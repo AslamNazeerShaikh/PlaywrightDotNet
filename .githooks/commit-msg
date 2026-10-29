@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Validate a commit message against Conventional Commits v1.0.0.
+# https://www.conventionalcommits.org/en/v1.0.0/#specification
+#
+# Install once per clone:
+#   git config core.hooksPath .githooks
+#
+# Bypass only for a Git-generated message the hook cannot classify:
+#   git commit --no-verify
+#
+# Git runs hooks through sh on every supported platform, including Windows.
+
+set -eu
+
+msg_file=${1:-}
+
+if [ -z "$msg_file" ] || [ ! -f "$msg_file" ]; then
+  echo "commit-msg: missing commit message file" >&2
+  exit 1
+fi
+
+# First non-empty, non-comment line is the header.
+header_line=$(awk 'NF && $0 !~ /^#/ { print NR; exit }' "$msg_file")
+if [ -z "$header_line" ]; then
+  echo "commit-msg: empty commit message" >&2
+  exit 1
+fi
+header=$(sed -n "${header_line}p" "$msg_file" | tr -d '\r')
+
+# Git-generated messages are exempt. Do not block merges, reverts, or rebase
+# fixups; their formats are owned by Git, not by this project.
+case "$header" in
+  Merge\ * | Revert\ \"*\" | fixup!\ * | squash!\ * | amend!\ *)
+    exit 0
+    ;;
+esac
+
+if [ -z "$header" ]; then
+  echo "commit-msg: empty commit message" >&2
+  exit 1
+fi
+
+types='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test'
+pattern="^(${types})(\([a-z0-9][a-z0-9._/-]*\))?!?: .+"
+
+if ! printf '%s\n' "$header" | grep -Eq "$pattern"; then
+  cat >&2 <<EOF
+ERROR: commit message does not follow Conventional Commits.
+
+  Got:      $header
+  Expected: <type>(<scope>)!: <description>
+
+  Types:    build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+  Example:  feat(domain): add job deduplication policy
+
+  See docs/13-conventional-commits.md.
+EOF
+  exit 1
+fi
+
+# Project rule: keep headers readable in logs and release notes.
+header_length=$(printf '%s' "$header" | wc -c | tr -d ' ')
+if [ "$header_length" -gt 100 ]; then
+  echo "commit-msg: header is ${header_length} characters; maximum is 100." >&2
+  echo "commit-msg: move detail into the body. See docs/13-conventional-commits.md." >&2
+  exit 1
+fi
+
+# Spec rule: the body MUST begin one blank line after the description.
+next_line=$((header_line + 1))
+body_start=$(sed -n "${next_line}p" "$msg_file" | tr -d '\r')
+if printf '%s' "$body_start" | grep -q '[^[:space:]]' &&
+   ! printf '%s' "$body_start" | grep -q '^[[:space:]]*#'; then
+  echo "commit-msg: the body must start with a blank line after the header." >&2
+  echo "commit-msg: separate them with one empty line. See docs/13-conventional-commits.md." >&2
+  exit 1
+fi
+
+exit 0

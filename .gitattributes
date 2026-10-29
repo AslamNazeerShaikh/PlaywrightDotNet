@@ -1,0 +1,12 @@
+# Normalize line endings for tracked text files.
+* text=auto
+
+# Git runs hooks through sh. CRLF breaks them on Windows.
+.githooks/* text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Store fixtures with LF so parser tests stay deterministic across machines.
+*.html text eol=lf
+*.json text eol=lf
+*.snap text eol=lf
