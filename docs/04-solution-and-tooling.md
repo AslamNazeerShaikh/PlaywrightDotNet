@@ -52,7 +52,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 |---|---|---|
 | `JobLens.Domain` | Aggregates, value objects, invariants, policies, domain events. Pure C#. | BCL only |
 | `JobLens.Application` | Use cases, ports, orchestration, Result pattern, specifications, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
-| `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, HTTP clients/resilience, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, DocumentFormat.OpenXml, Polly (via `Microsoft.Extensions.Http.Resilience`) |
+| `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, HTTP clients/resilience, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML, Polly (via `Microsoft.Extensions.Http.Resilience`) |
 | `JobLens.Cli` | Composition root: commands, DI, configuration, logging, exit codes. | Application, Infrastructure, Hosting, Serilog, System.CommandLine |
 | `JobLens.Api` (v2) | HTTP command surface, Problem Details, OpenAPI; Scalar is Development-only. | Application, Infrastructure, ASP.NET Core, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore` |
 | `JobLens.TestKit` | Builders, fakes, fixture server helpers, test data. | Domain, Application |
@@ -113,7 +113,7 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Explicit provider dependency / pragmas. |
 | `AngleSharp` | `1.8.6` | Infrastructure | HTML parsing with CSS selectors. |
-| `DocumentFormat.OpenXml` | `3.5.1` | Infrastructure | Excel export with explicit typed rows/hyperlinks; trim-aware. |
+| `ClosedXML` | `0.105.1` | Infrastructure | Excel export with hyperlinks; accepted vendor exception under the AOT policy. |
 | `Serilog.AspNetCore` | `10.0.0` | CLI, API | Structured logging, request logging, console + file integration. |
 | `Serilog.Sinks.File` | `7.0.0` | CLI, API | Daily rolling JSON text logs with retention. |
 | `Serilog.Sinks.Async` | `2.1.0` | CLI, API | Keep file I/O off the request/run thread. |
@@ -141,7 +141,6 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 - `FluentValidation` — domain guards, request validation, and options validation are enough.
 - `Ardalis.Specification` and similar — a small in-repo `Specification<T>` base is enough for the query criteria we have.
 - `Microsoft.Extensions.Options.DataAnnotations` — reflection-based validation; use explicit `IValidateOptions<T>`.
-- `ClosedXML` — reflection/trim-unfriendly; use `DocumentFormat.OpenXml`.
 - `Serilog.Exceptions`, `Serilog.Enrichers.AssemblyName`, `Serilog.Enrichers.Demystifier` — reflection-based; use explicit scalar logging and a generated `BuildInfo` version constant.
 - `ReadFrom.Configuration` (`Serilog.Settings.Configuration`) — reflection-based package binding; the package is transitive but must not be used. Configure the logger in code.
 - `System.CommandLine.NamingConventionBinder` — reflection-based; use `SetAction`/`SetHandler`.
@@ -227,7 +226,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <PackageVersion Include="AngleSharp" Version="1.8.6" />
-    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="ClosedXML" Version="0.105.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
@@ -664,7 +663,7 @@ jobs:
 - Serilog message templates only; no interpolation, PII, cookies, auth headers, or full page bodies in logs.
 - Check free disk before writes; enforce artifact/log retention; never call `GC.Collect()`.
 
-AOT constraints: no reflection, `Activator`, dynamic code, assembly scanning, reflection-based JSON/configuration/validation, or `Expression.Compile` in production. Use source generators, explicit factories, `SetAction`/`SetHandler`, and typed OpenXML. Scalar is Development-only and excluded from production/AOT smoke. See [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
+AOT constraints: no reflection, `Activator`, dynamic code, assembly scanning, reflection-based JSON/configuration/validation, or `Expression.Compile` in production. Use source generators, explicit factories, and `SetAction`/`SetHandler`. ClosedXML is an accepted vendor exception for Excel export; Scalar is Development-only and excluded from production/AOT smoke. See [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
 
 Full runtime rules and code sketches: [Runtime Hardening](15-runtime-hardening.md).
 - Structured logs with named properties; never interpolate secrets.

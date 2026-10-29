@@ -33,7 +33,7 @@ Read the documentation in this order:
 - xUnit.net v3 **4.0.2** (VS adapter 4.0.1)
 - Playwright for .NET **1.64.1** (Chromium 156, Firefox 157, WebKit 27.2)
 - EF Core / Microsoft.Extensions **10.0.14**
-- SQLite, System.CommandLine 2.0.14, AngleSharp, DocumentFormat.OpenXml 3.5.1
+- SQLite, System.CommandLine 2.0.14, AngleSharp, ClosedXML 0.105.1
 - Serilog 10.0.0 (compact JSON file logs, enrichers, 90-day retention) + Polly v8 HTTP resilience via `Microsoft.Extensions.Http.Resilience` 10.0.0
 - Scalar.AspNetCore 2.18.5 local API reference at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` 10.0.14
 

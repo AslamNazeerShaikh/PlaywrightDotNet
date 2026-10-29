@@ -148,7 +148,7 @@ flowchart LR
 |---|---|---|
 | `JobLens.Domain` | BCL only | EF Core, Playwright, AngleSharp, HTTP, Serilog, CLI |
 | `JobLens.Application` | Domain, `Microsoft.Extensions.Logging.Abstractions` | EF Core, Playwright, AngleSharp, CLI, file system |
-| `JobLens.Infrastructure` | Application, Domain, EF Core, Playwright, AngleSharp, DocumentFormat.OpenXml | CLI |
+| `JobLens.Infrastructure` | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML | CLI |
 | `JobLens.Cli` | Application, Infrastructure, Hosting, Serilog, System.CommandLine | — (composition root) |
 
 **Architecture tests** (NetArchTest) enforce:

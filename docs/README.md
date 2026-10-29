@@ -59,7 +59,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | Persistence | SQLite via EF Core `10.0.14`; PostgreSQL later if scale demands it |
 | CLI | [`System.CommandLine`](04-solution-and-tooling.md#6-target-cli-surface) `2.0.14` + `Microsoft.Extensions.Hosting` `10.0.14` + Serilog |
 | HTML parsing | [AngleSharp](02-architecture.md#9-source-adapter-design) `1.8.6` for offline fixtures and server-rendered pages |
-| Export | CSV + Excel ([DocumentFormat.OpenXml](04-solution-and-tooling.md#3-package-matrix) `3.5.1`) |
+| Export | CSV + Excel ([ClosedXML](04-solution-and-tooling.md#3-package-matrix) `0.105.1`) |
 | Control plane (v2) | React `19.3.1` + TypeScript `7.0.2` + Tailwind `4.3.3` + shadcn/ui `4.23.0`; Bun `1.4.4` runtime/package manager/BFF; no Node.js |
 | Application patterns | Explicit use-case handlers; Result, Options, Specification, Problem Details; **no CQRS/MediatR** ([details](14-application-patterns.md)) |
 | Logging & resilience | Serilog compact JSON logs, daily rolling + 90-day retention, standard enrichers; global exception handling; `IHttpClientFactory` + Polly v8 retry/circuit/timeout/fallback ([details](15-runtime-hardening.md)) |
@@ -148,5 +148,5 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Added the v2 web cockpit specification (React 19, Bun 1.4.4, Tailwind 4.3, shadcn/ui; no Node.js) and ADR-0010. |
 | 2026-10-29 | Added the application-patterns guide (Result, Options, Specification, Problem Details) and ADR-0011 rejecting CQRS/MediatR. |
 | 2026-10-29 | Added the runtime-hardening guide (Serilog enrichers/file retention, global exceptions, Polly HTTP resilience, async/disposal/resource rules) and ADR-0012. |
-| 2026-10-29 | Added the AOT-friendly coding policy, removed reflection-heavy packages (`ClosedXML`, DataAnnotations, Serilog.Exceptions/AssemblyName/Demystifier), and added ADR-0013. |
+| 2026-10-29 | Added the AOT-friendly coding policy, removed DataAnnotations and Serilog reflection enrichers, accepted `ClosedXML` as a vendor exception for Excel export, and added ADR-0013. |
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |

@@ -516,7 +516,7 @@ Builders keep tests readable and make new required fields cheap to add.
 - JSON-LD parser, DOM parser, normalization, salary/location parsing.
 - Challenge classifier with fixture pages.
 - EF Core mappings/indexes/upsert.
-- CSV/Excel writers (open with `DocumentFormat.OpenXml` and assert cells/hyperlinks; no reflection-based readers).
+- CSV/Excel writers (open with ClosedXML and assert cells/hyperlinks).
 - Options validation.
 
 ### 7.4 CLI

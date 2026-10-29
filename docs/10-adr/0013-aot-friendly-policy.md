@@ -20,9 +20,10 @@ At the same time, several optional choices were reflection-heavy and avoidable:
 - DataAnnotations options validation.
 - `Serilog.Settings.Configuration` runtime binding.
 - `Serilog.Exceptions`, `Serilog.Enrichers.AssemblyName`, and `Serilog.Enrichers.Demystifier`.
-- `ClosedXML`.
 - Assembly-scanning/mediator-style registrations (already rejected in ADR-0011).
 - Reflection-based JSON.
+
+`ClosedXML` is also reflection-based, but it is a mature, trusted Excel writer and an explicit product choice. It is treated as an accepted vendor exception, alongside Playwright, EF Core, and Serilog.
 
 ## Decision
 
@@ -34,7 +35,7 @@ Adopt an **AOT-friendly coding policy** for our code; do not claim or gate on a 
 - Configuration uses the source-generated binder; options validation uses explicit `IValidateOptions<T>`.
 - Logging uses explicit Serilog configuration, scalar properties, and no object destructuring or reflection enrichers.
 - CLI uses `System.CommandLine` `SetAction`/`SetHandler`, never `CommandHandler.Create`/`NamingConventionBinder`.
-- Excel export uses `DocumentFormat.OpenXml`, not `ClosedXML`.
+- Excel export uses `ClosedXML`, isolated behind `IExportWriter`.
 - DI uses explicit factory registrations; no assembly scanning.
 - AOT/trim analyzers are enabled; warnings in our code are errors.
 - A small `JobLens.AotSmoke` console (Domain/Application only) is published with `PublishAot=true` in CI to prove the core stays AOT-compatible.
@@ -49,7 +50,7 @@ Allowed vendor exceptions, isolated behind Infrastructure or the composition roo
 | ASP.NET Core hosting/DI | Framework; explicit registrations/source generators |
 | AngleSharp | HTML parsing; AOT warning fixed upstream |
 | System.CommandLine | AOT-supported with explicit handlers |
-| DocumentFormat.OpenXml | Trim-aware Excel writer |
+| ClosedXML | Trusted Excel writer; reflection-based; Infrastructure export only |
 | Polly / Http.Resilience | AOT-friendly HTTP policies |
 
 The full app's `PublishAot=true` is not a release gate and is expected to fail/warn because of Playwright and EF Core.
@@ -61,7 +62,7 @@ The full app's `PublishAot=true` is not a release gate and is expected to fail/w
 - Our code stays portable and free of avoidable reflection.
 - Trim/AOT analyzers catch new reflection-heavy code early.
 - JSON, configuration, logging, and CLI paths become faster and more predictable.
-- Removing `ClosedXML`, DataAnnotations validation, and Serilog reflection enrichers reduces dependency and warning surface.
+- Removing DataAnnotations validation and Serilog reflection enrichers reduces dependency and warning surface.
 - A future NativeAOT migration depends on upstream Playwright/EF Core support, not on rewriting our application logic.
 
 ### Negative / trade-offs
@@ -69,7 +70,7 @@ The full app's `PublishAot=true` is not a release gate and is expected to fail/w
 - Explicit factories and validators are more verbose than attribute/scanning-based registration.
 - Source-generated JSON requires registering every DTO; forgetting one fails tests instead of silently using reflection.
 - `System.CommandLine` parsing is more verbose without naming-convention binding.
-- `DocumentFormat.OpenXml` is lower-level than `ClosedXML`; the export writer needs more code.
+- ClosedXML remains a reflection-based vendor exception; the export path is excluded from the AOT smoke and must stay behind `IExportWriter`.
 - Serilog remains a vendor exception and may emit vendor trim warnings.
 - Full NativeAOT remains blocked; the policy is not a promise of a native binary.
 
@@ -79,7 +80,7 @@ The full app's `PublishAot=true` is not a release gate and is expected to fail/w
 - Add architecture tests banning reflection namespaces in Domain/Application.
 - Add `JobLensJsonContext` and disable reflection-based JSON.
 - Replace DataAnnotations options validation with `IValidateOptions<T>`.
-- Replace `ClosedXML` with `DocumentFormat.OpenXml`.
+- Keep `ClosedXML` behind `IExportWriter`; exclude the export path from AOT smoke.
 - Remove reflection Serilog enrichers and `ReadFrom.Configuration`.
 - Review new packages against this policy before adding them.
 
@@ -91,6 +92,7 @@ The full app's `PublishAot=true` is not a release gate and is expected to fail/w
 | Remove Playwright and EF Core | Removes browser automation and the persistence model; changes the product. |
 | Status quo | Leaves avoidable reflection in options, JSON, logging, CLI, and Excel export. |
 | AOT-friendly core + separate non-AOT worker | Possible later, but adds IPC/process complexity now; explicit policy gives most of the benefit. |
+| Replace ClosedXML with `DocumentFormat.OpenXml` | Lower-level writer code; the product owner prefers the trusted ClosedXML API. |
 | Suppress all AOT warnings | Hides real problems and defeats the purpose. |
 
 ## References

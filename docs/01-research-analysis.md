@@ -29,7 +29,7 @@
 | `Microsoft.NET.Test.Sdk` | **18.11.0** | NuGet |
 | `System.CommandLine` | **2.0.14** | NuGet |
 | `AngleSharp` | **1.8.6** | NuGet |
-| `DocumentFormat.OpenXml` | **3.5.1** | NuGet |
+| `ClosedXML` | **0.105.1** | NuGet |
 
 > **Naming note:** xUnit's product line is “v3”, but the current `xunit.v3` package version is **4.0.2**. The 4.x package line is the v3 framework; do not confuse it with xUnit v2's `2.9.3`.
 
@@ -440,7 +440,7 @@ Each spike is time-boxed and produces a written note + fixture, not open-ended e
 | S2 | Indeed challenge behavior | 0.5 day | Does a headed persistent profile get a public page from the target network? How quickly does Cloudflare challenge? | Keep Indeed opt-in; document block |
 | S3 | LinkedIn guest search | 0.5 day | How many guest pages before auth wall/429/999? Does a manual session help? | Keep disabled; official/manual path |
 | S4 | WebKit on target sites | 0.5 day | Do Naukri/Indeed/LinkedIn render under Playwright WebKit? | Chromium-only production; WebKit for diagnostics |
-| S5 | Excel hyperlinks | 0.5 day | Does `DocumentFormat.OpenXml` produce clickable titles with long URLs cross-platform without AOT warnings? | CSV + HTML report |
+| S5 | Excel hyperlinks | 0.5 day | Does ClosedXML produce clickable titles with long URLs cross-platform? | CSV + HTML report |
 | S6 | Profile lock/concurrency | 0.5 day | What happens when two runs share a user-data dir? How to detect stale locks? | Global semaphore + explicit error |
 | S7 | SQLite WAL + EF Core | 0.5 day | Write throughput/locking under page-by-page upserts? | Batch writes per page |
 
@@ -481,7 +481,7 @@ Spikes S1–S3 are **research only**; they do not authorize bypassing a wall. If
 - Playwright system requirements: <https://playwright.dev/dotnet/docs/intro#system-requirements>
 - EF Core docs: <https://learn.microsoft.com/ef/core/>
 - AngleSharp: <https://anglesharp.github.io/>
-- Open XML SDK: <https://github.com/dotnet/Open-XML-SDK>
+- ClosedXML: <https://github.com/ClosedXML/ClosedXML>
 
 ### Target-site policies (fetched 2026-10-29)
 

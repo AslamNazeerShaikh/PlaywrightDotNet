@@ -72,7 +72,7 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 | **Serilog** | `10.0.0` | Structured JSON file logs with enrichers, daily retention, correlation, and redaction; console + async file sinks. |
 | **Polly v8** | via `Microsoft.Extensions.Http.Resilience` `10.0.0` | HTTP retry, circuit breaker, timeout, and safe fallback for optional API clients; browser navigation keeps its own stop-on-wall policy. |
 | **AngleSharp** | `1.8.6` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
-| **DocumentFormat.OpenXml** | `3.5.1` | Cross-platform Excel with explicit typed rows/hyperlinks; trim-aware and reflection-free on our path. |
+| **ClosedXML** | `0.105.1` | Cross-platform Excel with hyperlinks; accepted vendor exception under the AOT policy. |
 | **Scalar.AspNetCore** | `2.18.5` | Local interactive API reference/testing at `/scalar`; Development only, paired with `Microsoft.AspNetCore.OpenApi` `10.0.14`. |
 
 Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.

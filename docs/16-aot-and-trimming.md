@@ -44,7 +44,6 @@ See [ADR-0013](10-adr/0013-aot-friendly-policy.md) for the decision.
 | DataAnnotations validation (`ValidateDataAnnotations`) | Explicit `IValidateOptions<T>` checks |
 | `CommandHandler.Create` / `System.CommandLine.NamingConventionBinder` | `SetAction` / `SetHandler` with explicit parse results |
 | `AutoMapper`, `Mapster`, `Dapper`, `FluentValidation`, `MediatR` | Explicit mapping, ADO.NET/EF Core, explicit validation, explicit handlers |
-| `ClosedXML` | `DocumentFormat.OpenXml` typed API |
 | `System.ComponentModel.TypeDescriptor`, `Convert.ChangeType` | Typed parsing (`int.TryParse`, `Enum.TryParse<T>`) |
 | `Enum.GetValues`/`GetNames` | Allowed; metadata access is AOT-safe |
 | `Regex` constructed from runtime strings | `[GeneratedRegex]` |
@@ -85,7 +84,7 @@ These dependencies are retained by explicit product decision. They must stay beh
 | **ASP.NET Core hosting/DI** | Framework support with source generators; constructor activation may use reflection | Composition root only; explicit factory registrations; enable request-delegate/configuration source generators; no assembly scanning. |
 | **AngleSharp** | Core parser fixed its AOT warning in 1.0.6; 1.8.6 is used | HTML parsing only; no scripting/CSS engine; keep in Infrastructure. |
 | **System.CommandLine 2.0** | AOT/trimming supported when using explicit handler APIs | `SetAction`/`SetHandler` only; never `CommandHandler.Create` or `NamingConventionBinder`. |
-| **DocumentFormat.OpenXml 3.x** | Trim-aware; reflection removed where possible | Typed SDK only; no schema reflection/validation on hot paths; keep in Infrastructure. |
+| **ClosedXML 0.105.1** | Reflection-based Excel writer; accepted by product decision | Only `JobLens.Infrastructure.Export`; explicit cell writes, bounded rows, dispose; excluded from AOT smoke. |
 | **Polly v8 / `Microsoft.Extensions.Http.Resilience`** | AOT-friendly | Configure pipelines in code; no reflection-based policy discovery. |
 | **Scalar.AspNetCore** | Development-only UI | Keep behind `IsDevelopment()`; exclude from production/AOT smoke; never proxy through the BFF. |
 
@@ -219,23 +218,26 @@ Serilog is retained as a vendor exception, but used in a restricted mode:
 
 ## 12. Excel export
 
-`ClosedXML` is removed because it relies on reflection and other AOT-hostile machinery. Use `DocumentFormat.OpenXml` 3.5.1 with the typed API:
+`ClosedXML` is retained as an accepted vendor exception, alongside Playwright, EF Core, and Serilog. It is a mature, trusted Excel writer, and the product owner explicitly chose it.
 
 ```csharp
-using var document = SpreadsheetDocument.Create(path, SpreadsheetDocumentType.Workbook);
-var workbookPart = document.AddWorkbookPart();
-workbookPart.Workbook = new Workbook();
-var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-worksheetPart.Worksheet = new Worksheet(new SheetData());
-// build rows/cells explicitly; add hyperlink relationships explicitly
+using var workbook = new XLWorkbook();
+var sheet = workbook.Worksheets.Add("Jobs");
+sheet.Cell(1, 1).Value = "Title";
+sheet.Cell(2, 1).Value = "Senior .NET Engineer";
+sheet.Cell(2, 1).SetHyperlink(new XLHyperlink(applyUrl));
+workbook.SaveAs(path);
 ```
 
 Rules:
 
-- No schema validation/reflection on the export path.
-- Stream rows; do not build the whole workbook in memory.
-- Keep the writer behind `IExportWriter`.
-- If OpenXML SDK emits trim/AOT warnings in our usage, replace it with a minimal `ZipArchive` + `XmlWriter` XLSX writer rather than adding a suppression.
+- Keep `ClosedXML` inside `JobLens.Infrastructure.Export`; never leak `IXLWorksheet`/`XLWorkbook` into Application or Domain.
+- Write cells explicitly; no reflection in our code.
+- Bound rows and stream the source query; do not load the entire database or build an unbounded workbook in memory.
+- Dispose the workbook; write to a temp file and move it into place atomically.
+- Keep the writer behind `IExportWriter` so the export format is swappable.
+- The export path is excluded from the AOT smoke project; the full app still runs on the normal CLR.
+- Verify long URLs/hyperlinks cross-platform in the S5 spike and export tests.
 
 ---
 
@@ -243,8 +245,9 @@ Rules:
 
 - **Architecture test:** Domain/Application must not reference `System.Reflection`, `System.Reflection.Emit`, `System.Linq.Expressions.Expression.Compile`, or `dynamic`-related namespaces.
 - **Analyzer gate:** build with AOT/trim analyzers; our code must be warning-free. Vendor warnings are tracked separately.
-- **AOT smoke:** a small `JobLens.AotSmoke` console references Domain/Application (no Playwright/EF/Serilog) and publishes with `PublishAot=true` on macOS/Linux/Windows CI. It proves our core is AOT-compatible without claiming the full app is.
+- **AOT smoke:** a small `JobLens.AotSmoke` console references Domain/Application (no Playwright/EF/Serilog/ClosedXML) and publishes with `PublishAot=true` on macOS/Linux/Windows CI. It proves our core is AOT-compatible without claiming the full app is.
 - **Scalar:** Development-only; excluded from the AOT smoke and the production API build.
+- **ClosedXML:** Infrastructure export only; excluded from the AOT smoke.
 - **Serialization test:** every DTO round-trips through `JobLensJsonContext` with reflection disabled.
 - **Options test:** generated binding + explicit validator; no DataAnnotations.
 - **CLI test:** commands use `SetAction`; no `CommandHandler.Create`.
@@ -263,6 +266,6 @@ The full app's `dotnet publish -p:PublishAot=true` is **expected to fail or warn
 - [Serilog AOT issue](https://github.com/serilog/serilog/issues/1985)
 - [System.CommandLine trimming/AOT](https://github.com/dotnet/command-line-api/issues/1776)
 - [AngleSharp AOT warning fix](https://github.com/AngleSharp/AngleSharp/issues/1144)
-- [Open XML SDK trimming support](https://github.com/dotnet/Open-XML-SDK/blob/main/CHANGELOG.md)
+- [ClosedXML](https://github.com/ClosedXML/ClosedXML)
 - [Configuration binding source generator](https://learn.microsoft.com/dotnet/core/extensions/configuration-generator)
 - [System.Text.Json source generation](https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/source-generation)
