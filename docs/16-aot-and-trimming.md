@@ -87,6 +87,7 @@ These dependencies are retained by explicit product decision. They must stay beh
 | **System.CommandLine 2.0** | AOT/trimming supported when using explicit handler APIs | `SetAction`/`SetHandler` only; never `CommandHandler.Create` or `NamingConventionBinder`. |
 | **DocumentFormat.OpenXml 3.x** | Trim-aware; reflection removed where possible | Typed SDK only; no schema reflection/validation on hot paths; keep in Infrastructure. |
 | **Polly v8 / `Microsoft.Extensions.Http.Resilience`** | AOT-friendly | Configure pipelines in code; no reflection-based policy discovery. |
+| **Scalar.AspNetCore** | Development-only UI | Keep behind `IsDevelopment()`; exclude from production/AOT smoke; never proxy through the BFF. |
 
 Vendor exceptions do **not** excuse reflection in our own code. If a vendor package needs a reflection-based feature, isolate it behind a port and document the exception in the PR.
 
@@ -243,6 +244,7 @@ Rules:
 - **Architecture test:** Domain/Application must not reference `System.Reflection`, `System.Reflection.Emit`, `System.Linq.Expressions.Expression.Compile`, or `dynamic`-related namespaces.
 - **Analyzer gate:** build with AOT/trim analyzers; our code must be warning-free. Vendor warnings are tracked separately.
 - **AOT smoke:** a small `JobLens.AotSmoke` console references Domain/Application (no Playwright/EF/Serilog) and publishes with `PublishAot=true` on macOS/Linux/Windows CI. It proves our core is AOT-compatible without claiming the full app is.
+- **Scalar:** Development-only; excluded from the AOT smoke and the production API build.
 - **Serialization test:** every DTO round-trips through `JobLensJsonContext` with reflection disabled.
 - **Options test:** generated binding + explicit validator; no DataAnnotations.
 - **CLI test:** commands use `SetAction`; no `CommandHandler.Create`.

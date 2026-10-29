@@ -35,6 +35,7 @@ Read the documentation in this order:
 - EF Core / Microsoft.Extensions **10.0.14**
 - SQLite, System.CommandLine 2.0.14, AngleSharp, DocumentFormat.OpenXml 3.5.1
 - Serilog 10.0.0 (compact JSON file logs, enrichers, 90-day retention) + Polly v8 HTTP resilience via `Microsoft.Extensions.Http.Resilience` 10.0.0
+- Scalar.AspNetCore 2.18.5 local API reference at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` 10.0.14
 
 ## What this project will be
 

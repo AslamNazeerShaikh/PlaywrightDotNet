@@ -836,6 +836,43 @@ bun run api:types
 
 `openapi-typescript` writes `src/shared/contracts.ts`. CI regenerates and fails on drift. Use `openapi-fetch` with a middleware that adds the CSRF header and maps Problem Details.
 
+### 12.8 Local API reference and testing (Scalar)
+
+Use **Scalar.AspNetCore** as the local, interactive API reference. It is a development tool, not part of the production API or the cockpit bundle.
+
+```csharp
+using Scalar.AspNetCore;
+
+builder.Services.AddOpenApi(); // OpenAPI document v1
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi().AllowAnonymous(); // /openapi/v1.json
+
+    app.MapScalarApiReference("/scalar", options =>
+    {
+        options
+            .WithTitle("JobLens API v1")
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+            .AddPreferredSecuritySchemes("Bearer")
+            .DisableAgent()
+            .DisableDefaultFonts();
+    }).AllowAnonymous();
+}
+```
+
+- **OpenAPI:** `AddOpenApi()` generates the document; `MapOpenApi()` serves `/openapi/v1.json`. The same document feeds `bun run api:types`.
+- **Scalar:** open `http://127.0.0.1:<port>/scalar` while the API runs. Use `/scalar/v1` if multiple documents are registered.
+- **AOT:** `Microsoft.AspNetCore.OpenApi` is AOT-compatible. `Scalar.AspNetCore` is development-only and is excluded from the production/AOT release; do not add it to the AOT smoke project.
+- **Security:** the Scalar and OpenAPI endpoints are anonymous only inside the Development block. The API endpoints still require the bearer token. Add a `Bearer` HTTP security scheme to the OpenAPI document (via a document transformer) so Scalar can supply the header; see [Microsoft OpenAPI docs](https://learn.microsoft.com/aspnet/core/fundamentals/openapi/aspnetcore-openapi).
+- **No secrets:** never prefill a real token with `AddHttpAuthentication` or enable persistent authentication. Paste a short-lived dev token into the UI, or read it from a local secret.
+- **Privacy:** keep `.DisableAgent()` off external AI calls and `.DisableDefaultFonts()` off the font CDN. Scalar assets are local by default.
+- **Exposure:** bind the API to `127.0.0.1`; never proxy `/scalar` through the BFF, expose it on a tunnel, or add its origins to the production CSP.
+- **Testing flow:** start `JobLens.Api`, open `/scalar`, authorize with the dev token, then exercise `GET /api/v1/health`, `GET /api/v1/runs`, and `POST /api/v1/runs` with an `Idempotency-Key`.
+- **Contract check:** compare the Scalar view with `/openapi/v1.json`; generated TypeScript must come from the same document, not a hand-maintained copy.
+
+Packages: `Microsoft.AspNetCore.OpenApi` `10.0.14` and `Scalar.AspNetCore` `2.18.5` (Development only).
+
 ---
 
 ## 13. Bun BFF
@@ -1181,6 +1218,7 @@ Techniques: route-level code splitting, lazy charts/diagnostics, virtualized tab
 | Component | `bun test` + happy-dom + Testing Library | Forms, tables, status badges, timeline, command palette |
 | Contract | Generated OpenAPI types + zod fixtures | API drift and event schema drift |
 | API errors | Generated types + fixtures | Problem Details status/`code`/`traceId` mapping |
+| API exploration | Scalar.AspNetCore (Development only) | `/scalar` against `/openapi/v1.json`; bearer auth flow |
 | AOT | .NET analyzer + AOT smoke | Source-generated JSON/config, no reflection, `JobLens.AotSmoke` publish |
 | Observability | .NET tests + BFF logs | Correlation ID propagation, redaction, no stack traces |
 | E2E | Existing .NET Playwright suite | Critical flows against a real API + built cockpit |
@@ -1316,7 +1354,7 @@ The cockpit is interactive; the OS scheduler still runs the CLI for unattended c
 
 | Step | Duration | Deliverable | Exit criteria |
 |---|---:|---|---|
-| **W0 — Spike & contract** | 2 days | Bun/React/Tailwind/shadcn skeleton; OpenAPI stub; SSE proxy; single binary | `bun ci`, `bun check`, `bun fmt --check`, `bun test`, `bun run build`, `bun run compile` green; no Node installed |
+| **W0 — Spike & contract** | 2 days | Bun/React/Tailwind/shadcn skeleton; OpenAPI stub; Scalar local reference; SSE proxy; single binary | `bun ci`, `bun check`, `bun fmt --check`, `bun test`, `bun run build`, `bun run compile` green; no Node installed |
 | **W1 — Shell & read-only** | 3–4 days | App shell, dashboard, runs list, jobs table, health, Problem Details error states, correlation ID display | Read-only cockpit works against a stub or real API; a11y keyboard pass |
 | **W2 — Commands & live runs** | 4–5 days | Profiles CRUD, start/cancel/resume, SSE timeline, idempotency | Start → live events → terminal state; duplicate command is safe |
 | **W3 — Sessions, exports, diagnostics** | 4–5 days | Session states, challenge artifacts, exports, quotas, logs | Challenge drill shows artifact and manual instructions; export downloads |

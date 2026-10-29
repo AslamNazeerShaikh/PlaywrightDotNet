@@ -415,7 +415,7 @@ The v1 CLI plan above is unchanged. The first v2.0 deliverable is the **local we
 
 | Step | Deliverable | Dependency |
 |---|---|---|
-| **W0** | Bun/React/Tailwind/shadcn spike; OpenAPI stub incl. Problem Details schemas; SSE proxy; single binary | Can start during Phase 3 |
+| **W0** | Bun/React/Tailwind/shadcn spike; OpenAPI stub incl. Problem Details schemas; Scalar local reference; SSE proxy; single binary | Can start during Phase 3 |
 | **W1** | Shell, dashboard, read-only runs/jobs, health, Problem Details error states, correlation ID display | .NET API contract |
 | **W2** | Profiles CRUD, start/cancel/resume, live SSE timeline | API command endpoints |
 | **W3** | Sessions, challenge artifacts, exports, diagnostics | API artifacts/exports |

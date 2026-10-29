@@ -23,7 +23,8 @@ PlaywrightDotNet/
 │   ├── JobLens.Domain/
 │   ├── JobLens.Application/
 │   ├── JobLens.Infrastructure/
-│   └── JobLens.Cli/
+│   ├── JobLens.Cli/
+│   └── JobLens.Api/               (v2)
 ├── tests/
 │   ├── JobLens.TestKit/
 │   ├── JobLens.Domain.Tests/
@@ -53,6 +54,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | `JobLens.Application` | Use cases, ports, orchestration, Result pattern, specifications, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
 | `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, HTTP clients/resilience, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, DocumentFormat.OpenXml, Polly (via `Microsoft.Extensions.Http.Resilience`) |
 | `JobLens.Cli` | Composition root: commands, DI, configuration, logging, exit codes. | Application, Infrastructure, Hosting, Serilog, System.CommandLine |
+| `JobLens.Api` (v2) | HTTP command surface, Problem Details, OpenAPI; Scalar is Development-only. | Application, Infrastructure, ASP.NET Core, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore` |
 | `JobLens.TestKit` | Builders, fakes, fixture server helpers, test data. | Domain, Application |
 | `JobLens.Domain.Tests` | Pure unit tests. | Domain, TestKit, xUnit |
 | `JobLens.Application.Tests` | Use-case tests with fakes/NSubstitute. | Application, TestKit, xUnit, NSubstitute |
@@ -104,6 +106,8 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `Microsoft.Extensions.Options` | `10.0.14` | CLI, API | Options pattern with explicit `IValidateOptions<T>`; source-generated binding. |
 | `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | `IHttpClientFactory` for the optional API fast path / health probes. |
 | `Microsoft.Extensions.Http.Resilience` | `10.0.0` | Infrastructure | Polly v8 HTTP retry, circuit breaker, timeout, fallback. |
+| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | API (v2) | OpenAPI document generation; AOT-compatible. |
+| `Scalar.AspNetCore` | `2.18.5` | API (v2, Development only) | Interactive local API reference/testing at `/scalar`. |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Browser automation, tracing, persistent contexts. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
@@ -216,6 +220,8 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.5" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
@@ -658,7 +664,7 @@ jobs:
 - Serilog message templates only; no interpolation, PII, cookies, auth headers, or full page bodies in logs.
 - Check free disk before writes; enforce artifact/log retention; never call `GC.Collect()`.
 
-AOT constraints: no reflection, `Activator`, dynamic code, assembly scanning, reflection-based JSON/configuration/validation, or `Expression.Compile` in production. Use source generators, explicit factories, `SetAction`/`SetHandler`, and typed OpenXML. See [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
+AOT constraints: no reflection, `Activator`, dynamic code, assembly scanning, reflection-based JSON/configuration/validation, or `Expression.Compile` in production. Use source generators, explicit factories, `SetAction`/`SetHandler`, and typed OpenXML. Scalar is Development-only and excluded from production/AOT smoke. See [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
 
 Full runtime rules and code sketches: [Runtime Hardening](15-runtime-hardening.md).
 - Structured logs with named properties; never interpolate secrets.

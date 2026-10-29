@@ -446,7 +446,13 @@ dotnet run --project src/JobLens.Cli -- doctor
 dotnet run --project src/JobLens.Cli -- source list
 dotnet run --project src/JobLens.Cli -- runs list --limit 20
 dotnet run --project src/JobLens.Cli -- runs show <runId>
+
+# v2 API local reference (Development only; bind 127.0.0.1)
+dotnet run --project src/JobLens.Api
+# open http://127.0.0.1:5080/scalar
 ```
+
+Scalar is a local development tool. Do not proxy `/scalar` through the BFF, expose it on a tunnel, or enable it in production.
 
 ### 10.2 Collecting a support bundle
 
