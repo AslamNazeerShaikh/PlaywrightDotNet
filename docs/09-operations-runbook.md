@@ -388,7 +388,7 @@ sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25
 | `logs/joblens-cli-*.jsonl` | Structured JSON events with `RunId`/`Source`/`TraceId`. |
 | `runs show <id>` | Human-readable summary + artifact paths. |
 
-Each line is one compact JSON event. Standard enrichers add `MachineName`, `EnvironmentName`, `ProcessId`, `ProcessName`, `ThreadId`, `TraceId`, `SpanId`, `AssemblyName`, and `AssemblyVersion`; run scopes add `RunId`, `Source`, and `JobId`.
+Each line is one compact JSON event. Standard enrichers add `MachineName`, `EnvironmentName`, `ProcessId`, `ProcessName`, `ThreadId`, `TraceId`, and `SpanId`; startup properties add `Application` and compile-time `Version`; run scopes add `RunId`, `Source`, and `JobId`.
 
 ```bash
 # Follow one run across pages and HTTP calls

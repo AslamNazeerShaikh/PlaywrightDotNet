@@ -19,7 +19,7 @@
 | Resources | `await using`/`using`, bounded channels, streaming, atomic file writes, disk-space checks, retention cleanup |
 | Verification | Structured-log assertions, fake HTTP handlers, cancellation/disposal tests, soak runs, `dotnet-counters`/`dotnet-trace` |
 
-Related decisions: [Application Patterns](14-application-patterns.md), [ADR-0012](10-adr/0012-serilog-polly-runtime-hardening.md), [Anti-Bot & Compliance](07-anti-bot-and-compliance.md).
+Related decisions: [Application Patterns](14-application-patterns.md), [AOT-Friendly Coding](16-aot-and-trimming.md), [ADR-0012](10-adr/0012-serilog-polly-runtime-hardening.md), [ADR-0013](10-adr/0013-aot-friendly-policy.md), [Anti-Bot & Compliance](07-anti-bot-and-compliance.md).
 
 ---
 
@@ -43,21 +43,38 @@ Related decisions: [Application Patterns](14-application-patterns.md), [ADR-0012
 | `Serilog.Enrichers.Process` | `3.0.0` | Process ID and name |
 | `Serilog.Enrichers.Thread` | `4.0.0` | Thread ID |
 | `Serilog.Enrichers.Span` | `3.1.0` | `TraceId` / `SpanId` from `Activity.Current` |
-| `Serilog.Enrichers.AssemblyName` | `2.0.0` | Application/assembly version |
-| `Serilog.Exceptions` | `8.4.0` | Detailed exception properties |
-| `Serilog.Enrichers.Demystifier` | `1.0.3` | Readable async/iterator stack traces |
 
-`Serilog.AspNetCore` is already in the package matrix. `Serilog.Formatting.Compact`, `Serilog.Settings.Configuration`, `Serilog.Sinks.Console`, and `Serilog.Sinks.File` come with it.
+`Serilog.AspNetCore` is already in the package matrix. `Serilog.Formatting.Compact`, `Serilog.Settings.Configuration`, `Serilog.Sinks.Console`, and `Serilog.Sinks.File` come with it. The settings package is present transitively but must not be used.
+
+Serilog is a **vendor exception** under the AOT policy. Do not call `ReadFrom.Configuration` (reflection-based package binding), do not destructure objects, and do not add reflection enrichers. Configure explicitly in code and log scalar properties only.
 
 ### 2.3 Bootstrap
 
+`LoggingOptions` is a small bound record:
+
 ```csharp
+public sealed class LoggingOptions
+{
+    public LogEventLevel MinimumLevel { get; init; } = LogEventLevel.Information;
+    public int RetentionDays { get; init; } = 90;
+    public long FileSizeLimitBytes { get; init; } = 100 * 1024 * 1024;
+}
+```
+
+```csharp
+// Source-generated configuration binding; see the AOT policy.
 var logOptions = builder.Configuration
     .GetSection("JobLens:Logging")
     .Get<LoggingOptions>() ?? new LoggingOptions();
 
+var applicationName = role == "api" ? "JobLens.Api" : "JobLens.Cli";
+
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
+    .MinimumLevel.Is(logOptions.MinimumLevel)
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .Enrich.WithMachineName()
     .Enrich.WithEnvironmentName()
@@ -65,10 +82,8 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProcessName()
     .Enrich.WithThreadId()
     .Enrich.WithSpan()
-    .Enrich.WithAssemblyName()
-    .Enrich.WithAssemblyVersion()
-    .Enrich.WithExceptionDetails()
-    .Enrich.WithDemystifiedStackTraces()
+    .Enrich.WithProperty("Application", applicationName)
+    .Enrich.WithProperty("Version", BuildInfo.Version)
     .WriteTo.Console(new RenderedCompactJsonFormatter())
     .WriteTo.Async(
         configure: sink => sink.File(
@@ -94,23 +109,13 @@ builder.Host.UseSerilog();          // IHostBuilder
 - `rollOnFileSizeLimit` prevents one 100 MB file per day from becoming unbounded.
 - `Log.CloseAndFlush()` must run on every exit path.
 
-`LoggingOptions` is bound and validated at the composition root ([Solution & Tooling §5.3](04-solution-and-tooling.md#53-options-binding)). `appsettings.json` controls levels and retention; thresholds are not hard-coded:
+`LoggingOptions` is bound with the configuration source generator and validated at the composition root ([Solution & Tooling §5.3](04-solution-and-tooling.md#53-options-binding)). `appsettings.json` controls levels and retention; thresholds are not hard-coded:
 
 ```json
 {
-  "Serilog": {
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Microsoft": "Warning",
-        "Microsoft.Hosting.Lifetime": "Information",
-        "Microsoft.EntityFrameworkCore.Database.Command": "Warning",
-        "System.Net.Http.HttpClient": "Warning"
-      }
-    }
-  },
   "JobLens": {
     "Logging": {
+      "MinimumLevel": "Information",
       "RetentionDays": 90,
       "FileSizeLimitBytes": 104857600
     },
@@ -138,16 +143,14 @@ Always on:
 | `WithProcessId` / `WithProcessName` | `ProcessId`, `ProcessName` | CLI vs API vs test host |
 | `WithThreadId` | `ThreadId` | Diagnose thread-pool starvation |
 | `WithSpan` | `TraceId`, `SpanId` | Correlate API, HTTP, and run events |
-| `WithAssemblyName` / `WithAssemblyVersion` | `AssemblyName`, `AssemblyVersion` | Version-specific bugs |
-| `WithExceptionDetails` | `ExceptionDetail` | Nested exception data not in `ToString()` |
-| `WithDemystifiedStackTraces` | readable stack traces | Async/iterator frames |
+| `WithProperty` | `Application`, `Version` | App identity from a compile-time `BuildInfo` constant |
 
 Application-scoped (not global mutable state):
 
 | Property | Source |
 |---|---|
 | `Application` | `"JobLens.Cli"` or `"JobLens.Api"` |
-| `Version` | Informational version |
+| `Version` | Generated `BuildInfo.Version` from `$(Version)` |
 | `RunId` | Run scope |
 | `Source` | Source scope |
 | `JobId` | Per-posting scope |
@@ -157,9 +160,9 @@ Application-scoped (not global mutable state):
 Optional, not default:
 
 - `WithMemoryUsage` — useful during a memory investigation, too noisy and too costly per event for normal runs.
-- `WithSensitiveDataMasking` — opt-in defense in depth; explicit redaction and destructuring policies remain mandatory.
-- `WithClientInfo` — client IP/user agent are PII; enable only with a privacy decision.
 - `WithCorrelationId` — redundant when `WithSpan` is enabled.
+
+Do not use reflection-based enrichers (`Serilog.Exceptions`, `Serilog.Enrichers.AssemblyName`, `Serilog.Enrichers.Demystifier`, sensitive-data/client-info enrichers) under the AOT policy. Use explicit scalar properties and explicit redaction.
 
 Never enrich with environment user names, full request/response bodies, cookies, authorization headers, or raw HTML.
 
@@ -203,15 +206,14 @@ Never put a `RunId` in a static global property; concurrent runs must not share 
 - Never interpolate: `_logger.LogInformation($"Fetched {count}")` loses structure and allocates.
 - Use `[LoggerMessage]` source-generated methods on hot paths; the `CA1848` analyzer enforces this.
 - Guard expensive argument construction with `if (_logger.IsEnabled(LogLevel.Debug))`.
-- Destructure only small, safe objects: `{@JobSummary}`, never `{@HtmlDocument}` or a full `HttpResponseMessage`.
+- Log scalar properties only. Never use `{@...}` object destructuring; Serilog's destructuring path is reflection-based and violates the AOT policy.
 - Log counts, IDs, hashes, sizes, and paths — not page bodies.
 - Do not log the same exception at every layer. Log once at the boundary that decides the outcome.
 
 ### 2.7 Redaction
 
 - Cookies, `Authorization`, `Set-Cookie`, API keys, and form values are never logged.
-- Use a Serilog destructuring policy for request/response DTOs; mask values rather than omitting the property when the property name matters for debugging.
-- `Serilog.Enrichers.Sensitive` can mask known patterns as defense in depth, but it does not replace explicit redaction.
+- Redact at the call site and in the HTTP handler; do not rely on reflection-based masking enrichers.
 - Problem Details `detail` is also safe: no stack traces, SQL, HTML, or filesystem paths.
 - Log artifact **paths** and **hashes**, not artifact contents.
 
@@ -735,7 +737,7 @@ Use `System.Diagnostics.Metrics`; OpenTelemetry export is optional and out of sc
 - [Serilog configuration](https://github.com/serilog/serilog/wiki/Configuration-Basics)
 - [Serilog file sink and retention](https://github.com/serilog/serilog-sinks-file)
 - [Serilog async sink](https://github.com/serilog/serilog-sinks-async)
-- [Serilog.Exceptions](https://github.com/RehanSaeed/Serilog.Exceptions)
+- [AOT-Friendly Coding Policy](16-aot-and-trimming.md)
 - [Microsoft: IHttpClientFactory](https://learn.microsoft.com/dotnet/core/extensions/httpclient-factory)
 - [Microsoft: HTTP resilience with Polly](https://learn.microsoft.com/dotnet/core/resilience/http-resilience)
 - [Polly v8 documentation](https://www.pollydocs.org/)

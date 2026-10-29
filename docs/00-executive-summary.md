@@ -72,13 +72,15 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 | **Serilog** | `10.0.0` | Structured JSON file logs with enrichers, daily retention, correlation, and redaction; console + async file sinks. |
 | **Polly v8** | via `Microsoft.Extensions.Http.Resilience` `10.0.0` | HTTP retry, circuit breaker, timeout, and safe fallback for optional API clients; browser navigation keeps its own stop-on-wall policy. |
 | **AngleSharp** | `1.8.6` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
-| **ClosedXML** | `0.105.1` | Cross-platform Excel with hyperlinks; no Office dependency. |
+| **DocumentFormat.OpenXml** | `3.5.1` | Cross-platform Excel with explicit typed rows/hyperlinks; trim-aware and reflection-free on our path. |
 
 Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
 
 Application code uses explicit use-case handlers and four small patterns: **Result**, **Options**, **Specification**, and **Problem Details**. See [Application Patterns](14-application-patterns.md).
 
-Operational baseline: Serilog JSON logs with 90-day retention and enrichers, global exception handling, `IHttpClientFactory` + Polly v8 HTTP resilience, and strict async/disposal/disk rules. See [Runtime Hardening](15-runtime-hardening.md).
+Operational baseline: Serilog JSON logs with 90-day retention, global exception handling, `IHttpClientFactory` + Polly v8 HTTP resilience, and strict async/disposal/disk rules. See [Runtime Hardening](15-runtime-hardening.md).
+
+AOT posture: no reflection, dynamic code, assembly scanning, or reflection-based JSON/configuration/validation in our code. Playwright and EF Core are retained as documented vendor exceptions; the app runs normally on the CLR and is not published as NativeAOT. See [AOT-Friendly Coding](16-aot-and-trimming.md).
 
 > **Browser reality:** Playwright drives Chromium, Firefox, and WebKit (Safari's engine) on macOS/Linux/Windows. It does **not** automate real Safari; WebKit is the closest cross-platform proxy. Real Safari automation would require a separate macOS SafariDriver adapter. Windows 10 and macOS 13 or older are outside Playwright's supported matrix.
 
@@ -210,6 +212,7 @@ v1 is successful when all of these are true:
 | SQLite write contention | Low | Low | Single writer; WAL; busy timeout; one run at a time |
 | Log/artifact growth fills disk | Medium | Medium | Daily rotation; 90/30-day retention; size caps; free-space checks |
 | Socket/handle/browser leaks | Medium | Medium | `IHttpClientFactory`, `await using`, bounded queues, soak test |
+| Vendor AOT incompatibility (Playwright/EF Core) | High | Low | Documented vendor exceptions; isolate; AOT smoke for our code; normal CLR release |
 | Scope creep into auto-apply | Medium | High | Explicit non-goals; separate future decision; no v1 code paths |
 | Flaky live tests | High | Low | Live tests are manual/nightly, not CI; deterministic fixtures for CI |
 | Over-engineering | Medium | Medium | YAGNI checklist; vertical slices; no CQRS/MediatR/AutoMapper/microservices |

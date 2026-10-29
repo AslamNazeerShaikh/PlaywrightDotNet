@@ -24,7 +24,8 @@ Read the documentation in this order:
 14. [Conventional Commits](docs/13-conventional-commits.md)
 15. [Application patterns](docs/14-application-patterns.md)
 16. [Runtime hardening](docs/15-runtime-hardening.md)
-17. [ADRs](docs/10-adr/README.md)
+17. [AOT-friendly coding](docs/16-aot-and-trimming.md)
+18. [ADRs](docs/10-adr/README.md)
 
 ## Verified stack
 
@@ -32,7 +33,7 @@ Read the documentation in this order:
 - xUnit.net v3 **4.0.2** (VS adapter 4.0.1)
 - Playwright for .NET **1.64.1** (Chromium 156, Firefox 157, WebKit 27.2)
 - EF Core / Microsoft.Extensions **10.0.14**
-- SQLite, System.CommandLine 2.0.14, AngleSharp, ClosedXML
+- SQLite, System.CommandLine 2.0.14, AngleSharp, DocumentFormat.OpenXml 3.5.1
 - Serilog 10.0.0 (compact JSON file logs, enrichers, 90-day retention) + Polly v8 HTTP resilience via `Microsoft.Extensions.Http.Resilience` 10.0.0
 
 ## What this project will be
@@ -44,6 +45,7 @@ A **modular monolith + CLI** that:
 - Optionally enriches details and exports CSV/Excel.
 - Handles anti-bot walls by **stopping, cooling down, and asking a human** — no CAPTCHA solving, fingerprint spoofing, auth-wall bypass, or proxy rotation.
 - Uses explicit use-case handlers — **no CQRS/MediatR** — with Result, Options, Specification, and Problem Details patterns.
+- Keeps application code AOT-friendly: no reflection, dynamic code, assembly scanning, or reflection-based JSON/configuration/validation. Playwright and EF Core are documented vendor exceptions.
 - Treats LinkedIn as high-risk and disabled by default.
 
 ## Before implementation

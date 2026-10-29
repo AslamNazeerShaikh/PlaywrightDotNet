@@ -1181,6 +1181,7 @@ Techniques: route-level code splitting, lazy charts/diagnostics, virtualized tab
 | Component | `bun test` + happy-dom + Testing Library | Forms, tables, status badges, timeline, command palette |
 | Contract | Generated OpenAPI types + zod fixtures | API drift and event schema drift |
 | API errors | Generated types + fixtures | Problem Details status/`code`/`traceId` mapping |
+| AOT | .NET analyzer + AOT smoke | Source-generated JSON/config, no reflection, `JobLens.AotSmoke` publish |
 | Observability | .NET tests + BFF logs | Correlation ID propagation, redaction, no stack traces |
 | E2E | Existing .NET Playwright suite | Critical flows against a real API + built cockpit |
 | Accessibility | Keyboard checks + `@axe-core/react` in dev | Focus order, labels, contrast, reduced motion |

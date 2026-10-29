@@ -33,6 +33,7 @@
 | **DIP** | Application defines ports; Infrastructure implements them; CLI wires them. | Architecture tests: no `Microsoft.Playwright`/`Microsoft.EntityFrameworkCore` in Domain/Application. |
 | **DRY** | Shared pacing, retry, URL canonicalization, visibility guards, and validation helpers. | Shared libraries inside Infrastructure; no copy-paste selectors. |
 | **YAGNI** | No microservices, message bus, CQRS/MediatR, AutoMapper, dashboard, auto-apply, or ML in v1. | Scope gate in every phase. |
+| **AOT-friendly** | No reflection, dynamic code, assembly scanning, or reflection-based JSON/config/validation in our code. Playwright/EF Core are vendor exceptions. | AOT/trim analyzers; AOT smoke; PR checklist. |
 | **KISS** | CLI + SQLite + one browser at a time. | Deployment and runbook simplicity. |
 | **Fail fast** | Invalid options, missing browser, unsafe compliance settings fail before a run starts. | `IValidateOptions`, `doctor`, startup checks. |
 | **Idempotency** | Upsert by `(source, externalJobId)`; re-running a page never duplicates. | Unique index + repository tests. |
@@ -147,7 +148,7 @@ flowchart LR
 |---|---|---|
 | `JobLens.Domain` | BCL only | EF Core, Playwright, AngleSharp, HTTP, Serilog, CLI |
 | `JobLens.Application` | Domain, `Microsoft.Extensions.Logging.Abstractions` | EF Core, Playwright, AngleSharp, CLI, file system |
-| `JobLens.Infrastructure` | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML | CLI |
+| `JobLens.Infrastructure` | Application, Domain, EF Core, Playwright, AngleSharp, DocumentFormat.OpenXml | CLI |
 | `JobLens.Cli` | Application, Infrastructure, Hosting, Serilog, System.CommandLine | — (composition root) |
 
 **Architecture tests** (NetArchTest) enforce:
@@ -472,7 +473,7 @@ Every `IJobSource` must pass a shared suite:
 
 ### 8.4 Specifications for query criteria
 
-Reusable query predicates use the Specification pattern: an expression tree plus an in-memory `IsSatisfiedBy` check. Specifications live in `JobLens.Application/Queries`, compose with `And`/`Or`/`Not`, and are accepted by read-model ports. They never expose `IQueryable` and never make authorization or compliance decisions.
+Reusable query predicates use the Specification pattern: an expression tree that EF Core translates. Specifications live in `JobLens.Application/Queries`, compose with `And`/`Or`/`Not`, and are accepted by read-model ports. They never expose `IQueryable`, never call `Expression.Compile()` in production, and never make authorization or compliance decisions.
 
 ```csharp
 var specification = new ActivePostingSpecification(now, retentionDays)
@@ -646,7 +647,7 @@ Options are bound and validated once at the composition root, then consumed as i
 - `ComplianceOptions`
 - `LoggingOptions`
 
-Validate on startup with DataAnnotations + custom validators:
+Validate on startup with explicit `IValidateOptions<T>` validators; binding uses the source generator, not reflection:
 
 - `maxPages >= 1`, `maxJobs >= 1`, `minDelay <= maxDelay`.
 - Daily caps non-negative.
@@ -810,6 +811,7 @@ Threat model in one line: **the browser profile is the crown jewel; the target s
 - Microservices, message bus, distributed locks, Kubernetes.
 - A generic “scrape any website” framework; only shared primitives + per-source adapters.
 - CQRS command/query buses, MediatR, mediator pipelines, AutoMapper, and FluentValidation pipelines; explicit handlers and validation are clearer at this size.
+- Reflection-based mapping, validation, serialization, configuration binding, and assembly scanning; see the [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
 - Auto-apply, cover-letter generation, recruiter messaging.
 - CAPTCHA solving, fingerprint spoofing, proxy rotation, account rotation.
 - ML ranking, resume tailoring, vector databases.
@@ -844,3 +846,4 @@ The **Sourcing** domain stays job-specific. A future automation case (e.g., form
 - [ADR-0010: React + Bun web cockpit](10-adr/0010-react-bun-cockpit.md)
 - [ADR-0011: Explicit use-case handlers, no CQRS or MediatR](10-adr/0011-no-cqrs-mediatr.md)
 - [ADR-0012: Serilog and Polly runtime hardening](10-adr/0012-serilog-polly-runtime-hardening.md)
+- [ADR-0013: AOT-friendly code, no NativeAOT release](10-adr/0013-aot-friendly-policy.md)
