@@ -40,7 +40,8 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 10 | [Operations Runbook](09-operations-runbook.md) | How do we install, run, schedule, back up, troubleshoot, and upgrade on macOS/Linux/Windows? |
 | 11 | [Open Decisions](11-open-decisions.md) | What needs your approval before Phase 0 starts? |
 | 12 | [Web Cockpit (v2)](12-web-cockpit.md) | What is the React + Bun control plane, how does it command the .NET API, and how is it built, secured, and tested? |
-| 13 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
+| 13 | [Conventional Commits](13-conventional-commits.md) | How are commit messages written, reviewed, and validated? |
+| 14 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
 
 ---
 

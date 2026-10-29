@@ -595,7 +595,8 @@ jobs:
 ### 10.3 Git
 
 - Trunk-based development; short-lived branches.
-- Conventional Commits: `feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`.
+- [Conventional Commits v1.0.0](13-conventional-commits.md): `type(scope): description`; add `!` or a `BREAKING CHANGE:` footer for breaking changes. Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `style`, `chore`, `revert`.
+- Enable the commit-message validator once per clone: `git config core.hooksPath .githooks`.
 - One logical change per commit; tests in the same commit as the behavior.
 - Tag releases `v1.0.0`; MinVer derives versions.
 - Never commit `artifacts/`, profiles, databases, `.env`, `appsettings.Local.json`, or secrets.

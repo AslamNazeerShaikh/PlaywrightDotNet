@@ -1,3 +1,15 @@
+## Commits
+
+Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#specification); the project policy is [docs/13-conventional-commits.md](docs/13-conventional-commits.md).
+
+- Format: `<type>(<scope>)!: <description>`; one logical change per commit.
+- Allowed types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
+- Imperative, lowercase description with no trailing period; target 72 characters, hard maximum 100.
+- Put the why in the body after one blank line; reference issues in footers (`Refs: #42`).
+- Enable the local validator once per clone: `git config core.hooksPath .githooks`.
+- Never bypass the hook to avoid fixing a message; fix the message or the hook.
+- PR titles follow the same format because squash merges use them as the commit header.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

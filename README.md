@@ -20,7 +20,9 @@ Read the documentation in this order:
 10. [Site playbooks](docs/08-site-playbooks.md)
 11. [Operations runbook](docs/09-operations-runbook.md)
 12. [Open decisions](docs/11-open-decisions.md)
-13. [ADRs](docs/10-adr/README.md)
+13. [Web cockpit (v2)](docs/12-web-cockpit.md)
+14. [Conventional Commits](docs/13-conventional-commits.md)
+15. [ADRs](docs/10-adr/README.md)
 
 ## Verified stack
 
