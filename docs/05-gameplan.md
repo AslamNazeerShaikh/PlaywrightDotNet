@@ -36,12 +36,12 @@ flowchart LR
 
 | Phase | Dates | Goal | Key deliverables | Exit criteria |
 |---|---|---|---|---|
-| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0011, `doctor` stub, application-pattern contracts (Result/Error, options records, specification base). | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted. |
+| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0012, `doctor` stub, application-pattern contracts (Result/Error, options records, specification base), Serilog file logging + global exception skeleton. | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted; logs land in `artifacts/logs` with retention. |
 | **1 — Domain + Application** | Nov 5–11 (5d) | Model the core without a browser. | Value objects, aggregates, state machines, policies, ports, Result/Error contracts, specification base, `RunScrapeHandler`, fakes. | Domain/application tests pass; architecture tests pass; no Playwright/EF references in Domain/Application. |
 | **2 — Browser + Session** | Nov 12–18 (5d) | Make one real browser session safe and observable. | Playwright session factory, persistent profiles, `doctor`, `session login/probe`, challenge detector, artifact capture, E2E fixture server. | Browser matrix smoke green (Chromium/Firefox/WebKit); challenge fixture classified; profile lock handled. |
-| **3 — Naukri slice** | Nov 19–25 (5d) | Prove the full pipeline on a real source. | URL builder, parser, native Next pagination, detail enrichment, SQLite repositories, CSV/Excel export. | One page → DB → CSV; then multi-page run; fixture + live canary; caps/challenge handling. |
+| **3 — Naukri slice** | Nov 19–25 (5d) | Prove the full pipeline on a real source. | URL builder, parser, native Next pagination, detail enrichment, SQLite repositories, CSV/Excel export, optional Polly HTTP fast-path client. | One page → DB → CSV; then multi-page run; fixture + live canary; caps/challenge handling; HTTP retries/circuit/fallback tested. |
 | **4 — Indeed + LinkedIn** | Nov 26–Dec 4 (7d) | Add breadth behind compliance gates. | Indeed adapter, LinkedIn opt-in adapter, contract tests, quota/circuit breaker integration. | Indeed completes or stops gracefully on challenge; LinkedIn refuses without consent, stops on wall with consent. |
-| **5 — Ops + packaging** | Dec 7–9 (3d) | Make it usable on all target OSes. | CLI polish, run history, publish scripts, Dockerfile, scheduler examples, runbook. | Publish for osx-arm64/linux-x64/win-x64; fresh-machine setup < 15 min; scheduler example works. |
+| **5 — Ops + packaging** | Dec 7–9 (3d) | Make it usable on all target OSes. | CLI polish, run history, log retention/cleanup, publish scripts, Dockerfile, scheduler examples, runbook. | Publish for osx-arm64/linux-x64/win-x64; fresh-machine setup < 15 min; scheduler example works; disk use bounded. |
 | **6 — Hardening + release** | Dec 10–15 (4d) | Prove it survives failure and release it. | Failure injection, wall drills, soak test, security/dependency scan, backup/restore, release notes. | Release checklist complete; no critical vulnerabilities; 10 consecutive fixture runs green; canary documented. |
 | **Buffer** | Dec 16–18 (3d) | Absorb slippage. | — | v1.0.0 tagged or a clear slip decision. |
 
@@ -99,7 +99,7 @@ gantt
 | Day | Work | Output |
 |---|---|---|
 | Mon | Decide name, license, LinkedIn/Indeed policy; create solution/projects/references; `global.json`, CPM, props, editorconfig. | Repo skeleton builds. |
-| Tue | CI skeleton; `doctor` stub; ADRs 0001–0005; architecture test skeleton. | CI green; architecture rule fails on a deliberate violation (then passes). |
+| Tue | CI skeleton; `doctor` stub; review ADRs 0001–0012; architecture test skeleton. | CI green; architecture rule fails on a deliberate violation (then passes). |
 | Wed | Domain value objects: IDs, `SourceKey`, `RunLimits`, `SearchCriteria`; tests first. | 15–25 unit tests. |
 | Thu | `SearchProfile`, `JobPosting`, `ScrapeRun` invariants/state machine; tests. | 30–40 unit tests; no I/O. |
 | Fri | Application ports + `RunScrapeHandler` skeleton with fakes; weekly demo. | Handler test: fake source → fake repo → run state. |
@@ -186,9 +186,11 @@ gantt
 - **E0-S2** As a developer, I can run unit tests and see a clear result.
   - Given the repo, when I run `dotnet test --filter "Category!=Live&Category!=E2E"`, then all non-live tests pass.
 - **E0-S3** As a maintainer, I can see why key decisions were made.
-  - ADRs 0001–0011 exist and link from the docs index.
+  - ADRs 0001–0012 exist and link from the docs index.
 - **E0-S4** As a developer, I can add an application abstraction without reintroducing CQRS/MediatR.
   - The pattern guide and ADR-0011 are linked; the package matrix has no MediatR/CQRS package; the architecture test skeleton names the ban.
+- **E0-S5** As a maintainer, I can diagnose a failed run from one structured log.
+  - JSON logs rotate daily with 90-day retention; enrichers add process/thread/trace/assembly context; cookies and auth headers are absent; `Log.CloseAndFlush()` runs on exit.
 
 ### E1 — Domain
 
@@ -253,6 +255,8 @@ gantt
 - **E8-S3** As an operator, I can schedule a run with cron/launchd/Task Scheduler.
 - **E8-S4** As an operator, logs/artifacts tell me what happened without reading code.
 - **E8-S5** As an operator, I can publish/run self-contained binaries on three OSes.
+- **E8-S6** As an operator, logs/artifacts/temp files stay within their retention and disk budget.
+  - Cleanup is idempotent, skips the active run, and reports bytes/files freed.
 
 ### E9 — Quality/Release
 
@@ -291,6 +295,8 @@ gantt
 | R10 | Over-engineering | Medium | Medium | YAGNI gate; vertical slices; no CQRS/MediatR/AutoMapper/microservices | Abstraction without a second use | You |
 | R11 | Browser download/install friction | Medium | Medium | `doctor --install-browsers`; Docker fallback; docs per OS | New machine setup > 15 min | You |
 | R12 | Data quality (missing fields) | High | Medium | Validation flags; drop bad cards; parse confidence; raw fields kept | High missing-company rate | You |
+| R13 | Log/artifact growth fills disk | Medium | Medium | Daily rotation; 90/30-day retention; size caps; `MinimumFreeDiskBytes` | Disk usage rises run over run | You |
+| R14 | Socket/handle/browser leaks | Medium | Medium | `IHttpClientFactory`, `await using`, bounded queues, soak test, `dotnet-counters` | Working set/handles grow over 10 runs | You |
 
 ---
 
@@ -368,7 +374,8 @@ Each commit should build and keep the test suite green.
 - `dotnet build -warnaserror` and all non-live tests green.
 - Coverage gates met; architecture tests green.
 - Docs updated (selector/policy/config/runbook).
-- No secrets/PII; logs redacted.
+- No secrets/PII; structured logs redacted; retention verified.
+- No leaked browser/process/file handles; bounded queues and disk checks verified for runtime-sensitive changes.
 - Demoed or exercised end-to-end.
 - Changelog entry if user-visible.
 
@@ -404,7 +411,7 @@ The v1 CLI plan above is unchanged. The first v2.0 deliverable is the **local we
 | Step | Deliverable | Dependency |
 |---|---|---|
 | **W0** | Bun/React/Tailwind/shadcn spike; OpenAPI stub incl. Problem Details schemas; SSE proxy; single binary | Can start during Phase 3 |
-| **W1** | Shell, dashboard, read-only runs/jobs, health, Problem Details error states | .NET API contract |
+| **W1** | Shell, dashboard, read-only runs/jobs, health, Problem Details error states, correlation ID display | .NET API contract |
 | **W2** | Profiles CRUD, start/cancel/resume, live SSE timeline | API command endpoints |
 | **W3** | Sessions, challenge artifacts, exports, diagnostics | API artifacts/exports |
 | **W4** | Auth/CSRF/CSP, tests, budgets, packaging | W1–W3 |

@@ -460,6 +460,7 @@ Spikes S1–S3 are **research only**; they do not authorize bypassing a wall. If
 | LinkedIn prohibits automated access | Default disabled; explicit consent; guest-only; stop on wall; recommend official/manual. |
 | Indeed is Cloudflare-protected | Opt-in; very low volume; headed; stop on challenge; no private GraphQL. |
 | Microservices/CQRS/MediatR/AutoMapper add no value | Modular monolith; explicit handlers/mapping; YAGNI. |
+| Serilog + Polly are the right operational baseline | Compact JSON file logs with daily retention/enrichers; Polly v8 via `Microsoft.Extensions.Http.Resilience` for HTTP only; browser stops keep their explicit policy. |
 | 100% coverage is not the goal | Risk-based gates: Domain 95/90, Application 90/85, overall 85/80. |
 | Live scraping is nondeterministic | Fixtures in CI; live canaries manual/nightly. |
 

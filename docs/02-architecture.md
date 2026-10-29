@@ -402,6 +402,7 @@ Other ports:
 - `IArtifactStore`
 - `IExportWriter`
 - `IJobReadModel`
+- `IDiskSpace` (free-space checks; fake in tests)
 - `IRandomSource`
 - `IClock` → prefer BCL `TimeProvider`
 
@@ -653,6 +654,9 @@ Validate on startup with DataAnnotations + custom validators:
 - Profile directory must be writable.
 - Database directory must exist or be creatable.
 - Browser channel must be valid for the engine.
+- Artifact caps (HTML/screenshot/trace) are positive and bounded.
+- Log retention days and file-size limit are positive and bounded.
+- `MinimumFreeDiskBytes` is positive; low disk fails before writing.
 
 ### 11.3 Secrets
 
@@ -676,6 +680,7 @@ Validate on startup with DataAnnotations + custom validators:
 | Parse | missing fields, DOM change | **No** | Artifact, drop bad card, mark degraded. |
 | Validation | bad URL/title/salary | **No** | Drop item with a named-field warning. |
 | Config | invalid options, missing browser | **No** | Fail fast with actionable message. |
+| Storage | disk full, write failure, locked file | **No** | Fail with `STORAGE_LOW_DISK`/`IO_FAILURE`, clean temp files, stop. |
 | Cancelled | Ctrl+C, shutdown | **No** | Stop, keep partial results. |
 | Source changed | empty page with no challenge | **No** | Artifact, `SourceChanged`, canary alert. |
 
@@ -691,6 +696,7 @@ Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem
 - Retry only idempotent GET/navigation.
 - If a page fails after retries, record the page as failed and continue or stop based on the run policy.
 - No retries for parse/validation failures.
+- Browser navigation uses this explicit policy. HTTP API clients use a Polly v8 pipeline (retry, circuit breaker, timeout, fallback) from [Runtime Hardening §4](15-runtime-hardening.md#4-http-clients-and-polly-resilience). Do not stack a manual retry loop on top of Polly, and never retry a challenge/wall.
 
 ### 12.3 Time and randomness
 
@@ -700,17 +706,25 @@ Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem
 
 ### 12.4 Cancellation
 
-- Every async method takes a `CancellationToken`.
+- Every async method takes a `CancellationToken`; request paths never pass `CancellationToken.None`.
 - Ctrl+C cancels the run cooperatively; the current page may finish, then the run is marked `Cancelled`.
-- Browser contexts/pages are disposed in `finally`/`await using`.
+- Use linked tokens for timeouts; distinguish an operator cancel from a timeout.
+- `OperationCanceledException` propagates. It is not converted to a `Result`, not logged as an error, and never swallowed.
+- No sync-over-async (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`); no `async void`.
+- Browser contexts/pages are disposed in `finally`/`await using`, in reverse acquisition order.
 - Scheduler runs have a hard timeout (e.g., 30 minutes) to avoid orphaned processes.
+- Full rules: [Runtime Hardening §5](15-runtime-hardening.md#5-async-and-cancellation).
 
 ### 12.5 Logging and artifacts
 
-- Serilog structured logs: `RunId`, `Source`, `Page`, `JobId`, `ChallengeKind`, `ElapsedMs`.
-- Console sink for humans; rolling file sink for audit.
+- Serilog structured logs: `RunId`, `Source`, `Page`, `JobId`, `ChallengeKind`, `ElapsedMs`, `TraceId`/`SpanId`, `CorrelationId`.
+- Compact JSON file sink per process (`artifacts/logs/joblens-{role}-YYYYMMDD.jsonl`), daily + 100 MB rolling, 90-day retention, 200-file cap, async writes with backpressure.
+- Standard enrichers: log context, machine/environment, process, thread, span, assembly, detailed exceptions, demystified stack traces.
+- Console sink for live output; file sink for audit. Both use named message templates, never string interpolation.
 - Artifacts per run: `run.json`, page HTML, screenshots, Playwright trace on failure.
-- Redact cookies/auth headers; cap HTML size; retention policy (default 30 days).
+- Redact cookies/auth headers/form values; cap HTML (10 MB), screenshots (5 MB), and traces (100 MB); artifacts retain 30 days.
+- Global API exception handling returns Problem Details with a trace ID; CLI uses documented exit codes.
+- Full logging/error/resource rules: [Runtime Hardening §2–3](15-runtime-hardening.md#2-structured-logging-with-serilog).
 
 ### 12.6 Idempotency and dedupe
 
@@ -723,6 +737,16 @@ Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem
 ### 12.7 Problem Details mapping
 
 The v2 API returns `application/problem+json` for every error. One mapper translates `ErrorKind` to an HTTP status and adds `code`, `traceId`, and optional `retryAfter`; endpoints do not hand-build error bodies. Stack traces, SQL, cookies, and HTML never appear in `detail`. Problem Details is HTTP-only: the CLI maps the same error kinds to exit codes, and SSE emits a typed `run.failed` event. See [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern).
+
+### 12.8 Resource budgets
+
+- Bound every queue/channel; stream artifacts and exports instead of loading them.
+- Cap HTML, screenshots, traces, and in-memory caches.
+- Check free disk before runs/exports; fail with `STORAGE_LOW_DISK` before filling the volume.
+- Clean temp files in `finally`; retain artifacts/logs by policy, never unbounded.
+- Dispose browser/context/page, streams, responses, DB contexts, token sources, and semaphores in reverse order.
+- No `GC.Collect()`; profile with `dotnet-counters`/`dotnet-trace` before optimizing.
+- Full matrix: [Runtime Hardening §6](15-runtime-hardening.md#6-resource-management).
 
 ---
 
@@ -819,3 +843,4 @@ The **Sourcing** domain stays job-specific. A future automation case (e.g., form
 - [ADR-0009: Test pyramid and coverage gates](10-adr/0009-test-pyramid-coverage-gates.md)
 - [ADR-0010: React + Bun web cockpit](10-adr/0010-react-bun-cockpit.md)
 - [ADR-0011: Explicit use-case handlers, no CQRS or MediatR](10-adr/0011-no-cqrs-mediatr.md)
+- [ADR-0012: Serilog and Polly runtime hardening](10-adr/0012-serilog-polly-runtime-hardening.md)

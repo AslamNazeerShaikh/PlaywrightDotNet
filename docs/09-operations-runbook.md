@@ -226,6 +226,13 @@ dotnet run --project src/JobLens.Cli -- export --format csv --out artifacts/expo
 3. Update the parser/selector chain and contract tests.
 4. Run a one-page canary; update the site playbook.
 
+### 5.4 If a run exits with a storage/I/O failure (`7`)
+
+1. Check free disk; compare with `Storage:MinimumFreeDiskBytes`.
+2. Review log retention/artifact retention; delete expired data only.
+3. Fix permissions or the locked file; do not delete the active run.
+4. Re-run after the free-space check passes.
+
 ---
 
 ## 6. Scheduling
@@ -310,7 +317,7 @@ artifacts/
 ├── exports/
 │   └── joblens_2026-11-25.xlsx
 ├── logs/
-│   └── joblens-20261125.log
+│   └── joblens-cli-20261125.jsonl
 └── backups/
     └── joblens-2026-11-25.db
 ```
@@ -324,10 +331,12 @@ artifacts/
 | Data | Default | Config |
 |---|---|---|
 | Run artifacts (HTML/screenshots/traces) | 30 days | `Storage:RetentionDays` |
-| Logs | 90 days | Serilog rolling |
+| Logs | 90 days | `Logging:RetentionDays` + Serilog rolling |
 | Postings | 180 days inactive | `Storage:PostingRetentionDays` |
 | Exports | Manual | User-managed |
 | Browser profiles | Until reset | Manual |
+
+Cleanup runs at startup and daily: it deletes expired artifacts/temp files, skips the active run, and logs `BytesFreed`/`FilesDeleted`/`SkippedActive`. Serilog owns log retention; do not delete an open log file manually. Low disk fails the next write with `STORAGE_LOW_DISK` rather than filling the volume.
 
 ---
 
@@ -376,10 +385,23 @@ sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25
 | `page-001.html` | Exact DOM at the time of failure. |
 | `screenshot-001.png` | Visual wall/state. |
 | `trace.zip` | Playwright timeline (DOM snapshots, network, actions). |
-| `logs/joblens-*.log` | Structured events with `RunId`/`Source`. |
+| `logs/joblens-cli-*.jsonl` | Structured JSON events with `RunId`/`Source`/`TraceId`. |
 | `runs show <id>` | Human-readable summary + artifact paths. |
 
-**Redaction:** cookies, authorization headers, and form values are never logged. HTML may contain page data; treat it as sensitive.
+Each line is one compact JSON event. Standard enrichers add `MachineName`, `EnvironmentName`, `ProcessId`, `ProcessName`, `ThreadId`, `TraceId`, `SpanId`, `AssemblyName`, and `AssemblyVersion`; run scopes add `RunId`, `Source`, and `JobId`.
+
+```bash
+# Follow one run across pages and HTTP calls
+jq -c 'select(.RunId == "01J...")' artifacts/logs/joblens-cli-*.jsonl
+
+# Find challenge and retry events
+jq -c 'select(.Level == "Warning" and (.ChallengeKind or .Attempt))' artifacts/logs/joblens-cli-*.jsonl
+
+# Correlate an API problem trace ID with the file log
+jq -c 'select(.TraceId == "00-...-01")' artifacts/logs/joblens-api-*.jsonl
+```
+
+**Redaction:** cookies, authorization headers, form values, request/response bodies, and HTML are never logged. HTML artifacts may contain page data; treat them as sensitive. Logs rotate daily and at 100 MB, retain 90 days / 200 files, and use an async sink with backpressure so events are not silently dropped.
 
 ---
 
@@ -398,6 +420,15 @@ sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25
 | Indeed Cloudflare “Just a moment” | Managed challenge | Stop; wait; normal network; no bypass. |
 | LinkedIn auth wall/999 | Rate limit/auth wall | Stop; wait; manual session; consider disabling. |
 | `database is locked` | Concurrent writer/long transaction | One writer; WAL; `busy_timeout`; retry the operation. |
+| `No space left on device` / `STORAGE_LOW_DISK` | Disk full or retention too loose | Free space; lower artifact/log retention; check `MinimumFreeDiskBytes`; do not delete the active run. |
+| `The process cannot access the file` / log locked | Two processes writing the same log role, or a file handle leaked | Use separate `cli`/`api` log prefixes; dispose streams; find the owning process. |
+| `Socket exhaustion` / `An operation on a socket could not be performed` | `new HttpClient()` per call or unbounded connections | Use `IHttpClientFactory`; reuse typed clients; cap `MaxConnectionsPerServer`. |
+| `TaskCanceledException` but no user cancel | Per-attempt or overall timeout | Check `CorrelationId`/`TraceId`; distinguish timeout from Ctrl+C; tune Polly timeout, not retries. |
+| `circuit open` / repeated 429/5xx | Upstream API unstable or rate limited | Honor `Retry-After`; reduce concurrency; check `joblens.http.circuit_open`; do not bypass the breaker. |
+| Working set grows across runs | Unbounded queue/cache, large HTML in memory, or leaked browser process | `dotnet-counters`/`dotnet-gcdump`; bound channels; stream artifacts; dispose page/context/browser. |
+| Cannot delete artifacts on Windows | File handle still open | Dispose browser/streams/traces; stop the owning run; retry cleanup after exit. |
+| `joblens.log.async_buffer_used` high or missing final logs | Log flood or shutdown without flush | Keep `blockWhenFull: true`; call `Log.CloseAndFlush()`; reduce Debug logging. |
+| `joblens.db-wal` keeps growing | Long read transaction or no checkpoint | Keep transactions short; `PRAGMA wal_checkpoint(TRUNCATE)` on shutdown/backup; one writer. |
 | `no such table` | Migrations not applied | `joblens db migrate`. |
 | xUnit tests not discovered | Missing adapter/test SDK or library project | Add `xunit.runner.visualstudio` + `Microsoft.NET.Test.Sdk`; set `OutputType=Exe`. |
 | `dotnet test` hangs | Browser test waiting forever | Add timeouts; check fixture server; run with `--blame-hang`. |

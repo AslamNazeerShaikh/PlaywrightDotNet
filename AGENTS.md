@@ -4,6 +4,7 @@
 - Use explicit constructor-injected use-case handlers; call them directly from CLI commands and API endpoints.
 - Use the project patterns: `Result<T>` for expected failures, validated Options at the composition root, Specifications for reusable query criteria, and RFC 9457 Problem Details at the API edge.
 - Read [docs/14-application-patterns.md](docs/14-application-patterns.md) before adding an application abstraction or error contract.
+- Runtime rules: Serilog message templates and redaction, global exception handling, `IHttpClientFactory` + Polly for HTTP, `CancellationToken` on every I/O boundary, `using`/`await using`, bounded queues, disk checks. See [docs/15-runtime-hardening.md](docs/15-runtime-hardening.md).
 
 ## Commits
 

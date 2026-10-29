@@ -50,7 +50,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 |---|---|---|
 | `JobLens.Domain` | Aggregates, value objects, invariants, policies, domain events. Pure C#. | BCL only |
 | `JobLens.Application` | Use cases, ports, orchestration, Result pattern, specifications, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
-| `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML |
+| `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, HTTP clients/resilience, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML, Polly (via `Microsoft.Extensions.Http.Resilience`) |
 | `JobLens.Cli` | Composition root: commands, DI, configuration, logging, exit codes. | Application, Infrastructure, Hosting, Serilog, System.CommandLine |
 | `JobLens.TestKit` | Builders, fakes, fixture server helpers, test data. | Domain, Application |
 | `JobLens.Domain.Tests` | Pure unit tests. | Domain, TestKit, xUnit |
@@ -100,15 +100,24 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `Microsoft.Extensions.Hosting` | `10.0.14` | CLI | DI, configuration, logging, lifetime. |
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
 | `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | CLI, Infrastructure | Options pattern binding + DataAnnotations validation. |
-| `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | Future API fast path / health probes. |
+| `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | `IHttpClientFactory` for the optional API fast path / health probes. |
+| `Microsoft.Extensions.Http.Resilience` | `10.0.0` | Infrastructure | Polly v8 HTTP retry, circuit breaker, timeout, fallback. |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Browser automation, tracing, persistent contexts. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Explicit provider dependency / pragmas. |
 | `AngleSharp` | `1.8.6` | Infrastructure | HTML parsing with CSS selectors. |
 | `ClosedXML` | `0.105.1` | Infrastructure | Excel export with hyperlinks. |
-| `Serilog.AspNetCore` | `10.0.0` | CLI | Structured logging integration. |
-| `Serilog.Sinks.File` | `7.0.0` | CLI | Rolling file logs. |
+| `Serilog.AspNetCore` | `10.0.0` | CLI, API | Structured logging, request logging, console + file integration. |
+| `Serilog.Sinks.File` | `7.0.0` | CLI, API | Daily rolling JSON text logs with retention. |
+| `Serilog.Sinks.Async` | `2.1.0` | CLI, API | Keep file I/O off the request/run thread. |
+| `Serilog.Enrichers.Environment` | `3.0.1` | CLI, API | Machine and environment names. |
+| `Serilog.Enrichers.Process` | `3.0.0` | CLI, API | Process ID and name. |
+| `Serilog.Enrichers.Thread` | `4.0.0` | CLI, API | Thread ID for pool diagnostics. |
+| `Serilog.Enrichers.Span` | `3.1.0` | CLI, API | `TraceId` / `SpanId` correlation. |
+| `Serilog.Enrichers.AssemblyName` | `2.0.0` | CLI, API | Application/assembly version. |
+| `Serilog.Exceptions` | `8.4.0` | CLI, API | Detailed exception properties. |
+| `Serilog.Enrichers.Demystifier` | `1.0.3` | CLI, API | Readable async stack traces. |
 | `System.CommandLine` | `2.0.14` | CLI | Command parsing, help, validation. |
 | `xunit.v3` | `4.0.2` | All test projects | Test framework + assertions. |
 | `xunit.runner.visualstudio` | `4.0.1` | All test projects | `dotnet test` / VS Test Explorer. |
@@ -119,6 +128,7 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `coverlet.collector` | `10.1.0` | Test projects | Cross-platform coverage. |
 | `Microsoft.Extensions.TimeProvider.Testing` | `10.11.0` | Tests | `FakeTimeProvider`. |
 | `Verify.XunitV3` | `33.3.4` | Infrastructure tests (optional) | Snapshot parser output. |
+| `Serilog.Sinks.InMemory` | `2.0.0` | Test projects | Assert structured log properties and redaction. |
 | `MinVer` | `8.0.0` | All projects (optional) | SemVer from git tags. |
 
 **Deliberately absent**
@@ -127,8 +137,9 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 - `AutoMapper` — explicit mapping is clearer and faster.
 - `FluentValidation` — domain guards, request validation, and options validation are enough.
 - `Ardalis.Specification` and similar — a small in-repo `Specification<T>` base is enough for the query criteria we have.
-- `Polly` — a small, tested retry policy is enough; fewer dependencies.
+- `Polly` as a direct package — HTTP resilience is consumed through `Microsoft.Extensions.Http.Resilience` (Polly v8). Add raw Polly only for a measured non-HTTP pipeline.
 - `Dapper` — EF Core handles both writes and read models.
+- `Seq`/ELK/OpenTelemetry exporters — local JSON logs are the v1 baseline; add centralized telemetry only when a real requirement appears.
 - `Selenium` — only if real Safari becomes mandatory.
 - `FluentAssertions` — xUnit assertions are sufficient; avoid the v8 license question.
 - `Moq` — NSubstitute avoids sponsor/license ambiguity.
@@ -191,6 +202,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
@@ -199,6 +211,14 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="ClosedXML" Version="0.105.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageVersion Include="Serilog.Enrichers.Process" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
+    <PackageVersion Include="Serilog.Enrichers.AssemblyName" Version="2.0.0" />
+    <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
+    <PackageVersion Include="Serilog.Enrichers.Demystifier" Version="1.0.3" />
     <PackageVersion Include="System.CommandLine" Version="2.0.14" />
 
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
@@ -210,6 +230,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageVersion Include="Verify.XunitV3" Version="33.3.4" />
+    <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 </Project>
@@ -267,7 +288,8 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
       "ArtifactsRoot": "artifacts",
       "ProfilesRoot": "artifacts/profiles",
       "RetentionDays": 30,
-      "PostingRetentionDays": 180
+      "PostingRetentionDays": 180,
+      "MinimumFreeDiskBytes": 1073741824
     },
     "Browser": {
       "DefaultEngine": "Chromium",
@@ -280,7 +302,10 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
       "Timezone": "Asia/Kolkata",
       "ViewportWidth": 1366,
       "ViewportHeight": 768,
-      "BlockTrackers": false
+      "BlockTrackers": false,
+      "MaxHtmlBytes": 10485760,
+      "MaxScreenshotBytes": 5242880,
+      "MaxTraceBytes": 104857600
     },
     "Compliance": {
       "AcknowledgeSourceRisk": false,
@@ -338,7 +363,9 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
     },
     "Logging": {
       "MinimumLevel": "Information",
-      "FilePath": "artifacts/logs/joblens-.log"
+      "FilePath": "artifacts/logs/joblens-.jsonl",
+      "RetentionDays": 90,
+      "FileSizeLimitBytes": 104857600
     }
   }
 }
@@ -412,6 +439,7 @@ Full rules and test cases: [Application Patterns §4](14-application-patterns.md
 | `4` | Rate limited; cooldown active. |
 | `5` | Source unavailable / circuit open. |
 | `6` | Data validation/parse failure (run may be partial). |
+| `7` | Storage full / I/O failure (run may be partial). |
 | `130` | Cancelled by Ctrl+C. |
 
 Exit codes matter for schedulers: a challenge (`3`) should not be treated as a generic crash, and a rate limit (`4`) should not trigger an immediate retry.
@@ -611,6 +639,13 @@ jobs:
 - Exceptions for programmer/invariant errors; `Result<T>` for expected operational outcomes.
 - Query criteria use specifications when reusable; no `IQueryable` leakage.
 - API errors use one RFC 9457 Problem Details mapper.
+- No `new HttpClient()` per call; use `IHttpClientFactory` and typed clients. Polly owns HTTP retries; browser navigation keeps its explicit policy.
+- Async all the way; `CancellationToken` on every I/O boundary; no `.Result`, `.Wait()`, or `Task.Run` for I/O.
+- `using`/`await using` for owned resources; no unbounded channels, queues, or caches.
+- Serilog message templates only; no interpolation, PII, cookies, auth headers, or full page bodies in logs.
+- Check free disk before writes; enforce artifact/log retention; never call `GC.Collect()`.
+
+Full runtime rules and code sketches: [Runtime Hardening](15-runtime-hardening.md).
 - Structured logs with named properties; never interpolate secrets.
 - Public ports get XML docs explaining invariants and failure semantics.
 - Comments explain **why**, not **what**.

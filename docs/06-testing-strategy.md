@@ -522,7 +522,7 @@ Builders keep tests readable and make new required fields cheap to add.
 
 - Required options are enforced with actionable errors.
 - Invalid values (bad source, zero pages, unsafe caps) exit with code `2`.
-- `scrape` maps run outcomes to the documented exit codes (`0/3/4/5/6`).
+- `scrape` maps run outcomes to the documented exit codes (`0/3/4/5/6/7`).
 - `--dry-run` never writes to the database (verify with a fake/spy).
 - `--help` lists commands and examples.
 - Cancellation maps to `130`.
@@ -530,10 +530,21 @@ Builders keep tests readable and make new required fields cheap to add.
 ### 7.5 Application patterns
 
 - **Result:** every handler branch returns `IsSuccess` or the expected `Error.Code`; cancellation still throws; no expected failure is tested through an exception.
-- **Options:** invalid caps, `minDelay > maxDelay`, LinkedIn enabled without consent, and non-writable paths fail validation; `ValidateOnStart` prevents the host from starting.
+- **Options:** invalid caps, `minDelay > maxDelay`, LinkedIn enabled without consent, non-writable paths, zero log retention, and non-positive file-size limits fail validation; `ValidateOnStart` prevents the host from starting.
 - **Specifications:** `IsSatisfiedBy` boundary cases; `And`/`Or`/`Not` composition; SQLite integration asserts rows; `ToQueryString()` proves server translation.
 - **Problem Details:** each `ErrorKind` maps to the documented status and `application/problem+json`; `code` and `traceId` are present; `500` bodies never contain stack traces, SQL, cookies, or paths; validation errors use request field names.
 - **No CQRS/MediatR:** an architecture test (Phase 0) fails if `MediatR` or a banned namespace appears.
+
+### 7.6 Runtime hardening
+
+- **Serilog:** assert structured properties, `CorrelationId`, `TraceId`, and redaction; assert no cookie/authorization value appears in the sink.
+- **Global exceptions:** `OperationCanceledException` is not logged as an error; API `500` carries `traceId` and no stack trace; CLI exit codes match the contract.
+- **Polly:** fake `HttpMessageHandler`; assert retry counts, `Retry-After`, no retry for POST/4xx, circuit opening, timeout mapping, and fallback flags.
+- **Cancellation:** `OperationCanceledException` propagates; no partial artifact remains; partial results are kept where specified.
+- **Disposal:** count `DisposeAsync` calls; temp files are gone; SQLite/log/profile handles are released; artifact directory can be deleted on Windows.
+- **Disk:** `IDiskSpace` fake returns low space; handler returns `STORAGE_LOW_DISK` before writing.
+- **Soak:** 10 fixture runs; bounded file count, stable memory, no orphan browser processes, bounded WAL.
+- **Static analysis:** `CA1848`, `CA2000`, `CA2007`, `CA2016`, and `CA1031` are enforced in `.editorconfig`.
 
 ---
 

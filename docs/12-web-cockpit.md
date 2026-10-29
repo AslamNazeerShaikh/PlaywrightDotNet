@@ -664,7 +664,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 - Base path: `/api/v1`.
 - JSON only; UTF-8; ISO 8601 UTC timestamps.
 - IDs are opaque strings (GUID or ULID).
-- Errors use RFC 9457 Problem Details.
+- Errors use RFC 9457 Problem Details; `X-Correlation-Id` is returned on every response and `traceId` is included in problems.
 - The API binds `127.0.0.1` and requires a bearer token from the BFF.
 - No CORS: the browser never calls the API directly.
 - Long-running work returns `202 Accepted` + a run/resource ID.
@@ -796,6 +796,7 @@ Every error uses **RFC 9457 Problem Details** with content type `application/pro
 | `429` | `RATE_LIMITED`, `QUOTA_EXCEEDED` |
 | `502` | `SOURCE_CHANGED` |
 | `503` | `SOURCE_UNAVAILABLE`, `SOURCE_CIRCUIT_OPEN` |
+| `507` | `STORAGE_LOW_DISK` |
 | `500` | `INTERNAL_ERROR` |
 
 - `code` is the UI contract; `title` and `detail` are human-readable and may change.
@@ -805,7 +806,7 @@ Every error uses **RFC 9457 Problem Details** with content type `application/pro
 - The BFF forwards the problem body and content type unchanged.
 - Use `AddProblemDetails()`, `UseExceptionHandler()`, and one Result-to-Problem mapper. Endpoints do not hand-build error JSON.
 
-Full contract, mapping table, and tests: [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern).
+Full contract, mapping table, and tests: [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern). Log correlation, retention, and redaction: [Runtime Hardening §2](15-runtime-hardening.md#2-structured-logging-with-serilog).
 
 ### 12.6 Pagination, sorting, idempotency
 
@@ -1179,6 +1180,8 @@ Techniques: route-level code splitting, lazy charts/diagnostics, virtualized tab
 | BFF | `bun test` + `Bun.serve` on an ephemeral port | Proxy, token injection, CSRF, SSE streaming, timeouts |
 | Component | `bun test` + happy-dom + Testing Library | Forms, tables, status badges, timeline, command palette |
 | Contract | Generated OpenAPI types + zod fixtures | API drift and event schema drift |
+| API errors | Generated types + fixtures | Problem Details status/`code`/`traceId` mapping |
+| Observability | .NET tests + BFF logs | Correlation ID propagation, redaction, no stack traces |
 | E2E | Existing .NET Playwright suite | Critical flows against a real API + built cockpit |
 | Accessibility | Keyboard checks + `@axe-core/react` in dev | Focus order, labels, contrast, reduced motion |
 
@@ -1313,7 +1316,7 @@ The cockpit is interactive; the OS scheduler still runs the CLI for unattended c
 | Step | Duration | Deliverable | Exit criteria |
 |---|---:|---|---|
 | **W0 — Spike & contract** | 2 days | Bun/React/Tailwind/shadcn skeleton; OpenAPI stub; SSE proxy; single binary | `bun ci`, `bun check`, `bun fmt --check`, `bun test`, `bun run build`, `bun run compile` green; no Node installed |
-| **W1 — Shell & read-only** | 3–4 days | App shell, dashboard, runs list, jobs table, health | Read-only cockpit works against a stub or real API; a11y keyboard pass |
+| **W1 — Shell & read-only** | 3–4 days | App shell, dashboard, runs list, jobs table, health, Problem Details error states, correlation ID display | Read-only cockpit works against a stub or real API; a11y keyboard pass |
 | **W2 — Commands & live runs** | 4–5 days | Profiles CRUD, start/cancel/resume, SSE timeline, idempotency | Start → live events → terminal state; duplicate command is safe |
 | **W3 — Sessions, exports, diagnostics** | 4–5 days | Session states, challenge artifacts, exports, quotas, logs | Challenge drill shows artifact and manual instructions; export downloads |
 | **W4 — Hardening** | 3–4 days | Auth/CSRF/CSP, tests, budgets, packaging, docs | Security checklist; budgets met; release notes |

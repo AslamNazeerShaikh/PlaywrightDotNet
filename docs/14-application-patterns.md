@@ -148,6 +148,7 @@ public enum ErrorKind
     CoolingDown,
     SourceChanged,
     Unavailable,
+    Storage,
     Unexpected
 }
 
@@ -204,6 +205,7 @@ Codes use uppercase snake case and are stable across releases. The cockpit maps 
 | `CoolingDown` | `SOURCE_COOLING_DOWN` | `423` |
 | `SourceChanged` | `SOURCE_CHANGED` | `502` |
 | `Unavailable` | `SOURCE_UNAVAILABLE` | `503` |
+| `Storage` | `STORAGE_LOW_DISK` | `507` |
 | `Unexpected` | `INTERNAL_ERROR` | `500` |
 
 `ErrorKind` is an application concept, not an HTTP status. The API edge performs the mapping; the CLI maps the same kinds to exit codes and stderr messages.
@@ -551,6 +553,7 @@ public static IResult ToProblem(this Error error)
         ErrorKind.CoolingDown => StatusCodes.Status423Locked,
         ErrorKind.SourceChanged => StatusCodes.Status502BadGateway,
         ErrorKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
+        ErrorKind.Storage => StatusCodes.Status507InsufficientStorage,
         _ => StatusCodes.Status500InternalServerError
     };
 

@@ -69,13 +69,16 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 | **SQLite + EF Core 10** | `10.0.14` | Zero-ops local database, cross-platform, transactional, easy backup, good enough for personal volume. PostgreSQL remains an option later. |
 | **System.CommandLine** | `2.0.14` | Stable, testable CLI parsing without a heavy framework. |
 | **Microsoft.Extensions.Hosting** | `10.0.14` | DI, configuration, logging, cancellation, lifetime — the ASP.NET Core patterns you already know. |
-| **Serilog** | `10.0.0` | Structured logs with run/source correlation; file + console sinks. |
+| **Serilog** | `10.0.0` | Structured JSON file logs with enrichers, daily retention, correlation, and redaction; console + async file sinks. |
+| **Polly v8** | via `Microsoft.Extensions.Http.Resilience` `10.0.0` | HTTP retry, circuit breaker, timeout, and safe fallback for optional API clients; browser navigation keeps its own stop-on-wall policy. |
 | **AngleSharp** | `1.8.6` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
 | **ClosedXML** | `0.105.1` | Cross-platform Excel with hyperlinks; no Office dependency. |
 
-Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Polly, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
+Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
 
 Application code uses explicit use-case handlers and four small patterns: **Result**, **Options**, **Specification**, and **Problem Details**. See [Application Patterns](14-application-patterns.md).
+
+Operational baseline: Serilog JSON logs with 90-day retention and enrichers, global exception handling, `IHttpClientFactory` + Polly v8 HTTP resilience, and strict async/disposal/disk rules. See [Runtime Hardening](15-runtime-hardening.md).
 
 > **Browser reality:** Playwright drives Chromium, Firefox, and WebKit (Safari's engine) on macOS/Linux/Windows. It does **not** automate real Safari; WebKit is the closest cross-platform proxy. Real Safari automation would require a separate macOS SafariDriver adapter. Windows 10 and macOS 13 or older are outside Playwright's supported matrix.
 
@@ -205,6 +208,8 @@ v1 is successful when all of these are true:
 | Browser/OS matrix breakage | Medium | Medium | Pin Playwright; CI matrix; monthly upgrade; Docker for Linux |
 | Session/profile loss | Medium | Medium | Persistent profiles; backup; explicit re-login flow; profile lock handling |
 | SQLite write contention | Low | Low | Single writer; WAL; busy timeout; one run at a time |
+| Log/artifact growth fills disk | Medium | Medium | Daily rotation; 90/30-day retention; size caps; free-space checks |
+| Socket/handle/browser leaks | Medium | Medium | `IHttpClientFactory`, `await using`, bounded queues, soak test |
 | Scope creep into auto-apply | Medium | High | Explicit non-goals; separate future decision; no v1 code paths |
 | Flaky live tests | High | Low | Live tests are manual/nightly, not CI; deterministic fixtures for CI |
 | Over-engineering | Medium | Medium | YAGNI checklist; vertical slices; no CQRS/MediatR/AutoMapper/microservices |

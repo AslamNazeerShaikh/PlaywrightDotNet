@@ -15,6 +15,7 @@
 | [0009](0009-test-pyramid-coverage-gates.md) | Test pyramid + risk-based coverage gates | Accepted |
 | [0010](0010-react-bun-cockpit.md) | React + Bun web cockpit, no Node.js | Accepted |
 | [0011](0011-no-cqrs-mediatr.md) | Explicit use-case handlers, no CQRS or MediatR | Accepted |
+| [0012](0012-serilog-polly-runtime-hardening.md) | Serilog logging + Polly HTTP resilience runtime baseline | Accepted |
 
 ## Conventions
 

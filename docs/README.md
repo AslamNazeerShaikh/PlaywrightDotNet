@@ -42,7 +42,8 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 12 | [Web Cockpit (v2)](12-web-cockpit.md) | What is the React + Bun control plane, how does it command the .NET API, and how is it built, secured, and tested? |
 | 13 | [Conventional Commits](13-conventional-commits.md) | How are commit messages written, reviewed, and validated? |
 | 14 | [Application Patterns](14-application-patterns.md) | How do Result, Options, Specification, and Problem Details work — and why is there no CQRS/MediatR? |
-| 15 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
+| 15 | [Runtime Hardening](15-runtime-hardening.md) | How do structured logs, global errors, Polly resilience, async/cancellation, and resource cleanup work? |
+| 16 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
 
 ---
 
@@ -60,6 +61,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | Export | CSV + Excel ([ClosedXML](04-solution-and-tooling.md#3-package-matrix) `0.105.1`) |
 | Control plane (v2) | React `19.3.1` + TypeScript `7.0.2` + Tailwind `4.3.3` + shadcn/ui `4.23.0`; Bun `1.4.4` runtime/package manager/BFF; no Node.js |
 | Application patterns | Explicit use-case handlers; Result, Options, Specification, Problem Details; **no CQRS/MediatR** ([details](14-application-patterns.md)) |
+| Logging & resilience | Serilog compact JSON logs, daily rolling + 90-day retention, standard enrichers; global exception handling; `IHttpClientFactory` + Polly v8 retry/circuit/timeout/fallback ([details](15-runtime-hardening.md)) |
 | Browser policy | Headed first contact, persistent profile per source, one run at a time |
 | Anti-bot policy | Low-signal, consistent, polite, stop-on-wall. **No CAPTCHA solving, no fingerprint spoofing, no auth-wall bypass, no proxy rotation to evade bans.** |
 | Default sources | Naukri enabled; Indeed opt-in; LinkedIn high-risk opt-in and disabled by default |
@@ -142,3 +144,4 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Initial research, architecture, domain model, gameplan, testing, anti-bot, site playbooks, runbook, and ADRs created. |
 | 2026-10-29 | Added the v2 web cockpit specification (React 19, Bun 1.4.4, Tailwind 4.3, shadcn/ui; no Node.js) and ADR-0010. |
 | 2026-10-29 | Added the application-patterns guide (Result, Options, Specification, Problem Details) and ADR-0011 rejecting CQRS/MediatR. |
+| 2026-10-29 | Added the runtime-hardening guide (Serilog enrichers/file retention, global exceptions, Polly HTTP resilience, async/disposal/resource rules) and ADR-0012. |
