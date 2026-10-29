@@ -33,6 +33,8 @@ Refs: #42
 |---|---|
 | `type` | A noun describing the change. Lowercase in this project. |
 | `(scope)` | Optional noun in parentheses. Lowercase in this project. Prefer the narrowest area. |
+
+> The specification requires types and scopes to be treated case-insensitively. The validator accepts `Feat`, `FEAT`, and `feat`; the lowercase forms above are a project style choice, not a validity rule.
 | `!` | Optional. Marks a breaking change. Placed immediately before the colon. |
 | `: ` | Required colon followed by one space. |
 | `description` | Required short summary, immediately after the colon and space. |
@@ -130,7 +132,7 @@ compliance, storage, exports, docs, build, ci, deps, graph
 
 Use a slash for a sub-area when it improves clarity: `sources/naukri`, `sources/indeed`.
 
-The validator enforces lowercase scopes and allows only letters, digits, `.`, `_`, `/`, and `-`.
+The validator accepts scopes case-insensitively, as the specification requires, and allows only letters, digits, `.`, `_`, `/`, and `-` after lowercasing.
 
 ---
 

@@ -42,9 +42,13 @@ if [ -z "$header" ]; then
 fi
 
 types='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test'
-pattern="^(${types})(\([a-z0-9][a-z0-9._/-]*\))?!?: .+"
+pattern="^(${types})(\([a-z0-9][a-z0-9._/-]*\))?!?: [^ ].*"
 
-if ! printf '%s\n' "$header" | grep -Eq "$pattern"; then
+# The specification forbids treating types and scopes as case-sensitive, so
+# match the header lowercased. Lowercase remains the project style.
+header_lower=$(printf '%s' "$header" | tr '[:upper:]' '[:lower:]')
+
+if ! printf '%s\n' "$header_lower" | grep -Eq "$pattern"; then
   cat >&2 <<EOF
 ERROR: commit message does not follow Conventional Commits.
 
