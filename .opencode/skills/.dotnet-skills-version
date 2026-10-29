@@ -1,0 +1,12 @@
+source: https://github.com/dotnet/skills
+commit: 95e7d0c
+vendored: 2026-10-29
+plugins:
+  dotnet: 4
+  dotnet-test: 22
+  dotnet-msbuild: 20
+  dotnet-data: 1
+  dotnet-diag: 4
+  dotnet-aspnetcore: 1
+skills: 52
+pruned: MSTest-only, MTP hot reload, mobile symbolication, legacy CPM conversion, UI-scaffolding

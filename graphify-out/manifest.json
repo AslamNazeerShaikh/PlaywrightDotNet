@@ -1,0 +1,164 @@
+{
+  ".opencode/opencode.json": {
+    "mtime": 1793276898.4033322,
+    "seen": 1793280759.20158,
+    "ast_hash": "5bf8ae877d6a513cb85e8b8d90395e3c",
+    "semantic_hash": "5bf8ae877d6a513cb85e8b8d90395e3c"
+  },
+  "AGENTS.md": {
+    "mtime": 1793280361.295933,
+    "seen": 1793280759.2015831,
+    "ast_hash": "f36539ecc9af68f33ebd72770ce4a19e",
+    "semantic_hash": "f36539ecc9af68f33ebd72770ce4a19e"
+  },
+  "README.md": {
+    "mtime": 1793267935.388537,
+    "seen": 1793280759.2015848,
+    "ast_hash": "076ece27f3319ba87ca60e7b372cb8a9",
+    "semantic_hash": "076ece27f3319ba87ca60e7b372cb8a9"
+  },
+  "docs/00-executive-summary.md": {
+    "mtime": 1793278457.3666298,
+    "seen": 1793280759.201586,
+    "ast_hash": "81c4422211d3eeb9f610ca2b3406d457",
+    "semantic_hash": "81c4422211d3eeb9f610ca2b3406d457"
+  },
+  "docs/01-research-analysis.md": {
+    "mtime": 1793268165.64697,
+    "seen": 1793280759.201586,
+    "ast_hash": "0d845867ff57e9800e24f5460a4f09df",
+    "semantic_hash": "0d845867ff57e9800e24f5460a4f09df"
+  },
+  "docs/02-architecture.md": {
+    "mtime": 1793281067.4890785,
+    "seen": 1793281381.434226,
+    "ast_hash": "f74d960cf6748418b39bcdddf1a9b170",
+    "semantic_hash": "f74d960cf6748418b39bcdddf1a9b170"
+  },
+  "docs/03-domain-model.md": {
+    "mtime": 1793268201.880213,
+    "seen": 1793280759.201588,
+    "ast_hash": "8a12280624ee5fd11f31ab189deaecd3",
+    "semantic_hash": "8a12280624ee5fd11f31ab189deaecd3"
+  },
+  "docs/04-solution-and-tooling.md": {
+    "mtime": 1793278457.3628597,
+    "seen": 1793280759.201588,
+    "ast_hash": "f1c8abed745f940e435bd0c3550d7e64",
+    "semantic_hash": "f1c8abed745f940e435bd0c3550d7e64"
+  },
+  "docs/05-gameplan.md": {
+    "mtime": 1793281067.4896781,
+    "seen": 1793281381.434228,
+    "ast_hash": "d651ffe252c7307522f69ce8380aeab6",
+    "semantic_hash": "d651ffe252c7307522f69ce8380aeab6"
+  },
+  "docs/06-testing-strategy.md": {
+    "mtime": 1793268265.324135,
+    "seen": 1793280759.20159,
+    "ast_hash": "053160245da21c645da7c90b4523b6d8",
+    "semantic_hash": "053160245da21c645da7c90b4523b6d8"
+  },
+  "docs/07-anti-bot-and-compliance.md": {
+    "mtime": 1793281067.4896233,
+    "seen": 1793281381.434229,
+    "ast_hash": "479c9821eebdd0a733534cdba0763c99",
+    "semantic_hash": "479c9821eebdd0a733534cdba0763c99"
+  },
+  "docs/08-site-playbooks.md": {
+    "mtime": 1793281067.4890792,
+    "seen": 1793281381.43423,
+    "ast_hash": "9060bc6156c560f6ad37b472981c269b",
+    "semantic_hash": "9060bc6156c560f6ad37b472981c269b"
+  },
+  "docs/09-operations-runbook.md": {
+    "mtime": 1793268090.1661935,
+    "seen": 1793280759.201591,
+    "ast_hash": "a19d11e47fa8563a8cd702b703b1e7d3",
+    "semantic_hash": "a19d11e47fa8563a8cd702b703b1e7d3"
+  },
+  "docs/10-adr/0001-dotnet-10-lts.md": {
+    "mtime": 1793267576.7372582,
+    "seen": 1793280759.201592,
+    "ast_hash": "4d5035db22d0a087736b205daf31d2dc",
+    "semantic_hash": "4d5035db22d0a087736b205daf31d2dc"
+  },
+  "docs/10-adr/0002-xunit-v3.md": {
+    "mtime": 1793267576.738043,
+    "seen": 1793280759.2015932,
+    "ast_hash": "389cbfe4b3f163109838cf4f4dc9a0c5",
+    "semantic_hash": "389cbfe4b3f163109838cf4f4dc9a0c5"
+  },
+  "docs/10-adr/0003-playwright-dotnet.md": {
+    "mtime": 1793267589.3722556,
+    "seen": 1793280759.2015932,
+    "ast_hash": "2550a6e637f2b9787e74b41099eb298a",
+    "semantic_hash": "2550a6e637f2b9787e74b41099eb298a"
+  },
+  "docs/10-adr/0004-modular-monolith-clean-architecture.md": {
+    "mtime": 1793267589.3722553,
+    "seen": 1793280759.201594,
+    "ast_hash": "30ca1f1722411b5876c62c4b6ef3e05d",
+    "semantic_hash": "30ca1f1722411b5876c62c4b6ef3e05d"
+  },
+  "docs/10-adr/0005-sqlite-ef-core.md": {
+    "mtime": 1793267589.3737829,
+    "seen": 1793280759.201594,
+    "ast_hash": "0e7a2d5a8a90ae81bb18f474f192a794",
+    "semantic_hash": "0e7a2d5a8a90ae81bb18f474f192a794"
+  },
+  "docs/10-adr/0006-browser-first-optional-api-fast-path.md": {
+    "mtime": 1793267603.6886218,
+    "seen": 1793280759.2015948,
+    "ast_hash": "6aa6b6e0ee8d8571c382dd06f20195d4",
+    "semantic_hash": "6aa6b6e0ee8d8571c382dd06f20195d4"
+  },
+  "docs/10-adr/0007-compliance-first-low-signal-automation.md": {
+    "mtime": 1793267603.6886222,
+    "seen": 1793280759.2015948,
+    "ast_hash": "697e235c0a294daa3fb776b8d46c8502",
+    "semantic_hash": "697e235c0a294daa3fb776b8d46c8502"
+  },
+  "docs/10-adr/0008-cli-first-api-later.md": {
+    "mtime": 1793278471.7192678,
+    "seen": 1793280759.201596,
+    "ast_hash": "5d876a773119e3d01e80e6548a84e932",
+    "semantic_hash": "5d876a773119e3d01e80e6548a84e932"
+  },
+  "docs/10-adr/0009-test-pyramid-coverage-gates.md": {
+    "mtime": 1793267603.6898344,
+    "seen": 1793280759.201596,
+    "ast_hash": "6f233ec68d66fd36482f7078a06f0ddd",
+    "semantic_hash": "6f233ec68d66fd36482f7078a06f0ddd"
+  },
+  "docs/10-adr/0010-react-bun-cockpit.md": {
+    "mtime": 1793278356.6574569,
+    "seen": 1793280759.201597,
+    "ast_hash": "a1f4903dfe6036922c4b37df504ae544",
+    "semantic_hash": "a1f4903dfe6036922c4b37df504ae544"
+  },
+  "docs/10-adr/README.md": {
+    "mtime": 1793278367.336692,
+    "seen": 1793280759.201598,
+    "ast_hash": "93df09fb11e49fb09eb6d5d49833cf7a",
+    "semantic_hash": "93df09fb11e49fb09eb6d5d49833cf7a"
+  },
+  "docs/11-open-decisions.md": {
+    "mtime": 1793278457.3627996,
+    "seen": 1793280759.201598,
+    "ast_hash": "c3259b3793bed2e26261a990038cccdb",
+    "semantic_hash": "c3259b3793bed2e26261a990038cccdb"
+  },
+  "docs/12-web-cockpit.md": {
+    "mtime": 1793280288.0829835,
+    "seen": 1793280759.201599,
+    "ast_hash": "7693291193e493f6072ac00b667fdb4b",
+    "semantic_hash": "7693291193e493f6072ac00b667fdb4b"
+  },
+  "docs/README.md": {
+    "mtime": 1793281047.4888537,
+    "seen": 1793281381.434238,
+    "ast_hash": "b4fd35d0ac439f0b87c037de83f1bdba",
+    "semantic_hash": "b4fd35d0ac439f0b87c037de83f1bdba"
+  }
+}
