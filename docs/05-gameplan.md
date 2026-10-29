@@ -36,7 +36,7 @@ flowchart LR
 
 | Phase | Dates | Goal | Key deliverables | Exit criteria |
 |---|---|---|---|---|
-| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0013, `doctor` stub, application-pattern contracts (Result/Error, options records, specification base), Serilog file logging + global exception skeleton, AOT/trim analyzers + `JobLens.AotSmoke` skeleton. | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted; logs land in `artifacts/logs` with retention; AOT smoke publishes. |
+| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0014, `doctor` stub, application-pattern contracts (Result/Error, options records, specification base), Serilog file logging + global exception skeleton. | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted; logs land in `artifacts/logs` with retention. |
 | **1 — Domain + Application** | Nov 5–11 (5d) | Model the core without a browser. | Value objects, aggregates, state machines, policies, ports, Result/Error contracts, specification base, `RunScrapeHandler`, fakes. | Domain/application tests pass; architecture tests pass; no Playwright/EF references in Domain/Application. |
 | **2 — Browser + Session** | Nov 12–18 (5d) | Make one real browser session safe and observable. | Playwright session factory, persistent profiles, `doctor`, `session login/probe`, challenge detector, artifact capture, E2E fixture server. | Browser matrix smoke green (Chromium/Firefox/WebKit); challenge fixture classified; profile lock handled. |
 | **3 — Naukri slice** | Nov 19–25 (5d) | Prove the full pipeline on a real source. | URL builder, parser, native Next pagination, detail enrichment, SQLite repositories, CSV/Excel export, optional Polly HTTP fast-path client. | One page → DB → CSV; then multi-page run; fixture + live canary; caps/challenge handling; HTTP retries/circuit/fallback tested. |
@@ -99,7 +99,7 @@ gantt
 | Day | Work | Output |
 |---|---|---|
 | Mon | Decide name, license, LinkedIn/Indeed policy; create solution/projects/references; `global.json`, CPM, props, editorconfig. | Repo skeleton builds. |
-| Tue | CI skeleton; `doctor` stub; review ADRs 0001–0013; architecture test skeleton; AOT analyzer gate. | CI green; architecture rule fails on a deliberate violation (then passes); no reflection/AOT warnings in our code. |
+| Tue | CI skeleton; `doctor` stub; review ADRs 0001–0014; architecture test skeleton. | CI green; architecture rule fails on a deliberate violation (then passes). |
 | Wed | Domain value objects: IDs, `SourceKey`, `RunLimits`, `SearchCriteria`; tests first. | 15–25 unit tests. |
 | Thu | `SearchProfile`, `JobPosting`, `ScrapeRun` invariants/state machine; tests. | 30–40 unit tests; no I/O. |
 | Fri | Application ports + `RunScrapeHandler` skeleton with fakes; weekly demo. | Handler test: fake source → fake repo → run state. |
@@ -186,13 +186,11 @@ gantt
 - **E0-S2** As a developer, I can run unit tests and see a clear result.
   - Given the repo, when I run `dotnet test --filter "Category!=Live&Category!=E2E"`, then all non-live tests pass.
 - **E0-S3** As a maintainer, I can see why key decisions were made.
-  - ADRs 0001–0013 exist and link from the docs index.
+  - ADRs 0001–0014 exist and link from the docs index.
 - **E0-S4** As a developer, I can add an application abstraction without reintroducing CQRS/MediatR.
   - The pattern guide and ADR-0011 are linked; the package matrix has no MediatR/CQRS package; the architecture test skeleton names the ban.
 - **E0-S5** As a maintainer, I can diagnose a failed run from one structured log.
   - JSON logs rotate daily with 90-day retention; enrichers add process/thread/trace context; cookies and auth headers are absent; `Log.CloseAndFlush()` runs on exit.
-- **E0-S6** As a maintainer, I can add code without introducing an AOT-hostile pattern.
-  - AOT/trim analyzers are on; no `System.Reflection`, `Activator`, `dynamic`, assembly scanning, reflection JSON/config/validation, or production `Expression.Compile`; `JobLens.AotSmoke` publishes with `PublishAot=true`.
 
 ### E1 — Domain
 
@@ -266,8 +264,6 @@ gantt
 - **E9-S2** As a maintainer, coverage gates and mutation spot-checks catch weak tests.
 - **E9-S3** As a maintainer, failure drills cover timeout/403/429/CAPTCHA/DOM change/DB lock.
 - **E9-S4** As a maintainer, no critical vulnerabilities or secrets are in the release.
-- **E9-S5** As a maintainer, the AOT smoke app publishes on macOS/Linux/Windows CI with zero warnings.
-  - `JobLens.AotSmoke` covers Domain/Application only; Playwright/EF Core are excluded and documented as vendor exceptions.
 - **E9-S5** As a maintainer, v1.0.0 has release notes, runbook, and a rollback plan.
 
 ---
@@ -301,7 +297,6 @@ gantt
 | R12 | Data quality (missing fields) | High | Medium | Validation flags; drop bad cards; parse confidence; raw fields kept | High missing-company rate | You |
 | R13 | Log/artifact growth fills disk | Medium | Medium | Daily rotation; 90/30-day retention; size caps; `MinimumFreeDiskBytes` | Disk usage rises run over run | You |
 | R14 | Socket/handle/browser leaks | Medium | Medium | `IHttpClientFactory`, `await using`, bounded queues, soak test, `dotnet-counters` | Working set/handles grow over 10 runs | You |
-| R15 | Vendor AOT incompatibility (Playwright/EF Core) | High | Low | Documented vendor exceptions; isolate; AOT smoke for our code; normal CLR release | AOT smoke or analyzer regression | You |
 
 ---
 

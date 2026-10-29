@@ -43,7 +43,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 13 | [Conventional Commits](13-conventional-commits.md) | How are commit messages written, reviewed, and validated? |
 | 14 | [Application Patterns](14-application-patterns.md) | How do Result, Options, Specification, and Problem Details work — and why is there no CQRS/MediatR? |
 | 15 | [Runtime Hardening](15-runtime-hardening.md) | How do structured logs, global errors, Polly resilience, async/cancellation, and resource cleanup work? |
-| 16 | [AOT-Friendly Coding](16-aot-and-trimming.md) | Which reflection/dynamic patterns are banned, which vendor exceptions exist, and how is AOT compatibility verified? |
+| 16 | [Library Usage Policy](16-library-usage-policy.md) | How should third-party/first-party libraries be configured, and why is AOT not a design constraint? |
 | 17 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
 
 ---
@@ -63,7 +63,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | Control plane (v2) | React `19.3.1` + TypeScript `7.0.2` + Tailwind `4.3.3` + shadcn/ui `4.23.0`; Bun `1.4.4` runtime/package manager/BFF; no Node.js |
 | Application patterns | Explicit use-case handlers; Result, Options, Specification, Problem Details; **no CQRS/MediatR** ([details](14-application-patterns.md)) |
 | Logging & resilience | Serilog compact JSON logs, daily rolling + 90-day retention, standard enrichers; global exception handling; `IHttpClientFactory` + Polly v8 retry/circuit/timeout/fallback ([details](15-runtime-hardening.md)) |
-| AOT posture | Reflection-free code, source-generated JSON/config, explicit factories; Playwright/EF Core retained as documented vendor exceptions; no NativeAOT release ([details](16-aot-and-trimming.md)) |
+| Library policy | Use documented/recommended configurations; AOT/trimming is not a design constraint. Serilog, DataAnnotations, ClosedXML, Scalar, EF Core, and Playwright are used as designed ([details](16-library-usage-policy.md)) |
 | API testing | [Scalar.AspNetCore](https://scalar.com/products/api-references/integrations/aspnetcore/integration) `2.18.5` at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` `10.0.14` |
 | Browser policy | Headed first contact, persistent profile per source, one run at a time |
 | Anti-bot policy | Low-signal, consistent, polite, stop-on-wall. **No CAPTCHA solving, no fingerprint spoofing, no auth-wall bypass, no proxy rotation to evade bans.** |
@@ -148,5 +148,5 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Added the v2 web cockpit specification (React 19, Bun 1.4.4, Tailwind 4.3, shadcn/ui; no Node.js) and ADR-0010. |
 | 2026-10-29 | Added the application-patterns guide (Result, Options, Specification, Problem Details) and ADR-0011 rejecting CQRS/MediatR. |
 | 2026-10-29 | Added the runtime-hardening guide (Serilog enrichers/file retention, global exceptions, Polly HTTP resilience, async/disposal/resource rules) and ADR-0012. |
-| 2026-10-29 | Added the AOT-friendly coding policy, removed DataAnnotations and Serilog reflection enrichers, accepted `ClosedXML` as a vendor exception for Excel export, and added ADR-0013. |
+| 2026-10-29 | Replaced the AOT-driven policy with the library-usage policy, restored standard Serilog configuration/enrichers, DataAnnotations, ClosedXML, and Scalar defaults, and added ADR-0014. |
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |

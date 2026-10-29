@@ -33,7 +33,7 @@
 | **DIP** | Application defines ports; Infrastructure implements them; CLI wires them. | Architecture tests: no `Microsoft.Playwright`/`Microsoft.EntityFrameworkCore` in Domain/Application. |
 | **DRY** | Shared pacing, retry, URL canonicalization, visibility guards, and validation helpers. | Shared libraries inside Infrastructure; no copy-paste selectors. |
 | **YAGNI** | No microservices, message bus, CQRS/MediatR, AutoMapper, dashboard, auto-apply, or ML in v1. | Scope gate in every phase. |
-| **AOT-friendly** | No reflection, dynamic code, assembly scanning, or reflection-based JSON/config/validation in our code. Playwright/EF Core are vendor exceptions. | AOT/trim analyzers; AOT smoke; PR checklist. |
+| **Libraries as designed** | Use each library’s documented/recommended configuration. AOT/trimming is not a design constraint. | Official docs; package review; no custom replacement for standard features. |
 | **KISS** | CLI + SQLite + one browser at a time. | Deployment and runbook simplicity. |
 | **Fail fast** | Invalid options, missing browser, unsafe compliance settings fail before a run starts. | `IValidateOptions`, `doctor`, startup checks. |
 | **Idempotency** | Upsert by `(source, externalJobId)`; re-running a page never duplicates. | Unique index + repository tests. |
@@ -647,7 +647,7 @@ Options are bound and validated once at the composition root, then consumed as i
 - `ComplianceOptions`
 - `LoggingOptions`
 
-Validate on startup with explicit `IValidateOptions<T>` validators; binding uses the source generator, not reflection:
+Validate on startup with DataAnnotations plus custom `IValidateOptions<T>` validators:
 
 - `maxPages >= 1`, `maxJobs >= 1`, `minDelay <= maxDelay`.
 - Daily caps non-negative.
@@ -811,7 +811,7 @@ Threat model in one line: **the browser profile is the crown jewel; the target s
 - Microservices, message bus, distributed locks, Kubernetes.
 - A generic “scrape any website” framework; only shared primitives + per-source adapters.
 - CQRS command/query buses, MediatR, mediator pipelines, AutoMapper, and FluentValidation pipelines; explicit handlers and validation are clearer at this size.
-- Reflection-based mapping, validation, serialization, configuration binding, and assembly scanning; see the [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
+- Custom replacements for documented library features (logging, validation, Excel, API reference); use the library as designed. See the [Library Usage Policy](16-library-usage-policy.md).
 - Auto-apply, cover-letter generation, recruiter messaging.
 - CAPTCHA solving, fingerprint spoofing, proxy rotation, account rotation.
 - ML ranking, resume tailoring, vector databases.
@@ -846,4 +846,5 @@ The **Sourcing** domain stays job-specific. A future automation case (e.g., form
 - [ADR-0010: React + Bun web cockpit](10-adr/0010-react-bun-cockpit.md)
 - [ADR-0011: Explicit use-case handlers, no CQRS or MediatR](10-adr/0011-no-cqrs-mediatr.md)
 - [ADR-0012: Serilog and Polly runtime hardening](10-adr/0012-serilog-polly-runtime-hardening.md)
-- [ADR-0013: AOT-friendly code, no NativeAOT release](10-adr/0013-aot-friendly-policy.md)
+- [ADR-0013: AOT-friendly code, no NativeAOT release](10-adr/0013-aot-friendly-policy.md) — superseded
+- [ADR-0014: Use libraries as designed](10-adr/0014-use-libraries-as-designed.md)

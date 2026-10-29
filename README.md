@@ -24,7 +24,7 @@ Read the documentation in this order:
 14. [Conventional Commits](docs/13-conventional-commits.md)
 15. [Application patterns](docs/14-application-patterns.md)
 16. [Runtime hardening](docs/15-runtime-hardening.md)
-17. [AOT-friendly coding](docs/16-aot-and-trimming.md)
+17. [Library usage policy](docs/16-library-usage-policy.md)
 18. [ADRs](docs/10-adr/README.md)
 
 ## Verified stack
@@ -46,7 +46,7 @@ A **modular monolith + CLI** that:
 - Optionally enriches details and exports CSV/Excel.
 - Handles anti-bot walls by **stopping, cooling down, and asking a human** — no CAPTCHA solving, fingerprint spoofing, auth-wall bypass, or proxy rotation.
 - Uses explicit use-case handlers — **no CQRS/MediatR** — with Result, Options, Specification, and Problem Details patterns.
-- Keeps application code AOT-friendly: no reflection, dynamic code, assembly scanning, or reflection-based JSON/configuration/validation. Playwright and EF Core are documented vendor exceptions.
+- Uses each library in its documented, recommended configuration; AOT/trimming is not a design constraint.
 - Treats LinkedIn as high-risk and disabled by default.
 
 ## Before implementation

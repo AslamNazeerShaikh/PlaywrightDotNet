@@ -16,7 +16,8 @@
 | [0010](0010-react-bun-cockpit.md) | React + Bun web cockpit, no Node.js | Accepted |
 | [0011](0011-no-cqrs-mediatr.md) | Explicit use-case handlers, no CQRS or MediatR | Accepted |
 | [0012](0012-serilog-polly-runtime-hardening.md) | Serilog logging + Polly HTTP resilience runtime baseline | Accepted |
-| [0013](0013-aot-friendly-policy.md) | AOT-friendly code, no NativeAOT release | Accepted |
+| [0013](0013-aot-friendly-policy.md) | AOT-friendly code, no NativeAOT release | Superseded by 0014 |
+| [0014](0014-use-libraries-as-designed.md) | Use libraries as designed; AOT is not a constraint | Accepted |
 
 ## Conventions
 

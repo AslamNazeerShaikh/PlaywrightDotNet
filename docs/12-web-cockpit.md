@@ -854,19 +854,17 @@ if (app.Environment.IsDevelopment())
         options
             .WithTitle("JobLens API v1")
             .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-            .AddPreferredSecuritySchemes("Bearer")
-            .DisableAgent()
-            .DisableDefaultFonts();
+            .AddPreferredSecuritySchemes("Bearer");
     }).AllowAnonymous();
 }
 ```
 
 - **OpenAPI:** `AddOpenApi()` generates the document; `MapOpenApi()` serves `/openapi/v1.json`. The same document feeds `bun run api:types`.
 - **Scalar:** open `http://127.0.0.1:<port>/scalar` while the API runs. Use `/scalar/v1` if multiple documents are registered.
-- **AOT:** `Microsoft.AspNetCore.OpenApi` is AOT-compatible. `Scalar.AspNetCore` is development-only and is excluded from the production/AOT release; do not add it to the AOT smoke project.
+- **Placement:** Development-only is Scalar’s recommended and security-appropriate placement. `Microsoft.AspNetCore.OpenApi` and `Scalar.AspNetCore` are used as documented.
 - **Security:** the Scalar and OpenAPI endpoints are anonymous only inside the Development block. The API endpoints still require the bearer token. Add a `Bearer` HTTP security scheme to the OpenAPI document (via a document transformer) so Scalar can supply the header; see [Microsoft OpenAPI docs](https://learn.microsoft.com/aspnet/core/fundamentals/openapi/aspnetcore-openapi).
 - **No secrets:** never prefill a real token with `AddHttpAuthentication` or enable persistent authentication. Paste a short-lived dev token into the UI, or read it from a local secret.
-- **Privacy:** keep `.DisableAgent()` off external AI calls and `.DisableDefaultFonts()` off the font CDN. Scalar assets are local by default.
+- **Privacy:** `.DisableAgent()` and `.DisableDefaultFonts()` are optional privacy hardening. Scalar assets are local by default.
 - **Exposure:** bind the API to `127.0.0.1`; never proxy `/scalar` through the BFF, expose it on a tunnel, or add its origins to the production CSP.
 - **Testing flow:** start `JobLens.Api`, open `/scalar`, authorize with the dev token, then exercise `GET /api/v1/health`, `GET /api/v1/runs`, and `POST /api/v1/runs` with an `Idempotency-Key`.
 - **Contract check:** compare the Scalar view with `/openapi/v1.json`; generated TypeScript must come from the same document, not a hand-maintained copy.
@@ -1219,7 +1217,6 @@ Techniques: route-level code splitting, lazy charts/diagnostics, virtualized tab
 | Contract | Generated OpenAPI types + zod fixtures | API drift and event schema drift |
 | API errors | Generated types + fixtures | Problem Details status/`code`/`traceId` mapping |
 | API exploration | Scalar.AspNetCore (Development only) | `/scalar` against `/openapi/v1.json`; bearer auth flow |
-| AOT | .NET analyzer + AOT smoke | Source-generated JSON/config, no reflection, `JobLens.AotSmoke` publish |
 | Observability | .NET tests + BFF logs | Correlation ID propagation, redaction, no stack traces |
 | E2E | Existing .NET Playwright suite | Critical flows against a real API + built cockpit |
 | Accessibility | Keyboard checks + `@axe-core/react` in dev | Focus order, labels, contrast, reduced motion |

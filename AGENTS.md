@@ -5,7 +5,7 @@
 - Use the project patterns: `Result<T>` for expected failures, validated Options at the composition root, Specifications for reusable query criteria, and RFC 9457 Problem Details at the API edge.
 - Read [docs/14-application-patterns.md](docs/14-application-patterns.md) before adding an application abstraction or error contract.
 - Runtime rules: Serilog message templates and redaction, global exception handling, `IHttpClientFactory` + Polly for HTTP, `CancellationToken` on every I/O boundary, `using`/`await using`, bounded queues, disk checks. See [docs/15-runtime-hardening.md](docs/15-runtime-hardening.md).
-- AOT rules: no `System.Reflection`, `Activator`, `dynamic`, assembly scanning, reflection-based JSON/config/validation, or production `Expression.Compile`. Use source generators, explicit factories, and `SetAction`/`SetHandler`. Playwright/EF Core are documented vendor exceptions; see [docs/16-aot-and-trimming.md](docs/16-aot-and-trimming.md).
+- Library rule: use each package’s documented, recommended configuration. Do not remove or restrict a library feature because of AOT/trimming. Serilog, DataAnnotations, ClosedXML, Scalar, EF Core, and Playwright are used as designed. See [docs/16-library-usage-policy.md](docs/16-library-usage-policy.md).
 
 ## Commits
 

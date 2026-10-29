@@ -1,6 +1,6 @@
 # ADR-0013: AOT-Friendly Code, No NativeAOT Release
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0014](0014-use-libraries-as-designed.md)
 - **Date:** 2026-10-29
 - **Deciders:** Project owner
 
@@ -97,7 +97,7 @@ The full app's `PublishAot=true` is not a release gate and is expected to fail/w
 
 ## References
 
-- [AOT-Friendly Coding Policy](../16-aot-and-trimming.md)
+- [Library Usage Policy](../16-library-usage-policy.md)
 - [Runtime Hardening](../15-runtime-hardening.md)
 - [EF Core NativeAOT (experimental)](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)
 - [Playwright .NET AOT issue](https://github.com/microsoft/playwright-dotnet/issues/2714)

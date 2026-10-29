@@ -32,7 +32,6 @@ PlaywrightDotNet/
 │   ├── JobLens.Infrastructure.Tests/
 │   ├── JobLens.Architecture.Tests/
 │   ├── JobLens.Cli.Tests/
-│   ├── JobLens.AotSmoke/          (Domain/Application only; PublishAot=true)
 │   └── JobLens.E2E.Tests/
 ├── build/
 │   ├── scripts/
@@ -59,8 +58,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | `JobLens.Domain.Tests` | Pure unit tests. | Domain, TestKit, xUnit |
 | `JobLens.Application.Tests` | Use-case tests with fakes/NSubstitute. | Application, TestKit, xUnit, NSubstitute |
 | `JobLens.Infrastructure.Tests` | Parser fixtures, SQLite integration, options, artifacts. | Infrastructure, TestKit, xUnit |
-| `JobLens.Architecture.Tests` | Layer/dependency rules + reflection ban. | Domain, Application, Infrastructure, NetArchTest |
-| `JobLens.AotSmoke` | CI-only console proving Domain/Application publish with `PublishAot=true`. | Domain, Application |
+| `JobLens.Architecture.Tests` | Layer/dependency rules. | Domain, Application, Infrastructure, NetArchTest |
 | `JobLens.Cli.Tests` | Command parsing, option validation, exit-code mapping, help text. | Cli, Application, TestKit, xUnit |
 | `JobLens.E2E.Tests` | Local fixture server + Playwright browser tests. | Infrastructure, TestKit, `Microsoft.Playwright.Xunit.v3` |
 
@@ -103,17 +101,17 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 |---|---|---|---|
 | `Microsoft.Extensions.Hosting` | `10.0.14` | CLI | DI, configuration, logging, lifetime. |
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
-| `Microsoft.Extensions.Options` | `10.0.14` | CLI, API | Options pattern with explicit `IValidateOptions<T>`; source-generated binding. |
+| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | CLI, API | Options binding + DataAnnotations validation. |
 | `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | `IHttpClientFactory` for the optional API fast path / health probes. |
 | `Microsoft.Extensions.Http.Resilience` | `10.0.0` | Infrastructure | Polly v8 HTTP retry, circuit breaker, timeout, fallback. |
-| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | API (v2) | OpenAPI document generation; AOT-compatible. |
+| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | API (v2) | OpenAPI document generation. |
 | `Scalar.AspNetCore` | `2.18.5` | API (v2, Development only) | Interactive local API reference/testing at `/scalar`. |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Browser automation, tracing, persistent contexts. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Explicit provider dependency / pragmas. |
 | `AngleSharp` | `1.8.6` | Infrastructure | HTML parsing with CSS selectors. |
-| `ClosedXML` | `0.105.1` | Infrastructure | Excel export with hyperlinks; accepted vendor exception under the AOT policy. |
+| `ClosedXML` | `0.105.1` | Infrastructure | Trusted Excel export with hyperlinks. |
 | `Serilog.AspNetCore` | `10.0.0` | CLI, API | Structured logging, request logging, console + file integration. |
 | `Serilog.Sinks.File` | `7.0.0` | CLI, API | Daily rolling JSON text logs with retention. |
 | `Serilog.Sinks.Async` | `2.1.0` | CLI, API | Keep file I/O off the request/run thread. |
@@ -121,7 +119,10 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `Serilog.Enrichers.Process` | `3.0.0` | CLI, API | Process ID and name. |
 | `Serilog.Enrichers.Thread` | `4.0.0` | CLI, API | Thread ID for pool diagnostics. |
 | `Serilog.Enrichers.Span` | `3.1.0` | CLI, API | `TraceId` / `SpanId` correlation. |
-| `System.CommandLine` | `2.0.14` | CLI | Command parsing, help, validation; `SetAction`/`SetHandler` only. |
+| `Serilog.Enrichers.AssemblyName` | `2.0.0` | CLI, API | Assembly name/version. |
+| `Serilog.Exceptions` | `8.4.0` | CLI, API | Detailed exception properties. |
+| `Serilog.Enrichers.Demystifier` | `1.0.3` | CLI, API | Readable async stack traces. |
+| `System.CommandLine` | `2.0.14` | CLI | Command parsing, help, validation; `SetAction`/`SetHandler` recommended. |
 | `xunit.v3` | `4.0.2` | All test projects | Test framework + assertions. |
 | `xunit.runner.visualstudio` | `4.0.1` | All test projects | `dotnet test` / VS Test Explorer. |
 | `Microsoft.NET.Test.Sdk` | `18.11.0` | All test projects | VSTest host. |
@@ -140,11 +141,8 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 - `AutoMapper` — explicit mapping is clearer and faster.
 - `FluentValidation` — domain guards, request validation, and options validation are enough.
 - `Ardalis.Specification` and similar — a small in-repo `Specification<T>` base is enough for the query criteria we have.
-- `Microsoft.Extensions.Options.DataAnnotations` — reflection-based validation; use explicit `IValidateOptions<T>`.
-- `Serilog.Exceptions`, `Serilog.Enrichers.AssemblyName`, `Serilog.Enrichers.Demystifier` — reflection-based; use explicit scalar logging and a generated `BuildInfo` version constant.
-- `ReadFrom.Configuration` (`Serilog.Settings.Configuration`) — reflection-based package binding; the package is transitive but must not be used. Configure the logger in code.
-- `System.CommandLine.NamingConventionBinder` — reflection-based; use `SetAction`/`SetHandler`.
-- `Newtonsoft.Json` — reflection-based; use `System.Text.Json` source generation.
+- `System.CommandLine.NamingConventionBinder` — legacy handler binding; prefer the library-recommended `SetAction`/`SetHandler`.
+- `Newtonsoft.Json` — `System.Text.Json` is the platform default; add Newtonsoft only for a concrete compatibility requirement.
 - `Polly` as a direct package — HTTP resilience is consumed through `Microsoft.Extensions.Http.Resilience` (Polly v8). Add raw Polly only for a measured non-HTTP pipeline.
 - `Dapper` — EF Core handles both writes and read models.
 - `Seq`/ELK/OpenTelemetry exporters — local JSON logs are the v1 baseline; add centralized telemetry only when a real requirement appears.
@@ -188,11 +186,6 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <Deterministic>true</Deterministic>
     <InvariantGlobalization>false</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <EnableAotAnalyzer>true</EnableAotAnalyzer>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
-    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
-    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 </Project>
 ```
@@ -200,9 +193,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
 - `InvariantGlobalization=false` because locale/timezone handling matters (`en-IN`, `Asia/Kolkata`).
 - `GenerateDocumentationFile` can be enabled for Domain/Application if XML docs are maintained; not required for the CLI.
 - Warnings are errors from day one; suppress only with a documented justification.
-- AOT/trim analyzers are on. Set `IsAotCompatible=true` on Domain/Application only; they treat `IL2026`/`IL3050` as errors. Infrastructure may suppress only at documented vendor boundaries (Playwright/EF Core). Do not set `PublishAot=true` on the full app.
-- Generate a `BuildInfo.Version` constant from `$(Version)` with a small MSBuild `WriteLinesToFile` target; do not read assembly attributes at runtime.
-- Full policy and vendor exceptions: [AOT-Friendly Coding](16-aot-and-trimming.md).
+- AOT/trimming is not a design constraint. Use libraries in their documented configuration; see [Library Usage Policy](16-library-usage-policy.md).
 
 ### 4.3 `Directory.Packages.props` (central package management)
 
@@ -216,7 +207,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
   <ItemGroup>
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
@@ -234,6 +225,9 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Serilog.Enrichers.Process" Version="3.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
+    <PackageVersion Include="Serilog.Enrichers.AssemblyName" Version="2.0.0" />
+    <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
+    <PackageVersion Include="Serilog.Enrichers.Demystifier" Version="1.0.3" />
     <PackageVersion Include="System.CommandLine" Version="2.0.14" />
 
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
@@ -409,14 +403,14 @@ Bind each section once at the composition root, validate it at startup, and inje
 builder.Services
     .AddOptions<BrowserOptions>()
     .Bind(builder.Configuration.GetSection(BrowserOptions.SectionName))
+    .ValidateDataAnnotations()
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IValidateOptions<BrowserOptions>, BrowserOptionsValidator>();
 ```
 
-- `EnableConfigurationBindingGenerator` makes `Bind` source-generated; do not fall back to reflection.
-- Use explicit `IValidateOptions<T>` checks for cross-field rules (delays, caps, LinkedIn consent, writable paths); no DataAnnotations reflection.
-- JSON uses `System.Text.Json` source generation; reflection fallback is disabled.
+- Use DataAnnotations for simple ranges and `IValidateOptions<T>` for cross-field rules (delays, caps, LinkedIn consent, writable paths).
+- JSON uses `System.Text.Json`; source generation is preferred for hot DTOs, but reflection-based serialization is allowed where it is simpler.
 - Application code receives plain records such as `ScrapeLimits`; it does not read `IConfiguration` or `IOptions<T>`.
 - Prefer `IOptions<T>`; use `IOptionsSnapshot<T>` only for scoped API reloads and `IOptionsMonitor<T>` only in long-lived services that must observe changes.
 - Safety-critical values never fall back to unsafe defaults. Invalid configuration fails startup.
@@ -663,7 +657,7 @@ jobs:
 - Serilog message templates only; no interpolation, PII, cookies, auth headers, or full page bodies in logs.
 - Check free disk before writes; enforce artifact/log retention; never call `GC.Collect()`.
 
-AOT constraints: no reflection, `Activator`, dynamic code, assembly scanning, reflection-based JSON/configuration/validation, or `Expression.Compile` in production. Use source generators, explicit factories, and `SetAction`/`SetHandler`. ClosedXML is an accepted vendor exception for Excel export; Scalar is Development-only and excluded from production/AOT smoke. See [AOT-Friendly Coding Policy](16-aot-and-trimming.md).
+Library usage: use each package’s documented, recommended configuration. Reflection, DataAnnotations, `ReadFrom.Configuration`, ClosedXML, Scalar, and standard DI are allowed; AOT is not a design constraint. See [Library Usage Policy](16-library-usage-policy.md).
 
 Full runtime rules and code sketches: [Runtime Hardening](15-runtime-hardening.md).
 - Structured logs with named properties; never interpolate secrets.

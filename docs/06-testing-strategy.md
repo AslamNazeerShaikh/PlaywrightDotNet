@@ -448,7 +448,6 @@ tests/
 ├── JobLens.Cli.Tests/
 │   ├── Commands/
 │   └── ExitCodes/
-├── JobLens.AotSmoke/              (Domain/Application only; PublishAot=true)
 └── JobLens.E2E.Tests/
     ├── Fixtures/                 (localhost pages)
     └── Browser/
@@ -532,7 +531,7 @@ Builders keep tests readable and make new required fields cheap to add.
 
 - **Result:** every handler branch returns `IsSuccess` or the expected `Error.Code`; cancellation still throws; no expected failure is tested through an exception.
 - **Options:** invalid caps, `minDelay > maxDelay`, LinkedIn enabled without consent, non-writable paths, zero log retention, and non-positive file-size limits fail validation; `ValidateOnStart` prevents the host from starting.
-- **Specifications:** expression boundary cases (compile only in tests); `And`/`Or`/`Not` composition; SQLite integration asserts rows; `ToQueryString()` proves server translation.
+- **Specifications:** `IsSatisfiedBy` boundary cases; `And`/`Or`/`Not` composition; SQLite integration asserts rows; `ToQueryString()` proves server translation.
 - **Problem Details:** each `ErrorKind` maps to the documented status and `application/problem+json`; `code` and `traceId` are present; `500` bodies never contain stack traces, SQL, cookies, or paths; validation errors use request field names.
 - **No CQRS/MediatR:** an architecture test (Phase 0) fails if `MediatR` or a banned namespace appears.
 
@@ -546,7 +545,6 @@ Builders keep tests readable and make new required fields cheap to add.
 - **Disk:** `IDiskSpace` fake returns low space; handler returns `STORAGE_LOW_DISK` before writing.
 - **Soak:** 10 fixture runs; bounded file count, stable memory, no orphan browser processes, bounded WAL.
 - **Static analysis:** `CA1848`, `CA2000`, `CA2007`, `CA2016`, and `CA1031` are enforced in `.editorconfig`.
-- **AOT:** architecture tests ban `System.Reflection`/`Activator`/`dynamic` in Domain/Application; `JobLens.AotSmoke` publishes with `PublishAot=true`; JSON uses `JobLensJsonContext`; options use generated binding; production code never calls `Expression.Compile()`.
 
 ---
 

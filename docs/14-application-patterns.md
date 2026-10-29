@@ -271,16 +271,22 @@ Options are bound **once at the composition root** and validated at startup. Con
 
 ### 4.2 Bind and validate
 
-Options classes are grouped by section. Use `init` properties and explicit `IValidateOptions<T>` checks; do not use DataAnnotations (reflection-based validation).
+Options classes are grouped by section. Use `init` properties, DataAnnotations for simple ranges, and `IValidateOptions<T>` for cross-field rules.
 
 ```csharp
 public sealed class BrowserOptions
 {
     public const string SectionName = "JobLens:Browser";
 
+    [Required]
     public string DefaultEngine { get; init; } = "Chromium";
+
+    [Range(1, 300)]
     public int NavigationTimeoutSeconds { get; init; } = 45;
+
+    [Range(0, 60_000)]
     public int SlowMoMs { get; init; } = 40;
+
     public bool Headless { get; init; }
 }
 ```
@@ -289,13 +295,13 @@ public sealed class BrowserOptions
 builder.Services
     .AddOptions<BrowserOptions>()
     .Bind(builder.Configuration.GetSection(BrowserOptions.SectionName))
+    .ValidateDataAnnotations()
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IValidateOptions<BrowserOptions>, BrowserOptionsValidator>();
 ```
 
-- Enable `EnableConfigurationBindingGenerator`; `Bind` is then source-generated.
-- Explicit validators replace DataAnnotations and keep the options path reflection-free.
+Cross-field validation belongs in a validator, not in the handler.
 
 Cross-field validation belongs in a validator, not in the handler:
 
@@ -373,11 +379,18 @@ Specifications live in `JobLens.Application/Queries` and expose an expression tr
 public interface ISpecification<T>
 {
     Expression<Func<T, bool>> ToExpression();
+    bool IsSatisfiedBy(T candidate);
 }
 
 public abstract class Specification<T> : ISpecification<T>
 {
+    private readonly Lazy<Func<T, bool>> _compiled;
+
+    protected Specification() => _compiled = new(() => ToExpression().Compile());
+
     public abstract Expression<Func<T, bool>> ToExpression();
+
+    public bool IsSatisfiedBy(T candidate) => _compiled.Value(candidate);
 
     public Specification<T> And(Specification<T> other) => new AndSpecification<T>(this, other);
     public Specification<T> Or(Specification<T> other) => new OrSpecification<T>(this, other);
@@ -394,9 +407,7 @@ public sealed class ActivePostingSpecification(
 }
 ```
 
-`Specification<T>` is a small in-repo base class that implements `And`, `Or`, and `Not` by replacing the parameter in the expression tree. The helper specification types are private nested classes in the same file. Do not use `Expression.Invoke` for EF Core queries; it is not reliably translatable. A parameter-replacing `ExpressionVisitor` is the supported composition mechanism.
-
-Production specifications never call `Expression.Compile()`; that is a dynamic-code dependency and violates the [AOT policy](16-aot-and-trimming.md). Tests may compile an expression locally to assert boundary behavior.
+`Specification<T>` is a small in-repo base class that caches the compiled predicate for `IsSatisfiedBy` and implements `And`, `Or`, and `Not` by replacing the parameter in the expression tree. The helper specification types are private nested classes in the same file. Do not use `Expression.Invoke` for EF Core queries; it is not reliably translatable. A parameter-replacing `ExpressionVisitor` is the supported composition mechanism.
 
 Example specifications:
 
@@ -456,7 +467,7 @@ public interface IJobReadModel
 - One specification = one business predicate; compose rather than inherit deep hierarchies.
 - The expression must be EF Core translatable: no custom methods, no client-side evaluation, no `Compile()` inside the expression.
 - Normalize missing values before filtering. If `PostedAt` is absent, the read model applies the documented `FirstSeenAt` fallback once; specifications assume a normalized value.
-- No production `Expression.Compile()` or `Expression.Invoke`; tests may compile a specification expression locally.
+- `IsSatisfiedBy` is for domain tests and in-memory checks, not for filtering database rows.
 - Specifications filter; they do not authorize, mutate, or persist.
 - Do not put `Include`, tracking, or projection into a specification. The read model owns projection.
 - No generic repository with `Find(ISpecification<T>)`. The read model exposes named query methods.
@@ -465,7 +476,7 @@ public interface IJobReadModel
 
 ### 5.5 Testing
 
-- Unit-test expression boundary values (inclusive/exclusive dates, empty keywords); compile only inside the test project.
+- Unit test `IsSatisfiedBy` with boundary values (inclusive/exclusive dates, empty keywords).
 - Integration test each specification against SQLite and assert the row count, not just the SQL string.
 - Test `And`/`Or`/`Not` composition, especially overlapping parameters.
 - Use `ToQueryString()` in tests to catch client evaluation.
