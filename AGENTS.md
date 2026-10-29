@@ -1,3 +1,10 @@
+## Architecture
+
+- No CQRS command/query buses, no MediatR/mediator, no AutoMapper, and no generic repositories.
+- Use explicit constructor-injected use-case handlers; call them directly from CLI commands and API endpoints.
+- Use the project patterns: `Result<T>` for expected failures, validated Options at the composition root, Specifications for reusable query criteria, and RFC 9457 Problem Details at the API edge.
+- Read [docs/14-application-patterns.md](docs/14-application-patterns.md) before adding an application abstraction or error contract.
+
 ## Commits
 
 Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#specification); the project policy is [docs/13-conventional-commits.md](docs/13-conventional-commits.md).

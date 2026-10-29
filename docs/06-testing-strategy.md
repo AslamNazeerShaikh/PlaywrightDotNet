@@ -527,6 +527,14 @@ Builders keep tests readable and make new required fields cheap to add.
 - `--help` lists commands and examples.
 - Cancellation maps to `130`.
 
+### 7.5 Application patterns
+
+- **Result:** every handler branch returns `IsSuccess` or the expected `Error.Code`; cancellation still throws; no expected failure is tested through an exception.
+- **Options:** invalid caps, `minDelay > maxDelay`, LinkedIn enabled without consent, and non-writable paths fail validation; `ValidateOnStart` prevents the host from starting.
+- **Specifications:** `IsSatisfiedBy` boundary cases; `And`/`Or`/`Not` composition; SQLite integration asserts rows; `ToQueryString()` proves server translation.
+- **Problem Details:** each `ErrorKind` maps to the documented status and `application/problem+json`; `code` and `traceId` are present; `500` bodies never contain stack traces, SQL, cookies, or paths; validation errors use request field names.
+- **No CQRS/MediatR:** an architecture test (Phase 0) fails if `MediatR` or a banned namespace appears.
+
 ---
 
 ## 8. Parser tests

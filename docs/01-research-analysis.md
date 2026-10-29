@@ -459,7 +459,7 @@ Spikes S1–S3 are **research only**; they do not authorize bypassing a wall. If
 | Naukri is public-search friendly but Akamai-protected | First adapter; browser-first; native Next pagination; optional API flag. |
 | LinkedIn prohibits automated access | Default disabled; explicit consent; guest-only; stop on wall; recommend official/manual. |
 | Indeed is Cloudflare-protected | Opt-in; very low volume; headed; stop on challenge; no private GraphQL. |
-| Microservices/MediatR/AutoMapper add no value | Modular monolith; explicit handlers/mapping; YAGNI. |
+| Microservices/CQRS/MediatR/AutoMapper add no value | Modular monolith; explicit handlers/mapping; YAGNI. |
 | 100% coverage is not the goal | Risk-based gates: Domain 95/90, Application 90/85, overall 85/80. |
 | Live scraping is nondeterministic | Fixtures in CI; live canaries manual/nightly. |
 

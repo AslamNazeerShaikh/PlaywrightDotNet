@@ -17,7 +17,7 @@ Build a **modular monolith** with Clean Architecture layers:
 - `Infrastructure` — Playwright, EF Core, parsers, exporters.
 - `Cli` — composition root.
 
-Apply **DDD tactically** to Sourcing and Access; use read models/query objects for Insight/Export. No MediatR, AutoMapper, or generic repositories.
+Apply **DDD tactically** to Sourcing and Access; use read models/filter objects for Insight/Export. No CQRS, MediatR, AutoMapper, or generic repositories. See [ADR-0011](0011-no-cqrs-mediatr.md).
 
 ## Consequences
 

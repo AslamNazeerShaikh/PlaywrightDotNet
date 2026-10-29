@@ -73,7 +73,9 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 | **AngleSharp** | `1.8.6` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
 | **ClosedXML** | `0.105.1` | Cross-platform Excel with hyperlinks; no Office dependency. |
 
-Deliberately **not** used in v1: MediatR, AutoMapper, FluentValidation, Polly, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
+Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Polly, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
+
+Application code uses explicit use-case handlers and four small patterns: **Result**, **Options**, **Specification**, and **Problem Details**. See [Application Patterns](14-application-patterns.md).
 
 > **Browser reality:** Playwright drives Chromium, Firefox, and WebKit (Safari's engine) on macOS/Linux/Windows. It does **not** automate real Safari; WebKit is the closest cross-platform proxy. Real Safari automation would require a separate macOS SafariDriver adapter. Windows 10 and macOS 13 or older are outside Playwright's supported matrix.
 
@@ -205,7 +207,7 @@ v1 is successful when all of these are true:
 | SQLite write contention | Low | Low | Single writer; WAL; busy timeout; one run at a time |
 | Scope creep into auto-apply | Medium | High | Explicit non-goals; separate future decision; no v1 code paths |
 | Flaky live tests | High | Low | Live tests are manual/nightly, not CI; deterministic fixtures for CI |
-| Over-engineering | Medium | Medium | YAGNI checklist; vertical slices; no MediatR/AutoMapper/microservices |
+| Over-engineering | Medium | Medium | YAGNI checklist; vertical slices; no CQRS/MediatR/AutoMapper/microservices |
 
 Full register: [Gameplan §7](05-gameplan.md#7-risk-register).
 

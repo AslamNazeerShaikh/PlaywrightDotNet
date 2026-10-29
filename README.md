@@ -22,7 +22,8 @@ Read the documentation in this order:
 12. [Open decisions](docs/11-open-decisions.md)
 13. [Web cockpit (v2)](docs/12-web-cockpit.md)
 14. [Conventional Commits](docs/13-conventional-commits.md)
-15. [ADRs](docs/10-adr/README.md)
+15. [Application patterns](docs/14-application-patterns.md)
+16. [ADRs](docs/10-adr/README.md)
 
 ## Verified stack
 
@@ -40,6 +41,7 @@ A **modular monolith + CLI** that:
 - Extracts, validates, deduplicates, and stores postings in SQLite.
 - Optionally enriches details and exports CSV/Excel.
 - Handles anti-bot walls by **stopping, cooling down, and asking a human** — no CAPTCHA solving, fingerprint spoofing, auth-wall bypass, or proxy rotation.
+- Uses explicit use-case handlers — **no CQRS/MediatR** — with Result, Options, Specification, and Problem Details patterns.
 - Treats LinkedIn as high-risk and disabled by default.
 
 ## Before implementation

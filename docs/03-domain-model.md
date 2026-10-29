@@ -602,6 +602,8 @@ public interface IUnitOfWork
 - No generic repository.
 - No `IQueryable` leakage.
 - Read models use separate ports (`IJobReadModel`, `ISkillDemandReadModel`) returning DTOs.
+- Reusable query predicates use specifications; simple one-off filters stay inline. Identity lookups use repository methods. See [Application Patterns §5](14-application-patterns.md#5-specification-pattern).
+- Invariant violations throw domain exceptions; expected operational failures return `Result<T>`. See [Application Patterns §3](14-application-patterns.md#3-result-pattern).
 - Repository implementations live in Infrastructure; domain/application tests use in-memory fakes.
 - Uniqueness (`profile name`, `source + external id`) is enforced by the database and handled as a conflict, not by a domain-wide lock.
 

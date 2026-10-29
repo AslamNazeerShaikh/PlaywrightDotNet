@@ -32,7 +32,7 @@
 | **ISP** | Small ports (`IJobSource`, `IJobPostingRepository`, `ISessionManager`) instead of one god interface. | Interface review. |
 | **DIP** | Application defines ports; Infrastructure implements them; CLI wires them. | Architecture tests: no `Microsoft.Playwright`/`Microsoft.EntityFrameworkCore` in Domain/Application. |
 | **DRY** | Shared pacing, retry, URL canonicalization, visibility guards, and validation helpers. | Shared libraries inside Infrastructure; no copy-paste selectors. |
-| **YAGNI** | No microservices, message bus, MediatR, AutoMapper, dashboard, auto-apply, or ML in v1. | Scope gate in every phase. |
+| **YAGNI** | No microservices, message bus, CQRS/MediatR, AutoMapper, dashboard, auto-apply, or ML in v1. | Scope gate in every phase. |
 | **KISS** | CLI + SQLite + one browser at a time. | Deployment and runbook simplicity. |
 | **Fail fast** | Invalid options, missing browser, unsafe compliance settings fail before a run starts. | `IValidateOptions`, `doctor`, startup checks. |
 | **Idempotency** | Upsert by `(source, externalJobId)`; re-running a page never duplicates. | Unique index + repository tests. |
@@ -417,7 +417,7 @@ Other ports:
 
 It owns sequencing, cancellation, and outcome mapping. Selectors, browser code, and persistence details stay in Infrastructure; the handler must not catch `OperationCanceledException` and continue. This is the application boundary that connects scraping orchestration, the job-posting domain, and compliance policy; it is not a reason to split the handler before the first vertical slice proves the seams.
 
-### 8.2 Result types, not exceptions, for expected operational outcomes
+### 8.2 Result pattern, not exceptions, for expected operational outcomes
 
 ```csharp
 public sealed record SearchPageResult(
@@ -447,6 +447,8 @@ public sealed record ChallengeAssessment(
     bool RequiresManualIntervention);
 ```
 
+`SearchPageResult` is an adapter DTO, not the generic application result. Use cases return `Result<T>` with a typed `Error` (code, title, detail, kind); only the API edge maps that error to HTTP. See [Application Patterns §3](14-application-patterns.md#3-result-pattern).
+
 Rules:
 
 - Domain invariant violations throw domain exceptions (programmer error).
@@ -466,6 +468,17 @@ Every `IJobSource` must pass a shared suite:
 - Challenge fixture is classified correctly and never extracted as jobs.
 - Empty/partial/malformed HTML does not throw; it returns `SourceChanged` or drops bad cards with diagnostics.
 - Detail parser handles missing fields and returns `null`/partial detail, never a fake success.
+
+### 8.4 Specifications for query criteria
+
+Reusable query predicates use the Specification pattern: an expression tree plus an in-memory `IsSatisfiedBy` check. Specifications live in `JobLens.Application/Queries`, compose with `And`/`Or`/`Not`, and are accepted by read-model ports. They never expose `IQueryable` and never make authorization or compliance decisions.
+
+```csharp
+var specification = new ActivePostingSpecification(now, retentionDays)
+    .And(new PostedWithinSpecification(now, criteria.PostedWithinDays));
+```
+
+Simple one-off filters stay as inline LINQ. Identity lookups use repository methods, not specifications. See [Application Patterns §5](14-application-patterns.md#5-specification-pattern).
 
 ---
 
@@ -621,7 +634,9 @@ Full domain model and invariants: [Domain Model](03-domain-model.md).
 3. Environment variables (`JOBLENS_*`)
 4. CLI options (highest)
 
-### 11.2 Strongly typed options
+### 11.2 Options pattern
+
+Options are bound and validated once at the composition root, then consumed as immutable values. Application code receives plain records; it does not read `IConfiguration` or `IOptions<T>`. See [Application Patterns §4](14-application-patterns.md#4-options-pattern).
 
 - `JobLensOptions`
 - `BrowserOptions`
@@ -666,6 +681,8 @@ Validate on startup with DataAnnotations + custom validators:
 
 **Never retry** 403/429/CAPTCHA/challenge/auth-wall responses. A retry storm is how a soft block becomes a ban.
 
+Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem Details. CLI exit codes and SSE events use the same stable error codes, not the HTTP envelope. See [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern).
+
 ### 12.2 Retry policy
 
 - Max **2 attempts** (1 retry) for transient failures.
@@ -702,6 +719,10 @@ Validate on startup with DataAnnotations + custom validators:
 - `FirstSeenAt` never changes; `LastSeenAt` updates on every successful sighting.
 - Re-running the same page updates no duplicates.
 - Detail enrichment updates the same posting; it never creates a second row.
+
+### 12.7 Problem Details mapping
+
+The v2 API returns `application/problem+json` for every error. One mapper translates `ErrorKind` to an HTTP status and adds `code`, `traceId`, and optional `retryAfter`; endpoints do not hand-build error bodies. Stack traces, SQL, cookies, and HTML never appear in `detail`. Problem Details is HTTP-only: the CLI maps the same error kinds to exit codes, and SSE emits a typed `run.failed` event. See [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern).
 
 ---
 
@@ -764,7 +785,7 @@ Threat model in one line: **the browser profile is the crown jewel; the target s
 
 - Microservices, message bus, distributed locks, Kubernetes.
 - A generic “scrape any website” framework; only shared primitives + per-source adapters.
-- MediatR/AutoMapper/FluentValidation pipelines; explicit code is clearer at this size.
+- CQRS command/query buses, MediatR, mediator pipelines, AutoMapper, and FluentValidation pipelines; explicit handlers and validation are clearer at this size.
 - Auto-apply, cover-letter generation, recruiter messaging.
 - CAPTCHA solving, fingerprint spoofing, proxy rotation, account rotation.
 - ML ranking, resume tailoring, vector databases.
@@ -796,3 +817,5 @@ The **Sourcing** domain stays job-specific. A future automation case (e.g., form
 - [ADR-0007: Compliance-first low-signal automation](10-adr/0007-compliance-first-low-signal-automation.md)
 - [ADR-0008: CLI first, API later](10-adr/0008-cli-first-api-later.md)
 - [ADR-0009: Test pyramid and coverage gates](10-adr/0009-test-pyramid-coverage-gates.md)
+- [ADR-0010: React + Bun web cockpit](10-adr/0010-react-bun-cockpit.md)
+- [ADR-0011: Explicit use-case handlers, no CQRS or MediatR](10-adr/0011-no-cqrs-mediatr.md)

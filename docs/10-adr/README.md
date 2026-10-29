@@ -14,6 +14,7 @@
 | [0008](0008-cli-first-api-later.md) | CLI first, API/dashboard later | Accepted |
 | [0009](0009-test-pyramid-coverage-gates.md) | Test pyramid + risk-based coverage gates | Accepted |
 | [0010](0010-react-bun-cockpit.md) | React + Bun web cockpit, no Node.js | Accepted |
+| [0011](0011-no-cqrs-mediatr.md) | Explicit use-case handlers, no CQRS or MediatR | Accepted |
 
 ## Conventions
 

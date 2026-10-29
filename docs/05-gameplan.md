@@ -36,8 +36,8 @@ flowchart LR
 
 | Phase | Dates | Goal | Key deliverables | Exit criteria |
 |---|---|---|---|---|
-| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0005, `doctor` stub. | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted. |
-| **1 — Domain + Application** | Nov 5–11 (5d) | Model the core without a browser. | Value objects, aggregates, state machines, policies, ports, `RunScrapeHandler`, fakes. | Domain/application tests pass; architecture tests pass; no Playwright/EF references in Domain/Application. |
+| **0 — Foundation** | Nov 2–4 (3d) | Make the repo buildable and the decisions explicit. | Solution/projects, SDK pin, CPM, `.editorconfig`, CI skeleton, ADRs 0001–0011, `doctor` stub, application-pattern contracts (Result/Error, options records, specification base). | Clean clone builds + tests green on macOS; CI skeleton green; ADRs accepted. |
+| **1 — Domain + Application** | Nov 5–11 (5d) | Model the core without a browser. | Value objects, aggregates, state machines, policies, ports, Result/Error contracts, specification base, `RunScrapeHandler`, fakes. | Domain/application tests pass; architecture tests pass; no Playwright/EF references in Domain/Application. |
 | **2 — Browser + Session** | Nov 12–18 (5d) | Make one real browser session safe and observable. | Playwright session factory, persistent profiles, `doctor`, `session login/probe`, challenge detector, artifact capture, E2E fixture server. | Browser matrix smoke green (Chromium/Firefox/WebKit); challenge fixture classified; profile lock handled. |
 | **3 — Naukri slice** | Nov 19–25 (5d) | Prove the full pipeline on a real source. | URL builder, parser, native Next pagination, detail enrichment, SQLite repositories, CSV/Excel export. | One page → DB → CSV; then multi-page run; fixture + live canary; caps/challenge handling. |
 | **4 — Indeed + LinkedIn** | Nov 26–Dec 4 (7d) | Add breadth behind compliance gates. | Indeed adapter, LinkedIn opt-in adapter, contract tests, quota/circuit breaker integration. | Indeed completes or stops gracefully on challenge; LinkedIn refuses without consent, stops on wall with consent. |
@@ -186,7 +186,9 @@ gantt
 - **E0-S2** As a developer, I can run unit tests and see a clear result.
   - Given the repo, when I run `dotnet test --filter "Category!=Live&Category!=E2E"`, then all non-live tests pass.
 - **E0-S3** As a maintainer, I can see why key decisions were made.
-  - ADRs 0001–0009 exist and link from the docs index.
+  - ADRs 0001–0011 exist and link from the docs index.
+- **E0-S4** As a developer, I can add an application abstraction without reintroducing CQRS/MediatR.
+  - The pattern guide and ADR-0011 are linked; the package matrix has no MediatR/CQRS package; the architecture test skeleton names the ban.
 
 ### E1 — Domain
 
@@ -203,6 +205,10 @@ gantt
 - **E2-S3** As an operator, cancellation keeps partial results and marks the run cancelled.
 - **E2-S4** As an operator, re-running a page does not duplicate postings.
 - **E2-S5** As an operator, quota exhaustion stops the run before the next page/detail.
+- **E2-S6** As a developer, expected failures return typed `Result` errors; invariant violations still throw.
+  - Given a missing profile or exceeded quota, when the handler runs, then it returns the documented `Error.Code` and does not throw.
+- **E2-S7** As a developer, a reusable job filter composes from specifications.
+  - Given active/date/source specifications, when the read model queries SQLite, then the expression translates to SQL and returns only matching DTOs.
 
 ### E3 — Access/Session
 
@@ -282,7 +288,7 @@ gantt
 | R7 | SQLite write contention | Low | Low | Single writer; WAL; busy timeout; one run | `database is locked` | You |
 | R8 | Scope creep into auto-apply | Medium | High | Explicit non-goals; separate decision; no v1 code paths | New “just one more” feature | You |
 | R9 | Flaky live tests | High | Low | Live tests manual/nightly; fixtures in CI | Intermittent CI failures | You |
-| R10 | Over-engineering | Medium | Medium | YAGNI gate; vertical slices; no MediatR/AutoMapper/microservices | Abstraction without a second use | You |
+| R10 | Over-engineering | Medium | Medium | YAGNI gate; vertical slices; no CQRS/MediatR/AutoMapper/microservices | Abstraction without a second use | You |
 | R11 | Browser download/install friction | Medium | Medium | `doctor --install-browsers`; Docker fallback; docs per OS | New machine setup > 15 min | You |
 | R12 | Data quality (missing fields) | High | Medium | Validation flags; drop bad cards; parse confidence; raw fields kept | High missing-company rate | You |
 
@@ -397,8 +403,8 @@ The v1 CLI plan above is unchanged. The first v2.0 deliverable is the **local we
 
 | Step | Deliverable | Dependency |
 |---|---|---|
-| **W0** | Bun/React/Tailwind/shadcn spike; OpenAPI stub; SSE proxy; single binary | Can start during Phase 3 |
-| **W1** | Shell, dashboard, read-only runs/jobs, health | .NET API contract |
+| **W0** | Bun/React/Tailwind/shadcn spike; OpenAPI stub incl. Problem Details schemas; SSE proxy; single binary | Can start during Phase 3 |
+| **W1** | Shell, dashboard, read-only runs/jobs, health, Problem Details error states | .NET API contract |
 | **W2** | Profiles CRUD, start/cancel/resume, live SSE timeline | API command endpoints |
 | **W3** | Sessions, challenge artifacts, exports, diagnostics | API artifacts/exports |
 | **W4** | Auth/CSRF/CSP, tests, budgets, packaging | W1–W3 |

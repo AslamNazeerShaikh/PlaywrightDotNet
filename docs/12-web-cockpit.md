@@ -772,6 +772,8 @@ Rules:
 
 ### 12.5 Errors
 
+Every error uses **RFC 9457 Problem Details** with content type `application/problem+json`. The standard members are `type`, `title`, `status`, `detail`, and `instance`; JobLens adds stable `code`, `traceId`, optional `retryAfter`, and field-level `errors` for validation.
+
 ```json
 {
   "type": "https://joblens.local/problems/run-already-active",
@@ -780,13 +782,30 @@ Rules:
   "detail": "Source 'naukri' has an active run.",
   "instance": "/api/v1/runs",
   "code": "RUN_ALREADY_ACTIVE",
-  "errors": {}
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 
-- `code` is stable and UI-mappable; `title`/`detail` are human-readable.
-- Map `409 RUN_ALREADY_ACTIVE`, `423 SOURCE_COOLING_DOWN`, `429 RATE_LIMITED`, `422 VALIDATION_FAILED`, `503 SOURCE_CIRCUIT_OPEN`.
-- Never display raw stack traces.
+| Status | Stable codes |
+|---|---|
+| `400` | `VALIDATION_FAILED` (with `errors` keyed by request field) |
+| `403` | `COMPLIANCE_BLOCKED` |
+| `404` | `PROFILE_NOT_FOUND`, `RUN_NOT_FOUND`, `JOB_NOT_FOUND` |
+| `409` | `RUN_ALREADY_ACTIVE`, `SOURCE_CHALLENGE` |
+| `423` | `SOURCE_COOLING_DOWN` |
+| `429` | `RATE_LIMITED`, `QUOTA_EXCEEDED` |
+| `502` | `SOURCE_CHANGED` |
+| `503` | `SOURCE_UNAVAILABLE`, `SOURCE_CIRCUIT_OPEN` |
+| `500` | `INTERNAL_ERROR` |
+
+- `code` is the UI contract; `title` and `detail` are human-readable and may change.
+- `detail` is safe for the operator. Never expose stack traces, SQL, cookies, HTML, authorization headers, or filesystem paths.
+- `traceId` is always present on `5xx`; log it server-side.
+- A failed SSE stream emits a typed `run.failed` event, not a Problem Details body.
+- The BFF forwards the problem body and content type unchanged.
+- Use `AddProblemDetails()`, `UseExceptionHandler()`, and one Result-to-Problem mapper. Endpoints do not hand-build error JSON.
+
+Full contract, mapping table, and tests: [Application Patterns §6](14-application-patterns.md#6-problem-details-pattern).
 
 ### 12.6 Pagination, sorting, idempotency
 

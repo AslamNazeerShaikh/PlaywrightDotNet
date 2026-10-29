@@ -49,7 +49,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | Project | Responsibility | References |
 |---|---|---|
 | `JobLens.Domain` | Aggregates, value objects, invariants, policies, domain events. Pure C#. | BCL only |
-| `JobLens.Application` | Use cases, ports, orchestration, result types, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
+| `JobLens.Application` | Use cases, ports, orchestration, Result pattern, specifications, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
 | `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML |
 | `JobLens.Cli` | Composition root: commands, DI, configuration, logging, exit codes. | Application, Infrastructure, Hosting, Serilog, System.CommandLine |
 | `JobLens.TestKit` | Builders, fakes, fixture server helpers, test data. | Domain, Application |
@@ -99,7 +99,7 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 |---|---|---|---|
 | `Microsoft.Extensions.Hosting` | `10.0.14` | CLI | DI, configuration, logging, lifetime. |
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
-| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | CLI, Infrastructure | Strongly typed options validation. |
+| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | CLI, Infrastructure | Options pattern binding + DataAnnotations validation. |
 | `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | Future API fast path / health probes. |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Browser automation, tracing, persistent contexts. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
@@ -123,9 +123,10 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 
 **Deliberately absent**
 
-- `MediatR` — explicit handlers are simpler at this size.
+- `MediatR` and CQRS command/query buses — explicit, constructor-injected use-case handlers are simpler and easier to debug. See [ADR-0011](10-adr/0011-no-cqrs-mediatr.md).
 - `AutoMapper` — explicit mapping is clearer and faster.
-- `FluentValidation` — domain guards + options validation are enough.
+- `FluentValidation` — domain guards, request validation, and options validation are enough.
+- `Ardalis.Specification` and similar — a small in-repo `Specification<T>` base is enough for the query criteria we have.
 - `Polly` — a small, tested retry policy is enough; fewer dependencies.
 - `Dapper` — EF Core handles both writes and read models.
 - `Selenium` — only if real Safari becomes mandatory.
@@ -358,6 +359,25 @@ appsettings.json
 - Browser profiles are secrets; the directory is created with owner-only permissions on Unix.
 - Future API keys: user secrets in development, environment variables in production.
 
+### 5.3 Options binding
+
+Bind each section once at the composition root, validate it at startup, and inject immutable values:
+
+```csharp
+builder.Services
+    .AddOptions<BrowserOptions>()
+    .Bind(builder.Configuration.GetSection(BrowserOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+```
+
+- Use `IValidateOptions<T>` for cross-field rules (delays, caps, LinkedIn consent, writable paths).
+- Application code receives plain records such as `ScrapeLimits`; it does not read `IConfiguration` or `IOptions<T>`.
+- Prefer `IOptions<T>`; use `IOptionsSnapshot<T>` only for scoped API reloads and `IOptionsMonitor<T>` only in long-lived services that must observe changes.
+- Safety-critical values never fall back to unsafe defaults. Invalid configuration fails startup.
+
+Full rules and test cases: [Application Patterns §4](14-application-patterns.md#4-options-pattern).
+
 ---
 
 ## 6. Target CLI surface
@@ -587,7 +607,10 @@ jobs:
 - No `new Random()` in Domain/Application; inject `IRandomSource`.
 - No service locator; constructor injection only.
 - No static mutable state.
-- Exceptions for programmer/invariant errors; result types for expected operational outcomes.
+- No CQRS command/query bus, no MediatR, no mediator-shaped dispatcher. Call use-case handlers directly.
+- Exceptions for programmer/invariant errors; `Result<T>` for expected operational outcomes.
+- Query criteria use specifications when reusable; no `IQueryable` leakage.
+- API errors use one RFC 9457 Problem Details mapper.
 - Structured logs with named properties; never interpolate secrets.
 - Public ports get XML docs explaining invariants and failure semantics.
 - Comments explain **why**, not **what**.
