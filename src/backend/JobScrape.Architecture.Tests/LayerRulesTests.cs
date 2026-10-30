@@ -10,8 +10,14 @@ namespace JobScrape.Architecture.Tests
         {
             var domain = Types.InAssembly(typeof(JobScrape.Domain.DomainException).Assembly);
 
-            var application = domain.ShouldNot().HaveDependencyOn("JobScrape.Application").GetResult();
-            var infrastructure = domain.ShouldNot().HaveDependencyOn("JobScrape.Infrastructure").GetResult();
+            var application = domain
+                .ShouldNot()
+                .HaveDependencyOn("JobScrape.Application")
+                .GetResult();
+            var infrastructure = domain
+                .ShouldNot()
+                .HaveDependencyOn("JobScrape.Infrastructure")
+                .GetResult();
             var api = domain.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
 
             Assert.True(application.IsSuccessful, Describe(application));
@@ -22,9 +28,14 @@ namespace JobScrape.Architecture.Tests
         [Fact]
         public void ApplicationDoesNotDependOnInfrastructureOrApi()
         {
-            var application = Types.InAssembly(typeof(JobScrape.Application.Results.Result).Assembly);
+            var application = Types.InAssembly(
+                typeof(JobScrape.Application.Results.Result).Assembly
+            );
 
-            var infrastructure = application.ShouldNot().HaveDependencyOn("JobScrape.Infrastructure").GetResult();
+            var infrastructure = application
+                .ShouldNot()
+                .HaveDependencyOn("JobScrape.Infrastructure")
+                .GetResult();
             var api = application.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
 
             Assert.True(infrastructure.IsSuccessful, Describe(infrastructure));
@@ -33,7 +44,10 @@ namespace JobScrape.Architecture.Tests
 
         private static string Describe(NetArchTest.Rules.TestResult result)
         {
-            return string.Join(Environment.NewLine, result.FailingTypes ?? Enumerable.Empty<Type>());
+            return string.Join(
+                Environment.NewLine,
+                result.FailingTypes ?? Enumerable.Empty<Type>()
+            );
         }
     }
 }

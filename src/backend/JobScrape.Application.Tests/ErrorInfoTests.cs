@@ -10,7 +10,13 @@ namespace JobScrape.Application.Tests
         {
             var metadata = new Dictionary<string, object?> { ["runId"] = "abc" };
 
-            var error = new ErrorInfo("QUOTA_EXCEEDED", "Quota exceeded", "Daily cap reached.", ErrorKind.QuotaExceeded, metadata);
+            var error = new ErrorInfo(
+                "QUOTA_EXCEEDED",
+                "Quota exceeded",
+                "Daily cap reached.",
+                ErrorKind.QuotaExceeded,
+                metadata
+            );
 
             Assert.Equal("QUOTA_EXCEEDED", error.Code);
             Assert.Equal("Quota exceeded", error.Title);

@@ -18,7 +18,12 @@ namespace JobScrape.Application.Tests
         [Fact]
         public void FailCarriesError()
         {
-            var error = new ErrorInfo("PROFILE_NOT_FOUND", "Not found", "Missing.", ErrorKind.NotFound);
+            var error = new ErrorInfo(
+                "PROFILE_NOT_FOUND",
+                "Not found",
+                "Missing.",
+                ErrorKind.NotFound
+            );
 
             var result = Result.Fail<string>(error);
 

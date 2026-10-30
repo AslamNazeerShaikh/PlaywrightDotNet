@@ -19,7 +19,9 @@ namespace JobScrape.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<GetHealthResponse>> GetAsync(CancellationToken cancellationToken)
+        public async Task<ActionResult<GetHealthResponse>> GetAsync(
+            CancellationToken cancellationToken
+        )
         {
             var response = await _handler.HandleAsync(cancellationToken);
             return Ok(response);

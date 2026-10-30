@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
@@ -25,5 +24,4 @@
     <ProjectReference Include="..\JobScrape.Infrastructure\JobScrape.Infrastructure.csproj" />
     <ProjectReference Include="..\JobScrape.Api\JobScrape.Api.csproj" />
   </ItemGroup>
-
 </Project>
