@@ -1,33 +1,36 @@
 # Graph Report - PlaywrightDotNet  (2026-10-31)
 
 ## Corpus Check
-- 20 files · ~68,746 words
+- 16 files · ~70,645 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 692 nodes · 870 edges · 73 communities (45 shown, 28 thin omitted)
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 134 edges (avg confidence: 0.86)
+- 696 nodes · 864 edges · 63 communities (35 shown, 28 thin omitted)
+- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 128 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
 - Result Contracts
 - Runtime Hardening
-- Health Slice
-- Architecture & Quality Gates
+- Delivery Gameplan
+- Application Patterns
+- Test Projects
 - Adapter Implementation Blueprint
 - Documentation Index
 - Web Cockpit
-- Browser Sessions
-- Delivery Gameplan
+- Error Taxonomy
+- Source Contracts
+- Health Slice
+- Architecture & Quality Gates
 - Test Pyramid
 - Compliance Non-Negotiables
 - Library Policy
-- Error Taxonomy
-- Conventional Commits
-- Source Playbooks
-- Backend Projects
+- Browser Sessions
 - Use-Case Handlers
-- Domain Aggregates
+- Conventional Commits
+- API Projects
+- C# Style Guides
+- Session Management
 - Compliance & Risk
 - GitHub MCP Config
 - Launch Profiles
@@ -35,34 +38,20 @@
 - No CQRS ADR
 - Serilog Polly ADR
 - AOT Policy ADR
-- API Test Packages
-- Application Test Packages
-- Architecture Test Packages
-- Result Factories
-- Challenge Handling
+- JobScrape Naming ADR
 - Operations Runbook
 - Libraries As Designed ADR
-- Problem Details Pattern
-- Domain Test Packages
-- CQRS Prohibition
-- Result Pattern
-- C# Style Guides
-- Options Pattern
-- Specification Pattern
-- Result Types
 - Data Retention
-- Application Patterns
 - Domain Exceptions
-- API Project
 - Design Documents
 - Persistence Unit of Work
 - Retry & Page Fetching
+- SDK & Package Pinning
 - Definition of Done
 - Detection Surface
 - Browser Profile Credential
 - Result ErrorInfo Mapping
 - Specification Queries
-- SDK & Package Pinning
 - Scope & YAGNI
 - CI Canary Policy
 - HTTP Error Contract
@@ -71,11 +60,9 @@
 - Pre-Phase Spikes
 - CLI Framework
 - Time Provider Injection
-- CI Pipeline
 - Gameplan Document
 - Testing Strategy Document
 - MTP Coverage Extension
-- ADR Index
 - Async Resource Management
 - Log Redaction
 - Frontend Scaffold
@@ -83,26 +70,26 @@
 ## God Nodes (most connected - your core abstractions)
 1. `Web cockpit (v2 control plane)` - 18 edges
 2. `RunScrapeHandler` - 16 edges
-3. `ErrorKind` - 15 edges
-4. `Phase 0 open decisions (D1-D12 with recommended defaults)` - 14 edges
+3. `Phase 0 open decisions (D1-D12 with recommended defaults)` - 14 edges
+4. `ErrorKind` - 14 edges
 5. `JobLens` - 12 edges
 6. `IJobSource` - 11 edges
-7. `Application Patterns` - 10 edges
+7. `Solution and Tooling` - 11 edges
 8. `2. Structured logging with Serilog` - 10 edges
 9. `Runtime Hardening: Logging, Errors, Resilience, and Resources` - 10 edges
-10. `ErrorInfo` - 10 edges
+10. `Application Patterns` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `3.3 Error codes` --references--> `ErrorKind`  [INFERRED]
-  docs/14-application-patterns.md → src/backend/JobScrape.Application/Results/ErrorKind.cs
-- `6.7 Testing` --references--> `ErrorKind`  [INFERRED]
-  docs/14-application-patterns.md → src/backend/JobScrape.Application/Results/ErrorKind.cs
 - `v1 Scope Boundary` --references--> `JobLens`  [EXTRACTED]
   docs/00-executive-summary.md → README.md
 - `v1 Success Criteria` --references--> `JobLens`  [EXTRACTED]
   docs/00-executive-summary.md → README.md
 - `JobLens` --conceptually_related_to--> `Clean Architecture dependency rule`  [INFERRED]
   README.md → docs/02-architecture.md
+- `React 19 plus Bun local web cockpit` --conceptually_related_to--> `JobLens v1 Phase Plan`  [INFERRED]
+  src/frontend/README.md → docs/05-gameplan.md
+- `Code Conventions and csharpier workflow` --semantically_similar_to--> `XML documentation global build rule`  [INFERRED] [semantically similar]
+  docs/04-solution-and-tooling.md → docs/10-adr/0017-xml-documentation-rule.md
 
 ## Import Cycles
 - None detected.
@@ -117,208 +104,169 @@
 - **Per-source adapter extraction pipeline** — docs_08_site_playbooks_urlbuilder, docs_08_site_playbooks_searchpageparser, docs_08_site_playbooks_normalizer, docs_08_site_playbooks_challengeclassifier, docs_02_architecture_searchpageresult, docs_08_site_playbooks_contract_tests [EXTRACTED 1.00]
 - **Cockpit control-plane request and live-update flow** — docs_12_web_cockpit_cockpit, docs_12_web_cockpit_dotnet_api_command_surface, docs_10_adr_0010_react_bun_cockpit_bun_bff, docs_12_web_cockpit_sse_event_stream, docs_12_web_cockpit_auth_csrf_model, docs_12_web_cockpit_tanstack_query_state [INFERRED 0.95]
 - **Deterministic C# formatting workflow** — docs_04_solution_and_tooling_code_conventions, docs_10_adr_0016_csharp_style_csharpier_style_guides, docs_10_adr_0016_csharp_style_csharpier_csharpier_formatting [INFERRED]
+- **xml docs enforcement flow** — docs_04_solution_and_tooling_code_conventions, docs_10_adr_0017_xml_documentation_rule_xml_doc_build_rule, docs_10_adr_readme_adr_index [INFERRED]
 
-## Communities (73 total, 28 thin omitted)
+## Communities (63 total, 28 thin omitted)
 
 ### Community 0 - "Result Contracts"
 Cohesion: 0.05
-Nodes (14): JobScrape.Application.Results, JobScrape.Api.Tests, JobScrape.Api.Controllers, JobScrape.Application.Tests, JobScrape.Domain.Tests, JobScrape.Architecture.Tests, HealthController, ErrorInfo (+6 more)
+Nodes (11): JobScrape.Api.Tests, JobScrape.Application.Tests, JobScrape.Domain.Tests, JobScrape.Architecture.Tests, HealthEndpointTests, ErrorInfoTests, GetHealthHandlerTests, ResultOfTTests (+3 more)
 
 ### Community 1 - "Runtime Hardening"
 Cohesion: 0.04
 Nodes (45): 1. Baseline decisions, 2.1 Layering, 2.2 Pipeline, 2.3 Bootstrap, 2.4 Enrichers, 2.5 Correlation and scopes, 2.6 Message templates and performance, 2.7 Redaction (+37 more)
 
-### Community 2 - "Health Slice"
-Cohesion: 0.07
-Nodes (16): JobScrape.Application.Features.Health, JobScrape.Api, ADR-0015: JobScrape solution naming, backend-first scaffold, native MTP tests, Alternatives considered, Consequences, Context, Decision, Follow-ups (+8 more)
-
-### Community 3 - "Architecture & Quality Gates"
+### Community 2 - "Delivery Gameplan"
 Cohesion: 0.06
-Nodes (31): v1 Success Criteria, SQLite + EF Core 10, ADR-0010 React + Bun cockpit, NetArchTest architecture tests, JobLens.Application, JobLens CLI (composition root), JobLens.Domain, JobLens.Infrastructure (+23 more)
+Nodes (35): ADR-0010 React + Bun cockpit, Modular Monolith with Clean Architecture and inward dependency rule, v2 Web Cockpit, Decision gates G0–G5, First 15 commits, Phase 0 — Foundation, Phase 1 — Domain + Application, Phase 2 — Browser + Session (+27 more)
 
-### Community 4 - "Adapter Implementation Blueprint"
+### Community 3 - "Application Patterns"
+Cohesion: 0.05
+Nodes (39): 1. Pattern map, 2.1 Decision, 2.2 Banned, 2.3 Replacements, 2.4 Why, 2.5 Allowed read/write separation, 2.6 Enforcement, 2. No CQRS, no MediatR (+31 more)
+
+### Community 4 - "Test Projects"
+Cohesion: 0.06
+Nodes (31): Microsoft.Extensions.TimeProvider.Testing, NetArchTest.Rules, net10.0, Microsoft.Extensions.Logging.Abstractions, Microsoft.NET.Sdk, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk (+23 more)
+
+### Community 5 - "Adapter Implementation Blueprint"
 Cohesion: 0.07
-Nodes (33): Naukri Private Search API (jobapi/v3/search), HtmlParser, JobSourceContractTests, JSON-LD extraction, Visibility guards, Challenge kinds taxonomy, ChallengeAssessment (kind, evidence, confidence), ChallengeDetector (anti-bot section 9.3) (+25 more)
+Nodes (35): Naukri Private Search API (jobapi/v3/search), HtmlParser, JobSourceContractTests, JSON-LD extraction, Visibility guards, Challenge kinds taxonomy, ChallengeAssessment (kind, evidence, confidence), ChallengeDetector (anti-bot section 9.3) (+27 more)
 
-### Community 5 - "Documentation Index"
+### Community 6 - "Documentation Index"
 Cohesion: 0.17
-Nodes (12): .NET 10 LTS, Per-source compliance tiers and consent gates, CSV + Excel export (JSON optional, Postgres later), Data retention 30/90/180 days (D12), Full posting field set (D4), Indeed opt-in with conservative caps (D3), JobLens working project name (D1), LinkedIn opt-in high-risk, default disabled (D2) (+4 more)
+Nodes (13): .NET 10 LTS, Solution and Tooling, Per-source compliance tiers and consent gates, CSV + Excel export (JSON optional, Postgres later), Data retention 30/90/180 days (D12), Full posting field set (D4), Indeed opt-in with conservative caps (D3), JobLens working project name (D1) (+5 more)
 
-### Community 6 - "Web Cockpit"
+### Community 7 - "Web Cockpit"
 Cohesion: 0.09
 Nodes (30): .NET 10 LTS, global.json SDK pin (10.0.403, rollForward latestFeature), Clean Architecture layers (Domain, Application, Infrastructure, Cli), Focused (tactical) DDD for Sourcing and Access, Modular monolith, EF Core 10.0.14, SQLite as source of truth, WAL single-writer configuration (+22 more)
 
-### Community 7 - "Browser Sessions"
-Cohesion: 0.10
-Nodes (24): Playwright for .NET, Public Browser Diagnostics, WebKit Is Not Safari, xUnit.net v3, BrowserSessionFactory, ChallengeDetector and ChallengeAssessment, CircuitBreaker (per source), ISessionManager (+16 more)
+### Community 8 - "Error Taxonomy"
+Cohesion: 0.07
+Nodes (24): JobScrape.Application.Results, ErrorInfo, ErrorKind, Challenge, Conflict, CoolingDown, Forbidden, NotFound (+16 more)
 
-### Community 8 - "Delivery Gameplan"
+### Community 9 - "Source Contracts"
 Cohesion: 0.09
-Nodes (21): Modular Monolith with Clean Architecture and inward dependency rule, Decision gates G0–G5, First 15 commits, Phase 0 — Foundation, Phase 1 — Domain + Application, Phase 2 — Browser + Session, Phase 3 — Naukri slice, Phase 4 — Indeed + LinkedIn (+13 more)
+Nodes (23): Akamai Bot Manager, Cloudflare Bot Management, ChallengeAssessment, ChallengeDetector, ChallengeKind, IJobSource, JobSnapshot, JobSourceRegistry (+15 more)
 
-### Community 9 - "Test Pyramid"
+### Community 10 - "Health Slice"
+Cohesion: 0.10
+Nodes (8): JobScrape.Application.Features.Health, JobScrape.Api.Controllers, JobScrape.Api, HealthController, Program, HealthPayload, GetHealthHandler, GetHealthResponse
+
+### Community 11 - "Architecture & Quality Gates"
+Cohesion: 0.09
+Nodes (20): v1 Success Criteria, SQLite + EF Core 10, NetArchTest architecture tests, ChallengeDetector and ChallengeAssessment, JobLens.Application, JobLens CLI (composition root), JobLens.Domain, JobLens.Infrastructure (+12 more)
+
+### Community 12 - "Test Pyramid"
 Cohesion: 0.12
 Nodes (13): xUnit.net v3, Playwright for .NET, Optional Naukri API fast path (jobapi/v3/search with RSA nkparam), Manual/nightly live canaries (never in CI), Local fixture server for Playwright E2E, Risk-based coverage gates (Domain 95/90, Application 90/85, overall 85/80), FakeTimeProvider namespace rename, JobScrape naming with backend-first MTP tests (+5 more)
 
-### Community 10 - "Compliance Non-Negotiables"
-Cohesion: 0.15
-Nodes (8): v1 Scope Boundary, Anti-ban by being a good citizen, Browser hygiene standard, Detection surface matrix, Inert stealth init script finding, Profile isolation per source, Public diagnostic sites (BotD, CreepJS), Old Python project (PythonWebScraping)
+### Community 13 - "Compliance Non-Negotiables"
+Cohesion: 0.18
+Nodes (6): v1 Scope Boundary, Anti-ban by being a good citizen, Browser hygiene standard, Inert stealth init script finding, Profile isolation per source, Old Python project (PythonWebScraping)
 
-### Community 11 - "Library Policy"
+### Community 14 - "Library Policy"
 Cohesion: 0.14
 Nodes (14): 1. Rules, 2. Library-specific guidance, 3. What we still enforce, 4. Reviewing a new library, 5. Related decisions, 6. References, ClosedXML, EF Core and Playwright (+6 more)
 
-### Community 12 - "Error Taxonomy"
-Cohesion: 0.14
-Nodes (13): ErrorKind, Challenge, Conflict, CoolingDown, Forbidden, NotFound, QuotaExceeded, RateLimited (+5 more)
+### Community 15 - "Browser Sessions"
+Cohesion: 0.22
+Nodes (11): Playwright for .NET, Public Browser Diagnostics, WebKit Is Not Safari, xUnit.net v3, BrowserSessionFactory, ISessionManager, BrowserProfile, Live Canary Tests (+3 more)
 
-### Community 13 - "Conventional Commits"
+### Community 16 - "Use-Case Handlers"
+Cohesion: 0.18
+Nodes (12): ArtifactStore, CompliancePolicy, RunScrapeHandler, JobLens Bounded Contexts, PolitenessPolicy, QuotaPolicy, RunEvent, RunLimits (+4 more)
+
+### Community 17 - "Conventional Commits"
 Cohesion: 0.15
 Nodes (13): 1.1 Header, 1.2 Body, 1.3 Footers, 1.4 Breaking changes, 1. Format, 2.1 Scopes, 2. Types used in this repository, 3.1 Examples (+5 more)
 
-### Community 14 - "Source Playbooks"
-Cohesion: 0.17
-Nodes (11): Akamai Bot Manager, Cloudflare Bot Management, PageFingerprint, JobSourceContractTests, Common Adapter Blueprint, URL Canonicalization, Indeed India Playbook, Native Next Pagination (Naukri) (+3 more)
+### Community 18 - "API Projects"
+Cohesion: 0.15
+Nodes (11): Microsoft.AspNetCore.Mvc.Testing, Microsoft.AspNetCore.OpenApi, Microsoft.NET.Sdk.Web, net10.0, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage (+3 more)
 
-### Community 15 - "Backend Projects"
+### Community 19 - "C# Style Guides"
 Cohesion: 0.20
-Nodes (8): net10.0, Microsoft.Extensions.Logging.Abstractions, Microsoft.NET.Sdk, net10.0, Microsoft.NET.Sdk, net10.0, Microsoft.Extensions.Logging.Abstractions, Microsoft.NET.Sdk
+Nodes (11): CI Outline restore build test E2E coverage, Code Conventions and csharpier workflow, Options binding and startup validation, Solution and Tooling, csharpier formatting ownership, ADR-0016 C# style guides and csharpier formatting, C# style guides ktaranov plus Google, ADR-0017 XML documentation as global build rule (+3 more)
 
-### Community 16 - "Use-Case Handlers"
-Cohesion: 0.24
-Nodes (9): ArtifactStore, CompliancePolicy, IJobSource, JobSnapshot, JobSourceRegistry, Page fingerprint, RunScrapeHandler, SearchPageResult (+1 more)
+### Community 20 - "Session Management"
+Cohesion: 0.22
+Nodes (10): CircuitBreaker (per source), Exponential backoff policy, Challenge and block metrics, Per-source circuit breaker, Cooldown policy, doctor command, Incident runbook, Review cadence (+2 more)
 
-### Community 17 - "Domain Aggregates"
-Cohesion: 0.20
-Nodes (9): JobLens Bounded Contexts, PolitenessPolicy, QuotaPolicy, RunEvent, RunLimits, ScrapeRun, SearchCriteria, SearchProfile (+1 more)
-
-### Community 18 - "Compliance & Risk"
+### Community 21 - "Compliance & Risk"
 Cohesion: 0.27
 Nodes (9): CompliancePolicy, ComplianceTier, CompliancePolicy gate, Fair use checklist, HumanPacing, Pacing and quotas, robots.txt findings (2026-10-29), Source risk tiers and gates (+1 more)
 
-### Community 19 - "GitHub MCP Config"
+### Community 22 - "GitHub MCP Config"
 Cohesion: 0.20
 Nodes (9): headers, oauth, type, url, Authorization, mcp, servers, $schema (+1 more)
 
-### Community 20 - "Launch Profiles"
+### Community 23 - "Launch Profiles"
 Cohesion: 0.20
 Nodes (9): ASPNETCORE_ENVIRONMENT, applicationUrl, commandName, dotnetRunMessages, environmentVariables, launchBrowser, profiles, http (+1 more)
 
-### Community 21 - "Posting Deduplication"
+### Community 24 - "Posting Deduplication"
 Cohesion: 0.31
 Nodes (9): Idempotent upsert by (SourceKey, ExternalJobId), IJobPostingRepository, JobNormalizer, JobPosting aggregate, ContentHash, DeduplicationPolicy, JobPosting, JobSkill (+1 more)
 
-### Community 22 - "No CQRS ADR"
+### Community 25 - "No CQRS ADR"
 Cohesion: 0.22
 Nodes (9): ADR-0011: Explicit Use-Case Handlers, No CQRS or MediatR, Alternatives considered, Consequences, Context, Decision, Follow-ups, Negative / trade-offs, Positive (+1 more)
 
-### Community 23 - "Serilog Polly ADR"
+### Community 26 - "Serilog Polly ADR"
 Cohesion: 0.22
 Nodes (9): ADR-0012: Serilog and Polly Runtime Hardening, Alternatives considered, Consequences, Context, Decision, Follow-ups, Negative / trade-offs, Positive (+1 more)
 
-### Community 24 - "AOT Policy ADR"
+### Community 27 - "AOT Policy ADR"
 Cohesion: 0.22
 Nodes (9): ADR-0013: AOT-Friendly Code, No NativeAOT Release, Alternatives considered, Consequences, Context, Decision, Follow-ups, Negative / trade-offs, Positive (+1 more)
 
-### Community 25 - "API Test Packages"
+### Community 28 - "JobScrape Naming ADR"
 Cohesion: 0.22
-Nodes (8): Microsoft.AspNetCore.Mvc.Testing, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio, xunit.v3, Microsoft.NET.Sdk
+Nodes (9): ADR-0015: JobScrape solution naming, backend-first scaffold, native MTP tests, Alternatives considered, Consequences, Context, Decision, Follow-ups, Negative / trade-offs, Positive (+1 more)
 
-### Community 26 - "Application Test Packages"
-Cohesion: 0.22
-Nodes (8): Microsoft.Extensions.TimeProvider.Testing, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio, xunit.v3, Microsoft.NET.Sdk
-
-### Community 27 - "Architecture Test Packages"
-Cohesion: 0.22
-Nodes (8): NetArchTest.Rules, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio, xunit.v3, Microsoft.NET.Sdk
-
-### Community 28 - "Result Factories"
-Cohesion: 0.22
-Nodes (4): Result, Error, IsFailure, IsSuccess
-
-### Community 29 - "Challenge Handling"
-Cohesion: 0.32
-Nodes (6): ChallengeAssessment, ChallengeDetector, ChallengeKind, ChallengeKind, ChallengePolicy, RetryPolicy
-
-### Community 30 - "Operations Runbook"
+### Community 29 - "Operations Runbook"
 Cohesion: 0.29
 Nodes (8): Per-Source Circuit Breaker, JobLens CLI Surface, joblens doctor, CLI Exit Codes, Cooldown Ladder, Anti-Bot Metrics and Alerts, OS Scheduling (cron/launchd/Task Scheduler), Troubleshooting Matrix
 
-### Community 31 - "Libraries As Designed ADR"
+### Community 30 - "Libraries As Designed ADR"
 Cohesion: 0.25
 Nodes (8): ADR-0014: Use Libraries as Designed; AOT Is Not a Constraint, Alternatives considered, Consequences, Context, Decision, Negative / trade-offs, Positive, References
 
-### Community 32 - "Problem Details Pattern"
-Cohesion: 0.25
-Nodes (8): 6.1 Contract, 6.2 Example, 6.3 Result → HTTP mapping, 6.4 Registration, 6.5 Rules, 6.6 CLI and SSE, 6.7 Testing, 6. Problem Details pattern
-
-### Community 33 - "Domain Test Packages"
-Cohesion: 0.25
-Nodes (7): net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio, xunit.v3, Microsoft.NET.Sdk
-
-### Community 34 - "CQRS Prohibition"
-Cohesion: 0.29
-Nodes (7): 2.1 Decision, 2.2 Banned, 2.3 Replacements, 2.4 Why, 2.5 Allowed read/write separation, 2.6 Enforcement, 2. No CQRS, no MediatR
-
-### Community 35 - "Result Pattern"
-Cohesion: 0.29
-Nodes (7): 3.1 When to use it, 3.2 Shape, 3.3 Error codes, 3.4 Handler example, 3.5 Rules, 3.6 Testing, 3. Result pattern
-
-### Community 36 - "C# Style Guides"
-Cohesion: 0.47
-Nodes (6): Code Conventions and csharpier workflow, Solution and Tooling, csharpier formatting ownership, ADR-0016 C# style guides and csharpier formatting, C# style guides ktaranov plus Google, ADR-0016 index entry C# style csharpier Accepted
-
-### Community 37 - "Options Pattern"
-Cohesion: 0.33
-Nodes (6): 4.1 Boundary, 4.2 Bind and validate, 4.3 Lifetimes, 4.4 Secrets, 4.5 Testing, 4. Options pattern
-
-### Community 38 - "Specification Pattern"
-Cohesion: 0.33
-Nodes (6): 5.1 When to use it, 5.2 Shape, 5.3 Query flow, 5.4 Rules, 5.5 Testing, 5. Specification pattern
-
-### Community 39 - "Result Types"
-Cohesion: 0.33
-Nodes (5): Result, Error, IsFailure, IsSuccess, Value
-
-### Community 40 - "Data Retention"
+### Community 31 - "Data Retention"
 Cohesion: 0.40
 Nodes (3): Retention Policy, Operator Security Checklist, Artifacts Storage Layout
 
-### Community 41 - "Application Patterns"
-Cohesion: 0.40
-Nodes (5): 1. Pattern map, 7. How the patterns compose, 8. Anti-patterns, 9. References, Application Patterns
-
-### Community 43 - "API Project"
-Cohesion: 0.50
-Nodes (3): Microsoft.AspNetCore.OpenApi, Microsoft.NET.Sdk.Web, net10.0
-
-### Community 44 - "Design Documents"
+### Community 33 - "Design Documents"
 Cohesion: 1.00
 Nodes (3): Architecture Document, Application Patterns Document, Runtime Hardening Document
 
-### Community 47 - "Definition of Done"
+### Community 36 - "SDK & Package Pinning"
+Cohesion: 0.67
+Nodes (3): Central Package Management, Layered projects and dependency graph, global.json SDK Pin
+
+### Community 37 - "Definition of Done"
 Cohesion: 0.67
 Nodes (3): Backlog epics E0–E9, Definition of Ready / Done, Coverage and quality metrics
 
 ## Knowledge Gaps
-- **162 isolated node(s):** `Error`, `IsFailure`, `IsSuccess`, `Error`, `IsFailure` (+157 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 348 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **164 isolated node(s):** `Anti-ban by being a good citizen`, `Profile isolation per source`, `Akamai Bot Manager`, `Cloudflare Bot Management`, `Selector Hit Logging` (+159 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 350 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `JobLens` connect `Documentation Index` to `Compliance Non-Negotiables`, `Architecture & Quality Gates`?**
-  _High betweenness centrality (0.215) - this node is a cross-community bridge._
+- **Why does `JobLens` connect `Documentation Index` to `Architecture & Quality Gates`, `Compliance Non-Negotiables`?**
+  _High betweenness centrality (0.160) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `RunScrapeHandler` (e.g. with `ChallengePolicy` and `Per-Source Circuit Breaker`) actually correct?**
   _`RunScrapeHandler` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Error`, `IsFailure`, `IsSuccess` to the rest of the system?**
-  _162 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `Anti-ban by being a good citizen`, `Profile isolation per source`, `Akamai Bot Manager` to the rest of the system?**
+  _164 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Result Contracts` be split into smaller, more focused modules?**
-  _Cohesion score 0.051587301587301584 - nodes in this community are weakly interconnected._
-- **Why does `IJobSource` connect `Use-Case Handlers` to `Architecture & Quality Gates`, `Adapter Implementation Blueprint`, `Source Playbooks`, `Compliance & Risk`, `Challenge Handling`?**
-  _High betweenness centrality (0.196) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `ErrorKind` (e.g. with `3.3 Error codes` and `6.7 Testing`) actually correct?**
-  _`ErrorKind` has 2 INFERRED edges - model-reasoned connections that need verification._
+  _Cohesion score 0.05323653962492438 - nodes in this community are weakly interconnected._
+- **Why does `IJobSource` connect `Source Contracts` to `Use-Case Handlers`, `Compliance & Risk`, `Architecture & Quality Gates`, `Adapter Implementation Blueprint`?**
+  _High betweenness centrality (0.157) - this node is a cross-community bridge._
 - **Should `Runtime Hardening` be split into smaller, more focused modules?**
   _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._
+- **Why does `Clean Architecture dependency rule` connect `Architecture & Quality Gates` to `Documentation Index`?**
+  _High betweenness centrality (0.129) - this node is a cross-community bridge._
