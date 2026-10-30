@@ -20,6 +20,7 @@
 | [0014](0014-use-libraries-as-designed.md) | Use libraries as designed; AOT is not a constraint | Accepted |
 | [0015](0015-jobscrape-naming-mtp-tests.md) | JobScrape naming, backend-first scaffold, native MTP tests | Accepted |
 | [0016](0016-csharp-style-csharpier.md) | C# style guides (ktaranov + Google) and csharpier formatting | Accepted |
+| [0017](0017-xml-documentation-rule.md) | XML documentation as a global build rule | Accepted |
 
 ## Conventions
 

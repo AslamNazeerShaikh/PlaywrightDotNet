@@ -678,6 +678,7 @@ owns formatting. Full decision: [ADR-0016](10-adr/0016-csharp-style-csharpier.md
 - `PascalCase` types, methods, properties, namespaces, files; `camelCase` locals and parameters; `_camelCase` private fields; `I`-prefixed interfaces; no underscores elsewhere.
 - `using` directives at the top, `System` first, then alphabetical.
 - Run `dotnet tool run csharpier format .` from `src/backend/` before every commit; `csharpier check .` must pass.
+- Every public type and member in production code carries XML documentation (`summary` + `param`/`returns`/`exception` as applicable); private logic that is not self-evident carries `//` why-comments. Missing docs fail the build globally (CS1591 + `TreatWarningsAsErrors`); test projects are explicitly exempt. See ADR-0017.
 - `sealed` by default for classes.
 - `record` for immutable data; `readonly record struct` for small IDs.
 - `CancellationToken cancellationToken` as the last parameter.
