@@ -7,6 +7,9 @@
     <!-- TreatWarningsAsErrors is enforced globally in Directory.Build.props;
          repeated here so the rule survives outside that hierarchy. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Tests are exempt from the global XML-documentation rule: test names
+         state the expectation, and examples live in docs/06-testing-strategy.md. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

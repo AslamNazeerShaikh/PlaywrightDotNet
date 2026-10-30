@@ -9,7 +9,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Global documentation rule (ADR-0017): every public type and member
+         must carry XML documentation. Missing docs (CS1591) fail the build
+         via TreatWarningsAsErrors. Test projects opt out explicitly below. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
       >true</ContinuousIntegrationBuild>
   </PropertyGroup>
