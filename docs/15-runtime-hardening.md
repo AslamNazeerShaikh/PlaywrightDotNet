@@ -509,7 +509,7 @@ using var response = await client.SendAsync(
     cancellationToken);
 
 if (!response.IsSuccessStatusCode)
-    return Result<T>.Fail(Errors.ApiUnavailable(response.StatusCode));
+    return Result.Fail<T>(Errors.ApiUnavailable(response.StatusCode));
 
 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 ```
@@ -548,7 +548,7 @@ catch (OperationCanceledException) when (
     !cancellationToken.IsCancellationRequested &&
     timeout.IsCancellationRequested)
 {
-    return Result<T>.Fail(Errors.Timeout("managed-api"));
+    return Result.Fail<T>(Errors.Timeout("managed-api"));
 }
 ```
 

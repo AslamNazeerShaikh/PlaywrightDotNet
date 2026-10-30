@@ -133,7 +133,7 @@ Do **not** use `Result` for:
 
 ### 3.2 Shape
 
-`Error` is a small immutable record. `Code` is the stable, machine-readable contract; `Title` and `Detail` are human-readable.
+`ErrorInfo` is a small immutable record. `Code` is the stable, machine-readable contract; `Title` and `Detail` are human-readable.
 
 ```csharp
 public enum ErrorKind
@@ -152,7 +152,7 @@ public enum ErrorKind
     Unexpected
 }
 
-public sealed record Error(
+public sealed record ErrorInfo(
     string Code,
     string Title,
     string Detail,
@@ -160,30 +160,48 @@ public sealed record Error(
     IReadOnlyDictionary<string, object?>? Metadata = null);
 ```
 
-`Result<T>` exposes success or one error, never both:
+The name is `ErrorInfo` rather than `Error` because `Error` collides with a
+reserved keyword in another .NET language (CA1716), and warnings are errors
+in this repository — no suppression markers are used.
+
+`Result<T>` exposes success or one error, never both. It carries no static
+members: all factories live on the non-generic `Result` hub so no statics sit
+on a generic type (CA1000):
 
 ```csharp
 public sealed class Result<T>
 {
     private readonly T? _value;
-    private readonly Error? _error;
+    private readonly ErrorInfo? _error;
 
-    private Result(T value) { IsSuccess = true; _value = value; }
-    private Result(Error error) { IsSuccess = false; _error = error; }
+    internal Result(T? value, ErrorInfo? error, bool isSuccess)
+    {
+        _value = value;
+        _error = error;
+        IsSuccess = isSuccess;
+    }
 
     public bool IsSuccess { get; }
     public bool IsFailure => !IsSuccess;
 
-    public T Value => IsSuccess
-        ? _value!
-        : throw new InvalidOperationException("Value is only available on success.");
+    public T Value => IsFailure
+        ? throw new InvalidOperationException("Value is only available on success.")
+        : _value!;
 
-    public Error Error => IsFailure
-        ? _error!
-        : throw new InvalidOperationException("Error is only available on failure.");
+    public ErrorInfo Error => IsSuccess
+        ? throw new InvalidOperationException("Error is only available on failure.")
+        : _error!;
+}
 
-    public static Result<T> Ok(T value) => new(value);
-    public static Result<T> Fail(Error error) => new(error);
+public sealed class Result
+{
+    // ... IsSuccess / IsFailure / Error as above ...
+
+    public static Result Ok() => new(true, null);
+    public static Result Fail(ErrorInfo error) => new(false, error);
+
+    public static Result<T> Ok<T>(T value) => new(value, null, true);
+    public static Result<T> Fail<T>(ErrorInfo error) => new(default, error, false);
 }
 ```
 
@@ -219,20 +237,20 @@ public async Task<Result<ScrapeRunSummary>> HandleAsync(
 {
     var profile = await _profiles.GetAsync(request.ProfileId, cancellationToken);
     if (profile is null)
-        return Result<ScrapeRunSummary>.Fail(Errors.ProfileNotFound(request.ProfileId));
+        return Result.Fail<ScrapeRunSummary>(Errors.ProfileNotFound(request.ProfileId));
 
     var compliance = _compliance.CanRun(profile.Source, request.Acknowledgment);
     if (compliance.IsBlocked)
-        return Result<ScrapeRunSummary>.Fail(
+        return Result.Fail<ScrapeRunSummary>(
             Errors.ComplianceBlocked(compliance.Reason));
 
     var source = _sources.Get(profile.Source);
     if (source is null)
-        return Result<ScrapeRunSummary>.Fail(Errors.SourceUnavailable(profile.Source));
+        return Result.Fail<ScrapeRunSummary>(Errors.SourceUnavailable(profile.Source));
 
     // ... orchestration ...
 
-    return Result<ScrapeRunSummary>.Ok(summary);
+    return Result.Ok(summary);
 }
 ```
 
@@ -242,7 +260,7 @@ public async Task<Result<ScrapeRunSummary>> HandleAsync(
 - Adapters classify expected page outcomes (`SearchPageResult`, `ChallengeAssessment`) and do not throw for a wall.
 - `OperationCanceledException` is never converted to a `Result`; it cancels the run.
 - Do not return `Result<T?>` for “not found”. Use `T?` for optional lookups that are not errors, and `Result<T>` when absence blocks the use case.
-- Do not put HTTP status codes, `HttpContext`, or user-facing localization inside `Error`.
+- Do not put HTTP status codes, `HttpContext`, or user-facing localization inside `ErrorInfo`.
 - `Metadata` may contain IDs, counts, and retry hints. Never put cookies, HTML, tokens, or PII in it.
 - Log at the edge or in the handler, not inside `Result` construction.
 - Only one error is returned per operation. Aggregate validation errors at the request-validation boundary.
@@ -534,7 +552,7 @@ Validation uses `ValidationProblemDetails`:
 One mapper owns the translation. Endpoints do not hand-build problem objects.
 
 ```csharp
-public static IResult ToProblem(this Error error)
+public static IResult ToProblem(this ErrorInfo error)
 {
     if (error.Kind == ErrorKind.Validation)
     {
@@ -658,7 +676,7 @@ Result<T> ──► CLI exit code
 | `IMediator.Send` for every use case | Runtime indirection, hidden handlers, noisy debugging | Inject and call the handler |
 | `PipelineBehavior` for validation/logging | Ordering is hidden; failures are hard to trace | Endpoint filter, middleware, or explicit call |
 | `Result` on every method | Noise; obscures real failure boundaries | Result only at use-case/contract boundaries |
-| Throwing for expected walls/quota | Exceptions become control flow; easy to swallow | Typed `Error` and `Result` |
+| Throwing for expected walls/quota | Exceptions become control flow; easy to swallow | Typed `ErrorInfo` and `Result` |
 | `IConfiguration` in Domain/Application | Couples core code to hosting; hard to test | Bind options at the edge; pass records |
 | Mutable options | Race conditions; unclear lifetime | Immutable `init` options; no mutation |
 | Specification for a single ID lookup | Ceremony without reuse | Inline LINQ |

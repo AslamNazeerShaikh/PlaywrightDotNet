@@ -64,7 +64,7 @@ flowchart LR
 public sealed class RunLimitsTests
 {
     [Fact]
-    public void Rejects_zero_pages()
+    public void RejectsZeroPages()
     {
         Assert.Throws<DomainException>(() => new RunLimits(
             maxPages: 0,
@@ -75,7 +75,7 @@ public sealed class RunLimitsTests
     }
 
     [Fact]
-    public void Rejects_min_delay_greater_than_max_delay()
+    public void RejectsMinDelayGreaterThanMaxDelay()
     {
         Assert.Throws<DomainException>(() => new RunLimits(
             maxPages: 3,
@@ -137,7 +137,7 @@ namespace JobLens.Domain.Tests;
 public sealed class SourceKeyTests
 {
     [Fact]
-    public void Parses_known_source_case_insensitively()
+    public void ParsesKnownSourceCaseInsensitively()
     {
         var key = SourceKey.Parse(" NAUKRI ");
 
@@ -146,7 +146,7 @@ public sealed class SourceKeyTests
     }
 
     [Fact]
-    public void Rejects_unknown_source()
+    public void RejectsUnknownSource()
     {
         Assert.Throws<DomainException>(() => SourceKey.Parse("monster"));
     }
@@ -159,7 +159,7 @@ public sealed class SourceKeyTests
 [Theory]
 [InlineData("https://www.naukri.com/job-listings-x-123?utm_source=a", "https://www.naukri.com/job-listings-x-123")]
 [InlineData("https://www.naukri.com/job-listings-x-123#fragment", "https://www.naukri.com/job-listings-x-123")]
-public void Canonicalizer_strips_tracking(string input, string expected)
+public void CanonicalizerStripsTracking(string input, string expected)
 {
     var actual = UrlCanonicalizer.Canonicalize(input, SourceKey.Naukri);
     Assert.Equal(expected, actual);
@@ -174,7 +174,7 @@ public static TheoryData<string, SourceKey> BadUrls => new()
 
 [Theory]
 [MemberData(nameof(BadUrls))]
-public void Canonicalizer_rejects_unsafe_urls(string input, SourceKey source)
+public void CanonicalizerRejectsUnsafeUrls(string input, SourceKey source)
 {
     Assert.Throws<DomainException>(() => UrlCanonicalizer.Canonicalize(input, source));
 }
@@ -556,7 +556,7 @@ Builders keep tests readable and make new required fields cheap to add.
 public sealed class NaukriSearchParserTests
 {
     [Fact]
-    public void Parses_twenty_cards_and_ignores_hidden_honeypot()
+    public void ParsesTwentyCardsAndIgnoresHiddenHoneypot()
     {
         var html = Fixture.Read("naukri/search-2026-10.html");
         var parser = new NaukriSearchPageParser();
@@ -603,14 +603,14 @@ public abstract class JobSourceContractTests
     protected abstract IJobSource CreateSource();
 
     [Fact]
-    public void Key_is_lowercase_and_stable()
+    public void KeyIsLowercaseAndStable()
     {
         var source = CreateSource();
         Assert.Equal(source.Key.Value, source.Key.Value.ToLowerInvariant());
     }
 
     [Fact]
-    public async Task Challenge_fixture_is_never_extracted_as_jobs()
+    public async Task ChallengeFixtureIsNeverExtractedAsJobs()
     {
         var source = CreateSource();
         var result = await source.SearchPageAsync(
@@ -621,7 +621,7 @@ public abstract class JobSourceContractTests
     }
 
     [Fact]
-    public void Capabilities_declare_compliance_and_detail_support()
+    public void CapabilitiesDeclareComplianceAndDetailSupport()
     {
         var capabilities = CreateSource().Capabilities;
         Assert.NotEqual(ComplianceTier.Unknown, capabilities.Compliance);

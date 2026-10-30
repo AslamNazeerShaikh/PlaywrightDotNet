@@ -449,7 +449,7 @@ public sealed record ChallengeAssessment(
     bool RequiresManualIntervention);
 ```
 
-`SearchPageResult` is an adapter DTO, not the generic application result. Use cases return `Result<T>` with a typed `Error` (code, title, detail, kind); only the API edge maps that error to HTTP. See [Application Patterns §3](14-application-patterns.md#3-result-pattern).
+`SearchPageResult` is an adapter DTO, not the generic application result. Use cases return `Result<T>` with a typed `ErrorInfo` (code, title, detail, kind); only the API edge maps that error to HTTP. See [Application Patterns §3](14-application-patterns.md#3-result-pattern).
 
 Rules:
 
