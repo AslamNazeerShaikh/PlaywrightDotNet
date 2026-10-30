@@ -19,6 +19,7 @@
 | [0013](0013-aot-friendly-policy.md) | AOT-friendly code, no NativeAOT release | Superseded by 0014 |
 | [0014](0014-use-libraries-as-designed.md) | Use libraries as designed; AOT is not a constraint | Accepted |
 | [0015](0015-jobscrape-naming-mtp-tests.md) | JobScrape naming, backend-first scaffold, native MTP tests | Accepted |
+| [0016](0016-csharp-style-csharpier.md) | C# style guides (ktaranov + Google) and csharpier formatting | Accepted |
 
 ## Conventions
 

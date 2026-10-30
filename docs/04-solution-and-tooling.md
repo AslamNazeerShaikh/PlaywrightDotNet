@@ -669,7 +669,15 @@ jobs:
 
 ### 10.2 Code rules
 
+Style authority: [ktaranov's C# standards](https://github.com/ktaranov/naming-convention/blob/master/C%23%20Coding%20Standards%20and%20Naming%20Conventions.md)
+and the [Google C# style guide](https://google.github.io/styleguide/csharpguide.html)
+for naming and organization; [csharpier](https://github.com/belav/csharpier)
+owns formatting. Full decision: [ADR-0016](10-adr/0016-csharp-style-csharpier.md).
+
 - One public type per file; file name matches the type.
+- `PascalCase` types, methods, properties, namespaces, files; `camelCase` locals and parameters; `_camelCase` private fields; `I`-prefixed interfaces; no underscores elsewhere.
+- `using` directives at the top, `System` first, then alphabetical.
+- Run `dotnet tool run csharpier format .` from `src/backend/` before every commit; `csharpier check .` must pass.
 - `sealed` by default for classes.
 - `record` for immutable data; `readonly record struct` for small IDs.
 - `CancellationToken cancellationToken` as the last parameter.
@@ -748,7 +756,9 @@ dotnet list package --vulnerable --include-transitive
 > (single). Coverage:
 > `dotnet test --project <Tests> --coverage --coverage-output <name>.cobertura.xml --coverage-output-format cobertura`,
 > then merge per-project files with the repo-local `dotnet-coverage` tool.
-> Feature 1 gate: 21/21 green, 100% line + branch on production code
+> Format: `dotnet tool run csharpier format .` before commit,
+> `dotnet tool run csharpier check .` in gates (see ADR-0016).
+> Feature 1 gate: 23/23 green, 100% line + branch on production code
 > (`Program` excluded as composition root, verified by boot + integration).
 
 Plus:
