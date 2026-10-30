@@ -524,4 +524,7 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/.graphify_*.json
 graphify-out/.needs_update
+# Pre-update backups and label signature sidecars rotate every run; not shared.
+graphify-out/[0-9]*/
+graphify-out/*.sig
 
