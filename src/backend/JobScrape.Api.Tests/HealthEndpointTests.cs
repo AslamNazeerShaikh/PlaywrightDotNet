@@ -17,13 +17,13 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
-        public void Rejects_null_handler()
+        public void RejectsNullHandler()
         {
             Assert.Throws<ArgumentNullException>(() => new HealthController(null!));
         }
 
         [Fact]
-        public async Task Get_returns_healthy_payload()
+        public async Task GetReturnsHealthyPayload()
         {
             using var client = _factory.CreateClient();
 

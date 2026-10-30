@@ -7,7 +7,7 @@ namespace JobScrape.Application.Tests
     public sealed class GetHealthHandlerTests
     {
         [Fact]
-        public async Task Returns_healthy_with_clock_time()
+        public async Task ReturnsHealthyWithClockTime()
         {
             var clock = new FakeTimeProvider();
             var fixedTime = new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero);
@@ -21,7 +21,7 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Rejects_null_clock()
+        public void RejectsNullClock()
         {
             Assert.Throws<ArgumentNullException>(() => new GetHealthHandler(null!));
         }

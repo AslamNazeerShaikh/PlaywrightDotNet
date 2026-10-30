@@ -6,9 +6,9 @@ namespace JobScrape.Application.Tests
     public sealed class ResultOfTTests
     {
         [Fact]
-        public void Ok_carries_value()
+        public void OkCarriesValue()
         {
-            var result = Result<string>.Ok("ok");
+            var result = Result.Ok<string>("ok");
 
             Assert.True(result.IsSuccess);
             Assert.False(result.IsFailure);
@@ -16,43 +16,31 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Fail_carries_error()
+        public void FailCarriesError()
         {
-            var error = new Error("PROFILE_NOT_FOUND", "Not found", "Missing.", ErrorKind.NotFound);
+            var error = new ErrorInfo("PROFILE_NOT_FOUND", "Not found", "Missing.", ErrorKind.NotFound);
 
-            var result = Result<string>.Fail(error);
+            var result = Result.Fail<string>(error);
 
             Assert.True(result.IsFailure);
             Assert.Same(error, result.Error);
         }
 
         [Fact]
-        public void Value_on_failure_throws()
+        public void ValueOnFailureThrows()
         {
-            var error = new Error("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
-            var result = Result<string>.Fail(error);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var result = Result.Fail<string>(error);
 
             Assert.Throws<InvalidOperationException>(() => result.Value);
         }
 
         [Fact]
-        public void Error_on_success_throws()
+        public void ErrorOnSuccessThrows()
         {
-            var result = Result<string>.Ok("ok");
+            var result = Result.Ok<string>("ok");
 
             Assert.Throws<InvalidOperationException>(() => result.Error);
-        }
-
-        [Fact]
-        public void Ok_with_null_value_throws()
-        {
-            Assert.Throws<ArgumentNullException>(() => Result<string>.Ok(null!));
-        }
-
-        [Fact]
-        public void Fail_with_null_error_throws()
-        {
-            Assert.Throws<ArgumentNullException>(() => Result<string>.Fail(null!));
         }
     }
 }

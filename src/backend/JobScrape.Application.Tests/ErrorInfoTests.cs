@@ -3,14 +3,14 @@ using Xunit;
 
 namespace JobScrape.Application.Tests
 {
-    public sealed class ErrorTests
+    public sealed class ErrorInfoTests
     {
         [Fact]
-        public void Stores_all_fields()
+        public void StoresAllFields()
         {
             var metadata = new Dictionary<string, object?> { ["runId"] = "abc" };
 
-            var error = new Error("QUOTA_EXCEEDED", "Quota exceeded", "Daily cap reached.", ErrorKind.QuotaExceeded, metadata);
+            var error = new ErrorInfo("QUOTA_EXCEEDED", "Quota exceeded", "Daily cap reached.", ErrorKind.QuotaExceeded, metadata);
 
             Assert.Equal("QUOTA_EXCEEDED", error.Code);
             Assert.Equal("Quota exceeded", error.Title);
@@ -20,18 +20,18 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Metadata_defaults_to_null()
+        public void MetadataDefaultsToNull()
         {
-            var error = new Error("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
 
             Assert.Null(error.Metadata);
         }
 
         [Fact]
-        public void Equal_records_are_equal()
+        public void EqualRecordsAreEqual()
         {
-            var left = new Error("NOT_FOUND", "Title", "Detail", ErrorKind.NotFound);
-            var right = new Error("NOT_FOUND", "Title", "Detail", ErrorKind.NotFound);
+            var left = new ErrorInfo("NOT_FOUND", "Title", "Detail", ErrorKind.NotFound);
+            var right = new ErrorInfo("NOT_FOUND", "Title", "Detail", ErrorKind.NotFound);
 
             Assert.Equal(left, right);
         }

@@ -6,7 +6,7 @@ namespace JobScrape.Architecture.Tests
     public sealed class LayerRulesTests
     {
         [Fact]
-        public void Domain_does_not_depend_on_outer_layers()
+        public void DomainDoesNotDependOnOuterLayers()
         {
             var domain = Types.InAssembly(typeof(JobScrape.Domain.DomainException).Assembly);
 
@@ -20,7 +20,7 @@ namespace JobScrape.Architecture.Tests
         }
 
         [Fact]
-        public void Application_does_not_depend_on_infrastructure_or_api()
+        public void ApplicationDoesNotDependOnInfrastructureOrApi()
         {
             var application = Types.InAssembly(typeof(JobScrape.Application.Results.Result).Assembly);
 

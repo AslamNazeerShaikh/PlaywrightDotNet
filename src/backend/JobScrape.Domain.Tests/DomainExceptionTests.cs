@@ -5,7 +5,7 @@ namespace JobScrape.Domain.Tests
     public sealed class DomainExceptionTests
     {
         [Fact]
-        public void Preserves_message()
+        public void PreservesMessage()
         {
             var exception = new DomainException("broken invariant");
 
@@ -13,7 +13,7 @@ namespace JobScrape.Domain.Tests
         }
 
         [Fact]
-        public void Preserves_inner_exception()
+        public void PreservesInnerException()
         {
             var inner = new InvalidOperationException("root cause");
 

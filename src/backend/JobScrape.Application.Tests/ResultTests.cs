@@ -6,7 +6,7 @@ namespace JobScrape.Application.Tests
     public sealed class ResultTests
     {
         [Fact]
-        public void Ok_is_success_without_error()
+        public void OkIsSuccessWithoutError()
         {
             var result = Result.Ok();
 
@@ -15,9 +15,9 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Fail_carries_error()
+        public void FailCarriesError()
         {
-            var error = new Error("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
 
             var result = Result.Fail(error);
 
@@ -27,7 +27,7 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Error_on_success_throws()
+        public void ErrorOnSuccessThrows()
         {
             var result = Result.Ok();
 
@@ -35,9 +35,41 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void Fail_with_null_error_throws()
+        public void FailWithNullErrorThrows()
         {
             Assert.Throws<ArgumentNullException>(() => Result.Fail(null!));
+        }
+
+        [Fact]
+        public void GenericOkCarriesValue()
+        {
+            var result = Result.Ok<string>("ok");
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("ok", result.Value);
+        }
+
+        [Fact]
+        public void GenericFailCarriesError()
+        {
+            var error = new ErrorInfo("PROFILE_NOT_FOUND", "Not found", "Missing.", ErrorKind.NotFound);
+
+            var result = Result.Fail<string>(error);
+
+            Assert.True(result.IsFailure);
+            Assert.Same(error, result.Error);
+        }
+
+        [Fact]
+        public void GenericOkWithNullValueThrows()
+        {
+            Assert.Throws<ArgumentNullException>(() => Result.Ok<string>(null!));
+        }
+
+        [Fact]
+        public void GenericFailWithNullErrorThrows()
+        {
+            Assert.Throws<ArgumentNullException>(() => Result.Fail<string>(null!));
         }
     }
 }

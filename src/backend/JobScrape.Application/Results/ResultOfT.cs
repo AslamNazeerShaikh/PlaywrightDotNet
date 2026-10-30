@@ -1,27 +1,21 @@
 namespace JobScrape.Application.Results
 {
-    // CA1000: Result<T>.Ok/Fail static factories are the documented
-    // application-pattern contract (docs/14-application-patterns.md section 3).
-#pragma warning disable CA1000
     /// <summary>
     /// Success/failure outcome for use cases with a return value. Success
-    /// carries exactly one value; failure carries exactly one <see cref="Error"/>.
+    /// carries exactly one value; failure carries exactly one
+    /// <see cref="ErrorInfo"/>. Instances come from the <see cref="Result"/>
+    /// factory hub so no static members sit on this generic type.
     /// </summary>
     public sealed class Result<T>
     {
         private readonly T? _value;
-        private readonly Error? _error;
+        private readonly ErrorInfo? _error;
 
-        private Result(T value)
+        internal Result(T? value, ErrorInfo? error, bool isSuccess)
         {
-            IsSuccess = true;
             _value = value;
-        }
-
-        private Result(Error error)
-        {
-            IsSuccess = false;
             _error = error;
+            IsSuccess = isSuccess;
         }
 
         public bool IsSuccess { get; }
@@ -41,7 +35,7 @@ namespace JobScrape.Application.Results
             }
         }
 
-        public Error Error
+        public ErrorInfo Error
         {
             get
             {
@@ -52,18 +46,6 @@ namespace JobScrape.Application.Results
 
                 return _error!;
             }
-        }
-
-        public static Result<T> Ok(T value)
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            return new Result<T>(value);
-        }
-
-        public static Result<T> Fail(Error error)
-        {
-            ArgumentNullException.ThrowIfNull(error);
-            return new Result<T>(error);
         }
     }
 }
