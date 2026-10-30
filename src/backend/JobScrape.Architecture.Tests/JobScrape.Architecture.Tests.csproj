@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Underscore test names (Method_State_Expectation) are the documented
+         xUnit convention in docs/06-testing-strategy.md. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobScrape.Domain\JobScrape.Domain.csproj" />
+    <ProjectReference Include="..\JobScrape.Application\JobScrape.Application.csproj" />
+    <ProjectReference Include="..\JobScrape.Infrastructure\JobScrape.Infrastructure.csproj" />
+    <ProjectReference Include="..\JobScrape.Api\JobScrape.Api.csproj" />
+  </ItemGroup>
+
+</Project>

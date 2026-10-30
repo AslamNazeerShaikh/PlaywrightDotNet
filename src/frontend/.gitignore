@@ -1,0 +1,35 @@
+# JobScrape frontend (React 19 + Bun 1.4.4) — scoped ignores.
+# Root .gitignore already covers node_modules/dist; this file keeps
+# src/frontend self-describing when viewed or moved on its own.
+
+node_modules/
+dist/
+build/
+.bun/
+*.tsbuildinfo
+generated.css
+
+# Bun / npm lockfile noise (we commit bun.lock, ignore the rest)
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Test / coverage output
+coverage/
+test-results/
+blob-report/
+playwright-report/
+
+# Local env (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
