@@ -8,7 +8,38 @@
 
 ## 1. Solution layout
 
-```text
+> **Implementation note (Feature 1, 2026-10-30):** the implemented scaffold
+> uses the `JobScrape` naming and a backend-first split per
+> [ADR-0015](10-adr/0015-jobscrape-naming-mtp-tests.md). `src/backend/` hosts
+> `JobScrape.slnx` and all .NET projects; `src/frontend/` is a scoped
+> placeholder for the React + Bun cockpit until the backend health slice is
+> finalized. The `JobLens.*` / `web/` names below remain the design-doc
+> target pending a repo-wide rename.
+>
+> ```text
+> PlaywrightDotNet/
+> ├── src/
+> │   ├── backend/
+> │   │   ├── JobScrape.slnx
+> │   │   ├── global.json (+ "test": { "runner": "Microsoft.Testing.Platform" })
+> │   │   ├── Directory.Build.props
+> │   │   ├── Directory.Packages.props
+> │   │   ├── NuGet.config
+> │   │   ├── JobScrape.Domain/
+> │   │   ├── JobScrape.Application/
+> │   │   ├── JobScrape.Infrastructure/
+> │   │   ├── JobScrape.Api/            (explicit Program.Main, controllers)
+> │   │   ├── JobScrape.Domain.Tests/
+> │   │   ├── JobScrape.Application.Tests/
+> │   │   ├── JobScrape.Api.Tests/      (WebApplicationFactory integration)
+> │   │   └── JobScrape.Architecture.Tests/ (NetArchTest layer rules)
+> │   └── frontend/                     (React 19 + Bun; scaffolded next)
+> └── .config/dotnet-tools.json         (dotnet-coverage 18.12.0, repo-local)
+> ```
+>
+> Design-doc target (pre-rename reference):
+>
+> ```text
 PlaywrightDotNet/
 ├── JobLens.slnx
 ├── global.json
@@ -129,7 +160,8 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
 | `Microsoft.Playwright.Xunit.v3` | `1.64.1` | E2E | Official `PageTest` base class. |
 | `NSubstitute` | `6.2.0` | Application/Infrastructure tests | Interaction fakes; BSD-licensed. |
 | `NetArchTest.Rules` | `1.3.2` | Architecture tests | Dependency rules. |
-| `coverlet.collector` | `10.1.0` | Test projects | Cross-platform coverage. |
+| `coverlet.collector` | `10.1.0` | Test projects | Cross-platform coverage (VSTest mode; inert under native MTP). |
+| `Microsoft.Testing.Extensions.CodeCoverage` | `18.12.0` | Test projects | Native MTP `--coverage` provider (see ADR-0015). |
 | `Microsoft.Extensions.TimeProvider.Testing` | `10.11.0` | Tests | `FakeTimeProvider`. |
 | `Verify.XunitV3` | `33.3.4` | Infrastructure tests (optional) | Snapshot parser output. |
 | `Serilog.Sinks.InMemory` | `2.0.0` | Test projects | Assert structured log properties and redaction. |
@@ -237,6 +269,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageVersion Include="Verify.XunitV3" Version="33.3.4" />
     <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
@@ -707,6 +740,16 @@ dotnet test --filter "Category!=Live&Category!=E2E"
 dotnet test tests/JobLens.E2E.Tests
 dotnet list package --vulnerable --include-transitive
 ```
+
+> **Backend note (native MTP, `src/backend/`):** `global.json` opts into the
+> Microsoft.Testing.Platform runner, so commands use the native form with no
+> bridge separator — `dotnet test --solution JobScrape.slnx` (all) or
+> `dotnet test --project JobScrape.Api.Tests/JobScrape.Api.Tests.csproj`
+> (single). Coverage:
+> `dotnet test --project <Tests> --coverage --coverage-output <name>.cobertura.xml --coverage-output-format cobertura`,
+> then merge per-project files with the repo-local `dotnet-coverage` tool.
+> Feature 1 gate: 21/21 green, 100% line + branch on production code
+> (`Program` excluded as composition root, verified by boot + integration).
 
 Plus:
 
