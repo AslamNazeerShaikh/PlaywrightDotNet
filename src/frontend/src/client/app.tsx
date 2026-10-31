@@ -35,7 +35,7 @@ export function App({
 }) {
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [upstream, setUpstream] = useState("http://127.0.0.1:5207");
   const [bffLive, setBffLive] = useState(false);
   const [apiState, setApiState] = useState<"unknown" | "live" | "down">("unknown");
