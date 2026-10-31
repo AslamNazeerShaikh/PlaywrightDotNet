@@ -22,6 +22,7 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 ## UI design
 
 - When designing or developing UI in `src/frontend/`, consult the ui-skills catalog first: `list_skills` filtered by topic/intent, then `get_skill` for the smallest useful set. Start with the `ibelick/ui-skills-root` router skill when unsure which applies.
+- Design baseline is 1920×1080 (16:9, ~141 PPI); fluid type/layout bottoms out below and ceilings at the baseline. See `src/frontend/README.md` § Design baseline.
 - Reference: [UI Skills](https://www.ui-skills.com/skills) · [MCP docs](https://www.ui-skills.com/mcp/docs).
 
 ## graphify

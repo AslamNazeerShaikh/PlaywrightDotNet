@@ -125,6 +125,35 @@ registry first (`list_skills` → `get_skill` via the `ui-skills` MCP, per
 | `pbakaus/typeset` | Hierarchy/measure/role assessment before editing | Five-role audit; measure caps, per-role leading, synthesis guard |
 | `ibelick/ui-skills-root` | Default router when no skill obviously applies | Pinned in `AGENTS.md`; consulted before each UI vertical |
 
+## Design baseline
+
+Default reference: **15.6-inch 1080p (1920 × 1080), 16:9, 141.21 PPI**.
+The deck stays responsive and dynamic for every size, shape, ratio, and
+orientation — but scale, density, and caps are tuned so this viewport is the
+reference render, not an accident of it.
+
+| Viewport (CSS px) | Layout | Type |
+| ----------------- | ------ | ---- |
+| 1920 (1080p @100%) | 12-col, full-bleed, 3-up modules | display 24, stat 20, title 13, body 12.5 |
+| 1536 (1080p @125% — common OS scaling) | 12-col desktop holds | same caps as baseline |
+| 1366 (laptop) | 12-col desktop holds | same caps as baseline |
+| ≤1100 | spans collapse 3/4/5→6, 7/8→12 | fluid range active |
+| ≤720 | 6-col grid, full-width rows, tighter padding | fluid minimums |
+| 390 (phone) | single column; tables scroll in-module | minimums, no overflow |
+
+Rules that follow from the baseline:
+
+- Fluid type (`clamp`) bottoms out for small screens and **ceilings at the
+  baseline** — 24px display / 20px stat never grow past 1920, so the
+  reference render is stable and smaller screens degrade smoothly.
+- No breakpoint between 1100 and 1920: the two most common 1080p
+  configurations (100% and 125% scaling) share one desktop layout.
+- Full-bleed is deliberate (`max-width: none`): the baseline's horizontal
+  space is working space, filled by auto-fit clusters, never letterboxed.
+- Verification is a live pass at 1920×1080 plus a narrow-width pass
+  (390px): no horizontal page scroll, no clipped text, no overlapping
+  modules — the grid's `minmax(0, 1fr)` + wrap-anywhere rules carry it.
+
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
 - **Port default is `5207`, not `5080`.** The doc's service table says
