@@ -102,17 +102,21 @@ describe("ops deck", () => {
     );
   });
 
-  test("overview shows the tac-map and endpoint catalog", async () => {
+  test("overview shows the tac-map, its key, and endpoint catalog", async () => {
     const queries = await renderDeck("overview");
 
     expect(queries.getByLabelText("Tactical overview map", { exact: false })).toBeDefined();
+    expect(queries.getByRole("list", { name: "Tac-map key" })).toBeDefined();
+    expect(queries.getByRole("list", { name: "Killfeed key" })).toBeDefined();
     expect(queries.getByText("/api/v1/search-profiles/{id}")).toBeDefined();
   });
 
-  test("topology shows the lifecycle sequence", async () => {
+  test("topology shows the lifecycle sequence, its key, and the glossary", async () => {
     const queries = await renderDeck("topology");
 
     expect(queries.getByLabelText("Request lifecycle sequence")).toBeDefined();
+    expect(queries.getByRole("list", { name: "Sequence key" })).toBeDefined();
+    expect(queries.getByText("Backend for Frontend", { exact: false })).toBeDefined();
     expect(queries.getByText("DOTNET_UNREACHABLE", { exact: false })).toBeDefined();
   });
 

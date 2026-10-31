@@ -719,6 +719,121 @@ table.data tr:last-child td {
   font-weight: 700;
 }
 
+/* ---- deck key: legends, swatches, glossary ---- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--text-micro);
+  color: var(--dim);
+}
+
+.swatch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.swatch-diamond {
+  width: 8px;
+  height: 8px;
+  border: 2px solid;
+  transform: rotate(45deg);
+  flex: none;
+}
+
+.swatch-wire {
+  width: 26px;
+  border-top-width: 2px;
+  flex: none;
+}
+
+.swatch-ring {
+  width: 10px;
+  height: 10px;
+  border: 1.5px dashed;
+  border-radius: 50%;
+  flex: none;
+}
+
+.swatch-cross {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+.swatch-cross::before,
+.swatch-cross::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 2px;
+  height: 10px;
+  background: var(--cross-color, var(--red));
+}
+
+.swatch-cross::before {
+  transform: rotate(45deg);
+}
+
+.swatch-cross::after {
+  transform: rotate(-45deg);
+}
+
+.glossary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.glossary-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 4px 14px;
+  padding: 7px 10px;
+  background: var(--void);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: var(--shadow-well);
+}
+
+.glossary-row dt {
+  font-weight: 600;
+  color: var(--sig);
+  overflow-wrap: anywhere;
+}
+
+.glossary-row dd {
+  margin: 0;
+  color: var(--dim);
+  font-size: var(--text-label);
+  overflow-wrap: anywhere;
+}
+
+.glossary-row dd strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+abbr.abbr {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 /* ---- page intro strip ---- */
 
 .page-head {

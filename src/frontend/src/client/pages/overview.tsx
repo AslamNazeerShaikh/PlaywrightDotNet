@@ -1,3 +1,4 @@
+import { Abbr, Cross, Diamond, Dot, Legend, Ring, Wire } from "../components/legend.tsx";
 import { CodeTag, codeTone, JsonBlock, Module, Stat } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
@@ -31,9 +32,7 @@ export function OverviewPage({
         <h1>
           <Scramble text="OPS-DECK // OVERVIEW" />
         </h1>
-        <p>
-          Engine state, request path, and event stream at a glance. Drill into a tab for detail.
-        </p>
+        <p>Engine state, battlespace, and killfeed at a glance. Drill into a tab for detail.</p>
       </div>
 
       <Module
@@ -66,6 +65,14 @@ export function OverviewPage({
         note="Round-trip ms per health probe, newest on the right."
       >
         <Sparkline samples={samples} label="Proxy latency" />
+        <Legend
+          label="Latency chart key"
+          items={[
+            { key: "hit", swatch: <Dot color="var(--sig)" />, text: "hit — probe answered" },
+            { key: "miss", swatch: <Dot color="var(--red)" />, text: "miss — probe failed" },
+            { key: "line", swatch: <Wire color="var(--sig)" />, text: "round-trip ms over time" },
+          ]}
+        />
         {stats !== null && (
           <div className="stat-grid" style={{ marginTop: "10px" }}>
             <Stat label="p50" value={formatMs(stats.p50)} />
@@ -79,16 +86,42 @@ export function OverviewPage({
         code="MOD-03"
         title="Tac-map // god's eye"
         span="span-4"
-        note="BFF is HQ. Tracers ride live wires; X marks failed probes."
+        note={
+          <>
+            <Abbr term="BFF" full="Backend for Frontend" /> is{" "}
+            <Abbr term="HQ" full="Headquarters: the tac-map center" />. Tracers ride live wires; X
+            marks failed probes.
+          </>
+        }
       >
         <TacMap samples={samples} apiState={apiState} />
+        <Legend
+          label="Tac-map key"
+          items={[
+            { key: "unit", swatch: <Diamond color="var(--sig)" />, text: "unit — color is state" },
+            { key: "hq", swatch: <Ring color="var(--sig)" />, text: "HQ — the BFF" },
+            { key: "wire", swatch: <Wire color="var(--sig)" />, text: "live wire" },
+            {
+              key: "unknown",
+              swatch: <Wire color="var(--faint)" dashed />,
+              text: "unknown wire",
+            },
+            { key: "blip", swatch: <Dot color="var(--sig)" />, text: "probe hit" },
+            { key: "kill", swatch: <Cross color="var(--red)" />, text: "probe miss" },
+          ]}
+        />
       </Module>
 
       <Module
         code="MOD-04"
         title="Endpoint catalog"
         span="span-7"
-        note="Every route the BFF exposes or proxies, and the handler that owns it."
+        note={
+          <>
+            Every route the <Abbr term="BFF" full="Backend for Frontend" /> exposes or proxies, and
+            the handler that owns it.
+          </>
+        }
       >
         <div className="tbl-wrap">
           <table className="data">
@@ -160,6 +193,17 @@ export function OverviewPage({
             ))}
           </ul>
         )}
+        <Legend
+          label="Killfeed key"
+          items={[
+            {
+              key: "confirm",
+              swatch: <Dot color="var(--sig)" />,
+              text: "▸ confirm — action landed",
+            },
+            { key: "kill", swatch: <Cross color="var(--red)" />, text: "✕ kill — action failed" },
+          ]}
+        />
       </Module>
     </>
   );

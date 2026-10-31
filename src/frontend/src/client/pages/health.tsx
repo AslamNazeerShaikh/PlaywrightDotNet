@@ -1,3 +1,4 @@
+import { Abbr, Dot, Legend } from "../components/legend.tsx";
 import { CodeTag, JsonBlock, Module, Stat } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
@@ -61,6 +62,13 @@ export function HealthPage({
         note="Rolling window of the last 60 probes."
       >
         <Sparkline samples={samples} label="Health probe latency" />
+        <Legend
+          label="Latency chart key"
+          items={[
+            { key: "hit", swatch: <Dot color="var(--sig)" />, text: "hit — probe answered" },
+            { key: "miss", swatch: <Dot color="var(--red)" />, text: "miss — probe failed" },
+          ]}
+        />
         <div className="stat-grid" style={{ marginTop: "10px" }}>
           <Stat label="Probes" value={stats === null ? "0" : String(stats.count)} />
           <Stat
@@ -112,7 +120,13 @@ export function HealthPage({
         code="HLT-04"
         title="Raw payload"
         span="span-6"
-        note="Exactly what the API returned — the deck renders fields, never prose."
+        note={
+          <>
+            Exactly what the{" "}
+            <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
+            returned — the deck renders fields, never prose.
+          </>
+        }
       >
         {health === null ? (
           <p className="status-line">Run a probe to capture the payload.</p>
@@ -138,19 +152,24 @@ export function HealthPage({
             <tbody>
               <tr>
                 <td>status = healthy</td>
-                <td>API process alive, JSON pipeline intact, clock readable.</td>
+                <td>
+                  <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
+                  process alive, JSON pipeline intact, clock readable.
+                </td>
               </tr>
               <tr>
                 <td>timeUtc</td>
                 <td>
-                  Server clock at response time; drift against the deck clock hints at environment
-                  skew.
+                  Server clock at response time in{" "}
+                  <Abbr term="UTC" full="Coordinated Universal Time" />; drift against the deck
+                  clock hints at environment skew.
                 </td>
               </tr>
               <tr>
                 <td>round trip</td>
                 <td>
-                  Browser → BFF → API → back. Spikes implicate the proxy path, not just the API.
+                  Browser → <Abbr term="BFF" full="Backend for Frontend" /> → API → back. Spikes
+                  implicate the proxy path, not just the API.
                 </td>
               </tr>
               <tr>

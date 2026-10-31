@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Abbr } from "../components/legend.tsx";
 import { CodeTag, codeTone, JsonBlock, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, SearchProfilePayload } from "../lib/api.ts";
@@ -63,7 +64,12 @@ export function ProfilesPage({
         code="PRF-01"
         title="Lookup"
         span="span-4"
-        note="GET /api/v1/search-profiles/{id} through the BFF proxy."
+        note={
+          <>
+            GET /api/v1/search-profiles/{"{id}"} through the{" "}
+            <Abbr term="BFF" full="Backend for Frontend" /> proxy.
+          </>
+        }
       >
         <form onSubmit={submit}>
           <label className="field">

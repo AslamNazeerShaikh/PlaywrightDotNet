@@ -1,3 +1,4 @@
+import { Abbr, Glossary, Legend, Wire } from "../components/legend.tsx";
 import { Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 
@@ -41,13 +42,30 @@ export function TopologyPage({ upstream }: { upstream: string }) {
           {arrow(420, 230, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
           {arrow(230, 230, 246, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
         </svg>
+        <Legend
+          label="Sequence key"
+          items={[
+            { key: "hit", swatch: <Wire color="var(--sig)" />, text: "happy path — 200" },
+            { key: "miss", swatch: <Wire color="var(--red)" />, text: "miss path — 404 + code" },
+            {
+              key: "down",
+              swatch: <Wire color="var(--amber)" />,
+              text: "plane down — self-loop answers 502",
+            },
+          ]}
+        />
       </Module>
 
       <Module
         code="TOP-02"
         title="Processes"
         span="span-5"
-        note="Loopback-only. No CORS, no cross-origin calls, ever."
+        note={
+          <>
+            Loopback-only. No <Abbr term="CORS" full="Cross-Origin Resource Sharing" />, no
+            cross-origin calls, ever.
+          </>
+        }
       >
         <div className="tbl-wrap">
           <table className="data">
@@ -60,12 +78,20 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             </thead>
             <tbody>
               <tr>
-                <td>BFF (Bun.serve)</td>
+                <td>
+                  <Abbr term="BFF" full="Backend for Frontend" /> (Bun.serve)
+                </td>
                 <td>127.0.0.1:3000</td>
-                <td>/healthz, /api/* proxy, SPA static, HMR in dev</td>
+                <td>
+                  /healthz, /api/* proxy, <Abbr term="SPA" full="Single-Page Application" /> static,{" "}
+                  <Abbr term="HMR" full="Hot Module Replacement" /> in dev
+                </td>
               </tr>
               <tr>
-                <td>API (ASP.NET)</td>
+                <td>
+                  <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
+                  (ASP.NET)
+                </td>
                 <td>127.0.0.1:5207</td>
                 <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
               </tr>
@@ -127,6 +153,68 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             </tbody>
           </table>
         </div>
+      </Module>
+
+      <Module
+        code="TOP-04"
+        title="Deck glossary"
+        span="span-12"
+        note="Every abbreviation on the deck, expanded once. Hover any dotted term anywhere for its meaning."
+      >
+        <Glossary
+          terms={[
+            {
+              abbr: "BFF",
+              full: "Backend for Frontend",
+              hint: "The Bun process on :3000. Serves the deck, proxies /api/* loopback-only, owns no business logic.",
+            },
+            {
+              abbr: "API",
+              full: "Application Programming Interface",
+              hint: "The .NET data plane on :5207. Controllers, handlers, and the store live here.",
+            },
+            {
+              abbr: "HQ",
+              full: "Headquarters",
+              hint: "The tac-map center: the BFF. All wires run through it.",
+            },
+            {
+              abbr: "MOD / HLT / PRF / TOP",
+              full: "Module code prefixes",
+              hint: "Which page owns the card: overview, health, profiles, topology.",
+            },
+            {
+              abbr: "UTC",
+              full: "Coordinated Universal Time",
+              hint: "Every timestamp on the deck. Compare against the server timeUtc to spot clock skew.",
+            },
+            {
+              abbr: "P50",
+              full: "50th percentile",
+              hint: "Median round-trip: half the probes were faster, half slower. Robust against one-off spikes.",
+            },
+            {
+              abbr: "HMR",
+              full: "Hot Module Replacement",
+              hint: "The dev server swaps edited modules live; the deck never needs a refresh while building.",
+            },
+            {
+              abbr: "SPA",
+              full: "Single-Page Application",
+              hint: "The React bundle served at /. Hash routes switch pages without a server round trip.",
+            },
+            {
+              abbr: "SSE",
+              full: "Server-Sent Events",
+              hint: "Planned: the runs feed will stream over SSE through the BFF proxy. Not wired yet.",
+            },
+            {
+              abbr: "CORS",
+              full: "Cross-Origin Resource Sharing",
+              hint: "Never opened. The browser talks same-origin to the BFF; the BFF talks loopback to the API.",
+            },
+          ]}
+        />
       </Module>
     </>
   );

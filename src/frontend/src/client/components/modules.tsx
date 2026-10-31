@@ -17,7 +17,7 @@ export function Module({
 }: {
   code: string;
   title: string;
-  note?: string;
+  note?: ReactNode;
   span?: string;
   children: ReactNode;
 }) {
