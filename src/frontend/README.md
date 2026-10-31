@@ -105,6 +105,24 @@ src/frontend/
 - Ambient life: tri-color aurora drift, scan-beam sweep, shimmering brand,
   button sheens, sparkline sheen sweeps (SMIL, motion-gated).
 
+## UI skill ledger
+
+Every visual decision routes through the [ui-skills](https://www.ui-skills.com/skills)
+registry first (`list_skills` → `get_skill` via the `ui-skills` MCP, per
+`AGENTS.md`). What was consulted, and where it landed:
+
+| Skill | Guided | Landed in |
+| ----- | ------ | --------- |
+| `mengto/tech-green-dark-mode-modern` | Signal system: matte-black surfaces, emerald accents, framed cards, mono labels | Design tokens, module frame, pills (`styles/globals.css`) |
+| `dammyjay93/interface-design` | Craft bar: intent-first, domain-driven, no-default output | Ops-deck brief (dense/cold/terminal), page-per-feature IA |
+| `tt-a1i/archify` | Diagram rigor: validated, code-backed flow diagrams | Topology lifecycle sequence, pipeline/tac-map diagrams |
+| `emilkowalski/animate` | Motion build order: gate → purpose → cheapest tool (CSS), transform/opacity only | `Scramble`, entrance choreography, press physics |
+| `mengto/animation-systems` | Motion tokens, stagger, choreography, reduced-motion policy | Spring/ease/duration tokens, staggered deck entrances |
+| `mengto/beautiful-shadows` | Layered neutral elevation, one strength per state | Shadow tokens (sm/md/lg/well), hover lift |
+| `iart-ai/svg-animation` | SMIL draw-on, motion paths, animated gradients | Sparkline draw + sheen, tac-map sweep + tracers |
+| `mengto/css-border-gradient` | Quiet gradient edges, border-taste rules | Bracket/corner treatment kept quiet; borders never compete |
+| `ibelick/ui-skills-root` | Default router when no skill obviously applies | Pinned in `AGENTS.md`; consulted before each UI vertical |
+
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
 - **Port default is `5207`, not `5080`.** The doc's service table says
