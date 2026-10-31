@@ -92,6 +92,10 @@ src/frontend/
   entrances, draw-in charts, breathing live-dots, press physics on controls
   (per `emilkowalski/animate` + `mengto/animation-systems`). Transform and
   opacity only; `prefers-reduced-motion` disables it all.
+- Elevation follows `mengto/beautiful-shadows`: layered neutral shadows,
+  one strength per state (sm controls, md resting modules, lg lifted hover),
+  recessed wells for data, borders never replaced. Top highlight included
+  for dark-mode depth; light theme uses the exact recipe curves.
 - UI taste follows ui-skills (`list_skills` → `get_skill` first):
   `tech-green-dark-mode-modern` for the signal system, `interface-design`
   for craft, `archify` for diagram rigor.

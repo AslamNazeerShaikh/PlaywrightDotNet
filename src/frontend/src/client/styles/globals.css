@@ -87,6 +87,16 @@
   --sig-line: rgba(11, 122, 85, 0.45);
   --amber: #96600a;
   --red: #c03232;
+  --shadow-sm: 0 1px 2px rgba(18, 33, 29, 0.1), 0 1px 1px rgba(18, 33, 29, 0.06);
+  --shadow-md:
+    0 1px 1px -0.5px rgba(18, 33, 29, 0.08), 0 3px 3px -1.5px rgba(18, 33, 29, 0.08),
+    0 6px 6px -3px rgba(18, 33, 29, 0.08), 0 12px 12px -6px rgba(18, 33, 29, 0.08),
+    0 24px 24px -12px rgba(18, 33, 29, 0.1);
+  --shadow-lg:
+    0 2.8px 2.2px rgba(18, 33, 29, 0.05), 0 6.7px 5.3px rgba(18, 33, 29, 0.06),
+    0 12.5px 10px rgba(18, 33, 29, 0.07), 0 22.3px 17.9px rgba(18, 33, 29, 0.08),
+    0 41.8px 33.4px rgba(18, 33, 29, 0.09), 0 100px 80px rgba(18, 33, 29, 0.12);
+  --shadow-well: inset 0 1px 2px rgba(18, 33, 29, 0.08);
 }
 
 *,
@@ -185,6 +195,7 @@ a:hover {
   padding: 10px 18px;
   background: rgba(5, 8, 7, 0.92);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.8);
 }
 
 .brand {
@@ -223,6 +234,7 @@ a:hover {
   padding: 2px 9px;
   border: 1px solid var(--line-hi);
   border-radius: 999px;
+  box-shadow: var(--shadow-sm);
   white-space: nowrap;
 }
 
@@ -331,6 +343,7 @@ a:hover {
   background: linear-gradient(180deg, var(--raise), var(--panel));
   border: 1px solid var(--line);
   border-radius: 6px;
+  box-shadow: var(--shadow-md);
   padding: var(--pad);
   overflow-wrap: anywhere;
 }
@@ -405,6 +418,7 @@ a:hover {
   background: var(--void);
   border: 1px solid var(--line);
   border-radius: 4px;
+  box-shadow: var(--shadow-well);
 }
 
 .stat-label {
@@ -446,6 +460,7 @@ a:hover {
   background: var(--sig);
   border: 1px solid var(--sig);
   border-radius: 4px;
+  box-shadow: var(--shadow-sm);
   padding: 7px 14px;
 }
 
@@ -485,6 +500,7 @@ select.input {
   background: var(--void);
   border: 1px solid var(--line-hi);
   border-radius: 4px;
+  box-shadow: var(--shadow-sm);
   padding: 8px 10px;
 }
 
@@ -502,6 +518,7 @@ select.input {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 4px;
+  box-shadow: var(--shadow-well);
 }
 
 table.data {
@@ -543,6 +560,7 @@ table.data tr:last-child td {
   background: var(--void);
   border: 1px solid var(--line);
   border-radius: 4px;
+  box-shadow: var(--shadow-well);
   font-size: 11.5px;
   line-height: 1.6;
   overflow-x: auto;
@@ -584,6 +602,7 @@ table.data tr:last-child td {
   border: 1px solid rgba(248, 113, 113, 0.45);
   border-left: 3px solid var(--red);
   border-radius: 4px;
+  box-shadow: var(--shadow-md);
   background: rgba(248, 113, 113, 0.07);
   overflow-wrap: anywhere;
 }
@@ -629,6 +648,7 @@ table.data tr:last-child td {
   background: var(--void);
   border: 1px solid var(--line);
   border-radius: 4px;
+  box-shadow: var(--shadow-well);
   font-size: 11.5px;
 }
 
@@ -743,6 +763,19 @@ table.data tr:last-child td {
   --dur-ui: 220ms;
   --dur-entrance: 550ms;
   --dur-draw: 900ms;
+
+  /* Elevation: layered neutral shadows (per mengto/beautiful-shadows —
+     ambient + direct + contact layers, low alphas, big blur, no tint).
+     Borders stay: shadows deepen, they never replace the 1px shells.
+     sm = controls/pills, md = resting modules, lg = lifted hover. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px -4px rgba(0, 0, 0, 0.55),
+    0 12px 28px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-lg:
+    0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 20px -6px rgba(0, 0, 0, 0.6),
+    0 24px 48px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-well: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes deck-in {
@@ -814,19 +847,24 @@ table.data tr:last-child td {
 
 /* Modules acknowledge hover with a border shift only — no lift, so dense
    tables never jitter under the cursor. Theme flips cross-fade. */
+/* Modules acknowledge hover with a 1px lift into the lg elevation — the
+   interaction clearly changes elevation, so a deeper shadow is earned. */
 .module {
   transition:
     border-color var(--dur-ui) var(--ease-out),
-    background-color 300ms var(--ease-out);
+    background-color 300ms var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out),
+    transform var(--dur-ui) var(--ease-spring);
 }
 
 .module:hover {
   border-color: var(--line-hi);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
 }
 
 .cmdbar,
 .tabs,
-.module,
 .stat,
 .json,
 .tbl-wrap,
