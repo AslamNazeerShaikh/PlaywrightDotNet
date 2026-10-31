@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
@@ -55,6 +55,11 @@ export function App({
   const [history, setHistory] = useState<LookupRecord[]>([]);
   const probeBusy = useRef(false);
   const probeRef = useRef<() => void>(() => undefined);
+  const linkLogged = useRef(false);
+  // Default client must be identity-stable: a fresh object per render would
+  // refire every [client] effect below and spiral into a fetch loop.
+  const fallbackClient = useMemo(createApiClient, []);
+  const activeClient = client ?? fallbackClient;
 
   const now = useNow();
   const heading =
@@ -82,10 +87,12 @@ export function App({
   }, [initialRoute]);
 
   // The BFF reports its own upstream on /healthz — the deck displays the
-  // wire it actually runs on, not a build-time guess.
+  // wire it actually runs on, not a build-time guess. The link event fires
+  // once: without the guard, its state update would refire this effect and
+  // spiral into a fetch loop.
   useEffect(() => {
     let cancelled = false;
-    client
+    activeClient
       .fetchMeta()
       .then(({ result }) => {
         if (cancelled || !result.ok) {
@@ -93,20 +100,23 @@ export function App({
         }
         setBffLive(true);
         setUpstream(result.value.upstream);
-        setEvents((e) =>
-          pushEvent(e, {
-            at: clockTime(new Date().toISOString()),
-            kind: "info",
-            code: "BFF_LINK",
-            detail: `BFF live · upstream ${result.value.upstream}`,
-          }),
-        );
+        if (!linkLogged.current) {
+          linkLogged.current = true;
+          setEvents((e) =>
+            pushEvent(e, {
+              at: clockTime(new Date().toISOString()),
+              kind: "info",
+              code: "BFF_LINK",
+              detail: `BFF live · upstream ${result.value.upstream}`,
+            }),
+          );
+        }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [activeClient]);
 
   async function checkHealth() {
     if (probeBusy.current) {
@@ -114,7 +124,7 @@ export function App({
     }
     probeBusy.current = true;
     setChecking(true);
-    const { result, ms, at } = await client.fetchHealth();
+    const { result, ms, at } = await activeClient.fetchHealth();
     const ok = result.ok;
     setSamples((s) => pushSample(s, { label: "health", ms, at: Date.parse(at), ok }));
     if (ok) {
@@ -156,7 +166,7 @@ export function App({
 
   async function lookupProfile(id: string) {
     setLooking(true);
-    const { result, ms, at } = await client.fetchProfile(id);
+    const { result, ms, at } = await activeClient.fetchProfile(id);
     const code = result.ok ? "OK" : result.problem.code;
     if (result.ok) {
       setProfile(result.value);
