@@ -1,7 +1,7 @@
 import { CodeTag, codeTone, JsonBlock, Module, Stat } from "../components/modules.tsx";
-import { PipelineDiagram } from "../components/pipeline.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
+import { TacMap } from "../components/tacmap.tsx";
 import type { HealthPayload } from "../lib/api.ts";
 import { formatMs, type LatencyStats, type LogEvent, type Sample } from "../lib/telemetry.ts";
 
@@ -17,7 +17,6 @@ export function OverviewPage({
   samples,
   events,
   apiState,
-  upstream,
 }: {
   health: HealthPayload | null;
   healthMs: number | null;
@@ -25,7 +24,6 @@ export function OverviewPage({
   samples: Sample[];
   events: LogEvent[];
   apiState: "unknown" | "live" | "down";
-  upstream: string;
 }) {
   return (
     <>
@@ -79,11 +77,11 @@ export function OverviewPage({
 
       <Module
         code="MOD-03"
-        title="Request path"
+        title="Tac-map // god's eye"
         span="span-4"
-        note={`Browser → BFF → ${upstream} → store.`}
+        note="BFF is HQ. Tracers ride live wires; X marks failed probes."
       >
-        <PipelineDiagram bffState="live" apiState={apiState} />
+        <TacMap samples={samples} apiState={apiState} />
       </Module>
 
       <Module
@@ -142,16 +140,19 @@ export function OverviewPage({
 
       <Module
         code="MOD-05"
-        title="Event log"
+        title="Killfeed"
         span="span-5"
         note="Newest first. Every probe, lookup, and failure lands here with its stable code."
       >
         {events.length === 0 ? (
           <p className="status-line">No events yet — run a health check or a profile lookup.</p>
         ) : (
-          <ul className="log">
+          <ul className="log feed">
             {events.map((e, i) => (
-              <li key={`${e.at}-${i}`}>
+              <li
+                key={`${e.at}-${i}`}
+                className={e.kind === "err" ? "feed-kill" : e.kind === "ok" ? "feed-ok" : ""}
+              >
                 <time>{e.at}</time>
                 <CodeTag code={e.code} tone={codeTone(e.code)} />
                 <span>{e.detail}</span>

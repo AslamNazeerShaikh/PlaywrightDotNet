@@ -102,10 +102,10 @@ describe("ops deck", () => {
     );
   });
 
-  test("overview shows the request-path diagram and endpoint catalog", async () => {
+  test("overview shows the tac-map and endpoint catalog", async () => {
     const queries = await renderDeck("overview");
 
-    expect(queries.getByLabelText("Request path diagram")).toBeDefined();
+    expect(queries.getByLabelText("Tactical overview map", { exact: false })).toBeDefined();
     expect(queries.getByText("/api/v1/search-profiles/{id}")).toBeDefined();
   });
 

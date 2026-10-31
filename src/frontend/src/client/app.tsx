@@ -224,7 +224,6 @@ export function App({
             samples={samples}
             events={events}
             apiState={apiState}
-            upstream={upstream}
           />
         )}
         {route === "health" && (

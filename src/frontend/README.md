@@ -59,7 +59,9 @@ src/frontend/
 │   │   │   ├── api.ts        # timed fetch helpers; UI maps stable codes, never prose
 │   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/topology
 │   │   │   └── telemetry.ts  # samples, stats, event log (pure, unit-tested)
-│   │   ├── components/   # module frame, sparkline, pipeline diagram
+│   │   ├── components/   # module frame, sparkline, tac-map, scramble
+│   │                 # (tac-map: god's-eye battlespace per iart-ai/svg-animation:
+│   │                 #  sweep, tracers, blips — SMIL, motion-gated)
 │   │   ├── pages/        # overview, health, profiles, topology (one page per feature)
 │   │   ├── fonts/        # IBM Plex Mono woff2, self-hosted (bundled as data URIs)
 │   │   └── styles/       # design system: tokens, grid, modules, no-overflow rules

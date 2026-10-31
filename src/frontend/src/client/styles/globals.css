@@ -363,6 +363,17 @@ a:hover {
   width: 10px;
   height: 10px;
   pointer-events: none;
+  transition:
+    width var(--dur-ui) var(--ease-spring),
+    height var(--dur-ui) var(--ease-spring),
+    border-color var(--dur-ui) var(--ease-out);
+}
+
+/* Target lock: corner brackets extend on hover like acquisition frames. */
+.module:hover::before,
+.module:hover::after {
+  width: 16px;
+  height: 16px;
 }
 
 .module::before {
@@ -663,6 +674,27 @@ table.data tr:last-child td {
   color: var(--faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Killfeed rows: hits confirm, kills mark. Typographic markers only. */
+.log li.feed-ok {
+  border-left: 2px solid var(--sig);
+}
+
+.log li.feed-kill {
+  border-left: 2px solid var(--red);
+}
+
+.log li.feed-ok::before {
+  content: "▸";
+  color: var(--sig);
+  font-weight: 700;
+}
+
+.log li.feed-kill::before {
+  content: "✕";
+  color: var(--red);
+  font-weight: 700;
 }
 
 /* ---- page intro strip ---- */
