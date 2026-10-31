@@ -85,6 +85,13 @@
   --sig: #0b7a55;
   --sig-soft: rgba(11, 122, 85, 0.1);
   --sig-line: rgba(11, 122, 85, 0.45);
+  --aurora-1: rgba(11, 122, 85, 0.1);
+  --aurora-2: rgba(14, 116, 144, 0.08);
+  --aurora-3: rgba(109, 40, 217, 0.08);
+  --brand-1: #0b7a55;
+  --brand-2: #0e7490;
+  --brand-3: #6d28d9;
+  --beam: rgba(11, 122, 85, 0.05);
   --amber: #96600a;
   --red: #c03232;
   --shadow-sm: 0 1px 2px rgba(18, 33, 29, 0.1), 0 1px 1px rgba(18, 33, 29, 0.06);
@@ -206,9 +213,9 @@ a:hover {
 }
 
 .brand-mark {
-  color: var(--sig);
   font-weight: 700;
   letter-spacing: 0.04em;
+  /* Gradient shimmer applied in the ambient-life section below. */
 }
 
 .brand-sub {
@@ -763,6 +770,14 @@ table.data tr:last-child td {
   --dur-ui: 220ms;
   --dur-entrance: 550ms;
   --dur-draw: 900ms;
+  /* Ambient aurora hues: emerald signal + cyan + violet, low alpha. */
+  --aurora-1: rgba(52, 211, 153, 0.16);
+  --aurora-2: rgba(34, 211, 238, 0.12);
+  --aurora-3: rgba(167, 139, 250, 0.12);
+  --brand-1: #34d399;
+  --brand-2: #22d3e3;
+  --brand-3: #a78bfa;
+  --beam: rgba(52, 211, 153, 0.05);
 
   /* Elevation: layered neutral shadows (per mengto/beautiful-shadows —
      ambient + direct + contact layers, low alphas, big blur, no tint).
@@ -962,4 +977,159 @@ table.data tr:last-child td {
 
 .flow-dash {
   animation: dash-flow 1.6s linear infinite;
+}
+
+/* ---- ambient life: the deck breathes behind the content ----
+   Aurora blobs drift on transform only (blur is static paint); the scan
+   beam sweeps on a slow loop; the brand shimmers through the signal
+   palette. All still instant-off under prefers-reduced-motion. */
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora-blob {
+  position: absolute;
+  width: 44vmax;
+  height: 44vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+}
+
+.blob-1 {
+  top: -12vmax;
+  left: -10vmax;
+  background: radial-gradient(circle, var(--aurora-1), transparent 65%);
+  animation: drift-1 34s ease-in-out infinite alternate;
+}
+
+.blob-2 {
+  top: 8vmax;
+  right: -14vmax;
+  background: radial-gradient(circle, var(--aurora-2), transparent 65%);
+  animation: drift-2 27s ease-in-out infinite alternate;
+}
+
+.blob-3 {
+  bottom: -16vmax;
+  left: 30vw;
+  background: radial-gradient(circle, var(--aurora-3), transparent 65%);
+  animation: drift-3 41s ease-in-out infinite alternate;
+}
+
+@keyframes drift-1 {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(9vmax, 7vmax) scale(1.15);
+  }
+}
+
+@keyframes drift-2 {
+  from {
+    transform: translate(0, 0) scale(1.1);
+  }
+  to {
+    transform: translate(-8vmax, 6vmax) scale(0.95);
+  }
+}
+
+@keyframes drift-3 {
+  from {
+    transform: translate(0, 0) scale(0.95);
+  }
+  to {
+    transform: translate(-6vmax, -8vmax) scale(1.12);
+  }
+}
+
+.scanbeam {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 18vh;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--beam), transparent);
+  animation: scan-drop 9s linear infinite;
+}
+
+@keyframes scan-drop {
+  from {
+    transform: translateY(-25vh);
+  }
+  to {
+    transform: translateY(125vh);
+  }
+}
+
+/* Content floats above the aurora; the beam washes over it faintly. */
+.tabs,
+.deck,
+.deck-root > footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Brand shimmer: slow gradient slide through the signal palette. */
+.brand-mark {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(
+    90deg,
+    var(--brand-1),
+    var(--brand-2),
+    var(--brand-3),
+    var(--brand-1)
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brand-slide 8s linear infinite;
+}
+
+@keyframes brand-slide {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+/* Button sheen: light sweeps across on hover, then rests. */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 60%
+  );
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+
+.btn:hover:not(:disabled)::after {
+  animation: sheen 0.7s var(--ease-out);
+}
+
+@keyframes sheen {
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(130%);
+  }
 }

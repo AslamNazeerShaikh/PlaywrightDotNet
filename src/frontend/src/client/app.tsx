@@ -151,6 +151,12 @@ export function App({
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
+      <div className="aurora" aria-hidden="true">
+        <div className="aurora-blob blob-1" />
+        <div className="aurora-blob blob-2" />
+        <div className="aurora-blob blob-3" />
+      </div>
+      <div className="scanbeam" aria-hidden="true" />
       <header className="cmdbar">
         <div className="brand">
           <span className="brand-mark">

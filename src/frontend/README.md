@@ -98,7 +98,10 @@ src/frontend/
   for dark-mode depth; light theme uses the exact recipe curves.
 - UI taste follows ui-skills (`list_skills` → `get_skill` first):
   `tech-green-dark-mode-modern` for the signal system, `interface-design`
-  for craft, `archify` for diagram rigor.
+  for craft, `archify` for diagram rigor, `iart-ai/svg-animation` + 
+  `mengto/css-border-gradient` for ambient motion.
+- Ambient life: tri-color aurora drift, scan-beam sweep, shimmering brand,
+  button sheens, sparkline sheen sweeps (SMIL, motion-gated).
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
