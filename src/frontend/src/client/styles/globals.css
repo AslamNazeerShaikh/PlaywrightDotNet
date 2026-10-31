@@ -698,6 +698,60 @@ table.data tr:last-child td {
   white-space: nowrap;
 }
 
+/* ---- heading ribbon: CoD compass tape ---- */
+
+.compass {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 18px 2px;
+  border-bottom: 1px solid var(--line);
+  background: var(--abyss);
+  position: relative;
+  z-index: 1;
+}
+
+.compass-hdg {
+  font-size: var(--text-label);
+  color: var(--dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.compass-hdg strong {
+  color: var(--brand-2);
+  font-weight: 600;
+}
+
+.compass-dial {
+  flex: 1;
+  height: 40px;
+  min-width: 0;
+}
+
+.compass-page {
+  font-size: var(--text-micro);
+  letter-spacing: 0.14em;
+  color: var(--brand-3);
+  white-space: nowrap;
+}
+
+.compass-needle {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: needle-hunt 5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 4px var(--brand-3));
+}
+
+@keyframes needle-hunt {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(9deg);
+  }
+}
+
 /* Killfeed rows: hits confirm, kills mark. Typographic markers only. */
 .log li.feed-ok {
   border-left: 2px solid var(--sig);
@@ -705,6 +759,16 @@ table.data tr:last-child td {
 
 .log li.feed-kill {
   border-left: 2px solid var(--red);
+}
+
+.log li.feed-info {
+  border-left: 2px solid var(--brand-2);
+}
+
+.log li.feed-info::before {
+  content: "»";
+  color: var(--brand-2);
+  font-weight: 700;
 }
 
 .log li.feed-ok::before {
@@ -1229,7 +1293,15 @@ abbr.abbr {
   height: 18vh;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent, var(--beam), transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--beam),
+    var(--aurora-2),
+    var(--aurora-3),
+    var(--beam),
+    transparent
+  );
   animation: scan-drop 9s linear infinite;
 }
 

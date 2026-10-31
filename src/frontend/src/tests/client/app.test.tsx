@@ -102,12 +102,14 @@ describe("ops deck", () => {
     );
   });
 
-  test("overview shows the tac-map, its key, and endpoint catalog", async () => {
+  test("overview shows the tac-map, its key, feed key, compass, and catalog", async () => {
     const queries = await renderDeck("overview");
 
     expect(queries.getByLabelText("Tactical overview map", { exact: false })).toBeDefined();
     expect(queries.getByRole("list", { name: "Tac-map key" })).toBeDefined();
     expect(queries.getByRole("list", { name: "Killfeed key" })).toBeDefined();
+    expect(queries.getByLabelText("Heading 0 degrees, OVERVIEW")).toBeDefined();
+    expect(queries.getByText("BFF_LINK")).toBeDefined();
     expect(queries.getByText("/api/v1/search-profiles/{id}")).toBeDefined();
   });
 

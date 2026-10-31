@@ -96,6 +96,42 @@ export function TacMap({
               repeatCount="indefinite"
             />
           </path>
+          {/* HQ sonar: cyan range rings breathing outward. Additive — the emerald
+              sweep keeps doing its job underneath. */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r="17"
+            fill="none"
+            style={{ stroke: "var(--brand-2)" }}
+            strokeWidth="1.5"
+          >
+            <animate attributeName="r" values="17;70" dur="3s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.5;0" dur="3s" repeatCount="indefinite" />
+          </circle>
+          <circle
+            cx={cx}
+            cy={cy}
+            r="17"
+            fill="none"
+            style={{ stroke: "var(--brand-3)" }}
+            strokeWidth="1"
+          >
+            <animate
+              attributeName="r"
+              values="17;95"
+              dur="4.5s"
+              begin="1.5s"
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="opacity"
+              values="0.4;0"
+              dur="4.5s"
+              begin="1.5s"
+              repeatCount="indefinite"
+            />
+          </circle>
         </g>
       )}
 

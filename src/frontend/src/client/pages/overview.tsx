@@ -184,7 +184,9 @@ export function OverviewPage({
             {events.map((e, i) => (
               <li
                 key={`${e.at}-${i}`}
-                className={e.kind === "err" ? "feed-kill" : e.kind === "ok" ? "feed-ok" : ""}
+                className={
+                  e.kind === "err" ? "feed-kill" : e.kind === "ok" ? "feed-ok" : "feed-info"
+                }
               >
                 <time>{e.at}</time>
                 <CodeTag code={e.code} tone={codeTone(e.code)} />

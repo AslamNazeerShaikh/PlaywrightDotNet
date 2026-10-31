@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
 import { Scramble } from "./components/scramble.tsx";
 import {
@@ -53,6 +54,9 @@ export function App({
   const [history, setHistory] = useState<LookupRecord[]>([]);
 
   const now = useNow();
+  const heading =
+    route === "overview" ? 0 : route === "health" ? 90 : route === "profiles" ? 180 : 270;
+  const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
   const stats = latencyStats(samples);
 
   // Theme lives on <html> so body-level surfaces (page grid texture,
@@ -86,6 +90,14 @@ export function App({
         }
         setBffLive(true);
         setUpstream(result.value.upstream);
+        setEvents((e) =>
+          pushEvent(e, {
+            at: clockTime(new Date().toISOString()),
+            kind: "info",
+            code: "BFF_LINK",
+            detail: `BFF live · upstream ${result.value.upstream}`,
+          }),
+        );
       })
       .catch(() => undefined);
     return () => {
@@ -195,6 +207,8 @@ export function App({
           </button>
         </div>
       </header>
+
+      <Compass heading={heading} page={pageLabel} />
 
       <nav className="tabs" aria-label="Deck pages">
         {ROUTES.map((r) => (
