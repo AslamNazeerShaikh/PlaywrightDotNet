@@ -169,8 +169,7 @@ export function TacMap({
             x={n.x}
             y={n.y - 16}
             textAnchor="middle"
-            style={{ fill: "var(--ink)" }}
-            fontSize="11"
+            style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
             fontWeight="600"
           >
             {n.label}
@@ -179,8 +178,7 @@ export function TacMap({
             x={n.x}
             y={n.y + 26}
             textAnchor="middle"
-            style={{ fill: "var(--faint)" }}
-            fontSize="10"
+            style={{ fill: "var(--faint)", fontSize: "var(--text-micro)" }}
           >
             {n.sub}
           </text>
@@ -236,8 +234,7 @@ function cardinals(cx: number, cy: number) {
           x={m.x}
           y={m.y}
           textAnchor="middle"
-          style={{ fill: "var(--faint)" }}
-          fontSize="11"
+          style={{ fill: "var(--faint)", fontSize: "var(--text-label)" }}
           fontWeight="600"
         >
           {m.t}

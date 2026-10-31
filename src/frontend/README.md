@@ -121,6 +121,8 @@ registry first (`list_skills` → `get_skill` via the `ui-skills` MCP, per
 | `mengto/beautiful-shadows` | Layered neutral elevation, one strength per state | Shadow tokens (sm/md/lg/well), hover lift |
 | `iart-ai/svg-animation` | SMIL draw-on, motion paths, animated gradients | Sparkline draw + sheen, tac-map sweep + tracers |
 | `mengto/css-border-gradient` | Quiet gradient edges, border-taste rules | Bracket/corner treatment kept quiet; borders never compete |
+| `jakubkrehel/better-typography` | Type scale, wrapping, tabular numerals, input floors | Role scale (micro/label/body/title/display/stat), balance/pretty wraps, 16px touch inputs |
+| `pbakaus/typeset` | Hierarchy/measure/role assessment before editing | Five-role audit; measure caps, per-role leading, synthesis guard |
 | `ibelick/ui-skills-root` | Default router when no skill obviously applies | Pinned in `AGENTS.md`; consulted before each UI vertical |
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`

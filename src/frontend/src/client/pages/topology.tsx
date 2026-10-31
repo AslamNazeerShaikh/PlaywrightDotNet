@@ -147,8 +147,7 @@ function lifeline(x: number, label: string) {
         x={x}
         y={25}
         textAnchor="middle"
-        style={{ fill: "var(--ink)" }}
-        fontSize="11"
+        style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
         fontWeight="600"
       >
         {label}
@@ -175,7 +174,7 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
           style={{ stroke: color }}
           strokeWidth="1.5"
         />
-        <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)" }} fontSize="10">
+        <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
           {label}
         </text>
       </g>
@@ -193,7 +192,11 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
         }
         style={{ fill: color }}
       />
-      <text x={left ? x1 + 6 : x2 + 6} y={y - 5} style={{ fill: "var(--dim)" }} fontSize="10">
+      <text
+        x={left ? x1 + 6 : x2 + 6}
+        y={y - 5}
+        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+      >
         {label}
       </text>
     </g>

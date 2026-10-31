@@ -50,8 +50,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
           x={width / 2}
           y={height / 2}
           textAnchor="middle"
-          style={{ fill: "var(--faint)" }}
-          fontSize="11"
+          style={{ fill: "var(--faint)", fontSize: "var(--text-label)" }}
         >
           AWAITING FIRST SAMPLE
         </text>
@@ -116,8 +115,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
             x={width - pad}
             y={pad + 4}
             textAnchor="end"
-            style={{ fill: "var(--faint)" }}
-            fontSize="10"
+            style={{ fill: "var(--faint)", fontSize: "var(--text-micro)" }}
           >
             {`MAX ${max < 10 ? max.toFixed(1) : Math.round(max)} MS`}
           </text>
