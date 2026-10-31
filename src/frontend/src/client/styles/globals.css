@@ -82,9 +82,9 @@
   --sig: #0b7a55;
   --sig-soft: rgba(11, 122, 85, 0.1);
   --sig-line: rgba(11, 122, 85, 0.45);
-  --aurora-1: rgba(11, 122, 85, 0.1);
-  --aurora-2: rgba(14, 116, 144, 0.08);
-  --aurora-3: rgba(109, 40, 217, 0.08);
+  --aurora-1: rgba(161, 98, 7, 0.1);
+  --aurora-2: rgba(154, 52, 18, 0.08);
+  --aurora-3: rgba(180, 83, 9, 0.08);
   --brand-1: #0b7a55;
   --brand-2: #0e7490;
   --brand-3: #6d28d9;
@@ -1007,10 +1007,10 @@ abbr.abbr {
   --dur-ui: 220ms;
   --dur-entrance: 550ms;
   --dur-draw: 900ms;
-  /* Ambient aurora hues: emerald signal + cyan + violet, low alpha. */
-  --aurora-1: rgba(52, 211, 153, 0.16);
-  --aurora-2: rgba(34, 211, 238, 0.12);
-  --aurora-3: rgba(167, 139, 250, 0.12);
+  /* Ambient aurora hues: warm gold/amber/ember wash behind the deck. */
+  --aurora-1: rgba(250, 204, 21, 0.14);
+  --aurora-2: rgba(251, 146, 60, 0.12);
+  --aurora-3: rgba(249, 115, 22, 0.1);
   --brand-1: #34d399;
   --brand-2: #22d3e3;
   --brand-3: #a78bfa;
