@@ -1,0 +1,76 @@
+import { afterEach, describe, expect, test } from "bun:test";
+
+import { buildTargetUrl, filterHeaders, proxyRequest } from "../../server/proxy.ts";
+
+let servers: Array<{ stop(): void }> = [];
+
+afterEach(() => {
+  for (const server of servers) {
+    server.stop();
+  }
+  servers = [];
+});
+
+describe("buildTargetUrl", () => {
+  test("joins base and path, preserving the query string", () => {
+    expect(buildTargetUrl("http://127.0.0.1:5207", "/api/v1/health")).toBe(
+      "http://127.0.0.1:5207/api/v1/health",
+    );
+  });
+});
+
+describe("filterHeaders", () => {
+  test("drops hop-by-hop headers and keeps end-to-end ones", () => {
+    const incoming = new Headers({
+      connection: "keep-alive",
+      "transfer-encoding": "chunked",
+      "content-type": "application/json",
+      "x-request-id": "abc",
+    });
+
+    const forwarded = filterHeaders(incoming);
+
+    expect(forwarded.get("connection")).toBeNull();
+    expect(forwarded.get("transfer-encoding")).toBeNull();
+    expect(forwarded.get("content-type")).toBe("application/json");
+    expect(forwarded.get("x-request-id")).toBe("abc");
+  });
+});
+
+describe("proxyRequest", () => {
+  test("streams the upstream response back", async () => {
+    const upstream = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      fetch: () =>
+        Response.json(
+          { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" },
+          { headers: { "x-request-id": "abc" } },
+        ),
+    });
+    servers.push(upstream);
+
+    const res = await proxyRequest(
+      new Request("http://bff/api/v1/health"),
+      `http://127.0.0.1:${upstream.port}`,
+      "/api/v1/health",
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "healthy", timeUtc: "2026-10-31T00:00:00Z" });
+  });
+
+  test("answers 502 problem+json when the data plane is down", async () => {
+    // Port 1 is never bound: connection refused, no stub server needed.
+    const res = await proxyRequest(
+      new Request("http://bff/api/v1/health"),
+      "http://127.0.0.1:1",
+      "/api/v1/health",
+    );
+
+    expect(res.status).toBe(502);
+    expect(res.headers.get("content-type")).toContain("application/problem+json");
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("DOTNET_UNREACHABLE");
+  });
+});

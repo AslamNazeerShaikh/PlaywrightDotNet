@@ -1,0 +1,39 @@
+{
+  "name": "jobscrape-cockpit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --parallel dev:server dev:css",
+    "dev:server": "bun --hot src/server/index.ts",
+    "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
+    "build": "bun run build:css && bun run build:client && bun run build:server",
+    "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
+    "build:client": "bun build ./src/client/index.html --outdir ./dist/client --minify --splitting --sourcemap=linked",
+    "build:server": "bun build ./src/server/index.ts --target=bun --outdir ./dist/server --minify",
+    "start": "NODE_ENV=production bun ./dist/server/index.js",
+    "typecheck": "bun check",
+    "format": "bun fmt",
+    "format:check": "bun fmt --check",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "api:types": "bunx --bun openapi-typescript@7.13.0 http://127.0.0.1:5207/openapi/v1.json -o ./src/shared/contracts.ts",
+    "audit": "bun audit"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "21.0.4",
+    "@tailwindcss/cli": "4.3.3",
+    "@testing-library/react": "16.3.3",
+    "@types/bun": "1.4.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.4",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": []
+}

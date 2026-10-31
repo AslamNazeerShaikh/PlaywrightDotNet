@@ -1,0 +1,11 @@
+[install]
+# Single-package app. Use "isolated" if strict dependency isolation is preferred.
+linker = "hoisted"
+# Supply-chain guard: skip versions published less than 3 days ago.
+minimumReleaseAge = "3d"
+
+[fmt]
+printWidth = 100
+sortImports = true
+sortTailwindcss = true
+sortPackageJson = true

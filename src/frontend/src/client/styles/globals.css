@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Walking-skeleton theme. shadcn theme tokens land with the first shadcn
+   slice; until then the cockpit uses this minimal layout scale. */
+.cockpit {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.cockpit section {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.cockpit button {
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.cockpit button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cockpit input {
+  display: block;
+  margin-top: 0.25rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, monospace;
+}
