@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 
+import { useRenderLog } from "../lib/debug.ts";
 import type { Sample } from "../lib/telemetry.ts";
 
 /**
@@ -9,6 +10,7 @@ import type { Sample } from "../lib/telemetry.ts";
  * test-queryable. Empty state draws the frame with a hint instead of an empty box.
  */
 export function Sparkline({ samples, label }: { samples: Sample[]; label: string }) {
+  useRenderLog("Sparkline");
   const width = 300;
   const height = 84;
   const pad = 8;

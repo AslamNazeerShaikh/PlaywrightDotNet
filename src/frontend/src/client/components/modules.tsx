@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { useRenderLog } from "../lib/debug.ts";
 import { Scramble } from "./scramble.tsx";
 
 /**
@@ -21,6 +22,7 @@ export function Module({
   span?: string;
   children: ReactNode;
 }) {
+  useRenderLog(`Module:${title}`);
   return (
     <section className={`module ${span}`} aria-label={title}>
       <div className="module-head">
@@ -44,6 +46,7 @@ export function Stat({
   value: string;
   tone?: "ok" | "bad" | "warn";
 }) {
+  useRenderLog(`Stat:${label}`);
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
@@ -57,6 +60,7 @@ export function CodeTag({ code, tone }: { code: string; tone?: "ok" | "bad" | "w
 }
 
 export function JsonBlock({ value, label }: { value: unknown; label: string }) {
+  useRenderLog(`JsonBlock:${label}`);
   return (
     <pre className="json" aria-label={label}>
       {JSON.stringify(value, null, 2)}

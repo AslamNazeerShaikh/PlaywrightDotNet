@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 
+import { useRenderLog } from "../lib/debug.ts";
 import type { Sample } from "../lib/telemetry.ts";
 
 /**
@@ -15,6 +16,7 @@ export function TacMap({
   samples: Sample[];
   apiState: "unknown" | "live" | "down";
 }) {
+  useRenderLog("TacMap");
   // React useId contains colons, which break url(#…) references: strip them.
   const uid = useId().replace(/:/g, "");
   // SMIL ignores the CSS reduced-motion kill-switch, so self-animated layers

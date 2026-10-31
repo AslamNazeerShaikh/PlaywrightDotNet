@@ -1,3 +1,4 @@
+import { useRenderLog } from "../lib/debug.ts";
 import { type DeckRoute, routeHash, ROUTES } from "../lib/router.ts";
 
 /**
@@ -13,6 +14,7 @@ export function RulerTabs({
   route: DeckRoute;
   onSelect?: (route: DeckRoute) => void;
 }) {
+  useRenderLog("RulerTabs");
   const index = ROUTES.findIndex((r) => r.id === route);
   const stops = ROUTES.length;
   const left = `${((index * 2 + 1) / (stops * 2)) * 100}%`;

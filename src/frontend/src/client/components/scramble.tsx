@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useRenderLog } from "../lib/debug.ts";
+
 /**
  * Decryption text reveal: random glyphs lock into the target left to right. Reserved for mount-once
  * moments (brand mark, page titles) — never for live data. Honors reduced motion by rendering the
@@ -21,6 +23,7 @@ export function Scramble({
   /** The module frame already labels the card, so its title scramble hides. */
   ariaHidden?: boolean;
 }) {
+  useRenderLog("Scramble");
   // Open on glyphs so the first paint is already decrypting; the effect
   // below locks characters in left to right.
   const [display, setDisplay] = useState(() => fullScramble(text));

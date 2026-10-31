@@ -4,6 +4,7 @@ import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
 import { TacMap } from "../components/tacmap.tsx";
 import type { HealthPayload } from "../lib/api.ts";
+import { useRenderLog } from "../lib/debug.ts";
 import { formatMs, type LatencyStats, type LogEvent, type Sample } from "../lib/telemetry.ts";
 
 /**
@@ -26,6 +27,7 @@ export function OverviewPage({
   events: LogEvent[];
   apiState: "unknown" | "live" | "down";
 }) {
+  useRenderLog("OverviewPage");
   return (
     <>
       <div className="page-head">

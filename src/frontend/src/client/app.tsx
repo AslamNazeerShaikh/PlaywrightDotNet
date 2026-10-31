@@ -11,6 +11,7 @@ import {
   type HealthPayload,
   type SearchProfilePayload,
 } from "./lib/api.ts";
+import { useRenderLog } from "./lib/debug.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
 import {
   latencyStats,
@@ -30,6 +31,7 @@ import { TopologyPage } from "./pages/topology.tsx";
  * so every page reads the same flight recorder.
  */
 export function App({ client, initialRoute }: { client?: ApiClient; initialRoute?: DeckRoute }) {
+  useRenderLog("App");
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
   const [theme, setTheme] = useState<"dark" | "light">("light");

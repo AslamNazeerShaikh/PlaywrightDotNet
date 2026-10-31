@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useRenderLog } from "../lib/debug.ts";
+
 /**
  * Deck key system: legends decode color/shape wherever it carries meaning, the glossary expands
  * every abbreviation once, and Abbr marks in-text shorthands with native tooltips. One shared
@@ -13,6 +15,7 @@ export interface LegendItem {
 }
 
 export function Legend({ label, items }: { label: string; items: LegendItem[] }) {
+  useRenderLog("Legend");
   return (
     <div className="legend" role="list" aria-label={label}>
       {items.map((item) => (
@@ -69,6 +72,7 @@ export interface GlossaryTerm {
 }
 
 export function Glossary({ terms }: { terms: GlossaryTerm[] }) {
+  useRenderLog("Glossary");
   return (
     <dl className="glossary">
       {terms.map((t) => (

@@ -3,6 +3,7 @@ import { CodeTag, JsonBlock, Module, Stat } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
 import type { ApiProblem, HealthPayload } from "../lib/api.ts";
+import { useRenderLog } from "../lib/debug.ts";
 import { formatMs, type LatencyStats, type Sample } from "../lib/telemetry.ts";
 
 /**
@@ -24,6 +25,7 @@ export function HealthPage({
   stats: LatencyStats | null;
   onCheck: () => void;
 }) {
+  useRenderLog("HealthPage");
   return (
     <>
       <div className="page-head">

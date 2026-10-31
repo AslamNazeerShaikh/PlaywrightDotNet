@@ -16,6 +16,8 @@ export interface SearchProfilePayload {
   sourceKey: string;
 }
 
+import { renderDebugEnabled } from "./debug.ts";
+
 /** RFC 9457 problem body plus the stable `code` extension. */
 export interface ApiProblem {
   status: number;
@@ -57,6 +59,9 @@ async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
 }
 
 async function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
+  if (renderDebugEnabled) {
+    console.debug(`[fetch] GET ${path}`);
+  }
   let res: { ok: boolean; status: number; json(): Promise<unknown> };
   try {
     res = await fetchImpl(path);

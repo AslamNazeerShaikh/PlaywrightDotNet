@@ -1,6 +1,7 @@
 import { Abbr, Glossary, Legend, Wire } from "../components/legend.tsx";
 import { Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
+import { useRenderLog } from "../lib/debug.ts";
 
 /**
  * Topology page: how the cockpit is wired. A sequence diagram for the request lifecycle (happy +
@@ -8,6 +9,7 @@ import { Scramble } from "../components/scramble.tsx";
  * with the module; tables carry the dense detail.
  */
 export function TopologyPage({ upstream }: { upstream: string }) {
+  useRenderLog("TopologyPage");
   return (
     <>
       <div className="page-head">

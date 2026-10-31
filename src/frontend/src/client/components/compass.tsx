@@ -1,3 +1,4 @@
+import { useRenderLog } from "../lib/debug.ts";
 /**
  * Heading ribbon: a CoD-style compass tape with cardinal points, a swaying violet needle, and a
  * fixed per-page heading readout. The tape is static; only the needle hunts (transform-only sway),
@@ -5,6 +6,7 @@
  * attention — emerald stays reserved for health.
  */
 export function Compass({ heading, page }: { heading: number; page: string }) {
+  useRenderLog("Compass");
   const width = 640;
   const height = 46;
   const pad = 14;

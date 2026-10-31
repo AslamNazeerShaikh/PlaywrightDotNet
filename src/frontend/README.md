@@ -91,6 +91,11 @@ src/frontend/
   probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
   `bun check` owns types.
+- Render radar: every component logs `[render] Name #N` + `[mount]`/`[unmount]`
+  via `useRenderLog`, and every API call logs `[fetch] GET path` — dev only
+  (off in production builds and under `bun test`). Force on/off anywhere
+  with `?renders=1` / `?renders=0`. Open devtools, filter the console, and
+  runaway renders or remount loops show themselves immediately.
 - Motion is a system, not decoration: one spring token, staggered deck
   entrances, draw-in charts, breathing live-dots, press physics on controls
   (per `emilkowalski/animate` + `mengto/animation-systems`). Transform and

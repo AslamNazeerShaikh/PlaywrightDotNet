@@ -4,6 +4,7 @@ import { Abbr } from "../components/legend.tsx";
 import { CodeTag, codeTone, JsonBlock, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, SearchProfilePayload } from "../lib/api.ts";
+import { useRenderLog } from "../lib/debug.ts";
 
 /**
  * Search-profile lookup page: uncontrolled lookup form (no per-keystroke state, happy-dom-safe),
@@ -31,6 +32,7 @@ export function ProfilesPage({
   history: LookupRecord[];
   onLookup: (id: string) => void;
 }) {
+  useRenderLog("ProfilesPage");
   const [error, setError] = useState<ApiProblem | null>(null);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
