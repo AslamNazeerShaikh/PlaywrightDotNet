@@ -64,9 +64,7 @@ function ProfileLookup({ client }: { client: ApiClient }) {
     event.preventDefault();
     // Uncontrolled input read via FormData: no per-keystroke React state,
     // and the suite can drive the DOM value without a synthetic onChange.
-    const raw = String(
-      new FormData(event.currentTarget).get("profileId") ?? "",
-    ).trim();
+    const raw = String(new FormData(event.currentTarget).get("profileId") ?? "").trim();
     if (raw === "") {
       setProfile(null);
       setProblem({

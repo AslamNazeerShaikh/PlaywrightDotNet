@@ -37,10 +37,7 @@ export function healthResponse(config: CockpitConfig): Response {
 }
 
 /** Forwards an `/api/*` request to the data plane (path + query preserved). */
-export function apiProxy(
-  req: Request,
-  config: CockpitConfig,
-): Promise<Response> {
+export function apiProxy(req: Request, config: CockpitConfig): Promise<Response> {
   const url = new URL(req.url);
   return proxyRequest(req, config.dotnetApiUrl, url.pathname + url.search);
 }
@@ -80,9 +77,7 @@ if (import.meta.main) {
   };
 
   Bun.serve({ port: config.port, hostname: "127.0.0.1", routes });
-  console.log(
-    `jobscrape-cockpit BFF listening on http://127.0.0.1:${config.port}`,
-  );
+  console.log(`jobscrape-cockpit BFF listening on http://127.0.0.1:${config.port}`);
 }
 
 /** Serves `dist/client` with SPA fallback to `index.html`. Production only. */
@@ -99,10 +94,7 @@ async function serveDist(req: Request): Promise<Response> {
   if (await fallback.exists()) {
     return new Response(fallback);
   }
-  return new Response(
-    "Cockpit client not built. Run `bun run build:client` first.",
-    {
-      status: 503,
-    },
-  );
+  return new Response("Cockpit client not built. Run `bun run build:client` first.", {
+    status: 503,
+  });
 }

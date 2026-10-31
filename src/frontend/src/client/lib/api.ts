@@ -22,17 +22,14 @@ export interface ApiProblem {
   code: string;
 }
 
-export type ApiResult<T> =
-  { ok: true; value: T } | { ok: false; problem: ApiProblem };
+export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
 
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
 ) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
-export function createApiClient(
-  fetchImpl: FetchImpl = fetch as unknown as FetchImpl,
-) {
+export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   return {
     fetchHealth: () => get<HealthPayload>(fetchImpl, "/api/v1/health"),
     fetchProfile: (id: string) =>
@@ -43,10 +40,7 @@ export function createApiClient(
 /** The client surface consumed by components. Passed as a prop for testability. */
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-async function get<T>(
-  fetchImpl: FetchImpl,
-  path: string,
-): Promise<ApiResult<T>> {
+async function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
   let res: { ok: boolean; status: number; json(): Promise<unknown> };
   try {
     res = await fetchImpl(path);
@@ -67,10 +61,7 @@ async function get<T>(
   return { ok: false, problem: await toProblem(res) };
 }
 
-async function toProblem(res: {
-  status: number;
-  json(): Promise<unknown>;
-}): Promise<ApiProblem> {
+async function toProblem(res: { status: number; json(): Promise<unknown> }): Promise<ApiProblem> {
   const fallback: ApiProblem = {
     status: res.status,
     title: "Request failed",
@@ -82,8 +73,7 @@ async function toProblem(res: {
     return {
       status: typeof body["status"] === "number" ? body["status"] : res.status,
       title: typeof body["title"] === "string" ? body["title"] : fallback.title,
-      detail:
-        typeof body["detail"] === "string" ? body["detail"] : fallback.detail,
+      detail: typeof body["detail"] === "string" ? body["detail"] : fallback.detail,
       code: typeof body["code"] === "string" ? body["code"] : "UNKNOWN",
     };
   } catch {

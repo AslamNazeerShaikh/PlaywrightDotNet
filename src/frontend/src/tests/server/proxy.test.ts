@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import {
-  buildTargetUrl,
-  filterHeaders,
-  proxyRequest,
-} from "../../server/proxy.ts";
+import { buildTargetUrl, filterHeaders, proxyRequest } from "../../server/proxy.ts";
 
 let servers: Array<{ stop(): void }> = [];
 
@@ -76,9 +72,7 @@ describe("proxyRequest", () => {
     );
 
     expect(res.status).toBe(502);
-    expect(res.headers.get("content-type")).toContain(
-      "application/problem+json",
-    );
+    expect(res.headers.get("content-type")).toContain("application/problem+json");
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("DOTNET_UNREACHABLE");
   });

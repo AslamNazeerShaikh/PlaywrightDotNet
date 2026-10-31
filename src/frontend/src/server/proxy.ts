@@ -51,8 +51,7 @@ export async function proxyRequest(
       method: req.method,
       headers: filterHeaders(req.headers),
       // GET/HEAD must not carry a body; anything else streams through.
-      body:
-        req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+      body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
       // The BFF is not a browser: no credentials, no caching, manual redirects.
       redirect: "manual",
     });
