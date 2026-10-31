@@ -80,7 +80,10 @@ src/frontend/
 - Dense but never overflowing: every grid child can shrink to zero, tokens
   wrap anywhere, wide tables scroll inside their module. Full viewport width
   is used; columns reflow at runtime via auto-fit grids plus a
-  compact/cozy density switch in the command bar.
+  compact/cozy density switch in the command bar (cozy is default).
+- Dark hacker deck by default, light paper theme on toggle (`THEME` in the
+  command bar): every surface and diagram reads CSS vars, so the flip needs
+  no markup changes.
 - Diagrams are evidence: the pipeline and lifecycle SVGs reflect the latest
   probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);

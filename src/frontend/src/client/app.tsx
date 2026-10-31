@@ -34,7 +34,8 @@ export function App({
   initialRoute?: DeckRoute;
 }) {
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
-  const [density, setDensity] = useState<"compact" | "cozy">("compact");
+  const [density, setDensity] = useState<"compact" | "cozy">("cozy");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [upstream, setUpstream] = useState("http://127.0.0.1:5207");
   const [bffLive, setBffLive] = useState(false);
   const [apiState, setApiState] = useState<"unknown" | "live" | "down">("unknown");
@@ -52,6 +53,15 @@ export function App({
 
   const now = useNow();
   const stats = latencyStats(samples);
+
+  // Theme lives on <html> so body-level surfaces (page grid texture,
+  // command bar) follow the deck theme without extra plumbing.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    return () => {
+      delete document.documentElement.dataset.theme;
+    };
+  }, [theme]);
 
   // Hash is the route: back/forward buttons and deep links work with zero config.
   useEffect(() => {
@@ -135,12 +145,11 @@ export function App({
           : result.problem.title,
       }),
     );
-    void ms;
     setLooking(false);
   }
 
   return (
-    <div className="deck-root" data-density={density}>
+    <div className="deck-root" data-density={density} data-theme={theme}>
       <header className="cmdbar">
         <div className="brand">
           <span className="brand-mark">JOBSCRAPE//OPS-DECK</span>
@@ -159,6 +168,14 @@ export function App({
             />{" "}
             API {apiState.toUpperCase()} · {upstream}
           </span>
+          <button
+            type="button"
+            className="density-btn"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            title="Toggle color theme"
+          >
+            THEME: {theme.toUpperCase()}
+          </button>
           <button
             type="button"
             className="density-btn"

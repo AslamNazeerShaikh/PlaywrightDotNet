@@ -116,14 +116,28 @@ describe("ops deck", () => {
     expect(queries.getByText("DOTNET_UNREACHABLE", { exact: false })).toBeDefined();
   });
 
-  test("density toggle switches the deck without losing content", async () => {
+  test("deck defaults to cozy density and toggles without losing content", async () => {
     const queries = await renderDeck("overview");
 
     const root = queries.container.firstElementChild;
-    expect(root?.getAttribute("data-density")).toBe("compact");
-    fireEvent.click(queries.getByRole("button", { name: "DENSITY: COMPACT" }));
     expect(root?.getAttribute("data-density")).toBe("cozy");
+    expect(root?.getAttribute("data-theme")).toBe("dark");
+    fireEvent.click(queries.getByRole("button", { name: "DENSITY: COZY" }));
+    expect(root?.getAttribute("data-density")).toBe("compact");
     expect(queries.getByLabelText("Endpoint catalog")).toBeDefined();
+  });
+
+  test("theme toggle flips to light without losing content", async () => {
+    const queries = await renderDeck("overview");
+
+    fireEvent.click(queries.getByRole("button", { name: "THEME: DARK" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(queries.container.firstElementChild?.getAttribute("data-theme")).toBe("light");
+    expect(queries.getByLabelText("Endpoint catalog")).toBeDefined();
+
+    fireEvent.click(queries.getByRole("button", { name: "THEME: LIGHT" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    document.documentElement.removeAttribute("data-theme");
   });
 });
 

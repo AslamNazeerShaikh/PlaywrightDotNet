@@ -34,9 +34,11 @@ export function PipelineDiagram({
               y1={height / 2}
               x2={n.x}
               y2={height / 2}
-              stroke={linkColor(bffState, apiState, i)}
+              style={{ stroke: linkColor(bffState, apiState, i) }}
               strokeWidth="1.5"
-              strokeDasharray={linkColor(bffState, apiState, i) === "#5f7370" ? "5 4" : undefined}
+              strokeDasharray={
+                linkColor(bffState, apiState, i) === "var(--faint)" ? "5 4" : undefined
+              }
             />
           )}
           <rect
@@ -45,15 +47,20 @@ export function PipelineDiagram({
             width="144"
             height="60"
             rx="4"
-            fill="#080c0b"
-            stroke={nodeColor(n.state)}
+            style={{ fill: "var(--canvas)", stroke: nodeColor(n.state) }}
             strokeWidth="1.5"
           />
-          <circle cx={n.x + 14} cy={height / 2 - 12} r="4" fill={nodeColor(n.state)} />
-          <text x={n.x + 26} y={height / 2 - 8} fill="#d8e4e1" fontSize="12" fontWeight="600">
+          <circle cx={n.x + 14} cy={height / 2 - 12} r="4" style={{ fill: nodeColor(n.state) }} />
+          <text
+            x={n.x + 26}
+            y={height / 2 - 8}
+            style={{ fill: "var(--ink)" }}
+            fontSize="12"
+            fontWeight="600"
+          >
             {n.label}
           </text>
-          <text x={n.x + 14} y={height / 2 + 12} fill="#5f7370" fontSize="10">
+          <text x={n.x + 14} y={height / 2 + 12} style={{ fill: "var(--faint)" }} fontSize="10">
             {n.sub}
           </text>
         </g>
@@ -63,9 +70,9 @@ export function PipelineDiagram({
 }
 
 function nodeColor(state: "unknown" | "live" | "down"): string {
-  if (state === "live") return "#34d399";
-  if (state === "down") return "#f87171";
-  return "#5f7370";
+  if (state === "live") return "var(--sig)";
+  if (state === "down") return "var(--red)";
+  return "var(--faint)";
 }
 
 /** Link i connects node i-1 → i: browser→BFF rides the BFF state, the rest the API state. */
@@ -75,7 +82,7 @@ function linkColor(
   i: number,
 ): string {
   const state = i === 1 ? bff : api;
-  if (state === "live") return "#34d399";
-  if (state === "down") return "#f87171";
-  return "#5f7370";
+  if (state === "live") return "var(--sig)";
+  if (state === "down") return "var(--red)";
+  return "var(--faint)";
 }

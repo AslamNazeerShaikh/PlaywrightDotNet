@@ -28,20 +28,49 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
         samples.length === 0 ? `${label}: no samples yet` : `${label}: ${samples.length} samples`
       }
     >
-      <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="#1b2524" />
+      <line
+        x1={pad}
+        y1={height - pad}
+        x2={width - pad}
+        y2={height - pad}
+        style={{ stroke: "var(--line)" }}
+      />
       {samples.length === 0 ? (
-        <text x={width / 2} y={height / 2} textAnchor="middle" fill="#5f7370" fontSize="11">
+        <text
+          x={width / 2}
+          y={height / 2}
+          textAnchor="middle"
+          style={{ fill: "var(--faint)" }}
+          fontSize="11"
+        >
           AWAITING FIRST SAMPLE
         </text>
       ) : (
         <>
           {points.length > 1 && (
-            <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
+            <polyline
+              points={line}
+              fill="none"
+              style={{ stroke: "var(--sig)" }}
+              strokeWidth="1.5"
+            />
           )}
           {points.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="2.4" fill={p.ok ? "#34d399" : "#f87171"} />
+            <circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r="2.4"
+              style={{ fill: p.ok ? "var(--sig)" : "var(--red)" }}
+            />
           ))}
-          <text x={width - pad} y={pad + 4} textAnchor="end" fill="#5f7370" fontSize="10">
+          <text
+            x={width - pad}
+            y={pad + 4}
+            textAnchor="end"
+            style={{ fill: "var(--faint)" }}
+            fontSize="10"
+          >
             {`MAX ${max < 10 ? max.toFixed(1) : Math.round(max)} MS`}
           </text>
         </>

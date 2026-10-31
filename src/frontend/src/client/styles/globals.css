@@ -51,6 +51,7 @@
   --abyss: #080c0b;
   --panel: #0b1110;
   --raise: #0e1514;
+  --canvas: #080c0b;
   --line: #1b2524;
   --line-hi: #2c3d3a;
   --ink: #d8e4e1;
@@ -65,6 +66,27 @@
   --gap: 12px;
   --pad: 14px;
   --fs: 12.5px;
+}
+
+/* Light instrument-panel: paper surfaces, same emerald signal language,
+   darkened for contrast on white. Every component reads these vars, so the
+   theme flips without touching markup. */
+[data-theme="light"] {
+  --void: #eef1f0;
+  --abyss: #e4e9e8;
+  --panel: #ffffff;
+  --raise: #f7faf9;
+  --canvas: #fbfcfc;
+  --line: #d5dcd9;
+  --line-hi: #aebdba;
+  --ink: #13211d;
+  --dim: #47605a;
+  --faint: #7e9590;
+  --sig: #0b7a55;
+  --sig-soft: rgba(11, 122, 85, 0.1);
+  --sig-line: rgba(11, 122, 85, 0.45);
+  --amber: #96600a;
+  --red: #c03232;
 }
 
 *,
@@ -91,11 +113,28 @@ body {
   line-height: 1.55;
 }
 
-/* Density switch: compact packs the deck, cozy breathes. Toggled at runtime. */
-.deck-root[data-density="cozy"] {
-  --gap: 18px;
-  --pad: 20px;
-  --fs: 13.5px;
+/* Density switch: compact packs the deck, cozy breathes. Cozy is default. */
+.deck-root[data-density="compact"] {
+  --gap: 9px;
+  --pad: 10px;
+  --fs: 11.5px;
+}
+
+/* Light theme surfaces: same grid texture, paper tint. */
+[data-theme="light"] body {
+  background:
+    radial-gradient(1200px 500px at 70% -10%, rgba(11, 122, 85, 0.07), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(71, 96, 90, 0.08) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(71, 96, 90, 0.08) 31px 32px),
+    var(--void);
+}
+
+[data-theme="light"] .cmdbar {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="light"] .btn {
+  color: #ffffff;
 }
 
 #root {
