@@ -160,7 +160,7 @@ export function App({
       <header className="cmdbar">
         <div className="brand">
           <span className="brand-mark">
-            <Scramble text="JOBSCRAPE//OPS-DECK" duration={900} />
+            <Scramble text="JOBSCRAPE//OPS-DECK" duration={1350} />
           </span>
           <span className="brand-sub">LOCAL CONTROL PLANE</span>
         </div>

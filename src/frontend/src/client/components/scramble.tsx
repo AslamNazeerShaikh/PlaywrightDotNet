@@ -11,7 +11,7 @@ const GLYPHS = "!@#$%^&*()_+!@#$%^&*()_+-={}|:\"<>?/.,;'[]\\";
 
 export function Scramble({
   text,
-  duration = 650,
+  duration = 975,
   className,
   ariaHidden = false,
 }: {

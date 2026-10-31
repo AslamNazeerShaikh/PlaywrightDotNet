@@ -26,7 +26,7 @@ export function Module({
       <div className="module-head">
         <span className="module-code">{code}</span>
         <h2 className="module-title">
-          <Scramble text={title} duration={550} ariaHidden />
+          <Scramble text={title} duration={825} ariaHidden />
         </h2>
         {note !== undefined && <span className="module-note">{note}</span>}
       </div>
