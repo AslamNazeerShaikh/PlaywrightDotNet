@@ -57,6 +57,23 @@ const healthyHandler = (url: string) => {
 };
 
 describe("ops deck", () => {
+  test("meta fetch fires once per mount, not per render", async () => {
+    let metaCalls = 0;
+    const counting: FetchImpl = async (url: string) => {
+      if (url === "/healthz") {
+        metaCalls += 1;
+      }
+      return { ok: true, status: 200, json: async () => ({ status: "ok", upstream: "x" }) };
+    };
+    const client = createApiClient(counting);
+    const queries = render(<App client={client} initialRoute="overview" />);
+    await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
+    const afterMount = metaCalls;
+    queries.rerender(<App client={client} initialRoute="overview" />);
+    queries.rerender(<App client={client} initialRoute="overview" />);
+    expect(metaCalls).toBe(afterMount);
+  });
+
   test("tab rail lists one tab per feature with stable codes", async () => {
     const queries = await renderDeck("overview");
 

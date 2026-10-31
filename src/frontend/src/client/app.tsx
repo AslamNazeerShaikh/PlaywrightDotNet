@@ -29,13 +29,7 @@ import { TopologyPage } from "./pages/topology.tsx";
  * tab per feature, and the routed page. Telemetry (samples, event log, lookup history) lives here
  * so every page reads the same flight recorder.
  */
-export function App({
-  client = createApiClient(),
-  initialRoute,
-}: {
-  client?: ApiClient;
-  initialRoute?: DeckRoute;
-}) {
+export function App({ client, initialRoute }: { client?: ApiClient; initialRoute?: DeckRoute }) {
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
   const [theme, setTheme] = useState<"dark" | "light">("light");
