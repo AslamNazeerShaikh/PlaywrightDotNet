@@ -2,7 +2,8 @@
 
 > **Purpose:** specify the central control system — the “cockpit” — that commands the .NET API to run scraping, monitoring, exports, and diagnostics.
 >
-> **Status:** Design complete; no frontend code yet.
+> **Status:** Walking skeleton live in `src/frontend/` (BFF + health and
+> profile-lookup cards over the tested API); full v2 scope per §2 below.
 >
 > **Verified:** 2026-10-29 · Bun `1.4.4` · React `19.3.1` · TypeScript `7.0.2` · Tailwind CSS `4.3.3` · shadcn CLI `4.23.0`
 >

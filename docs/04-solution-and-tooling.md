@@ -33,7 +33,7 @@
 > │   │   ├── JobScrape.Application.Tests/
 > │   │   ├── JobScrape.Api.Tests/      (WebApplicationFactory integration)
 > │   │   └── JobScrape.Architecture.Tests/ (NetArchTest layer rules)
-> │   └── frontend/                     (React 19 + Bun; scaffolded next)
+> │   └── frontend/                     (React 19 + Bun walking skeleton)
 > └── .config/dotnet-tools.json         (dotnet-coverage 18.12.0, repo-local)
 > ```
 >
