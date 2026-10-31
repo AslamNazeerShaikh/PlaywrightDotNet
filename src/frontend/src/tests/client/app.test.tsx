@@ -78,6 +78,12 @@ describe("ops deck", () => {
     expect(queries.getByRole("status").textContent).toContain("2026-10-31T00:00:00Z");
   });
 
+  test("health auto-probes on mount with no clicks", async () => {
+    const queries = await renderDeck("health");
+
+    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("HEALTHY"));
+  });
+
   test("profile lookup renders the profile, then the stable miss code", async () => {
     const queries = await renderDeck("profiles");
 

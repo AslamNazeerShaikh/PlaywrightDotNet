@@ -37,7 +37,7 @@ export function HealthPage({
         code="HLT-01"
         title="Probe control"
         span="span-4"
-        note="Each run appends a latency sample and an event-log row."
+        note="Auto-probes every 10s from mount; manual runs ride the same path. Each run appends a latency sample and an event-log row."
       >
         <button type="button" className="btn" onClick={onCheck} disabled={checking}>
           {checking ? "PROBING…" : "RUN HEALTH CHECK"}

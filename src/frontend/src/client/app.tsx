@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
@@ -53,6 +53,8 @@ export function App({
   const [profileProblem, setProfileProblem] = useState<ApiProblem | null>(null);
   const [looking, setLooking] = useState(false);
   const [history, setHistory] = useState<LookupRecord[]>([]);
+  const probeBusy = useRef(false);
+  const probeRef = useRef<() => void>(() => undefined);
 
   const now = useNow();
   const heading =
@@ -107,6 +109,10 @@ export function App({
   }, [client]);
 
   async function checkHealth() {
+    if (probeBusy.current) {
+      return;
+    }
+    probeBusy.current = true;
     setChecking(true);
     const { result, ms, at } = await client.fetchHealth();
     const ok = result.ok;
@@ -132,7 +138,21 @@ export function App({
       }),
     );
     setChecking(false);
+    probeBusy.current = false;
   }
+
+  probeRef.current = checkHealth;
+
+  // Auto-probe: first hit lands on mount so the deck opens with data, then one
+  // every 10s. The busy flag keeps a slow proxy from stacking probes; the
+  // manual button rides the same path.
+  useEffect(() => {
+    probeRef.current();
+    const timer = setInterval(() => {
+      probeRef.current();
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, []);
 
   async function lookupProfile(id: string) {
     setLooking(true);
