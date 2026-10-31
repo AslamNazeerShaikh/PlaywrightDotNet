@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Scramble } from "./scramble.tsx";
+
 /**
  * Shared deck furniture: the framed module shell, stat readouts, stable-code tags, raw JSON blocks,
  * and the reference tables. One module = one framed panel with corner brackets (see globals.css);
@@ -23,7 +25,9 @@ export function Module({
     <section className={`module ${span}`} aria-label={title}>
       <div className="module-head">
         <span className="module-code">{code}</span>
-        <h2 className="module-title">{title}</h2>
+        <h2 className="module-title">
+          <Scramble text={title} duration={550} ariaHidden />
+        </h2>
         {note !== undefined && <span className="module-note">{note}</span>}
       </div>
       {children}

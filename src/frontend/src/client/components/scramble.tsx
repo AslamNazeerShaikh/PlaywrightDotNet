@@ -13,10 +13,13 @@ export function Scramble({
   text,
   duration = 650,
   className,
+  ariaHidden = false,
 }: {
   text: string;
   duration?: number;
   className?: string;
+  /** The module frame already labels the card, so its title scramble hides. */
+  ariaHidden?: boolean;
 }) {
   // Open on glyphs so the first paint is already decrypting; the effect
   // below locks characters in left to right.
@@ -50,7 +53,11 @@ export function Scramble({
     return () => clearInterval(timer);
   }, [text, duration]);
 
-  return (
+  return ariaHidden ? (
+    <span className={className} aria-hidden="true">
+      {display}
+    </span>
+  ) : (
     <span className={className} aria-label={text}>
       {display}
     </span>
