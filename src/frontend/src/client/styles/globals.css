@@ -300,43 +300,127 @@ a:hover {
   border-color: var(--sig-line);
 }
 
-/* ---- tab rail ---- */
+/* ---- ruler-tabs: measuring-rail navigation ----
+   ArtCraft ruler language (ticks + section digits) fused with the deck's
+   radar language (glowing blip + sonar ping). The blip glides on the shared
+   spring; the ping fires once per route change. */
 
-.tabs {
+.ruler {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  padding: 0 18px;
+  align-items: stretch;
+  gap: 14px;
+  padding: 8px 18px 0;
   border-bottom: 1px solid var(--line);
   background: var(--abyss);
+  position: relative;
+  z-index: 1;
 }
 
-.tab {
-  padding: 10px 14px 8px;
+.ruler-code {
+  align-self: center;
+  color: var(--faint);
+  font-size: var(--text-micro);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.ruler-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 10px;
+}
+
+.ruler-ticks {
+  height: 12px;
+  background:
+    repeating-linear-gradient(90deg, var(--sig) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(90deg, var(--line-hi) 0 1px, transparent 1px 10px);
+  background-size:
+    100% 12px,
+    100% 6px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+
+.ruler-stops {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ruler-stop {
+  padding: 8px 6px 6px;
+  text-align: center;
   color: var(--dim);
   font-size: var(--text-label);
   letter-spacing: 0.08em;
-  border-bottom: 2px solid transparent;
   overflow-wrap: anywhere;
 }
 
-.tab:hover {
+.ruler-stop:hover {
   color: var(--ink);
   text-decoration: none;
 }
 
-.tab[aria-current="page"] {
+.ruler-stop[aria-current="page"] {
   color: var(--sig);
-  border-bottom-color: var(--sig);
 }
 
-.tab-code {
+.ruler-stop-code {
   color: var(--faint);
   margin-right: 8px;
 }
 
-.tab[aria-current="page"] .tab-code {
+.ruler-stop[aria-current="page"] .ruler-stop-code {
   color: var(--sig);
+}
+
+.ruler-blip {
+  position: absolute;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  transform-origin: center;
+  border: 2px solid var(--sig);
+  background: var(--sig-soft);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  transition: left 0.5s var(--ease-spring);
+  pointer-events: none;
+}
+
+.ruler-ping {
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--sig);
+  animation: ruler-ping 0.9s var(--ease-out) backwards;
+  pointer-events: none;
+}
+
+@keyframes ruler-ping {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.ruler-pos {
+  align-self: center;
+  color: var(--faint);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+.ruler-pos strong {
+  color: var(--sig);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- deck grid: full-bleed, auto-reflowing ---- */
@@ -546,7 +630,7 @@ select.input {
 .input:focus-visible,
 .btn:focus-visible,
 .density-btn:focus-visible,
-.tab:focus-visible {
+.ruler-stop:focus-visible {
   outline: 2px solid var(--sig);
   outline-offset: 1px;
 }
@@ -979,7 +1063,7 @@ abbr.abbr {
     grid-column: span 6;
   }
   .cmdbar,
-  .tabs {
+  .ruler {
     padding-left: 12px;
     padding-right: 12px;
   }
@@ -1072,7 +1156,7 @@ abbr.abbr {
 /* Micro-interactions: lift on hover, squash on press, spring back. */
 .btn,
 .density-btn,
-.tab {
+.ruler-stop {
   transition:
     transform var(--dur-micro) var(--ease-spring),
     background-color var(--dur-ui) var(--ease-out),
@@ -1089,7 +1173,7 @@ abbr.abbr {
   transform: translateY(0) scale(0.97);
 }
 
-.tab:hover {
+.ruler-stop:hover {
   transform: translateY(-1px);
 }
 
@@ -1315,7 +1399,8 @@ abbr.abbr {
 }
 
 /* Content floats above the aurora; the beam washes over it faintly. */
-.tabs,
+.compass,
+.ruler,
 .deck,
 .deck-root > footer {
   position: relative;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
+import { RulerTabs } from "./components/rulertabs.tsx";
 import { Scramble } from "./components/scramble.tsx";
 import {
   type ApiClient,
@@ -10,7 +11,7 @@ import {
   type HealthPayload,
   type SearchProfilePayload,
 } from "./lib/api.ts";
-import { type DeckRoute, parseRoute, routeHash, ROUTES } from "./lib/router.ts";
+import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
 import {
   latencyStats,
   type LogEvent,
@@ -210,24 +211,16 @@ export function App({
 
       <Compass heading={heading} page={pageLabel} />
 
-      <nav className="tabs" aria-label="Deck pages">
-        {ROUTES.map((r) => (
-          <a
-            key={r.id}
-            className="tab"
-            href={routeHash(r.id)}
-            aria-current={route === r.id ? "page" : undefined}
-            onClick={() => {
-              if (initialRoute === undefined) {
-                setRoute(r.id);
+      <RulerTabs
+        route={route}
+        onSelect={
+          initialRoute === undefined
+            ? (next) => {
+                setRoute(next);
               }
-            }}
-          >
-            <span className="tab-code">{r.code}</span>
-            {r.label.toUpperCase()}
-          </a>
-        ))}
-      </nav>
+            : undefined
+        }
+      />
 
       <main className="deck" key={route}>
         {route === "overview" && (
