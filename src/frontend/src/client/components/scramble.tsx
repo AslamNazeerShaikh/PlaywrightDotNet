@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
  * final text instantly, and exposes it via aria-label so assistive tech skips the scramble.
  */
 
-// Symbol-only: no alphanumerics, so the scramble can never equal the target.
-const GLYPHS = "!<>-_\\/[]{}=+*^?#";
+// Full symbol rack, no alphanumerics: the scramble can never equal the target.
+const GLYPHS = "!@#$%^&*()_+!@#$%^&*()_+-={}|:\"<>?/.,;'[]\\";
 
 export function Scramble({
   text,
