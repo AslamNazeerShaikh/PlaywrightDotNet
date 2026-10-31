@@ -1315,10 +1315,14 @@ abbr.abbr {
 
 .aurora-blob {
   position: absolute;
-  width: 44vmax;
-  height: 44vmax;
+  width: 50vmax;
+  height: 50vmax;
   border-radius: 50%;
-  filter: blur(90px);
+  /* No filter blur: softness is baked into the gradient stops so the blobs
+     ride the compositor on transform alone. A 90px blur here forced the
+     browser to re-rasterize ~50vmax layers every frame (100% CPU in
+     Firefox); radial falloff looks the same for a static paint. */
+  will-change: transform;
 }
 
 .blob-1 {
@@ -1377,6 +1381,7 @@ abbr.abbr {
   height: 18vh;
   z-index: 1;
   pointer-events: none;
+  will-change: transform;
   background: linear-gradient(
     180deg,
     transparent,
