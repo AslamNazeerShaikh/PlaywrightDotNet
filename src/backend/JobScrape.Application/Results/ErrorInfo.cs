@@ -28,5 +28,6 @@ namespace JobScrape.Application.Results
         string Title,
         string Detail,
         ErrorKind Kind,
-        IReadOnlyDictionary<string, object?>? Metadata = null);
+        IReadOnlyDictionary<string, object?>? Metadata = null
+    );
 }

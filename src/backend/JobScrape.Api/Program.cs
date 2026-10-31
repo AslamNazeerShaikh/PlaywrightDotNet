@@ -1,4 +1,6 @@
 using JobScrape.Application.Features.Health;
+using JobScrape.Application.Features.SearchProfiles;
+using JobScrape.Infrastructure.SearchProfiles;
 
 namespace JobScrape.Api
 {
@@ -38,6 +40,11 @@ namespace JobScrape.Api
             // scanning, no mediator: "Find usages" on a handler finds its
             // callers.
             builder.Services.AddTransient<GetHealthHandler>();
+            builder.Services.AddTransient<GetSearchProfileHandler>();
+
+            // Walking-skeleton store: in-memory until Phase 3 wires EF Core
+            // SQLite behind the same ISearchProfileStore port.
+            builder.Services.AddSingleton<ISearchProfileStore, InMemorySearchProfileStore>();
 
             var app = builder.Build();
 
