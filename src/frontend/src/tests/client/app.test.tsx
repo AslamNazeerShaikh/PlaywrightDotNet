@@ -1,4 +1,11 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
@@ -21,7 +28,9 @@ afterEach(() => {
   cleanup();
 });
 
-function stubClient(handler: (url: string) => { status: number; body: unknown }) {
+function stubClient(
+  handler: (url: string) => { status: number; body: unknown },
+) {
   const fetchImpl: FetchImpl = async (url: string) => {
     const { status, body } = handler(url);
     return {
@@ -45,7 +54,9 @@ describe("App", () => {
 
     fireEvent.click(queries.getByRole("button", { name: "Check health" }));
 
-    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("healthy"));
+    await waitFor(() =>
+      expect(queries.getByRole("status").textContent).toContain("healthy"),
+    );
   });
 
   test("profile lookup renders the profile and problems by code", async () => {
@@ -60,20 +71,29 @@ describe("App", () => {
               code: "PROFILE_NOT_FOUND",
             },
           }
-        : { status: 200, body: { id: "x", name: "Backend", sourceKey: "naukri" } },
+        : {
+            status: 200,
+            body: { id: "x", name: "Backend", sourceKey: "naukri" },
+          },
     );
     const queries = render(<App client={client} />);
 
-    fireEvent.change(queries.getByLabelText("Profile id"), { target: { value: "x" } });
+    fireEvent.change(queries.getByLabelText("Profile id"), {
+      target: { value: "x" },
+    });
     fireEvent.click(queries.getByRole("button", { name: "Look up" }));
-    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("Backend"));
+    await waitFor(() =>
+      expect(queries.getByRole("status").textContent).toContain("Backend"),
+    );
 
     fireEvent.change(queries.getByLabelText("Profile id"), {
       target: { value: "nope" },
     });
     fireEvent.click(queries.getByRole("button", { name: "Look up" }));
     await waitFor(() =>
-      expect(queries.getByRole("alert").textContent).toContain("PROFILE_NOT_FOUND"),
+      expect(queries.getByRole("alert").textContent).toContain(
+        "PROFILE_NOT_FOUND",
+      ),
     );
   });
 
@@ -84,7 +104,9 @@ describe("App", () => {
     fireEvent.click(queries.getByRole("button", { name: "Look up" }));
 
     await waitFor(() =>
-      expect(queries.getByRole("alert").textContent).toContain("VALIDATION_FAILED"),
+      expect(queries.getByRole("alert").textContent).toContain(
+        "VALIDATION_FAILED",
+      ),
     );
   });
 });

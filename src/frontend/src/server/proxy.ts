@@ -1,8 +1,7 @@
 /**
- * Same-origin `/api/*` proxy to the .NET data plane. The cockpit never talks
- * to the API cross-origin: the browser hits the BFF, the BFF forwards
- * loopback-only. On connection failure the BFF answers 502 with a
- * problem+json body (never a stack trace), mirroring the API edge contract.
+ * Same-origin `/api/*` proxy to the .NET data plane. The cockpit never talks to the API
+ * cross-origin: the browser hits the BFF, the BFF forwards loopback-only. On connection failure the
+ * BFF answers 502 with a problem+json body (never a stack trace), mirroring the API edge contract.
  */
 
 /** Hop-by-hop headers must not be forwarded to the upstream. See RFC 9110 §7.6. */
@@ -18,8 +17,8 @@ const HOP_BY_HOP = new Set([
 ]);
 
 /**
- * Joins the upstream base URL with the incoming `/api/...` path.
- * The base is expected to have no trailing slash (see `parseConfig`).
+ * Joins the upstream base URL with the incoming `/api/...` path. The base is expected to have no
+ * trailing slash (see `parseConfig`).
  */
 export function buildTargetUrl(base: string, path: string): string {
   return `${base}${path}`;
@@ -37,8 +36,8 @@ export function filterHeaders(headers: Headers): Headers {
 }
 
 /**
- * Forwards `req` to `base + path` and streams the upstream response back.
- * Returns a 502 problem+json response when the data plane is unreachable.
+ * Forwards `req` to `base + path` and streams the upstream response back. Returns a 502
+ * problem+json response when the data plane is unreachable.
  */
 export async function proxyRequest(
   req: Request,
@@ -52,7 +51,8 @@ export async function proxyRequest(
       method: req.method,
       headers: filterHeaders(req.headers),
       // GET/HEAD must not carry a body; anything else streams through.
-      body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+      body:
+        req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
       // The BFF is not a browser: no credentials, no caching, manual redirects.
       redirect: "manual",
     });

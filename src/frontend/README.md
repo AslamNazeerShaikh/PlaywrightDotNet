@@ -18,17 +18,17 @@
 
 ## Commands (run from `src/frontend/`)
 
-| Command            | What it does                                              |
-| ------------------ | --------------------------------------------------------- |
-| `bun install`      | Resolve + install; writes `bun.lock` (committed).          |
-| `bun run dev`      | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.    |
-| `bun run build`    | CSS → client bundle → server bundle, into `dist/`.        |
-| `bun run start`    | Serve the production build (`NODE_ENV=production`).       |
-| `bun test`         | 19 tests: config, proxy, routes, API client, components.   |
-| `bun check`        | Typecheck (built into Bun, no `tsc` script).               |
-| `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).              |
-| `bun run api:types`| Regenerate OpenAPI contract types (needs the API up).     |
-| `bun audit`        | Dependency audit.                                          |
+| Command                                   | What it does                                             |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `bun install`                             | Resolve + install; writes `bun.lock` (committed).        |
+| `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.  |
+| `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
+| `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
+| `bun test`                                | 19 tests: config, proxy, routes, API client, components. |
+| `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
+| `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
+| `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |
+| `bun audit`                               | Dependency audit.                                        |
 
 Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
 `DOTNET_API_URL` (default `http://127.0.0.1:5207`).
@@ -62,7 +62,8 @@ src/frontend/
   `127.0.0.1`. CORS is never opened.
 - Failures render the stable `code` (`PROFILE_NOT_FOUND`,
   `VALIDATION_FAILED`, `DOTNET_UNREACHABLE`, …), never prose parsing.
-- `bun fmt` owns formatting; `bun check` owns types.
+- `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
+  `bun check` owns types.
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 

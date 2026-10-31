@@ -3,11 +3,11 @@
  *
  * - `GET /healthz` — BFF self-check (does not touch the .NET API).
  * - `/api/*` — proxied to the .NET data plane (see `proxy.ts`).
- * - `/*` — the React bundle: the `dist/client` build output in production,
- *   or the on-demand Bun HTML import with HMR in development.
+ * - `/*` — the React bundle: the `dist/client` build output in production, or the on-demand Bun HTML
+ *   import with HMR in development.
  *
- * Auth (HttpOnly cookie, CSRF double-submit, BFF bearer token) and the SSE
- * run-event proxy land with the runs vertical slice — see README follow-ups.
+ * Auth (HttpOnly cookie, CSRF double-submit, BFF bearer token) and the SSE run-event proxy land
+ * with the runs vertical slice — see README follow-ups.
  */
 import homepage from "../client/index.html";
 import { type CockpitConfig, parseConfig } from "./config.ts";
@@ -37,14 +37,19 @@ export function healthResponse(config: CockpitConfig): Response {
 }
 
 /** Forwards an `/api/*` request to the data plane (path + query preserved). */
-export function apiProxy(req: Request, config: CockpitConfig): Promise<Response> {
+export function apiProxy(
+  req: Request,
+  config: CockpitConfig,
+): Promise<Response> {
   const url = new URL(req.url);
   return proxyRequest(req, config.dotnetApiUrl, url.pathname + url.search);
 }
 
-/** Stable-code 404 for unknown BFF paths. Browser navigation normally lands
- * on the /* SPA route instead (dev homepage or prod dist fallback); this
- * stays the tested default of the routing function for non-SPA clients. */
+/**
+ * Stable-code 404 for unknown BFF paths. Browser navigation normally lands on the /* SPA route
+ * instead (dev homepage or prod dist fallback); this stays the tested default of the routing
+ * function for non-SPA clients.
+ */
 export function fallbackResponse(pathname: string): Response {
   return Response.json(
     {
@@ -75,7 +80,9 @@ if (import.meta.main) {
   };
 
   Bun.serve({ port: config.port, hostname: "127.0.0.1", routes });
-  console.log(`jobscrape-cockpit BFF listening on http://127.0.0.1:${config.port}`);
+  console.log(
+    `jobscrape-cockpit BFF listening on http://127.0.0.1:${config.port}`,
+  );
 }
 
 /** Serves `dist/client` with SPA fallback to `index.html`. Production only. */
@@ -92,7 +99,10 @@ async function serveDist(req: Request): Promise<Response> {
   if (await fallback.exists()) {
     return new Response(fallback);
   }
-  return new Response("Cockpit client not built. Run `bun run build:client` first.", {
-    status: 503,
-  });
+  return new Response(
+    "Cockpit client not built. Run `bun run build:client` first.",
+    {
+      status: 503,
+    },
+  );
 }

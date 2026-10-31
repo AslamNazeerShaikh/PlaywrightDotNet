@@ -9,3 +9,6 @@ printWidth = 100
 sortImports = true
 sortTailwindcss = true
 sortPackageJson = true
+# JSDoc blocks are formatter-owned, like sortImports: the same mechanical
+# standard as CS1591 XML docs on the .NET side (see bun.com/docs/format).
+jsdoc = true
