@@ -19,6 +19,11 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - Never bypass the hook to avoid fixing a message; fix the message or the hook.
 - PR titles follow the same format because squash merges use them as the commit header.
 
+## UI design
+
+- When designing or developing UI in `src/frontend/`, consult the ui-skills catalog first: `list_skills` filtered by topic/intent, then `get_skill` for the smallest useful set. Start with the `ibelick/ui-skills-root` router skill when unsure which applies.
+- Reference: [UI Skills](https://www.ui-skills.com/skills) · [MCP docs](https://www.ui-skills.com/mcp/docs).
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
