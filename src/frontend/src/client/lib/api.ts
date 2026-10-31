@@ -1,7 +1,9 @@
 /**
  * Typed same-origin API helpers. Every call goes to the BFF (`/api/*`), which proxies loopback-only
- * to the .NET data plane. Failures surface as {@link ApiProblem} carrying the stable `code`
- * contract — the UI maps codes, never prose (see docs/14-application-patterns.md §6).
+ * to the .NET data plane. Calls are timed with `performance.now()` so the deck can chart proxy
+ * latency without a second measurement path. Failures surface as {@link ApiProblem} carrying the
+ * stable `code` contract — the UI maps codes, never prose (see docs/14-application-patterns.md
+ * §6).
  */
 export interface HealthPayload {
   status: string;
@@ -24,6 +26,13 @@ export interface ApiProblem {
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
 
+/** A result plus how long the round trip took and when it finished. */
+export interface Timed<T> {
+  result: T;
+  ms: number;
+  at: string;
+}
+
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
@@ -31,14 +40,21 @@ export type FetchImpl = (
 
 export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   return {
-    fetchHealth: () => get<HealthPayload>(fetchImpl, "/api/v1/health"),
+    fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
+    fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
     fetchProfile: (id: string) =>
-      get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`),
+      timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
   };
 }
 
 /** The client surface consumed by components. Passed as a prop for testability. */
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
+  const start = performance.now();
+  const result = await run();
+  return { result, ms: performance.now() - start, at: new Date().toISOString() };
+}
 
 async function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
   let res: { ok: boolean; status: number; json(): Promise<unknown> };

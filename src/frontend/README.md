@@ -1,13 +1,20 @@
 # JobScrape Cockpit (control plane) — React 19 + Bun
 
-> **Status:** walking skeleton. The BFF proxies `/api/*` loopback-only to the
-> .NET data plane, and two cards exercise the tested backend features:
-> engine health (`GET /api/v1/health`) and search-profile lookup
-> (`GET /api/v1/search-profiles/{id}`).
+> **Status:** ops-deck walking skeleton. The BFF proxies `/api/*` loopback-only
+> to the .NET data plane, and four routed pages exercise the tested backend
+> features: a central overview dashboard, engine-health detail,
+> search-profile lookup, and a topology map.
+>
+> **Look:** hacker instrument-panel — matte-black surfaces, one emerald signal
+> color, framed modules with corner brackets, IBM Plex Mono everywhere
+> (self-hosted `src/client/fonts/`, offline-safe), tabular numerals, dense
+> readouts that wrap instead of overflowing.
 >
 > **Stack:** Bun `1.4.4` · React `19.3.1` · TypeScript `7.0.2` ·
 > Tailwind CSS `4.3.3` · `bun test` + happy-dom + Testing Library.
 > No Node.js, no npm, no Vite, no Prettier/Biome.
+> UI guidance: [ui-skills](https://www.ui-skills.com/skills) via the
+> `ui-skills` MCP (`list_skills` → `get_skill`), per `AGENTS.md`.
 
 ## Prerequisites
 
@@ -24,7 +31,7 @@
 | `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.  |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
-| `bun test`                                | 19 tests: config, proxy, routes, API client, components. |
+| `bun test`                                | 32 tests: config, proxy, routes, router, telemetry, API client, deck pages. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
 | `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
 | `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |
@@ -47,12 +54,18 @@ src/frontend/
 │   │   ├── config.ts     # pure env parsing (unit-tested)
 │   │   └── proxy.ts      # target join, hop-by-hop filter, 502 mapping (unit-tested)
 │   ├── client/
-│   │   ├── index.html / main.tsx / app.tsx   # shell + health + profile cards
-│   │   ├── lib/api.ts    # typed fetch helpers; UI maps stable codes, never prose
-│   │   └── styles/       # Tailwind v4 CSS-first (globals.css in, generated.css out)
+│   │   ├── index.html / main.tsx / app.tsx   # ops-deck shell: cmd bar, tabs, routed pages
+│   │   ├── lib/
+│   │   │   ├── api.ts        # timed fetch helpers; UI maps stable codes, never prose
+│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/topology
+│   │   │   └── telemetry.ts  # samples, stats, event log (pure, unit-tested)
+│   │   ├── components/   # module frame, sparkline, pipeline diagram
+│   │   ├── pages/        # overview, health, profiles, topology (one page per feature)
+│   │   ├── fonts/        # IBM Plex Mono woff2, self-hosted (bundled as data URIs)
+│   │   └── styles/       # design system: tokens, grid, modules, no-overflow rules
 │   └── tests/
 │       ├── server/       # config, proxy (incl. live stub upstream), routes
-│       └── client/       # api client units, App interaction (stub client prop)
+│       └── client/       # router, telemetry, api client units, deck interaction
 └── dist/                 # build output (gitignored)
 ```
 
@@ -62,8 +75,19 @@ src/frontend/
   `127.0.0.1`. CORS is never opened.
 - Failures render the stable `code` (`PROFILE_NOT_FOUND`,
   `VALIDATION_FAILED`, `DOTNET_UNREACHABLE`, …), never prose parsing.
+- One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`,
+  `#/topology`): deep links survive refresh with zero server config.
+- Dense but never overflowing: every grid child can shrink to zero, tokens
+  wrap anywhere, wide tables scroll inside their module. Full viewport width
+  is used; columns reflow at runtime via auto-fit grids plus a
+  compact/cozy density switch in the command bar.
+- Diagrams are evidence: the pipeline and lifecycle SVGs reflect the latest
+  probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
   `bun check` owns types.
+- UI taste follows ui-skills (`list_skills` → `get_skill` first):
+  `tech-green-dark-mode-modern` for the signal system, `interface-design`
+  for craft, `archify` for diagram rigor.
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 

@@ -1,40 +1,677 @@
-@import "tailwindcss";
+/**
+ * OPS-DECK visual system. IBM Plex Mono everywhere (self-hosted, offline-safe),
+ * matte-black instrument surfaces, one emerald signal color, framed modules with
+ * corner brackets. Layout rules that keep dense info readable at any width:
+ * every grid child gets min-width 0, long tokens wrap anywhere, wide tables
+ * scroll inside their module instead of breaking the page.
+ */
 
-/* Walking-skeleton theme. shadcn theme tokens land with the first shadcn
-   slice; until then the cockpit uses this minimal layout scale. */
-.cockpit {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-.cockpit section {
-  margin-top: 2rem;
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 
-.cockpit button {
-  margin-top: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-400-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --void: #050807;
+  --abyss: #080c0b;
+  --panel: #0b1110;
+  --raise: #0e1514;
+  --line: #1b2524;
+  --line-hi: #2c3d3a;
+  --ink: #d8e4e1;
+  --dim: #93a7a3;
+  --faint: #5f7370;
+  --sig: #34d399;
+  --sig-soft: rgba(52, 211, 153, 0.12);
+  --sig-line: rgba(52, 211, 153, 0.38);
+  --amber: #fbbf24;
+  --red: #f87171;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gap: 12px;
+  --pad: 14px;
+  --fs: 12.5px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--void);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 500px at 70% -10%, rgba(52, 211, 153, 0.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(147, 167, 163, 0.05) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(147, 167, 163, 0.05) 31px 32px),
+    var(--void);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: var(--fs);
+  line-height: 1.55;
+}
+
+/* Density switch: compact packs the deck, cozy breathes. Toggled at runtime. */
+.deck-root[data-density="cozy"] {
+  --gap: 18px;
+  --pad: 20px;
+  --fs: 13.5px;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Every grid/flex child may shrink to zero so long tokens wrap instead of
+   forcing horizontal overflow. This is the one rule that keeps the cockpit
+   dense without overlap. */
+.deck-root * {
+  min-width: 0;
+}
+
+a {
+  color: var(--sig);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---- command bar ---- */
+
+.cmdbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 18px;
+  background: rgba(5, 8, 7, 0.92);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+
+.brand-mark {
+  color: var(--sig);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-sub {
+  color: var(--faint);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.cmdbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border: 1px solid var(--line-hi);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+  flex: none;
+}
+
+.dot.live {
+  background: var(--sig);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+}
+
+.dot.bad {
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.8);
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.density-btn {
   cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--line-hi);
+  border-radius: 4px;
+  padding: 2px 9px;
 }
 
-.cockpit button:disabled {
-  opacity: 0.5;
+.density-btn:hover {
+  color: var(--sig);
+  border-color: var(--sig-line);
+}
+
+/* ---- tab rail ---- */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--abyss);
+}
+
+.tab {
+  padding: 10px 14px 8px;
+  color: var(--dim);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid transparent;
+  overflow-wrap: anywhere;
+}
+
+.tab:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.tab[aria-current="page"] {
+  color: var(--sig);
+  border-bottom-color: var(--sig);
+}
+
+.tab-code {
+  color: var(--faint);
+  margin-right: 8px;
+}
+
+.tab[aria-current="page"] .tab-code {
+  color: var(--sig);
+}
+
+/* ---- deck grid: full-bleed, auto-reflowing ---- */
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--gap);
+  padding: var(--gap) 18px 40px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* Runtime-adaptive clusters inside a module: add/remove columns as width
+   allows, never dropping content. */
+.flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--gap);
+}
+
+/* ---- framed module ---- */
+
+.module {
+  position: relative;
+  background: linear-gradient(180deg, var(--raise), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: var(--pad);
+  overflow-wrap: anywhere;
+}
+
+/* Corner brackets: the instrument-panel signature. */
+.module::before,
+.module::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.module::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--sig);
+  border-left: 2px solid var(--sig);
+  border-top-left-radius: 6px;
+}
+
+.module::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--sig);
+  border-right: 2px solid var(--sig);
+  border-bottom-right-radius: 6px;
+}
+
+.module-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.module-code {
+  color: var(--faint);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+}
+
+.module-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.module-note {
+  width: 100%;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* ---- readouts ---- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
+  gap: 8px;
+}
+
+.stat {
+  padding: 8px 10px;
+  background: var(--void);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.stat-label {
+  color: var(--faint);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.stat-value {
+  font-size: clamp(15px, 1.4vw + 12px, 22px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.stat-value.ok {
+  color: var(--sig);
+}
+
+.stat-value.bad {
+  color: var(--red);
+}
+
+.stat-value.warn {
+  color: var(--amber);
+}
+
+/* ---- controls ---- */
+
+.btn {
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #04110b;
+  background: var(--sig);
+  border: 1px solid var(--sig);
+  border-radius: 4px;
+  padding: 7px 14px;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.btn:disabled {
+  opacity: 0.45;
   cursor: default;
 }
 
-.cockpit input {
-  display: block;
-  margin-top: 0.25rem;
+.btn-ghost {
+  color: var(--sig);
+  background: transparent;
+  border: 1px solid var(--sig-line);
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.field > span {
+  color: var(--dim);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.input,
+select.input {
   width: 100%;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-family: ui-monospace, monospace;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--void);
+  border: 1px solid var(--line-hi);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.input:focus-visible,
+.btn:focus-visible,
+.density-btn:focus-visible,
+.tab:focus-visible {
+  outline: 2px solid var(--sig);
+  outline-offset: 1px;
+}
+
+/* ---- tables: wrap inside a horizontal scroll guard ---- */
+
+.tbl-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+table.data th,
+table.data td {
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+table.data th {
+  color: var(--faint);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--abyss);
+  white-space: nowrap;
+}
+
+table.data tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---- code + raw payloads ---- */
+
+.json {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--void);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 3px;
+  border: 1px solid var(--line-hi);
+  color: var(--dim);
+  background: var(--abyss);
+  overflow-wrap: anywhere;
+}
+
+.code-tag.ok {
+  color: var(--sig);
+  border-color: var(--sig-line);
+  background: var(--sig-soft);
+}
+
+.code-tag.bad {
+  color: var(--red);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.code-tag.warn {
+  color: var(--amber);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.alert {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-left: 3px solid var(--red);
+  border-radius: 4px;
+  background: rgba(248, 113, 113, 0.07);
+  overflow-wrap: anywhere;
+}
+
+.status-line {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ---- diagrams: fluid SVG, never overflow ---- */
+
+.diagram {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--void);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.diagram text {
+  font-family: var(--mono);
+}
+
+/* ---- event log ---- */
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.log li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 6px 10px;
+  background: var(--void);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.log time {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- page intro strip ---- */
+
+.page-head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: clamp(17px, 1.2vw + 13px, 24px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.page-head p {
+  margin: 0;
+  color: var(--dim);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* 12-col spans; collapse gracefully as the viewport narrows. */
+.span-3 {
+  grid-column: span 3;
+}
+.span-4 {
+  grid-column: span 4;
+}
+.span-5 {
+  grid-column: span 5;
+}
+.span-6 {
+  grid-column: span 6;
+}
+.span-7 {
+  grid-column: span 7;
+}
+.span-8 {
+  grid-column: span 8;
+}
+.span-12 {
+  grid-column: span 12;
+}
+
+@media (max-width: 1100px) {
+  .span-3,
+  .span-4,
+  .span-5 {
+    grid-column: span 6;
+  }
+  .span-7,
+  .span-8 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 720px) {
+  .deck {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding: var(--gap) 12px 32px;
+  }
+  .span-3,
+  .span-4,
+  .span-5,
+  .span-6 {
+    grid-column: span 6;
+  }
+  .span-7,
+  .span-8,
+  .span-12 {
+    grid-column: span 6;
+  }
+  .cmdbar,
+  .tabs {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

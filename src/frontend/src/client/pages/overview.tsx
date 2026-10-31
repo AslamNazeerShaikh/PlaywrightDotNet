@@ -1,0 +1,162 @@
+import { CodeTag, codeTone, JsonBlock, Module, Stat } from "../components/modules.tsx";
+import { PipelineDiagram } from "../components/pipeline.tsx";
+import { Sparkline } from "../components/sparkline.tsx";
+import type { HealthPayload } from "../lib/api.ts";
+import { formatMs, type LatencyStats, type LogEvent, type Sample } from "../lib/telemetry.ts";
+
+/**
+ * Central dashboard: engine state, proxy latency chart, live request path, endpoint catalog, and
+ * the ops event log. Every module is a grid cell that reflows at runtime; nothing here assumes a
+ * minimum viewport width.
+ */
+export function OverviewPage({
+  health,
+  healthMs,
+  stats,
+  samples,
+  events,
+  apiState,
+  upstream,
+}: {
+  health: HealthPayload | null;
+  healthMs: number | null;
+  stats: LatencyStats | null;
+  samples: Sample[];
+  events: LogEvent[];
+  apiState: "unknown" | "live" | "down";
+  upstream: string;
+}) {
+  return (
+    <>
+      <div className="page-head">
+        <h1>OPS-DECK // OVERVIEW</h1>
+        <p>
+          Engine state, request path, and event stream at a glance. Drill into a tab for detail.
+        </p>
+      </div>
+
+      <Module
+        code="MOD-01"
+        title="Engine state"
+        span="span-4"
+        note="Last GET /api/v1/health through the BFF proxy."
+      >
+        <div className="stat-grid">
+          <Stat label="Engine" value={health?.status ?? "—"} tone={health ? "ok" : undefined} />
+          <Stat
+            label="Last round trip"
+            value={healthMs === null ? "—" : formatMs(healthMs)}
+            tone={healthMs === null ? undefined : "ok"}
+          />
+          <Stat
+            label="API plane"
+            value={apiState.toUpperCase()}
+            tone={apiState === "live" ? "ok" : apiState === "down" ? "bad" : undefined}
+          />
+          <Stat label="Samples" value={stats === null ? "0" : String(stats.count)} />
+        </div>
+        {health !== null && <JsonBlock label="Latest health payload" value={health} />}
+      </Module>
+
+      <Module
+        code="MOD-02"
+        title="Proxy latency"
+        span="span-4"
+        note="Round-trip ms per health probe, newest on the right."
+      >
+        <Sparkline samples={samples} label="Proxy latency" />
+        {stats !== null && (
+          <div className="stat-grid" style={{ marginTop: "10px" }}>
+            <Stat label="p50" value={formatMs(stats.p50)} />
+            <Stat label="min" value={formatMs(stats.min)} />
+            <Stat label="max" value={formatMs(stats.max)} />
+          </div>
+        )}
+      </Module>
+
+      <Module
+        code="MOD-03"
+        title="Request path"
+        span="span-4"
+        note={`Browser → BFF → ${upstream} → store.`}
+      >
+        <PipelineDiagram bffState="live" apiState={apiState} />
+      </Module>
+
+      <Module
+        code="MOD-04"
+        title="Endpoint catalog"
+        span="span-7"
+        note="Every route the BFF exposes or proxies, and the handler that owns it."
+      >
+        <div className="tbl-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Path</th>
+                <th>Owner</th>
+                <th>Contract</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>GET</td>
+                <td>/healthz</td>
+                <td>BFF (index.ts)</td>
+                <td>
+                  <CodeTag code="200 · ok" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/health</td>
+                <td>GetHealthHandler</td>
+                <td>
+                  <CodeTag code="200 · HealthPayload" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/search-profiles/{"{id}"}</td>
+                <td>GetSearchProfileHandler</td>
+                <td>
+                  <CodeTag code="200 / 404+code / 400" tone="warn" />
+                </td>
+              </tr>
+              <tr>
+                <td>*</td>
+                <td>/api/* (unmatched)</td>
+                <td>BFF proxy → API 404</td>
+                <td>
+                  <CodeTag code="passthrough" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Module>
+
+      <Module
+        code="MOD-05"
+        title="Event log"
+        span="span-5"
+        note="Newest first. Every probe, lookup, and failure lands here with its stable code."
+      >
+        {events.length === 0 ? (
+          <p className="status-line">No events yet — run a health check or a profile lookup.</p>
+        ) : (
+          <ul className="log">
+            {events.map((e, i) => (
+              <li key={`${e.at}-${i}`}>
+                <time>{e.at}</time>
+                <CodeTag code={e.code} tone={codeTone(e.code)} />
+                <span>{e.detail}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Module>
+    </>
+  );
+}

@@ -11,25 +11,39 @@ function stubJson(status: number, body: unknown): FetchImpl {
 }
 
 describe("api client", () => {
-  test("fetchHealth returns the payload on success", async () => {
+  test("fetchHealth returns the timed payload", async () => {
     const client = createApiClient(
       stubJson(200, { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" }),
     );
 
-    const result = await client.fetchHealth();
+    const { result, ms, at } = await client.fetchHealth();
 
     expect(result).toEqual({
       ok: true,
       value: { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" },
     });
+    expect(ms).toBeGreaterThanOrEqual(0);
+    expect(Number.isNaN(Date.parse(at))).toBe(false);
   });
 
-  test("fetchProfile returns the profile on success", async () => {
+  test("fetchMeta returns the BFF self-check", async () => {
+    const byPath: FetchImpl = async (input: string) =>
+      input === "/healthz"
+        ? { ok: true, status: 200, json: async () => ({ status: "ok", upstream: "http://x" }) }
+        : { ok: false, status: 404, json: async () => ({}) };
+    const client = createApiClient(byPath);
+
+    const { result } = await client.fetchMeta();
+
+    expect(result).toEqual({ ok: true, value: { status: "ok", upstream: "http://x" } });
+  });
+
+  test("fetchProfile returns the timed profile on success", async () => {
     const client = createApiClient(
       stubJson(200, { id: "abc", name: "Backend", sourceKey: "naukri" }),
     );
 
-    const result = await client.fetchProfile("abc");
+    const { result } = await client.fetchProfile("abc");
 
     expect(result.ok).toBe(true);
   });
@@ -44,7 +58,7 @@ describe("api client", () => {
       }),
     );
 
-    const result = await client.fetchProfile("abc");
+    const { result } = await client.fetchProfile("abc");
 
     expect(result).toEqual({
       ok: false,
@@ -63,7 +77,7 @@ describe("api client", () => {
     };
     const client = createApiClient(refusing);
 
-    const result = await client.fetchHealth();
+    const { result } = await client.fetchHealth();
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -84,13 +98,13 @@ describe("api client", () => {
     const brokenResult = await createApiClient(broken).fetchHealth();
     const codelessResult = await codeless.fetchHealth();
 
-    expect(brokenResult.ok).toBe(false);
-    if (!brokenResult.ok) {
-      expect(brokenResult.problem.code).toBe("UNKNOWN");
+    expect(brokenResult.result.ok).toBe(false);
+    if (!brokenResult.result.ok) {
+      expect(brokenResult.result.problem.code).toBe("UNKNOWN");
     }
-    expect(codelessResult.ok).toBe(false);
-    if (!codelessResult.ok) {
-      expect(codelessResult.problem.code).toBe("UNKNOWN");
+    expect(codelessResult.result.ok).toBe(false);
+    if (!codelessResult.result.ok) {
+      expect(codelessResult.result.problem.code).toBe("UNKNOWN");
     }
   });
 });
