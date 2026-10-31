@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { CodeTag } from "./components/modules.tsx";
+import { Scramble } from "./components/scramble.tsx";
 import {
   type ApiClient,
   type ApiProblem,
@@ -152,7 +153,9 @@ export function App({
     <div className="deck-root" data-density={density} data-theme={theme}>
       <header className="cmdbar">
         <div className="brand">
-          <span className="brand-mark">JOBSCRAPE//OPS-DECK</span>
+          <span className="brand-mark">
+            <Scramble text="JOBSCRAPE//OPS-DECK" duration={900} />
+          </span>
           <span className="brand-sub">LOCAL CONTROL PLANE</span>
         </div>
         <div className="cmdbar-meta">

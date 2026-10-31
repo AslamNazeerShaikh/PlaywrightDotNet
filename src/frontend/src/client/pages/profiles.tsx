@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CodeTag, codeTone, JsonBlock, Module } from "../components/modules.tsx";
+import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, SearchProfilePayload } from "../lib/api.ts";
 
 /**
@@ -52,7 +53,9 @@ export function ProfilesPage({
   return (
     <>
       <div className="page-head">
-        <h1>OPS-DECK // SEARCH PROFILES</h1>
+        <h1>
+          <Scramble text="OPS-DECK // SEARCH PROFILES" />
+        </h1>
         <p>Point lookup by id. Outcomes key on stable codes, never message text.</p>
       </div>
 

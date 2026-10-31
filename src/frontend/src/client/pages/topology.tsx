@@ -1,4 +1,5 @@
 import { Module } from "../components/modules.tsx";
+import { Scramble } from "../components/scramble.tsx";
 
 /**
  * Topology page: how the cockpit is wired. A sequence diagram for the request lifecycle (happy +
@@ -9,7 +10,9 @@ export function TopologyPage({ upstream }: { upstream: string }) {
   return (
     <>
       <div className="page-head">
-        <h1>OPS-DECK // TOPOLOGY</h1>
+        <h1>
+          <Scramble text="OPS-DECK // TOPOLOGY" />
+        </h1>
         <p>Two processes, one same-origin contract. Browser never touches the API directly.</p>
       </div>
 

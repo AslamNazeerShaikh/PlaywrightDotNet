@@ -1,5 +1,6 @@
 import { CodeTag, codeTone, JsonBlock, Module, Stat } from "../components/modules.tsx";
 import { PipelineDiagram } from "../components/pipeline.tsx";
+import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
 import type { HealthPayload } from "../lib/api.ts";
 import { formatMs, type LatencyStats, type LogEvent, type Sample } from "../lib/telemetry.ts";
@@ -29,7 +30,9 @@ export function OverviewPage({
   return (
     <>
       <div className="page-head">
-        <h1>OPS-DECK // OVERVIEW</h1>
+        <h1>
+          <Scramble text="OPS-DECK // OVERVIEW" />
+        </h1>
         <p>
           Engine state, request path, and event stream at a glance. Drill into a tab for detail.
         </p>

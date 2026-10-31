@@ -1,4 +1,5 @@
 import { CodeTag, JsonBlock, Module, Stat } from "../components/modules.tsx";
+import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
 import type { ApiProblem, HealthPayload } from "../lib/api.ts";
 import { formatMs, type LatencyStats, type Sample } from "../lib/telemetry.ts";
@@ -25,7 +26,9 @@ export function HealthPage({
   return (
     <>
       <div className="page-head">
-        <h1>OPS-DECK // ENGINE HEALTH</h1>
+        <h1>
+          <Scramble text="OPS-DECK // ENGINE HEALTH" />
+        </h1>
         <p>Liveness of the .NET data plane, measured through the BFF proxy.</p>
       </div>
 
