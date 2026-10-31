@@ -729,3 +729,199 @@ table.data tr:last-child td {
     animation: none !important;
   }
 }
+
+/* ---- motion system: bouncy but professional ----
+   Tokens first, one spring shared everywhere. transform/opacity only so
+   everything stays on the compositor. Entrance choreography reads top to
+   bottom (page-head first, modules stagger after). The reduced-motion
+   block above already nulls all of this. */
+
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-micro: 150ms;
+  --dur-ui: 220ms;
+  --dur-entrance: 550ms;
+  --dur-draw: 900ms;
+}
+
+@keyframes deck-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Every deck cell rises in on page mount; route changes remount <main>,
+   so the choreography replays per page. Stagger caps at 8 cells. */
+.deck > * {
+  animation: deck-in var(--dur-entrance) var(--ease-spring) backwards;
+}
+
+.deck > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.deck > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.deck > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.deck > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+
+.deck > *:nth-child(6),
+.deck > *:nth-child(7),
+.deck > *:nth-child(8) {
+  animation-delay: 300ms;
+}
+
+/* Micro-interactions: lift on hover, squash on press, spring back. */
+.btn,
+.density-btn,
+.tab {
+  transition:
+    transform var(--dur-micro) var(--ease-spring),
+    background-color var(--dur-ui) var(--ease-out),
+    border-color var(--dur-ui) var(--ease-out),
+    color var(--dur-ui) var(--ease-out),
+    filter var(--dur-ui) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.tab:hover {
+  transform: translateY(-1px);
+}
+
+.density-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Modules acknowledge hover with a border shift only — no lift, so dense
+   tables never jitter under the cursor. Theme flips cross-fade. */
+.module {
+  transition:
+    border-color var(--dur-ui) var(--ease-out),
+    background-color 300ms var(--ease-out);
+}
+
+.module:hover {
+  border-color: var(--line-hi);
+}
+
+.cmdbar,
+.tabs,
+.module,
+.stat,
+.json,
+.tbl-wrap,
+.log li {
+  transition-property: background-color, border-color;
+  transition-duration: 300ms;
+  transition-timing-function: var(--ease-out);
+}
+
+/* Live signal: breathing glow on the status dots. */
+@keyframes signal-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(52, 211, 153, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.95);
+  }
+}
+
+.dot.live {
+  animation: signal-pulse 2.2s ease-in-out infinite;
+}
+
+/* Event log rows spring in as they arrive. */
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.log li {
+  animation: log-in 350ms var(--ease-spring) backwards;
+}
+
+/* Alerts pop: spring scale from near-full size, never from zero. */
+@keyframes alert-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.alert {
+  animation: alert-pop 350ms var(--ease-spring) backwards;
+}
+
+/* Sparkline: line draws left to right, dots pop in sequence. */
+@keyframes draw-in {
+  from {
+    stroke-dashoffset: 340;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.spark-draw {
+  stroke-dasharray: 340;
+  animation: draw-in var(--dur-draw) var(--ease-out) backwards;
+}
+
+@keyframes dot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.spark-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 400ms var(--ease-spring) backwards;
+}
+
+/* Unknown-path links march slowly — motion means "waiting", not decoration. */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+.flow-dash {
+  animation: dash-flow 1.6s linear infinite;
+}

@@ -206,7 +206,7 @@ export function App({
         ))}
       </nav>
 
-      <main className="deck">
+      <main className="deck" key={route}>
         {route === "overview" && (
           <OverviewPage
             health={health}

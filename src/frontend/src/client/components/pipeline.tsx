@@ -34,6 +34,9 @@ export function PipelineDiagram({
               y1={height / 2}
               x2={n.x}
               y2={height / 2}
+              className={
+                linkColor(bffState, apiState, i) === "var(--faint)" ? "flow-dash" : undefined
+              }
               style={{ stroke: linkColor(bffState, apiState, i) }}
               strokeWidth="1.5"
               strokeDasharray={

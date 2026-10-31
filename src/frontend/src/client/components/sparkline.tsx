@@ -51,6 +51,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
             <polyline
               points={line}
               fill="none"
+              className="spark-draw"
               style={{ stroke: "var(--sig)" }}
               strokeWidth="1.5"
             />
@@ -61,7 +62,11 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
               cx={p.x}
               cy={p.y}
               r="2.4"
-              style={{ fill: p.ok ? "var(--sig)" : "var(--red)" }}
+              className="spark-dot"
+              style={{
+                fill: p.ok ? "var(--sig)" : "var(--red)",
+                animationDelay: `${Math.min(i, 20) * 45}ms`,
+              }}
             />
           ))}
           <text

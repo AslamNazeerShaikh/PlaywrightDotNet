@@ -88,6 +88,10 @@ src/frontend/
   probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
   `bun check` owns types.
+- Motion is a system, not decoration: one spring token, staggered deck
+  entrances, draw-in charts, breathing live-dots, press physics on controls
+  (per `emilkowalski/animate` + `mengto/animation-systems`). Transform and
+  opacity only; `prefers-reduced-motion` disables it all.
 - UI taste follows ui-skills (`list_skills` → `get_skill` first):
   `tech-green-dark-mode-modern` for the signal system, `interface-design`
   for craft, `archify` for diagram rigor.
