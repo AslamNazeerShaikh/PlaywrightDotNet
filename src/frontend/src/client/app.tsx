@@ -11,6 +11,7 @@ import {
   type CreateProfileInput,
   type HealthPayload,
   type SearchProfilePayload,
+  type SourceList,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
@@ -24,6 +25,7 @@ import {
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
+import { SourcesPage } from "./pages/sources.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
 
 /**
@@ -52,6 +54,9 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [creating, setCreating] = useState(false);
   const [createProblem, setCreateProblem] = useState<ApiProblem | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [sources, setSources] = useState<SourceList | null>(null);
+  const [sourcesProblem, setSourcesProblem] = useState<ApiProblem | null>(null);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
   const probeBusy = useRef(false);
   const probeRef = useRef<() => void>(() => undefined);
   const linkLogged = useRef(false);
@@ -61,8 +66,8 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const activeClient = client ?? fallbackClient;
 
   const now = useNow();
-  const heading =
-    route === "overview" ? 0 : route === "health" ? 90 : route === "profiles" ? 180 : 270;
+  // Pages sit evenly around the compass rose in tab order.
+  const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
   const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
   const stats = latencyStats(samples);
 
@@ -216,14 +221,31 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     return true;
   }
 
-  const loadProfilesRef = useRef(loadProfiles);
-  loadProfilesRef.current = loadProfiles;
+  async function loadSources() {
+    setSourcesLoading(true);
+    const { result } = await activeClient.listSources();
+    if (result.ok) {
+      setSources(result.value);
+      setSourcesProblem(null);
+      setApiState("live");
+    } else {
+      setSourcesProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+    }
+    setSourcesLoading(false);
+  }
 
-  // The list loads whenever the profiles page opens; the ref keeps the
-  // effect keyed on the route alone, so renders never refetch.
+  const loadersRef = useRef({ loadProfiles, loadSources });
+  loadersRef.current = { loadProfiles, loadSources };
+
+  // Page data loads whenever its page opens; the ref keeps the effect keyed
+  // on the route alone, so renders never refetch.
   useEffect(() => {
     if (route === "profiles") {
-      void loadProfilesRef.current();
+      void loadersRef.current.loadProfiles();
+    }
+    if (route === "sources") {
+      void loadersRef.current.loadSources();
     }
   }, [route]);
 
@@ -319,6 +341,14 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             onSelect={setSelectedProfileId}
             onCreate={createProfile}
             onRefresh={() => void loadProfiles()}
+          />
+        )}
+        {route === "sources" && (
+          <SourcesPage
+            sources={sources}
+            problem={sourcesProblem}
+            loading={sourcesLoading}
+            onRefresh={() => void loadSources()}
           />
         )}
         {route === "topology" && <TopologyPage upstream={upstream} />}

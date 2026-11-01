@@ -57,6 +57,17 @@ namespace JobScrape.Api.Composition
                     provider.GetRequiredService<IOptions<SourcesOptions>>().Value
                 )
             );
+            // Configured consent only: interactive confirmation is a per-run
+            // operator act, so it is never true in configuration.
+            services.AddSingleton(provider =>
+            {
+                var compliance = provider.GetRequiredService<IOptions<ComplianceOptions>>().Value;
+                return new ComplianceConsent(
+                    compliance.AcknowledgeSourceRisk,
+                    compliance.AllowHighRiskSources,
+                    InteractiveConfirmation: false
+                );
+            });
             services.AddSingleton<IRandomSource, SystemRandomSource>();
             services.AddSingleton<IDelay, TimeProviderDelay>();
             services.AddSingleton(provider => new RetryPolicy(

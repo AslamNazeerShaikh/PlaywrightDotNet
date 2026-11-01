@@ -34,6 +34,12 @@ namespace JobScrape.Application.Features.Scraping
         }
 
         /// <summary>
+        /// Gets every configured source's settings, ordered by source key.
+        /// </summary>
+        public IReadOnlyList<SourceSettings> All =>
+            _settings.Values.OrderBy(entry => entry.Source.Value, StringComparer.Ordinal).ToArray();
+
+        /// <summary>
         /// Returns the settings for <paramref name="source"/>, or null when unconfigured.
         /// </summary>
         /// <param name="source">The source.</param>

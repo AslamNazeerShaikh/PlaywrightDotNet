@@ -1,10 +1,11 @@
 # JobScrape Cockpit (control plane) — React 19 + Bun
 
 > **Status:** ops-deck walking skeleton. The BFF proxies `/api/*` loopback-only
-> to the .NET data plane, and four routed pages exercise the tested backend
+> to the .NET data plane, and five routed pages exercise the tested backend
 > features: a central overview dashboard, engine-health detail,
 > search-profile management (create with inline server field errors,
-> list, detail; persisted in SQLite), and a topology map.
+> list, detail; persisted in SQLite), source status (compliance gate,
+> daily quota meters, circuit state), and a topology map.
 >
 > **Look:** hacker instrument-panel — matte-black surfaces, one emerald signal
 > color, framed modules with corner brackets, IBM Plex Mono everywhere
@@ -58,13 +59,13 @@ src/frontend/
 │   │   ├── index.html / main.tsx / app.tsx   # ops-deck shell: cmd bar, tabs, routed pages
 │   │   ├── lib/
 │   │   │   ├── api.ts        # timed fetch helpers; UI maps stable codes, never prose
-│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/topology
+│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/sources #/topology
 │   │   │   └── telemetry.ts  # samples, stats, event log (pure, unit-tested)
 │   │   ├── components/   # module frame, sparkline, tac-map, scramble, legend,
 │   │   │                 # compass, ruler-tabs (ArtCraft rail × radar blip)
 │   │                 # (tac-map: god's-eye battlespace per iart-ai/svg-animation:
 │   │                 #  sweep, tracers, blips — SMIL, motion-gated)
-│   │   ├── pages/        # overview, health, profiles, topology (one page per feature)
+│   │   ├── pages/        # overview, health, profiles, sources, topology (one per feature)
 │   │   ├── fonts/        # IBM Plex Mono woff2, self-hosted (bundled as data URIs)
 │   │   └── styles/       # design system: tokens, grid, modules, no-overflow rules
 │   └── tests/
@@ -79,7 +80,7 @@ src/frontend/
   `127.0.0.1`. CORS is never opened.
 - Failures render the stable `code` (`PROFILE_NOT_FOUND`,
   `VALIDATION_FAILED`, `DOTNET_UNREACHABLE`, …), never prose parsing.
-- One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`,
+- One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`, `#/sources`,
   `#/topology`): deep links survive refresh with zero server config.
 - Dense but never overflowing: every grid child can shrink to zero, tokens
   wrap anywhere, wide tables scroll inside their module. Full viewport width

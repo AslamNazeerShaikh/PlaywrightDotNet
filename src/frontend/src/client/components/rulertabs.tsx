@@ -3,7 +3,7 @@ import { type DeckRoute, routeHash, ROUTES } from "../lib/router.ts";
 
 /**
  * Ruler-tabs: ArtCraft-style measuring-rail navigation fused with the deck's radar language. Tick
- * marks and section digits form the rail; the four pages are its stops; a glowing radar blip with a
+ * marks and section digits form the rail; the pages are its stops; a glowing radar blip with a
  * sonar ping marks position and glides on the shared spring when the route changes. It IS the tab
  * bar — same links, same names, new instrument.
  */
@@ -21,8 +21,9 @@ export function RulerTabs({
 
   return (
     <nav className="ruler" aria-label="Deck pages">
-      <span className="ruler-code">NAV // 04 STOPS</span>
-      <div className="ruler-track">
+      <span className="ruler-code">NAV // {String(stops).padStart(2, "0")} STOPS</span>
+      {/* --stops drives both the section ticks and the stop columns. */}
+      <div className="ruler-track" style={{ "--stops": stops } as React.CSSProperties}>
         <div className="ruler-ticks" aria-hidden="true" />
         <div className="ruler-stops">
           {ROUTES.map((r) => (

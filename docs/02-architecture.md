@@ -180,7 +180,7 @@ flowchart TB
     CLK --> OPT["AddJobScrapeOptions<br/>Storage · Compliance · Run<br/>Logging · Sources + validators"]
     OPT --> LOGG["AddJobScrapeLogging<br/>Serilog console JSON + async file"]
     LOGG --> H1["AddTransient GetHealthHandler"]
-    H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler"]
+    H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler<br/>ListSourcesHandler"]
     H2 --> DB["AddJobScrapeDatabase<br/>Storage:DatabasePath → SQLite file<br/>AddJobScrapePersistence (scoped)"]
     DB --> BUILD["app = builder.Build()"]
     BUILD --> MAPOA["MapOpenApi (Development only)"]
@@ -214,6 +214,7 @@ flowchart LR
 | Health | `GET /api/v1/health` | `GetHealthHandler(TimeProvider)` | none (DTO direct) | Live, tested |
 | Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `SearchProfileReadStore` (SQLite) | Live, tested |
 | Profile list | `GET /api/v1/search-profiles` | `ListSearchProfilesHandler(ISearchProfileStore)` | `SearchProfileReadStore` → `{ items, total }` by name | Live, tested |
+| Sources | `GET /api/v1/sources` | `ListSourcesHandler(SourceSettingsCatalog, ComplianceConsent, ISourceQuotaRepository, ISourceCircuitBreakerRepository, TimeProvider)` | Per source: tier, enabled, `CompliancePolicy` gate under the configured consent (interactive confirmation is per run, so always false here), policy caps, today's quota usage, circuit state; read-only | Live, tested; cockpit `#/sources` |
 | Profile create | `POST /api/v1/search-profiles` | `CreateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; `201` + `Location`, `400` field `errors`, `409 PROFILE_NAME_TAKEN`; caps default to and may only tighten the source policy (`SourceSettings.DefaultLimits`) | Live, tested; cockpit `#/profiles` |
 | Run scrape | — | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 EF repos via `ScrapeStores` + `IUnitOfWork`; session/artifacts/adapters unimplemented | Code complete, unregistered |
 
@@ -242,6 +243,7 @@ PlaywrightDotNet/
 │   │   │   ├── Abstractions/           (10 ports: 6 repositories, session, artifacts, delay, UoW)
 │   │   │   ├── Features/Health/        (GetHealthHandler, GetHealthResponse)
 │   │   │   ├── Features/SearchProfiles/ (Get/List/Create handlers, store port, request/response DTOs)
+│   │   │   ├── Features/Sources/       (ListSourcesHandler, source status read model)
 │   │   │   ├── Features/Scraping/      (RunScrapeHandler, IJobSource, registry, settings)
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
@@ -249,7 +251,7 @@ PlaywrightDotNet/
 │   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, migrations)
 │   │   │   └── Runtime/                (TimeProviderDelay, SystemRandomSource)
 │   │   ├── JobScrape.Api/
-│   │   │   ├── Controllers/            (Health, SearchProfiles)
+│   │   │   ├── Controllers/            (Health, SearchProfiles, Sources)
 │   │   │   ├── Http/                   (ErrorMapper, CorrelationMiddleware, GlobalExceptionHandler)
 │   │   │   ├── Composition/            (OptionsRegistration, LoggingRegistration, DatabaseRegistration)
 │   │   │   └── Program.cs              (composition root)

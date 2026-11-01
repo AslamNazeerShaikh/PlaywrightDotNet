@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import { App } from "../../client/app.tsx";
 import { createApiClient, type FetchImpl } from "../../client/lib/api.ts";
+import type { DeckRoute } from "../../client/lib/router.ts";
 
 // happy-dom replaces globals (Response, Request, fetch) that the BFF server
 // tests need native, so registration is scoped to this file and undone
@@ -55,12 +56,86 @@ const savedProfile = {
   updatedAt: "2026-11-02T08:00:00Z",
 };
 
+const sourceList = {
+  asOf: "2026-11-02T08:00:00Z",
+  items: [
+    {
+      key: "indeed",
+      tier: "Restricted",
+      enabled: false,
+      gate: {
+        allowed: false,
+        reason: "Source 'indeed' is restricted: set AcknowledgeSourceRisk=true to opt in.",
+      },
+      policy: {
+        maxPages: 2,
+        maxJobs: 40,
+        maxDetails: 30,
+        minDelayMs: 12000,
+        maxDelayMs: 25000,
+        challengeCooldownMinutes: 60,
+      },
+      quota: {
+        date: "2026-11-02",
+        pagesUsed: 0,
+        pageCap: 12,
+        detailsUsed: 0,
+        detailCap: 30,
+        runsUsed: 0,
+        runCap: 1,
+        challenges: 0,
+      },
+      circuit: {
+        state: "Closed",
+        openUntil: null,
+        canProbe: false,
+        consecutiveFailures: 0,
+        recentFailures: 0,
+      },
+    },
+    {
+      key: "naukri",
+      tier: "Standard",
+      enabled: true,
+      gate: { allowed: true, reason: null },
+      policy: {
+        maxPages: 3,
+        maxJobs: 60,
+        maxDetails: 60,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        challengeCooldownMinutes: 45,
+      },
+      quota: {
+        date: "2026-11-02",
+        pagesUsed: 20,
+        pageCap: 25,
+        detailsUsed: 60,
+        detailCap: 60,
+        runsUsed: 1,
+        runCap: 2,
+        challenges: 1,
+      },
+      circuit: {
+        state: "Open",
+        openUntil: "2026-11-03T08:00:00Z",
+        canProbe: false,
+        consecutiveFailures: 1,
+        recentFailures: 1,
+      },
+    },
+  ],
+};
+
 const healthyHandler = (url: string) => {
   if (url === "/healthz") {
     return { status: 200, body: { status: "ok", upstream: "http://127.0.0.1:5207" } };
   }
   if (url === "/api/v1/search-profiles") {
     return { status: 200, body: { items: [savedProfile], total: 1 } };
+  }
+  if (url === "/api/v1/sources") {
+    return { status: 200, body: sourceList };
   }
   return { status: 200, body: { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" } };
 };
@@ -137,7 +212,8 @@ describe("ops deck", () => {
       "01OVERVIEW",
       "02ENGINE HEALTH",
       "03SEARCH PROFILES",
-      "04TOPOLOGY",
+      "04SOURCES",
+      "05TOPOLOGY",
     ]);
   });
 
@@ -221,6 +297,26 @@ describe("ops deck", () => {
     );
   });
 
+  test("sources page renders a card per source with gate, meters, and circuit", async () => {
+    const queries = await renderDeck("sources");
+
+    await waitFor(() => expect(queries.getByRole("region", { name: "NAUKRI" })).toBeDefined());
+    const indeed = queries.getByRole("region", { name: "INDEED" });
+    expect(indeed.textContent).toContain("RESTRICTED");
+    expect(indeed.textContent).toContain("GATE BLOCKED");
+    expect(indeed.textContent).toContain("AcknowledgeSourceRisk=true");
+    const naukri = queries.getByRole("region", { name: "NAUKRI" });
+    expect(naukri.textContent).toContain("GATE OPEN");
+    expect(naukri.textContent).toContain("CIRCUIT OPEN");
+    expect(naukri.textContent).toContain("open until 2026-11-03T08:00:00Z");
+    expect(naukri.textContent).toContain("3 pages · 60 jobs · 60 details");
+    const meters = queries.getAllByRole("meter", { name: "Pages used" });
+    expect(meters.map((m) => m.getAttribute("data-level"))).toEqual(["ok", "near"]);
+    expect(
+      queries.getAllByRole("meter", { name: "Details used" })[1]?.getAttribute("data-level"),
+    ).toBe("full");
+  });
+
   test("overview shows the tac-map, its key, feed key, compass, and catalog", async () => {
     const queries = await renderDeck("overview");
 
@@ -271,7 +367,7 @@ describe("ops deck", () => {
  * Renders the deck and waits for the BFF self-check to settle, so the async /healthz state update
  * lands inside the test (act) instead of leaking into the next test's scheduler queue.
  */
-async function renderDeck(route: "overview" | "health" | "profiles" | "topology") {
+async function renderDeck(route: DeckRoute) {
   const queries = render(<App client={stubClient(healthyHandler)} initialRoute={route} />);
   await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
   return queries;

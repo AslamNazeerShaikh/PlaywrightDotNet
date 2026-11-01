@@ -334,7 +334,11 @@ a:hover {
 .ruler-ticks {
   height: 12px;
   background:
-    repeating-linear-gradient(90deg, var(--sig) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(
+      90deg,
+      var(--sig) 0 1px,
+      transparent 1px calc(100% / var(--stops, 4))
+    ),
     repeating-linear-gradient(90deg, var(--line-hi) 0 1px, transparent 1px 10px);
   background-size:
     100% 12px,
@@ -345,9 +349,10 @@ a:hover {
   margin-bottom: 2px;
 }
 
+/* One column per page; RulerTabs sets --stops from the route table. */
 .ruler-stops {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stops, 4), minmax(0, 1fr));
 }
 
 .ruler-stop {
@@ -655,6 +660,44 @@ a:hover {
   text-underline-offset: 3px;
   cursor: pointer;
   overflow-wrap: anywhere;
+}
+
+/* Quota meter: used / cap as a bar; turns amber near the cap, red at it. */
+.meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+  font-size: var(--text-label);
+  color: var(--dim);
+}
+
+.meter-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter-bar {
+  height: 100%;
+  background: var(--sig);
+}
+
+.meter[data-level="near"] .meter-bar {
+  background: var(--amber);
+}
+
+.meter[data-level="full"] .meter-bar {
+  background: var(--red);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 tr[aria-selected="true"] td {

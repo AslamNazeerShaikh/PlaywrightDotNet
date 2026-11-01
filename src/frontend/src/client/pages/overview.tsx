@@ -170,6 +170,14 @@ export function OverviewPage({
               </tr>
               <tr>
                 <td>GET</td>
+                <td>/api/v1/sources</td>
+                <td>ListSourcesHandler</td>
+                <td>
+                  <CodeTag code="200 · gate+quota+circuit" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
                 <td>/api/v1/search-profiles/{"{id}"}</td>
                 <td>GetSearchProfileHandler</td>
                 <td>

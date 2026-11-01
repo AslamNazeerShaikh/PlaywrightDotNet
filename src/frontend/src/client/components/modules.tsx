@@ -68,6 +68,11 @@ export function JsonBlock({ value, label }: { value: unknown; label: string }) {
   );
 }
 
+/** "1 page", "3 pages": counts in readouts read as English. */
+export function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
 /** Maps a stable error code to its tone for tags and log rows. */
 export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
   if (code === "OK" || code === "HEALTHY" || code === "CREATED") {

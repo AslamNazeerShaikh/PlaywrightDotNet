@@ -4,23 +4,21 @@
  * configuration. Parsing is pure and unit-tested.
  */
 
-export type DeckRoute = "overview" | "health" | "profiles" | "topology";
+export type DeckRoute = "overview" | "health" | "profiles" | "sources" | "topology";
 
 export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string }> = [
   { id: "overview", code: "01", label: "Overview" },
   { id: "health", code: "02", label: "Engine Health" },
   { id: "profiles", code: "03", label: "Search Profiles" },
-  { id: "topology", code: "04", label: "Topology" },
+  { id: "sources", code: "04", label: "Sources" },
+  { id: "topology", code: "05", label: "Topology" },
 ];
 
 /** Parses a location hash into a route; unknown or empty hashes fall home. */
 export function parseRoute(hash: string): DeckRoute {
   const match = /^#\/([a-z-]+)\/?$/.exec(hash.trim());
   const id = match?.[1];
-  if (id === "overview" || id === "health" || id === "profiles" || id === "topology") {
-    return id;
-  }
-  return "overview";
+  return ROUTES.find((r) => r.id === id)?.id ?? "overview";
 }
 
 /** Serializes a route back to its hash form. */

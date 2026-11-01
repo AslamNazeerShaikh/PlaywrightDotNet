@@ -35,6 +35,44 @@ export interface SearchProfileList {
   total: number;
 }
 
+/** One configured source: policy, compliance gate, today's quota, and circuit state. */
+export interface SourceStatus {
+  key: string;
+  tier: "Standard" | "Restricted" | "HighRisk";
+  enabled: boolean;
+  gate: { allowed: boolean; reason: string | null };
+  policy: {
+    maxPages: number;
+    maxJobs: number;
+    maxDetails: number;
+    minDelayMs: number;
+    maxDelayMs: number;
+    challengeCooldownMinutes: number;
+  };
+  quota: {
+    date: string;
+    pagesUsed: number;
+    pageCap: number;
+    detailsUsed: number;
+    detailCap: number;
+    runsUsed: number;
+    runCap: number;
+    challenges: number;
+  };
+  circuit: {
+    state: "Closed" | "Open" | "HalfOpen";
+    openUntil: string | null;
+    canProbe: boolean;
+    consecutiveFailures: number;
+    recentFailures: number;
+  };
+}
+
+export interface SourceList {
+  items: SourceStatus[];
+  asOf: string;
+}
+
 /** Body of POST /api/v1/search-profiles. Omitted caps default to the source policy. */
 export interface CreateProfileInput {
   name: string;
@@ -78,6 +116,7 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
     fetchProfile: (id: string) =>
       timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
     listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
+    listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
     createProfile: (input: CreateProfileInput) =>
       timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
   };

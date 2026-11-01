@@ -88,6 +88,18 @@ namespace JobScrape.Domain.Access
         public IReadOnlyList<DateTimeOffset> RecentFailures => _recentFailures.AsReadOnly();
 
         /// <summary>
+        /// Counts walls inside <see cref="FailureWindow"/> as of
+        /// <paramref name="now"/>. The stored list is pruned only on writes,
+        /// so readers must use this rather than <see cref="RecentFailures"/>'s count.
+        /// </summary>
+        /// <param name="now">The current time.</param>
+        /// <returns>Walls hit within the window before <paramref name="now"/>.</returns>
+        public int RecentFailureCount(DateTimeOffset now)
+        {
+            return _recentFailures.Count(at => now - at < FailureWindow);
+        }
+
+        /// <summary>
         /// Creates a closed breaker for a source.
         /// </summary>
         /// <param name="source">The source. Must not be null.</param>

@@ -199,6 +199,17 @@ namespace JobScrape.Domain.Tests.Access
         }
 
         [Fact]
+        public void RecentFailureCountIgnoresWallsOutsideTheWindowWithoutAWrite()
+        {
+            var breaker = SourceCircuitBreaker.Create(SourceKey.Naukri);
+            breaker.RecordFailure(ChallengeKind.Captcha, Now);
+
+            Assert.Equal(1, breaker.RecentFailureCount(Now.AddHours(23)));
+            Assert.Equal(0, breaker.RecentFailureCount(Now + SourceCircuitBreaker.FailureWindow));
+            Assert.Single(breaker.RecentFailures);
+        }
+
+        [Fact]
         public void CreateRejectsNullSource()
         {
             Assert.Throws<ArgumentNullException>(() => SourceCircuitBreaker.Create(null!));

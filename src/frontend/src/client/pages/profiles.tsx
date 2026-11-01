@@ -1,5 +1,5 @@
 import { Abbr } from "../components/legend.tsx";
-import { CodeTag, codeTone, JsonBlock, Module } from "../components/modules.tsx";
+import { CodeTag, codeTone, JsonBlock, Module, plural } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, CreateProfileInput, SearchProfilePayload } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
@@ -221,7 +221,7 @@ export function ProfilesPage({
                   <DetailRow label="Remote only" value={selected.remoteOnly ? "yes" : "no"} />
                   <DetailRow
                     label="Caps"
-                    value={`${selected.maxPages} pages · ${selected.maxJobs} jobs · ${selected.maxDetails} details`}
+                    value={`${plural(selected.maxPages, "page")} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
                   <DetailRow
                     label="Delay window"
