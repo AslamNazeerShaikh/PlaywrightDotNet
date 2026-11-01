@@ -10,11 +10,11 @@ using Xunit;
 
 namespace JobScrape.Api.Tests
 {
-    public sealed class SearchProfilesEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+    public sealed class SearchProfilesEndpointTests : IClassFixture<ApiFactory>
     {
-        private readonly WebApplicationFactory<Program> _factory;
+        private readonly ApiFactory _factory;
 
-        public SearchProfilesEndpointTests(WebApplicationFactory<Program> factory)
+        public SearchProfilesEndpointTests(ApiFactory factory)
         {
             _factory = factory;
         }
@@ -31,7 +31,7 @@ namespace JobScrape.Api.Tests
             // Each test gets a fresh server so the singleton in-memory store
             // starts empty; seeding through the resolved singleton keeps the
             // production Program free of test-only hooks.
-            using var factory = new WebApplicationFactory<Program>();
+            await using var factory = new ApiFactory();
             var profile = new SearchProfileResponse(Guid.NewGuid(), "Backend", "naukri");
             Seed(factory, profile);
             using var client = factory.CreateClient();
@@ -86,10 +86,7 @@ namespace JobScrape.Api.Tests
             Assert.Contains("VALIDATION_FAILED", body);
         }
 
-        private static void Seed(
-            WebApplicationFactory<Program> factory,
-            SearchProfileResponse profile
-        )
+        private static void Seed(ApiFactory factory, SearchProfileResponse profile)
         {
             var store = (InMemorySearchProfileStore)
                 factory.Services.GetRequiredService<ISearchProfileStore>();

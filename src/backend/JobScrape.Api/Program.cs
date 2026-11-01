@@ -1,6 +1,9 @@
+using JobScrape.Api.Composition;
+using JobScrape.Api.Http;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Infrastructure.SearchProfiles;
+using Serilog;
 
 namespace JobScrape.Api
 {
@@ -29,12 +32,34 @@ namespace JobScrape.Api
             // in Development (see the MapOpenApi guard below).
             builder.Services.AddOpenApi();
 
-            // RFC 9457 problem details for the global exception handler.
-            builder.Services.AddProblemDetails();
+            // RFC 9457 problem details; every problem carries the request
+            // path and a trace id (docs/14-application-patterns.md §6.4).
+            builder.Services.AddProblemDetails(options =>
+                options.CustomizeProblemDetails = context =>
+                {
+                    context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
+                    context.ProblemDetails.Extensions.TryAdd(
+                        "traceId",
+                        System.Diagnostics.Activity.Current?.Id
+                            ?? context.HttpContext.TraceIdentifier
+                    );
+                }
+            );
+            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // System clock as the ambient time source; handlers take
             // TimeProvider so tests can substitute a fake.
             builder.Services.AddSingleton(TimeProvider.System);
+
+            // Bound and validated once; bad caps or consent flags fail
+            // startup instead of running unsafely.
+            builder.Services.AddJobScrapeOptions();
+
+            // Serilog owns sinks and enrichers; app code logs through ILogger<T>.
+            builder.Services.AddJobScrapeLogging(
+                builder.Configuration,
+                builder.Environment.ContentRootPath
+            );
 
             // Explicit use-case handlers, registered one by one. No assembly
             // scanning, no mediator: "Find usages" on a handler finds its
@@ -55,8 +80,18 @@ namespace JobScrape.Api
                 app.MapOpenApi();
             }
 
+            app.UseMiddleware<CorrelationMiddleware>();
             app.UseExceptionHandler();
+            // One completion event per request, written through this host's
+            // logger rather than the static Log.Logger.
+            app.UseSerilogRequestLogging(options =>
+                options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
+            );
             app.MapControllers();
+
+            // Run disposes the host on every exit path; that disposes the
+            // container-owned Serilog logger and flushes the async file sink
+            // (docs/15-runtime-hardening.md §2.9).
             app.Run();
         }
     }
