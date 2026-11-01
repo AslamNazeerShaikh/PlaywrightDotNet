@@ -15,7 +15,7 @@ namespace JobScrape.Architecture.Tests
         [
             Domain,
             Application,
-            typeof(JobScrape.Infrastructure.SearchProfiles.InMemorySearchProfileStore).Assembly,
+            typeof(JobScrape.Infrastructure.Persistence.JobScrapeDbContext).Assembly,
             typeof(JobScrape.Api.Program).Assembly,
         ];
 

@@ -61,7 +61,8 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                             25,
                             60,
                             2,
-                            TimeSpan.FromMinutes(45)
+                            TimeSpan.FromMinutes(45),
+                            profile.Limits
                         ),
                     ]),
                     new ReadySessions(),

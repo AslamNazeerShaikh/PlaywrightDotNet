@@ -3,7 +3,8 @@
 > **Status:** ops-deck walking skeleton. The BFF proxies `/api/*` loopback-only
 > to the .NET data plane, and four routed pages exercise the tested backend
 > features: a central overview dashboard, engine-health detail,
-> search-profile lookup, and a topology map.
+> search-profile management (create with inline server field errors,
+> list, detail; persisted in SQLite), and a topology map.
 >
 > **Look:** hacker instrument-panel — matte-black surfaces, one emerald signal
 > color, framed modules with corner brackets, IBM Plex Mono everywhere
@@ -31,7 +32,7 @@
 | `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.  |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
-| `bun test`                                | 32 tests: config, proxy, routes, router, telemetry, API client, deck pages. |
+| `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, deck pages. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
 | `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
 | `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |

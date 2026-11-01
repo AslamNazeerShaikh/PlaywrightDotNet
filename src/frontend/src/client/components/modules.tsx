@@ -70,10 +70,15 @@ export function JsonBlock({ value, label }: { value: unknown; label: string }) {
 
 /** Maps a stable error code to its tone for tags and log rows. */
 export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
-  if (code === "OK" || code === "HEALTHY") {
+  if (code === "OK" || code === "HEALTHY" || code === "CREATED") {
     return "ok";
   }
-  if (code === "VALIDATION_FAILED" || code === "DOTNET_UNREACHABLE" || code === "BFF_UNREACHABLE") {
+  if (
+    code === "VALIDATION_FAILED" ||
+    code === "PROFILE_NAME_TAKEN" ||
+    code === "DOTNET_UNREACHABLE" ||
+    code === "BFF_UNREACHABLE"
+  ) {
     return "warn";
   }
   if (code === "PROFILE_NOT_FOUND" || code === "UNKNOWN" || code === "BFF_NOT_FOUND") {

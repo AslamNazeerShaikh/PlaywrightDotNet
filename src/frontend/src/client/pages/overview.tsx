@@ -154,6 +154,22 @@ export function OverviewPage({
               </tr>
               <tr>
                 <td>GET</td>
+                <td>/api/v1/search-profiles</td>
+                <td>ListSearchProfilesHandler</td>
+                <td>
+                  <CodeTag code="200 · items+total" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>POST</td>
+                <td>/api/v1/search-profiles</td>
+                <td>CreateSearchProfileHandler</td>
+                <td>
+                  <CodeTag code="201 / 400+errors / 409" tone="warn" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
                 <td>/api/v1/search-profiles/{"{id}"}</td>
                 <td>GetSearchProfileHandler</td>
                 <td>

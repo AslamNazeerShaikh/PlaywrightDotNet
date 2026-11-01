@@ -2,7 +2,6 @@ using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.SearchProfiles;
-using JobScrape.Infrastructure.SearchProfiles;
 using Serilog;
 
 namespace JobScrape.Api
@@ -66,10 +65,14 @@ namespace JobScrape.Api
             // callers.
             builder.Services.AddTransient<GetHealthHandler>();
             builder.Services.AddTransient<GetSearchProfileHandler>();
+            builder.Services.AddTransient<ListSearchProfilesHandler>();
+            builder.Services.AddTransient<CreateSearchProfileHandler>();
 
-            // Walking-skeleton store: in-memory until Phase 3 wires EF Core
-            // SQLite behind the same ISearchProfileStore port.
-            builder.Services.AddSingleton<ISearchProfileStore, InMemorySearchProfileStore>();
+            // SQLite through EF Core: one scoped unit of work per request.
+            builder.Services.AddJobScrapeDatabase(
+                builder.Configuration,
+                builder.Environment.ContentRootPath
+            );
 
             var app = builder.Build();
 
@@ -79,6 +82,8 @@ namespace JobScrape.Api
             {
                 app.MapOpenApi();
             }
+
+            DatabaseRegistration.MigrateInDevelopment(app);
 
             app.UseMiddleware<CorrelationMiddleware>();
             app.UseExceptionHandler();

@@ -8,6 +8,7 @@ import {
   type ApiClient,
   type ApiProblem,
   createApiClient,
+  type CreateProfileInput,
   type HealthPayload,
   type SearchProfilePayload,
 } from "./lib/api.ts";
@@ -22,7 +23,7 @@ import {
 } from "./lib/telemetry.ts";
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
-import { type LookupRecord, ProfilesPage } from "./pages/profiles.tsx";
+import { ProfilesPage } from "./pages/profiles.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
 
 /**
@@ -45,10 +46,12 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [samples, setSamples] = useState<Sample[]>([]);
   const [events, setEvents] = useState<LogEvent[]>([]);
 
-  const [profile, setProfile] = useState<SearchProfilePayload | null>(null);
-  const [profileProblem, setProfileProblem] = useState<ApiProblem | null>(null);
-  const [looking, setLooking] = useState(false);
-  const [history, setHistory] = useState<LookupRecord[]>([]);
+  const [profiles, setProfiles] = useState<SearchProfilePayload[] | null>(null);
+  const [profilesProblem, setProfilesProblem] = useState<ApiProblem | null>(null);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createProblem, setCreateProblem] = useState<ApiProblem | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const probeBusy = useRef(false);
   const probeRef = useRef<() => void>(() => undefined);
   const linkLogged = useRef(false);
@@ -160,33 +163,69 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     return () => clearInterval(timer);
   }, []);
 
-  async function lookupProfile(id: string) {
-    setLooking(true);
-    const { result, ms, at } = await activeClient.fetchProfile(id);
-    const code = result.ok ? "OK" : result.problem.code;
+  async function loadProfiles() {
+    setProfilesLoading(true);
+    const { result, at } = await activeClient.listProfiles();
     if (result.ok) {
-      setProfile(result.value);
-      setProfileProblem(null);
+      setProfiles(result.value.items);
+      setProfilesProblem(null);
       setApiState("live");
     } else {
-      setProfile(null);
-      setProfileProblem(result.problem);
+      setProfilesProblem(result.problem);
       setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
     }
-    const outcome = (result.ok ? "ok" : "err") as LookupRecord["outcome"];
-    setHistory((h) => [{ id, at: clockTime(at), outcome, code }, ...h].slice(0, 20));
+    setProfilesLoading(false);
+  }
+
+  async function createProfile(input: CreateProfileInput): Promise<boolean> {
+    setCreating(true);
+    const { result, at } = await activeClient.createProfile(input);
+    setCreating(false);
+    if (!result.ok) {
+      setCreateProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setCreateProblem(null);
+    setSelectedProfileId(result.value.id);
     setEvents((e) =>
       pushEvent(e, {
         at: clockTime(at),
-        kind: result.ok ? "ok" : "err",
-        code,
-        detail: result.ok
-          ? `${result.value.name} · ${result.value.sourceKey}`
-          : result.problem.title,
+        kind: "ok",
+        code: "CREATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
       }),
     );
-    setLooking(false);
+    await loadProfiles();
+    return true;
   }
+
+  const loadProfilesRef = useRef(loadProfiles);
+  loadProfilesRef.current = loadProfiles;
+
+  // The list loads whenever the profiles page opens; the ref keeps the
+  // effect keyed on the route alone, so renders never refetch.
+  useEffect(() => {
+    if (route === "profiles") {
+      void loadProfilesRef.current();
+    }
+  }, [route]);
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
@@ -271,11 +310,15 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         )}
         {route === "profiles" && (
           <ProfilesPage
-            profile={profile}
-            problem={profileProblem}
-            looking={looking}
-            history={history}
-            onLookup={lookupProfile}
+            profiles={profiles}
+            listProblem={profilesProblem}
+            loading={profilesLoading}
+            creating={creating}
+            createProblem={createProblem}
+            selectedId={selectedProfileId}
+            onSelect={setSelectedProfileId}
+            onCreate={createProfile}
+            onRefresh={() => void loadProfiles()}
           />
         )}
         {route === "topology" && <TopologyPage upstream={upstream} />}

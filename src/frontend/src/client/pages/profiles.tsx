@@ -1,57 +1,50 @@
-import { useState } from "react";
-
 import { Abbr } from "../components/legend.tsx";
 import { CodeTag, codeTone, JsonBlock, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
-import type { ApiProblem, SearchProfilePayload } from "../lib/api.ts";
+import type { ApiProblem, CreateProfileInput, SearchProfilePayload } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
 
 /**
- * Search-profile lookup page: uncontrolled lookup form (no per-keystroke state, happy-dom-safe),
- * full result detail, lookup history, and the stable error-code reference. The store starts empty
- * in a fresh API process — a 404 with PROFILE_NOT_FOUND is the honest steady state until seeding
- * lands.
+ * Search-profile management: create form with inline server field errors, the persisted profile
+ * table, and a detail panel for the selected row. The form is uncontrolled (no per-keystroke state,
+ * happy-dom-safe); the server is the only validator, so every rule the API enforces surfaces here
+ * verbatim, keyed by its JSON field name.
  */
-export interface LookupRecord {
-  id: string;
-  at: string;
-  outcome: "ok" | "err";
-  code: string;
-}
+export const SOURCES = ["naukri", "indeed", "linkedin"] as const;
 
 export function ProfilesPage({
-  profile,
-  problem,
-  looking,
-  history,
-  onLookup,
+  profiles,
+  listProblem,
+  loading,
+  creating,
+  createProblem,
+  selectedId,
+  onSelect,
+  onCreate,
+  onRefresh,
 }: {
-  profile: SearchProfilePayload | null;
-  problem: ApiProblem | null;
-  looking: boolean;
-  history: LookupRecord[];
-  onLookup: (id: string) => void;
+  profiles: SearchProfilePayload[] | null;
+  listProblem: ApiProblem | null;
+  loading: boolean;
+  creating: boolean;
+  createProblem: ApiProblem | null;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onCreate: (input: CreateProfileInput) => Promise<boolean>;
+  onRefresh: () => void;
 }) {
   useRenderLog("ProfilesPage");
-  const [error, setError] = useState<ApiProblem | null>(null);
+  const selected = profiles?.find((p) => p.id === selectedId) ?? null;
+  const fieldErrors = createProblem?.errors ?? {};
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const raw = String(new FormData(event.currentTarget).get("profileId") ?? "").trim();
-    if (raw === "") {
-      setError({
-        status: 400,
-        title: "Profile id required.",
-        detail: "Enter a search-profile id to look up.",
-        code: "VALIDATION_FAILED",
-      });
-      return;
+    const form = event.currentTarget;
+    const created = await onCreate(readForm(new FormData(form)));
+    if (created) {
+      form.reset();
     }
-    setError(null);
-    onLookup(raw);
   }
-
-  const shown = error ?? problem;
 
   return (
     <>
@@ -59,86 +52,197 @@ export function ProfilesPage({
         <h1>
           <Scramble text="OPS-DECK // SEARCH PROFILES" />
         </h1>
-        <p>Point lookup by id. Outcomes key on stable codes, never message text.</p>
+        <p>
+          Saved searches, persisted in SQLite. Caps start at the source policy and can only tighten.
+        </p>
       </div>
 
       <Module
         code="PRF-01"
-        title="Lookup"
-        span="span-4"
+        title="New profile"
+        span="span-5"
         note={
           <>
-            GET /api/v1/search-profiles/{"{id}"} through the{" "}
-            <Abbr term="BFF" full="Backend for Frontend" /> proxy.
+            POST /api/v1/search-profiles through the <Abbr term="BFF" full="Backend for Frontend" />
+            . Field errors come from the server.
           </>
         }
       >
-        <form onSubmit={submit}>
-          <label className="field">
-            <span>PROFILE ID</span>
+        <form onSubmit={submit} aria-label="New search profile" noValidate>
+          <Field label="NAME" name="name" errors={fieldErrors}>
+            <input className="input" name="name" aria-label="Name" autoComplete="off" />
+          </Field>
+          <Field label="SOURCE" name="sourceKey" errors={fieldErrors}>
+            <select className="input" name="sourceKey" aria-label="Source" defaultValue="naukri">
+              {SOURCES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="KEYWORDS" name="keywords" errors={fieldErrors}>
             <input
               className="input"
-              name="profileId"
-              aria-label="Profile id"
-              placeholder="00000000-0000-0000-0000-000000000000"
+              name="keywords"
+              aria-label="Keywords"
+              placeholder="asp.net core c#"
               autoComplete="off"
-              spellCheck={false}
             />
+          </Field>
+          <Field label="LOCATIONS (COMMA-SEPARATED)" name="locations" errors={fieldErrors}>
+            <input
+              className="input"
+              name="locations"
+              aria-label="Locations"
+              placeholder="Pune, Hyderabad"
+              autoComplete="off"
+            />
+          </Field>
+          <div className="field-pair">
+            <Field label="EXPERIENCE (YRS)" name="experienceYears" errors={fieldErrors}>
+              <input
+                className="input"
+                name="experienceYears"
+                aria-label="Experience years"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="POSTED WITHIN (DAYS)" name="postedWithinDays" errors={fieldErrors}>
+              <input
+                className="input"
+                name="postedWithinDays"
+                aria-label="Posted within days"
+                inputMode="numeric"
+              />
+            </Field>
+          </div>
+          <label className="check">
+            <input type="checkbox" name="remoteOnly" aria-label="Remote only" /> REMOTE ONLY
           </label>
-          <button type="submit" className="btn" disabled={looking}>
-            {looking ? "QUERYING…" : "RUN LOOKUP"}
+          <button type="submit" className="btn" disabled={creating}>
+            {creating ? "SAVING…" : "CREATE PROFILE"}
           </button>
         </form>
-        {shown !== null && (
+        {createProblem !== null && (
           <p className="alert" role="alert">
-            <CodeTag code={shown.code} tone={codeTone(shown.code)} /> {shown.title}
-            {shown.detail !== "" ? ` — ${shown.detail}` : ""}
+            <CodeTag code={createProblem.code} tone={codeTone(createProblem.code)} />{" "}
+            {createProblem.title}
+            {createProblem.detail !== "" ? ` — ${createProblem.detail}` : ""}
           </p>
         )}
       </Module>
 
       <Module
         code="PRF-02"
-        title="Result detail"
-        span="span-4"
-        note="Field table plus the exact payload. Empty until a 200 lands."
+        title="Profiles"
+        span="span-7"
+        note="GET /api/v1/search-profiles, ordered by name. Select a name for detail."
       >
-        {profile === null ? (
-          <p className="status-line">No profile loaded. A successful lookup fills this panel.</p>
+        <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
+          {loading ? "LOADING…" : "REFRESH"}
+        </button>
+        {listProblem !== null && (
+          <p className="alert" role="alert">
+            <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
+            {listProblem.title}
+          </p>
+        )}
+        {profiles !== null && profiles.length === 0 && (
+          <p className="status-line">No profiles yet. Create one to get started.</p>
+        )}
+        {profiles !== null && profiles.length > 0 && (
+          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
+            <table className="data" aria-label="Search profiles">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Source</th>
+                  <th>Keywords</th>
+                  <th>Locations</th>
+                  <th>Caps</th>
+                  <th>State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profiles.map((p) => (
+                  <tr key={p.id} aria-selected={p.id === selectedId}>
+                    <td>
+                      <button type="button" className="row-btn" onClick={() => onSelect(p.id)}>
+                        {p.name}
+                      </button>
+                    </td>
+                    <td>
+                      <CodeTag code={p.sourceKey} />
+                    </td>
+                    <td>{p.keywords}</td>
+                    <td>{p.remoteOnly ? "remote" : p.locations.join(", ")}</td>
+                    <td>{`${p.maxPages}p · ${p.maxJobs}j · ${p.maxDetails}d`}</td>
+                    <td>
+                      <CodeTag
+                        code={p.enabled ? "ENABLED" : "DISABLED"}
+                        tone={p.enabled ? "ok" : "warn"}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Module>
+
+      <Module
+        code="PRF-03"
+        title="Profile detail"
+        span="span-7"
+        note="Every stored field, plus the exact payload."
+      >
+        {selected === null ? (
+          <p className="status-line">Select a profile name to see its detail.</p>
         ) : (
           <>
             <div className="tbl-wrap">
-              <table className="data">
+              <table className="data" aria-label="Profile detail">
                 <tbody>
-                  <tr>
-                    <th>ID</th>
-                    <td>{profile.id}</td>
-                  </tr>
-                  <tr>
-                    <th>Name</th>
-                    <td>{profile.name}</td>
-                  </tr>
-                  <tr>
-                    <th>Source</th>
-                    <td>
-                      <CodeTag code={profile.sourceKey} tone="ok" />
-                    </td>
-                  </tr>
+                  <DetailRow label="ID" value={selected.id} />
+                  <DetailRow label="Name" value={selected.name} />
+                  <DetailRow label="Source" value={selected.sourceKey} />
+                  <DetailRow label="Keywords" value={selected.keywords} />
+                  <DetailRow
+                    label="Locations"
+                    value={selected.locations.length > 0 ? selected.locations.join(", ") : "—"}
+                  />
+                  <DetailRow label="Experience" value={orDash(selected.experienceYears, " yrs")} />
+                  <DetailRow
+                    label="Posted within"
+                    value={orDash(selected.postedWithinDays, " days")}
+                  />
+                  <DetailRow label="Remote only" value={selected.remoteOnly ? "yes" : "no"} />
+                  <DetailRow
+                    label="Caps"
+                    value={`${selected.maxPages} pages · ${selected.maxJobs} jobs · ${selected.maxDetails} details`}
+                  />
+                  <DetailRow
+                    label="Delay window"
+                    value={`${selected.minDelayMs}–${selected.maxDelayMs} ms`}
+                  />
+                  <DetailRow label="Created (UTC)" value={selected.createdAt} />
                 </tbody>
               </table>
             </div>
             <div style={{ marginTop: "10px" }}>
-              <JsonBlock label="Profile payload" value={profile} />
+              <JsonBlock label="Profile payload" value={selected} />
             </div>
           </>
         )}
       </Module>
 
       <Module
-        code="PRF-03"
+        code="PRF-04"
         title="Code reference"
-        span="span-4"
-        note="The full contract for this endpoint. UI branches on code."
+        span="span-5"
+        note="The contract for these endpoints. UI branches on code."
       >
         <div className="tbl-wrap">
           <table className="data">
@@ -150,72 +254,98 @@ export function ProfilesPage({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <CodeTag code="OK" tone="ok" />
-                </td>
-                <td>200</td>
-                <td>Profile exists; body is the SearchProfileResponse.</td>
-              </tr>
-              <tr>
-                <td>
-                  <CodeTag code="PROFILE_NOT_FOUND" tone="bad" />
-                </td>
-                <td>404</td>
-                <td>No profile with that id. Steady state on a fresh store.</td>
-              </tr>
-              <tr>
-                <td>
-                  <CodeTag code="VALIDATION_FAILED" tone="warn" />
-                </td>
-                <td>400</td>
-                <td>Empty or malformed id; nothing reached the store.</td>
-              </tr>
-              <tr>
-                <td>
-                  <CodeTag code="DOTNET_UNREACHABLE" tone="warn" />
-                </td>
-                <td>502</td>
-                <td>BFF alive, API down. Check the data plane.</td>
-              </tr>
+              <CodeRow code="OK" http="200/201" text="Listed, fetched, or created." />
+              <CodeRow
+                code="VALIDATION_FAILED"
+                http="400"
+                text="Field errors shown under each input."
+              />
+              <CodeRow
+                code="PROFILE_NAME_TAKEN"
+                http="409"
+                text="Another profile already uses that name."
+              />
+              <CodeRow code="PROFILE_NOT_FOUND" http="404" text="No profile with that id." />
+              <CodeRow
+                code="DOTNET_UNREACHABLE"
+                http="502"
+                text="BFF alive, API down. Start the data plane."
+              />
             </tbody>
           </table>
         </div>
       </Module>
-
-      <Module
-        code="PRF-04"
-        title="Lookup history"
-        span="span-12"
-        note="Session-local trail of every lookup and its outcome code."
-      >
-        {history.length === 0 ? (
-          <p className="status-line">No lookups yet this session.</p>
-        ) : (
-          <div className="tbl-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>At (UTC)</th>
-                  <th>Queried id</th>
-                  <th>Outcome</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h, i) => (
-                  <tr key={`${h.at}-${i}`}>
-                    <td>{h.at}</td>
-                    <td>{h.id}</td>
-                    <td>
-                      <CodeTag code={h.code} tone={codeTone(h.code)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Module>
     </>
   );
+}
+
+/** Reads the uncontrolled form into the API body; blank numbers become null. */
+export function readForm(data: FormData): CreateProfileInput {
+  const text = (key: string) => String(data.get(key) ?? "").trim();
+  const number = (key: string) => {
+    const raw = text(key);
+    return raw === "" ? null : Number(raw);
+  };
+  return {
+    name: text("name"),
+    sourceKey: text("sourceKey"),
+    keywords: text("keywords"),
+    locations: text("locations")
+      .split(",")
+      .map((l) => l.trim())
+      .filter((l) => l !== ""),
+    experienceYears: number("experienceYears"),
+    postedWithinDays: number("postedWithinDays"),
+    remoteOnly: data.get("remoteOnly") !== null,
+  };
+}
+
+function Field({
+  label,
+  name,
+  errors,
+  children,
+}: {
+  label: string;
+  name: string;
+  errors: Record<string, string[]>;
+  children: React.ReactNode;
+}) {
+  const messages = errors[name] ?? [];
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+      {messages.map((m) => (
+        <span key={m} className="field-error" role="note" data-field={name}>
+          {m}
+        </span>
+      ))}
+    </label>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr>
+      <th>{label}</th>
+      <td>{value}</td>
+    </tr>
+  );
+}
+
+function CodeRow({ code, http, text }: { code: string; http: string; text: string }) {
+  return (
+    <tr>
+      <td>
+        <CodeTag code={code} tone={codeTone(code)} />
+      </td>
+      <td>{http}</td>
+      <td>{text}</td>
+    </tr>
+  );
+}
+
+function orDash(value: number | null, unit: string): string {
+  return value === null ? "—" : `${value}${unit}`;
 }

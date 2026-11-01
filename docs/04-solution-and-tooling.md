@@ -86,8 +86,8 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | Project | Responsibility | References |
 |---|---|---|
 | `JobScrape.Domain` | Aggregates (`SearchProfile`, `ScrapeRun`, `JobPosting`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`), value objects, policies, domain events. Pure C#, zero packages. | BCL only |
-| `JobScrape.Application` | Use cases (`GetHealth`, `GetSearchProfile`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
-| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `InMemorySearchProfileStore`. | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations` |
+| `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
+| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `SearchProfileReadStore`. | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations` |
 | `JobScrape.Api` | Composition root (`Program.Main`): 2 controllers, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
 | `JobScrape.Domain.Tests` | Pure unit tests. | Domain, xUnit |
 | `JobScrape.Application.Tests` | Use-case tests with fakes + `FakeTimeProvider`. | Application, Domain, xUnit |

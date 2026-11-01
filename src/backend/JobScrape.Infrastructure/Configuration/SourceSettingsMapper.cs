@@ -26,7 +26,8 @@ namespace JobScrape.Infrastructure.Configuration
                     entry.Value.DailyPageCap,
                     entry.Value.DailyDetailCap,
                     entry.Value.DailyRunCap,
-                    TimeSpan.FromMinutes(entry.Value.ChallengeCooldownMinutes)
+                    TimeSpan.FromMinutes(entry.Value.ChallengeCooldownMinutes),
+                    SourcesOptionsValidator.ToRunLimits(entry.Value)
                 ))
             );
         }

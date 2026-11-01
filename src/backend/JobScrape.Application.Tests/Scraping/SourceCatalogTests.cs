@@ -1,15 +1,32 @@
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
+using JobScrape.Domain.Sourcing;
 using Xunit;
 
 namespace JobScrape.Application.Tests.Scraping
 {
     public sealed class SourceCatalogTests
     {
+        private static readonly RunLimits DefaultLimits = new(
+            3,
+            60,
+            60,
+            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(6)
+        );
+
         private static SourceSettings Settings(SourceKey source)
         {
-            return new SourceSettings(source, true, 25, 60, 2, TimeSpan.FromMinutes(45));
+            return new SourceSettings(
+                source,
+                true,
+                25,
+                60,
+                2,
+                TimeSpan.FromMinutes(45),
+                DefaultLimits
+            );
         }
 
         [Fact]

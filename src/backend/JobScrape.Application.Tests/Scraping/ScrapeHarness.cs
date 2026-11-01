@@ -14,6 +14,14 @@ namespace JobScrape.Application.Tests.Scraping
     /// </summary>
     internal sealed class ScrapeHarness
     {
+        public static readonly RunLimits DefaultLimits = new(
+            3,
+            60,
+            60,
+            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(6)
+        );
+
         public static readonly DateTimeOffset Start = new(2026, 11, 2, 8, 0, 0, TimeSpan.Zero);
 
         public ScrapeHarness(
@@ -47,7 +55,15 @@ namespace JobScrape.Application.Tests.Scraping
             Store.SearchProfiles.Add(Profile);
             Store.BrowserProfiles.Add(Browser);
             Source = new ScriptedSource(key);
-            Settings = new SourceSettings(key, true, 25, 60, 2, TimeSpan.FromMinutes(45));
+            Settings = new SourceSettings(
+                key,
+                true,
+                25,
+                60,
+                2,
+                TimeSpan.FromMinutes(45),
+                DefaultLimits
+            );
             Consent = new ComplianceConsent(true, true, true);
         }
 
@@ -182,6 +198,11 @@ namespace JobScrape.Application.Tests.Scraping
             )
             {
                 return Task.FromResult(SearchProfiles.FirstOrDefault(p => p.Id == id));
+            }
+
+            public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(SearchProfiles.Any(p => p.Name == name));
             }
 
             public Task AddAsync(SearchProfile profile, CancellationToken cancellationToken)

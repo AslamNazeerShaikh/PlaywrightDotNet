@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
+using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ namespace JobScrape.Infrastructure.Persistence
                 provider.GetRequiredService<JobScrapeDbContext>()
             );
             services.AddScoped<ISearchProfileRepository, SearchProfileRepository>();
+            services.AddScoped<ISearchProfileStore, SearchProfileReadStore>();
             services.AddScoped<IScrapeRunRepository, ScrapeRunRepository>();
             services.AddScoped<IJobPostingRepository, JobPostingRepository>();
             services.AddScoped<IBrowserProfileRepository, BrowserProfileRepository>();

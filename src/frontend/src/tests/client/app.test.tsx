@@ -36,25 +36,80 @@ function stubClient(handler: (url: string) => { status: number; body: unknown })
   return createApiClient(fetchImpl);
 }
 
+const savedProfile = {
+  id: "p1",
+  name: "backend",
+  sourceKey: "naukri",
+  keywords: "asp.net core",
+  locations: ["Pune", "Hyderabad"],
+  experienceYears: 6,
+  postedWithinDays: 7,
+  remoteOnly: false,
+  maxPages: 3,
+  maxJobs: 60,
+  maxDetails: 60,
+  minDelayMs: 2500,
+  maxDelayMs: 6000,
+  enabled: true,
+  createdAt: "2026-11-02T08:00:00Z",
+  updatedAt: "2026-11-02T08:00:00Z",
+};
+
 const healthyHandler = (url: string) => {
   if (url === "/healthz") {
     return { status: 200, body: { status: "ok", upstream: "http://127.0.0.1:5207" } };
   }
-  if (url.startsWith("/api/v1/search-profiles/")) {
-    return url.endsWith("/nope")
-      ? {
-          status: 404,
-          body: {
-            status: 404,
-            title: "Search profile not found.",
-            detail: "Missing.",
-            code: "PROFILE_NOT_FOUND",
-          },
-        }
-      : { status: 200, body: { id: "x", name: "Backend", sourceKey: "naukri" } };
+  if (url === "/api/v1/search-profiles") {
+    return { status: 200, body: { items: [savedProfile], total: 1 } };
   }
   return { status: 200, body: { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" } };
 };
+
+/**
+ * A stateful fake of the profiles API: GET lists what POST created, POST validates like the server
+ * (missing name → VALIDATION_FAILED with field errors, duplicate → PROFILE_NAME_TAKEN).
+ */
+function profilesBackend() {
+  const items: (typeof savedProfile)[] = [];
+  const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
+    const reply = (status: number, body: unknown) => ({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => body,
+    });
+    if (url === "/healthz") {
+      return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+    }
+    if (url === "/api/v1/search-profiles" && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { name: string; keywords: string };
+      if (body.name === "") {
+        return reply(400, {
+          status: 400,
+          title: "One or more validation errors occurred.",
+          detail: "The request contains invalid fields.",
+          code: "VALIDATION_FAILED",
+          errors: { name: ["A name of 1 to 200 characters is required."] },
+        });
+      }
+      if (items.some((p) => p.name === body.name)) {
+        return reply(409, {
+          status: 409,
+          title: "Profile name already in use.",
+          detail: `A search profile named '${body.name}' already exists.`,
+          code: "PROFILE_NAME_TAKEN",
+        });
+      }
+      const created = { ...savedProfile, id: `id-${items.length + 1}`, ...body };
+      items.push(created);
+      return reply(201, created);
+    }
+    if (url === "/api/v1/search-profiles") {
+      return reply(200, { items, total: items.length });
+    }
+    return reply(200, { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" });
+  };
+  return createApiClient(fetchImpl);
+}
 
 describe("ops deck", () => {
   test("meta fetch fires once per mount, not per render", async () => {
@@ -101,27 +156,68 @@ describe("ops deck", () => {
     await waitFor(() => expect(queries.getByRole("status").textContent).toContain("HEALTHY"));
   });
 
-  test("profile lookup renders the profile, then the stable miss code", async () => {
+  test("profiles page lists saved profiles and shows detail on select", async () => {
     const queries = await renderDeck("profiles");
 
-    fireEvent.change(queries.getByLabelText("Profile id"), { target: { value: "x" } });
-    fireEvent.click(queries.getByRole("button", { name: "RUN LOOKUP" }));
-    await waitFor(() => expect(queries.getByText("Backend")).toBeDefined());
+    await waitFor(() => expect(queries.getByRole("button", { name: "backend" })).toBeDefined());
+    expect(queries.getByText("Select a profile name to see its detail.")).toBeDefined();
 
-    fireEvent.change(queries.getByLabelText("Profile id"), { target: { value: "nope" } });
-    fireEvent.click(queries.getByRole("button", { name: "RUN LOOKUP" }));
-    await waitFor(() =>
-      expect(queries.getByRole("alert").textContent).toContain("PROFILE_NOT_FOUND"),
-    );
+    fireEvent.click(queries.getByRole("button", { name: "backend" }));
+
+    const detail = queries.getByRole("table", { name: "Profile detail" });
+    expect(detail.textContent).toContain("Pune, Hyderabad");
+    expect(detail.textContent).toContain("3 pages · 60 jobs · 60 details");
+    expect(detail.textContent).toContain("2500–6000 ms");
   });
 
-  test("empty lookup explains the requirement with the validation code", async () => {
-    const queries = await renderDeck("profiles");
+  test("creating a profile adds it to the list and selects it", async () => {
+    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    await waitFor(() =>
+      expect(queries.getByText("No profiles yet. Create one to get started.")).toBeDefined(),
+    );
 
-    fireEvent.click(queries.getByRole("button", { name: "RUN LOOKUP" }));
+    fireEvent.change(queries.getByLabelText("Name"), { target: { value: "dotnet-pune" } });
+    fireEvent.change(queries.getByLabelText("Keywords"), { target: { value: "c#" } });
+    fireEvent.change(queries.getByLabelText("Locations"), { target: { value: "Pune" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE PROFILE" }));
+
+    await waitFor(() => expect(queries.getByRole("button", { name: "dotnet-pune" })).toBeDefined());
+    expect(queries.getByRole("table", { name: "Profile detail" }).textContent).toContain(
+      "dotnet-pune",
+    );
+    expect(queries.queryByRole("alert")).toBeNull();
+  });
+
+  test("server field errors render inline under their inputs", async () => {
+    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
+
+    fireEvent.click(queries.getByRole("button", { name: "CREATE PROFILE" }));
 
     await waitFor(() =>
       expect(queries.getByRole("alert").textContent).toContain("VALIDATION_FAILED"),
+    );
+    const note = queries.getByRole("note");
+    expect(note.getAttribute("data-field")).toBe("name");
+    expect(note.textContent).toBe("A name of 1 to 200 characters is required.");
+  });
+
+  test("a duplicate name shows the conflict code", async () => {
+    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
+    const create = () => {
+      fireEvent.change(queries.getByLabelText("Name"), { target: { value: "dup" } });
+      fireEvent.change(queries.getByLabelText("Keywords"), { target: { value: "c#" } });
+      fireEvent.change(queries.getByLabelText("Locations"), { target: { value: "Pune" } });
+      fireEvent.click(queries.getByRole("button", { name: "CREATE PROFILE" }));
+    };
+
+    create();
+    await waitFor(() => expect(queries.getByRole("button", { name: "dup" })).toBeDefined());
+    create();
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("PROFILE_NAME_TAKEN"),
     );
   });
 
@@ -134,6 +230,7 @@ describe("ops deck", () => {
     expect(queries.getByLabelText("Heading 0 degrees, OVERVIEW")).toBeDefined();
     expect(queries.getByText("BFF_LINK")).toBeDefined();
     expect(queries.getByText("/api/v1/search-profiles/{id}")).toBeDefined();
+    expect(queries.getByText("CreateSearchProfileHandler")).toBeDefined();
   });
 
   test("topology shows the lifecycle sequence, its key, and the glossary", async () => {

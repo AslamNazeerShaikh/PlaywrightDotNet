@@ -10,20 +10,51 @@ export interface HealthPayload {
   timeUtc: string;
 }
 
+/** A saved search profile as the API returns it (delays in ms, timestamps ISO UTC). */
 export interface SearchProfilePayload {
   id: string;
   name: string;
   sourceKey: string;
+  keywords: string;
+  locations: string[];
+  experienceYears: number | null;
+  postedWithinDays: number | null;
+  remoteOnly: boolean;
+  maxPages: number;
+  maxJobs: number;
+  maxDetails: number;
+  minDelayMs: number;
+  maxDelayMs: number;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SearchProfileList {
+  items: SearchProfilePayload[];
+  total: number;
+}
+
+/** Body of POST /api/v1/search-profiles. Omitted caps default to the source policy. */
+export interface CreateProfileInput {
+  name: string;
+  sourceKey: string;
+  keywords: string;
+  locations: string[];
+  experienceYears: number | null;
+  postedWithinDays: number | null;
+  remoteOnly: boolean;
 }
 
 import { renderDebugEnabled } from "./debug.ts";
 
-/** RFC 9457 problem body plus the stable `code` extension. */
+/** RFC 9457 problem body plus the stable `code` and optional field `errors` extensions. */
 export interface ApiProblem {
   status: number;
   title: string;
   detail: string;
   code: string;
+  errors?: Record<string, string[]>;
 }
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
@@ -46,6 +77,9 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
     fetchProfile: (id: string) =>
       timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
+    listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
+    createProfile: (input: CreateProfileInput) =>
+      timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
   };
 }
 
@@ -58,13 +92,29 @@ async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
   return { result, ms: performance.now() - start, at: new Date().toISOString() };
 }
 
-async function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
+function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
+  return send<T>(fetchImpl, "GET", path);
+}
+
+async function send<T>(
+  fetchImpl: FetchImpl,
+  method: "GET" | "POST",
+  path: string,
+  body?: unknown,
+): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
-    console.debug(`[fetch] GET ${path}`);
+    console.debug(`[fetch] ${method} ${path}`);
   }
   let res: { ok: boolean; status: number; json(): Promise<unknown> };
   try {
-    res = await fetchImpl(path);
+    res =
+      body === undefined
+        ? await fetchImpl(path)
+        : await fetchImpl(path, {
+            method,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
   } catch {
     return {
       ok: false,
@@ -96,8 +146,19 @@ async function toProblem(res: { status: number; json(): Promise<unknown> }): Pro
       title: typeof body["title"] === "string" ? body["title"] : fallback.title,
       detail: typeof body["detail"] === "string" ? body["detail"] : fallback.detail,
       code: typeof body["code"] === "string" ? body["code"] : "UNKNOWN",
+      ...(isFieldErrors(body["errors"]) ? { errors: body["errors"] } : {}),
     };
   } catch {
     return fallback;
   }
+}
+
+/** Field errors are a map of JSON field name to messages; anything else is ignored. */
+function isFieldErrors(value: unknown): value is Record<string, string[]> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((v) => Array.isArray(v) && v.every((m) => typeof m === "string"))
+  );
 }

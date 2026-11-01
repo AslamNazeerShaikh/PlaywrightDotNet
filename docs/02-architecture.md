@@ -110,7 +110,7 @@ flowchart TB
         PERSIST["EF Core repositories +<br/>JobScrapeDbContext + migrations"]
         OPT["Options<br/>Storage · Run · Compliance · Logging · Sources"]
         RUN["Runtime<br/>TimeProviderDelay · SystemRandomSource"]
-        MEM["InMemorySearchProfileStore"]
+        READ["SearchProfileReadStore<br/>(EF, no-tracking)"]
     end
 
     CTRL --> UC
@@ -122,7 +122,7 @@ flowchart TB
     UC --> DOM
     UC --> RES
     PERSIST --> PORTS
-    MEM --> PORTS
+    READ --> PORTS
     RUN --> PORTS
     PERSIST --> DB[("SQLite<br/>artifacts/data/jobscrape.db")]
 ```
@@ -180,18 +180,19 @@ flowchart TB
     CLK --> OPT["AddJobScrapeOptions<br/>Storage · Compliance · Run<br/>Logging · Sources + validators"]
     OPT --> LOGG["AddJobScrapeLogging<br/>Serilog console JSON + async file"]
     LOGG --> H1["AddTransient GetHealthHandler"]
-    H1 --> H2["AddTransient GetSearchProfileHandler"]
-    H2 --> STORE["AddSingleton ISearchProfileStore<br/>InMemorySearchProfileStore"]
-    STORE --> BUILD["app = builder.Build()"]
+    H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler"]
+    H2 --> DB["AddJobScrapeDatabase<br/>Storage:DatabasePath → SQLite file<br/>AddJobScrapePersistence (scoped)"]
+    DB --> BUILD["app = builder.Build()"]
     BUILD --> MAPOA["MapOpenApi (Development only)"]
-    MAPOA --> CORR["UseMiddleware CorrelationMiddleware"]
+    MAPOA --> MIG["MigrateInDevelopment<br/>(Database.Migrate, Development only)"]
+    MIG --> CORR["UseMiddleware CorrelationMiddleware"]
     CORR --> EXHMW["UseExceptionHandler"]
     EXHMW --> SERILOG["UseSerilogRequestLogging"]
     SERILOG --> MAPC["MapControllers"]
     MAPC --> RUN["app.Run()"]
 ```
 
-Not registered (so unreachable at runtime): `AddJobScrapePersistence`, `JobSourceRegistry`, `RunScrapeHandler`, `ISessionManager`/`IArtifactStore` implementations, and any `IJobSource` adapter.
+Not registered (so unreachable at runtime): `JobSourceRegistry`, `RunScrapeHandler`, `ISessionManager`/`IArtifactStore` implementations, and any `IJobSource` adapter.
 
 ### 5.2 Implemented feature slices
 
@@ -199,7 +200,7 @@ Not registered (so unreachable at runtime): `AddJobScrapePersistence`, `JobSourc
 flowchart LR
     subgraph LIVE["live (registered + endpoint + tests)"]
         H1["GET /api/v1/health<br/>GetHealthHandler(TimeProvider)<br/>→ GetHealthResponse"]
-        H2["GET /api/v1/search-profiles/{id}<br/>GetSearchProfileHandler(ISearchProfileStore)<br/>→ InMemorySearchProfileStore<br/>→ SearchProfileResponse | Problem"]
+        H2["GET/POST /api/v1/search-profiles · GET /{id}<br/>List/Create/GetSearchProfileHandler<br/>→ SearchProfileReadStore + EF repository<br/>→ SearchProfileResponse | Problem"]
     end
     subgraph CODE["implemented, not wired"]
         H3["RunScrapeHandler<br/>+ ScrapeStores, settings, session,<br/>artifacts, delay, retry, clock, log<br/>→ Result<ScrapeRunSummary>"]
@@ -211,7 +212,9 @@ flowchart LR
 | Slice | Endpoint | Handler (ctor) | Ports → implementations | Status |
 |---|---|---|---|---|
 | Health | `GET /api/v1/health` | `GetHealthHandler(TimeProvider)` | none (DTO direct) | Live, tested |
-| Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `InMemorySearchProfileStore` | Live, tested |
+| Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `SearchProfileReadStore` (SQLite) | Live, tested |
+| Profile list | `GET /api/v1/search-profiles` | `ListSearchProfilesHandler(ISearchProfileStore)` | `SearchProfileReadStore` → `{ items, total }` by name | Live, tested |
+| Profile create | `POST /api/v1/search-profiles` | `CreateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; `201` + `Location`, `400` field `errors`, `409 PROFILE_NAME_TAKEN`; caps default to and may only tighten the source policy (`SourceSettings.DefaultLimits`) | Live, tested; cockpit `#/profiles` |
 | Run scrape | — | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 EF repos via `ScrapeStores` + `IUnitOfWork`; session/artifacts/adapters unimplemented | Code complete, unregistered |
 
 ---
@@ -238,18 +241,17 @@ PlaywrightDotNet/
 │   │   ├── JobScrape.Application/
 │   │   │   ├── Abstractions/           (10 ports: 6 repositories, session, artifacts, delay, UoW)
 │   │   │   ├── Features/Health/        (GetHealthHandler, GetHealthResponse)
-│   │   │   ├── Features/SearchProfiles/ (GetSearchProfileHandler, store port, response DTO)
+│   │   │   ├── Features/SearchProfiles/ (Get/List/Create handlers, store port, request/response DTOs)
 │   │   │   ├── Features/Scraping/      (RunScrapeHandler, IJobSource, registry, settings)
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
 │   │   │   ├── Configuration/          (Storage/Run/Compliance/Logging/Sources options)
 │   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, migrations)
-│   │   │   ├── Runtime/                (TimeProviderDelay, SystemRandomSource)
-│   │   │   └── SearchProfiles/         (InMemorySearchProfileStore)
+│   │   │   └── Runtime/                (TimeProviderDelay, SystemRandomSource)
 │   │   ├── JobScrape.Api/
 │   │   │   ├── Controllers/            (Health, SearchProfiles)
 │   │   │   ├── Http/                   (ErrorMapper, CorrelationMiddleware, GlobalExceptionHandler)
-│   │   │   ├── Composition/            (OptionsRegistration, LoggingRegistration)
+│   │   │   ├── Composition/            (OptionsRegistration, LoggingRegistration, DatabaseRegistration)
 │   │   │   └── Program.cs              (composition root)
 │   │   ├── JobScrape.Domain.Tests/
 │   │   ├── JobScrape.Application.Tests/
@@ -463,7 +465,8 @@ Other ports (all in `JobScrape.Application/Abstractions`, all EF-implemented exc
 - `ISourceCircuitBreakerRepository` — `FindAsync`, `AddAsync`
 - `IArtifactStore` — `CaptureAsync` (no implementation yet)
 - `IDelay` — `WaitAsync` (implemented by `TimeProviderDelay`)
-- `ISearchProfileStore` — `GetAsync` (implemented by `InMemorySearchProfileStore`; **not** by any EF repository)
+- `ISearchProfileStore` — `GetAsync`, `ListAsync` (implemented by `SearchProfileReadStore`: EF no-tracking reads mapped to `SearchProfileResponse`)
+- `ISearchProfileRepository` also has `NameExistsAsync` (checks staged and saved profiles; the unique index stays the final guard)
 
 Deliberately absent (no such types exist): `IExportWriter`, `IJobReadModel`, `ISkillDemandReadModel`, `IDiskSpace`, `IClock` (use BCL `TimeProvider`), `Specification<T>`, `BootstrapAsync`/`ProbeAsync` session methods, `SessionStatus`, `UpdateAsync` on `IJobPostingRepository`.
 
@@ -705,7 +708,8 @@ Full domain model and invariants: [Domain Model](03-domain-model.md).
 ### 10.5 Migrations
 
 - EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations` (current: `202611010743_InitialCreate`).
-- The context is registered by `PersistenceServiceCollectionExtensions.AddJobScrapePersistence` (scoped per run/request) — but `Program.cs` does not call it yet, so no database exists at runtime today.
+- The context is registered by `PersistenceServiceCollectionExtensions.AddJobScrapePersistence` (scoped per run/request), called from the API through `DatabaseRegistration.AddJobScrapeDatabase`, which resolves `JobScrape:Storage:DatabasePath` against the content root and creates its directory.
+- Migrations apply automatically **only in Development** (`DatabaseRegistration.MigrateInDevelopment`, used by the `http` launch profile and the API tests). Any other environment applies them explicitly with `dotnet tool run dotnet-ef database update --project src/backend/JobScrape.Infrastructure`.
 - `JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only.
 - Migrations are reviewed like code; no automatic destructive changes.
 

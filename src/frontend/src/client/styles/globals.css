@@ -602,6 +602,12 @@ a:hover {
   border: 1px solid var(--sig-line);
 }
 
+/* Ghost text stays the signal color in light mode too: the light-theme
+   ".btn { color: #fff }" rule is more specific than ".btn-ghost" alone. */
+[data-theme="light"] .btn-ghost {
+  color: var(--sig);
+}
+
 .field {
   display: grid;
   gap: 5px;
@@ -612,6 +618,47 @@ a:hover {
   color: var(--dim);
   font-size: var(--text-label);
   letter-spacing: 0.06em;
+}
+
+/* Inline server-side field error under its input (VALIDATION_FAILED). */
+.field > .field-error {
+  color: var(--red);
+  font-size: var(--text-label);
+  overflow-wrap: anywhere;
+}
+
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 0 10px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--dim);
+  font-size: var(--text-label);
+  letter-spacing: 0.06em;
+}
+
+/* A table cell action that reads as text but is a real, focusable button. */
+.row-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sig);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+tr[aria-selected="true"] td {
+  background: rgba(52, 211, 153, 0.08);
 }
 
 .input,

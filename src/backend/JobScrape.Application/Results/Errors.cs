@@ -48,6 +48,23 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a conflict for a profile name that is already in use.
+        /// </summary>
+        /// <param name="name">The requested name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo ProfileNameTaken(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "PROFILE_NAME_TAKEN",
+                "Profile name already in use.",
+                $"A search profile named '{name}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
         /// Creates a conflict for a run requested from a disabled profile.
         /// </summary>
         /// <param name="profileId">The disabled profile.</param>

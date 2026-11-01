@@ -18,6 +18,15 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             return await db.SearchProfiles.FindAsync([id], cancellationToken);
         }
 
+        public async Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
+        {
+            return db.SearchProfiles.Local.Any(profile => profile.Name == name)
+                || await db.SearchProfiles.AnyAsync(
+                    profile => profile.Name == name,
+                    cancellationToken
+                );
+        }
+
         public async Task AddAsync(SearchProfile profile, CancellationToken cancellationToken)
         {
             await db.SearchProfiles.AddAsync(profile, cancellationToken);

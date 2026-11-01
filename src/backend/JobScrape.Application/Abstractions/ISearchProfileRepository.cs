@@ -18,6 +18,15 @@ namespace JobScrape.Application.Abstractions
         Task<SearchProfile?> GetAsync(SearchProfileId id, CancellationToken cancellationToken);
 
         /// <summary>
+        /// Whether a profile with exactly this name exists. The store's unique
+        /// index remains the final guard against a concurrent insert.
+        /// </summary>
+        /// <param name="name">The trimmed profile name.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>True when the name is taken.</returns>
+        Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken);
+
+        /// <summary>
         /// Stages a new profile; persisted by <see cref="IUnitOfWork.SaveChangesAsync"/>.
         /// </summary>
         /// <param name="profile">The profile.</param>

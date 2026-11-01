@@ -1,4 +1,5 @@
 using JobScrape.Domain.Common;
+using JobScrape.Domain.Sourcing;
 
 namespace JobScrape.Application.Features.Scraping
 {
@@ -14,12 +15,17 @@ namespace JobScrape.Application.Features.Scraping
     /// <param name="DailyDetailCap">Detail pages per UTC day.</param>
     /// <param name="DailyRunCap">Runs started per UTC day.</param>
     /// <param name="ChallengeCooldown">How long a profile cools down after a wall.</param>
+    /// <param name="DefaultLimits">
+    /// The policy caps and delay window for this source: new profiles start
+    /// with them, and a profile may only tighten them, never loosen them.
+    /// </param>
     public sealed record SourceSettings(
         SourceKey Source,
         bool Enabled,
         int DailyPageCap,
         int DailyDetailCap,
         int DailyRunCap,
-        TimeSpan ChallengeCooldown
+        TimeSpan ChallengeCooldown,
+        RunLimits DefaultLimits
     );
 }
