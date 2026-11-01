@@ -87,7 +87,12 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
   ) {
     return "warn";
   }
-  if (code === "PROFILE_NOT_FOUND" || code === "UNKNOWN" || code === "BFF_NOT_FOUND") {
+  if (
+    code === "PROFILE_NOT_FOUND" ||
+    code === "UNKNOWN" ||
+    code === "BAD_RESPONSE" ||
+    code === "BFF_NOT_FOUND"
+  ) {
     return "bad";
   }
   return undefined;

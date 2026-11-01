@@ -66,14 +66,17 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [creatingSession, setCreatingSession] = useState(false);
   const [createSessionProblem, setCreateSessionProblem] = useState<ApiProblem | null>(null);
   const probeBusy = useRef(false);
+  const lastProbeAt = useRef(0);
   const probeRef = useRef<() => void>(() => undefined);
+  // Latest-wins tickets per list: a response may only write state while its
+  // request is still the newest one for that list.
+  const tickets = useRef({ profiles: 0, sources: 0, sessions: 0 });
   const linkLogged = useRef(false);
   // Default client must be identity-stable: a fresh object per render would
   // refire every [client] effect below and spiral into a fetch loop.
   const fallbackClient = useMemo(createApiClient, []);
   const activeClient = client ?? fallbackClient;
 
-  const now = useNow();
   // Pages sit evenly around the compass rose in tab order.
   const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
   const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
@@ -135,50 +138,69 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       return;
     }
     probeBusy.current = true;
+    lastProbeAt.current = Date.now();
     setChecking(true);
-    const { result, ms, at } = await activeClient.fetchHealth();
-    const ok = result.ok;
-    setSamples((s) => pushSample(s, { label: "health", ms, at: Date.parse(at), ok }));
-    if (ok) {
-      setHealth(result.value);
-      setProblem(null);
-      setApiState("live");
-    } else {
-      setHealth(null);
-      setProblem(result.problem);
-      // A 502/0 proves the plane is down; any other answer proves it lives.
-      setApiState(planeDown(result.problem) ? "down" : "live");
+    // finally: a throw must not leave the busy flag set, or every later
+    // probe (auto and manual) would return early forever.
+    try {
+      const { result, ms, at } = await activeClient.fetchHealth();
+      const ok = result.ok;
+      setSamples((s) => pushSample(s, { label: "health", ms, at: Date.parse(at), ok }));
+      if (ok) {
+        setHealth(result.value);
+        setProblem(null);
+        setApiState("live");
+      } else {
+        setHealth(null);
+        setProblem(result.problem);
+        // A 502/0 proves the plane is down; any other answer proves it lives.
+        setApiState(planeDown(result.problem) ? "down" : "live");
+      }
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: ok ? "ok" : "err",
+          code: ok ? "HEALTHY" : result.problem.code,
+          detail: ok
+            ? `engine healthy in ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
+            : result.problem.title,
+        }),
+      );
+    } finally {
+      setChecking(false);
+      probeBusy.current = false;
     }
-    setEvents((e) =>
-      pushEvent(e, {
-        at: clockTime(at),
-        kind: ok ? "ok" : "err",
-        code: ok ? "HEALTHY" : result.problem.code,
-        detail: ok
-          ? `engine healthy in ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
-          : result.problem.title,
-      }),
-    );
-    setChecking(false);
-    probeBusy.current = false;
   }
 
   probeRef.current = checkHealth;
 
   // Auto-probe: first hit lands on mount so the deck opens with data, then one
-  // every 10s. The busy flag keeps a slow proxy from stacking probes; the
-  // manual button rides the same path.
+  // per interval while the deck is visible. A hidden tab skips its ticks and
+  // probes once on return if the last probe is stale, so a background deck
+  // costs the API nothing. The busy flag keeps a slow proxy from stacking
+  // probes; the manual button rides the same path.
   useEffect(() => {
+    const poll = () => {
+      if (shouldProbe(document.visibilityState, lastProbeAt.current, Date.now())) {
+        probeRef.current();
+      }
+    };
     probeRef.current();
-    const timer = setInterval(() => {
-      probeRef.current();
-    }, 10_000);
-    return () => clearInterval(timer);
+    const timer = setInterval(poll, PROBE_INTERVAL_MS);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", poll);
+    };
   }, []);
 
   async function loadProfiles() {
+    const ticket = ++tickets.current.profiles;
     setProfilesLoading(true);
     const { result, at } = await activeClient.listProfiles();
+    if (ticket !== tickets.current.profiles) {
+      return;
+    }
     if (result.ok) {
       setProfiles(result.value.items);
       setProfilesProblem(null);
@@ -230,8 +252,12 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   }
 
   async function loadSources() {
+    const ticket = ++tickets.current.sources;
     setSourcesLoading(true);
     const { result } = await activeClient.listSources();
+    if (ticket !== tickets.current.sources) {
+      return;
+    }
     if (result.ok) {
       setSources(result.value);
       setSourcesProblem(null);
@@ -244,8 +270,12 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   }
 
   async function loadSessions() {
+    const ticket = ++tickets.current.sessions;
     setSessionsLoading(true);
     const { result } = await activeClient.listSessions();
+    if (ticket !== tickets.current.sessions) {
+      return;
+    }
     if (result.ok) {
       setSessions(result.value.items);
       setSessionsProblem(null);
@@ -314,9 +344,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
           <span className="brand-sub">LOCAL CONTROL PLANE</span>
         </div>
         <div className="cmdbar-meta">
-          <span className="clock" aria-label="Current UTC time">
-            {now} UTC
-          </span>
+          <UtcClock />
           <span className="pill" title="BFF self-check">
             <span className={`dot${bffLive ? " live" : ""}`} /> BFF {bffLive ? "LIVE" : "…"}
           </span>
@@ -419,6 +447,36 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         IBM Plex Mono
       </footer>
     </div>
+  );
+}
+
+/** Health auto-probe cadence. */
+export const PROBE_INTERVAL_MS = 10_000;
+
+/**
+ * Whether the auto-probe should hit the API now: only for a visible deck, and only when the last
+ * probe is about one interval old (a tab flipping back and forth must not fire a probe each time).
+ * One second of slack keeps timer jitter from skipping a regular tick.
+ */
+export function shouldProbe(
+  visibility: DocumentVisibilityState,
+  lastProbeAt: number,
+  now: number,
+): boolean {
+  return visibility === "visible" && now - lastProbeAt >= PROBE_INTERVAL_MS - 1000;
+}
+
+/**
+ * UTC clock. It owns its one-second tick so only this span re-renders: held in App, the tick
+ * re-rendered the whole deck every second (the profiler showed 25-54 components per commit).
+ */
+function UtcClock() {
+  useRenderLog("UtcClock");
+  const now = useNow();
+  return (
+    <span className="clock" aria-label="Current UTC time">
+      {now} UTC
+    </span>
   );
 }
 

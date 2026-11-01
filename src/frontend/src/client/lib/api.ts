@@ -198,7 +198,21 @@ async function send<T>(
     };
   }
   if (res.ok) {
-    return { ok: true, value: (await res.json()) as T };
+    // A 2xx that is not JSON (an HTML page from a misrouted upstream) is a
+    // problem like any other, never a throw the caller has to remember.
+    try {
+      return { ok: true, value: (await res.json()) as T };
+    } catch {
+      return {
+        ok: false,
+        problem: {
+          status: res.status,
+          title: "Unreadable response",
+          detail: `The server answered ${res.status} with a body that is not JSON.`,
+          code: "BAD_RESPONSE",
+        },
+      };
+    }
   }
   return { ok: false, problem: await toProblem(res) };
 }

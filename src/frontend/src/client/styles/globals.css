@@ -901,6 +901,15 @@ table.data tr:last-child td {
   flex: 1;
   height: 40px;
   min-width: 0;
+  position: relative;
+  /* Size container: the needle reads the tape's scale from it. */
+  container-type: size;
+}
+
+.compass-dial > svg:first-child {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .compass-page {
@@ -910,9 +919,20 @@ table.data tr:last-child td {
   white-space: nowrap;
 }
 
+/* The needle overlays the tape at the same scale: the tape SVG fits its box
+   (meet), so its scale is min(height/46, width/640). A standalone element's
+   transform animates on the compositor; inside the tape it repainted the
+   whole strip, glow filter included, every frame. */
 .compass-needle {
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: min(100%, 100cqw * 46 / 640);
+  aspect-ratio: 12 / 46;
+  translate: -50% -50%;
+  /* Pivot at the needle tip (y = 4 of 46). */
+  transform-origin: 50% 8.7%;
+  will-change: transform;
   animation: needle-hunt 5s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 4px var(--brand-3));
 }
@@ -1388,6 +1408,98 @@ abbr.abbr {
 
 .flow-dash {
   animation: dash-flow 1.6s linear infinite;
+}
+
+/* Tac-map motion (components/tacmap.tsx). Keyframes, not SMIL: SMIL forced a
+   style recalc every frame. transform-origin comes inline from the map's HQ
+   coordinates; the tracer waypoints match its node positions. */
+.tac-sweep {
+  animation: tac-sweep 7s linear infinite;
+}
+
+@keyframes tac-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scale keeps the stroke hairline while the ring grows (r 17 to 70, 95). */
+.tac-ping {
+  vector-effect: non-scaling-stroke;
+  animation: tac-ping 3s linear infinite;
+}
+
+.tac-ping-wide {
+  animation: tac-ping-wide 4.5s linear 1.5s infinite backwards;
+}
+
+@keyframes tac-ping {
+  from {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(4.12);
+    opacity: 0;
+  }
+}
+
+@keyframes tac-ping-wide {
+  from {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(5.59);
+    opacity: 0;
+  }
+}
+
+/* Browser (320,46) → BFF (320,180) → .NET (534,180): the corner sits at
+   134 of 348 units, 38.5% of the run, so the packet keeps one speed. */
+.tac-trace-api {
+  animation: tac-trace-api 2.4s linear infinite;
+}
+
+@keyframes tac-trace-api {
+  0% {
+    transform: translate(320px, 46px);
+  }
+  38.5% {
+    transform: translate(320px, 180px);
+  }
+  100% {
+    transform: translate(534px, 180px);
+  }
+}
+
+/* BFF (320,180) → store (320,314). */
+.tac-trace-store {
+  animation: tac-trace-store 3.4s linear infinite;
+}
+
+@keyframes tac-trace-store {
+  from {
+    transform: translate(320px, 180px);
+  }
+  to {
+    transform: translate(320px, 314px);
+  }
+}
+
+/* Sparkline sheen: the band crosses the clipped area once every 4s. */
+.spark-sheen {
+  transform-box: fill-box;
+  animation: spark-sheen 4s linear infinite;
+}
+
+@keyframes spark-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 /* ---- ambient life: the deck breathes behind the content ----

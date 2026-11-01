@@ -94,15 +94,25 @@ src/frontend/
   probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
   `bun check` owns types.
-- Render radar: every component logs `[render] Name #N` + `[mount]`/`[unmount]`
-  via `useRenderLog`, and every API call logs `[fetch] GET path` — dev only
-  (off in production builds and under `bun test`). Force on/off anywhere
-  with `?renders=1` / `?renders=0`. Open devtools, filter the console, and
-  runaway renders or remount loops show themselves immediately.
+- Render radar: with `?renders=1`, every component logs `[render] Name #N` +
+  `[mount]`/`[unmount]` via `useRenderLog`, and every API call logs
+  `[fetch] GET path`. Off by default: logging every render cost ~35 console
+  calls a second on an idle deck, which an open devtools console turns into
+  real CPU and memory. Render counts are always kept; read them with
+  `__deckRenders()` in the console (tests use `renderCount`).
+- Runtime budget, pinned by `tests/client/perf.test.tsx`: the UTC clock owns
+  its tick, so an idle deck commits one `<span>` a second, not the page; the
+  health auto-probe runs every 10 s only while the tab is visible and catches
+  up once on return; a list response that arrives after a newer request for
+  the same list is dropped (latest wins); a non-JSON 2xx body becomes a
+  `BAD_RESPONSE` problem instead of a throw that would stall the probe.
 - Motion is a system, not decoration: one spring token, staggered deck
   entrances, draw-in charts, breathing live-dots, press physics on controls
   (per `emilkowalski/animate` + `mengto/animation-systems`). Transform and
-  opacity only; `prefers-reduced-motion` disables it all.
+  opacity only; `prefers-reduced-motion` disables it all. Continuous motion
+  uses CSS keyframes, never SMIL (SMIL restyles the SVG every frame on the
+  main thread), and an infinitely animated shape gets its own element so its
+  transform runs on the compositor (the compass needle overlays the tape).
 - Elevation follows `mengto/beautiful-shadows`: layered neutral shadows,
   one strength per state (sm controls, md resting modules, lg lifted hover),
   recessed wells for data, borders never replaced. Top highlight included
