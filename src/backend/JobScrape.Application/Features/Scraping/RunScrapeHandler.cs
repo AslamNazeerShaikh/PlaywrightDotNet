@@ -105,8 +105,32 @@ namespace JobScrape.Application.Features.Scraping
         /// Thrown on cancellation, after the run is recorded as cancelled with
         /// its partial results.
         /// </exception>
+        public Task<Result<ScrapeRunSummary>> HandleAsync(
+            RunScrapeRequest request,
+            CancellationToken cancellationToken
+        )
+        {
+            return HandleAsync(request, null, cancellationToken);
+        }
+
+        /// <summary>
+        /// Executes one scrape run like <see cref="HandleAsync(RunScrapeRequest, CancellationToken)"/>,
+        /// reporting the run id as soon as every gate passed and the run is
+        /// recorded. A background host returns that id to its caller while
+        /// the scrape continues.
+        /// </summary>
+        /// <param name="request">The run request. Must not be null.</param>
+        /// <param name="started">Called once with the new run's id after its first save; not called when a gate refuses the run.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The same outcomes as <see cref="HandleAsync(RunScrapeRequest, CancellationToken)"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+        /// <exception cref="OperationCanceledException">
+        /// Thrown on cancellation, after the run is recorded as cancelled with
+        /// its partial results.
+        /// </exception>
         public async Task<Result<ScrapeRunSummary>> HandleAsync(
             RunScrapeRequest request,
+            Action<ScrapeRunId>? started,
             CancellationToken cancellationToken
         )
         {
@@ -120,6 +144,7 @@ namespace JobScrape.Application.Features.Scraping
             }
 
             var scope = gate.Value;
+            started?.Invoke(scope.Run.Id);
             try
             {
                 await ExecuteAsync(scope, cancellationToken);

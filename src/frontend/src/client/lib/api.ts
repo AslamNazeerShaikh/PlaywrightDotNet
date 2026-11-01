@@ -113,6 +113,70 @@ export interface CreateProfileInput {
   remoteOnly: boolean;
 }
 
+/** GET /api/v1/runs/{id}: a scrape run's stage, counters, and caps. Timestamps are UTC ISO. */
+export interface RunPayload {
+  id: string;
+  profileId: string;
+  profileName: string | null;
+  sourceKey: string;
+  stage: string;
+  isTerminal: boolean;
+  pagesFetched: number;
+  postingsFound: number;
+  postingsNew: number;
+  postingsUpdated: number;
+  detailsFetched: number;
+  challenges: number;
+  failures: number;
+  maxPages: number;
+  maxJobs: number;
+  maxDetails: number;
+  pauseReason: string | null;
+  retryAt: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+/** GET /api/v1/runs: newest first. */
+export interface RunList {
+  items: RunPayload[];
+  total: number;
+}
+
+/** One posting a run saw. Missing source fields are null, never faked. */
+export interface RunPosting {
+  id: string;
+  externalJobId: string;
+  url: string;
+  title: string;
+  company: string | null;
+  location: string | null;
+  workMode: string;
+  experience: string | null;
+  salary: string | null;
+  postedAt: string | null;
+  skills: string[];
+  enriched: boolean;
+  isNew: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+/** GET /api/v1/runs/{id}/postings. */
+export interface RunPostingList {
+  runId: string;
+  items: RunPosting[];
+}
+
+/** Body of POST /api/v1/runs. */
+export interface StartRunInput {
+  profileId: string;
+  browserProfileId: string;
+  enrich: boolean;
+}
+
 import { renderDebugEnabled } from "./debug.ts";
 
 /** RFC 9457 problem body plus the stable `code` and optional field `errors` extensions. */
@@ -151,6 +215,14 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
       timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
     createProfile: (input: CreateProfileInput) =>
       timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
+    listRuns: () => timed(() => get<RunList>(fetchImpl, "/api/v1/runs")),
+    getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
+    listRunPostings: (id: string) =>
+      timed(() => get<RunPostingList>(fetchImpl, `/api/v1/runs/${id}/postings`)),
+    startRun: (input: StartRunInput) =>
+      timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
+    cancelRun: (id: string) =>
+      timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
   };
 }
 

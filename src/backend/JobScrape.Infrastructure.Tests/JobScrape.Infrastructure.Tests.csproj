@@ -24,4 +24,9 @@
   <ItemGroup>
     <ProjectReference Include="..\JobScrape.Infrastructure\JobScrape.Infrastructure.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Synthetic source-page fixtures read by the parser tests at run time. -->
+    <None Update="Sources\Naukri\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

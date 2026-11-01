@@ -2,8 +2,11 @@
 
 > **Purpose:** specify the central control system — the “cockpit” — that commands the .NET API to run scraping, monitoring, exports, and diagnostics.
 >
-> **Status:** Walking skeleton live in `src/frontend/` (BFF + health and
-> profile-lookup cards over the tested API); full v2 scope per §2 below.
+> **Status:** Ops deck live in `src/frontend/`: BFF + seven hash-routed pages
+> (overview, health, profiles, sources, sessions, runs, topology) over the
+> tested API. Runs can be started, followed, and cancelled from `#/runs`
+> against the live Naukri adapter. Full v2 scope per §2 below; what is not
+> built yet is called out per section.
 >
 > **Verified:** 2026-10-29 · Bun `1.4.4` · React `19.3.1` · TypeScript `7.0.2` · Tailwind CSS `4.3.3` · shadcn CLI `4.23.0`
 >
@@ -704,6 +707,22 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/metrics/summary` | Dashboard aggregates |
 | `GET` | `/openapi/v1.json` | OpenAPI 3.1 document |
 
+> **As implemented (runs):** `RunsController` serves
+> `POST /api/v1/runs` (body `{ profileId, browserProfileId, enrich = true }` →
+> `202` + `Location` with the recorded run), `GET /api/v1/runs` (newest 50,
+> `{ items, total }`), `GET /api/v1/runs/{id}`, `POST /api/v1/runs/{id}/cancel`
+> (idempotent), and `GET /api/v1/runs/{id}/postings` (not in the table above:
+> postings of the run's source whose `LastSeenAt` falls in the run's
+> `[StartedAt, FinishedAt ?? now]` window, max 200 — valid because runs execute
+> one at a time). New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
+> run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
+> before the run was recorded); gate refusals keep their own codes
+> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).
+> **Not implemented:** `Idempotency-Key` on `POST /runs`, `/runs/{id}/events`
+> (SSE), `/runs/{id}/resume`, `/runs/{id}/artifacts`, `/artifacts/{id}`, and
+> BFF auth (§13.4). Sources and sessions are read/create only (no `PATCH`,
+> probe, or login).
+
 ### 12.3 Run lifecycle
 
 Use the domain stages from [Domain Model §6.1](03-domain-model.md):
@@ -720,6 +739,10 @@ Any non-terminal → Cancelling → Cancelled
 The UI must render the domain stages verbatim; do not invent a parallel status model. `RunStage` is the contract.
 
 ### 12.4 SSE events
+
+> **Not implemented.** No SSE endpoint or BFF SSE proxy exists. The cockpit
+> uses this section's documented fallback: it polls `GET /api/v1/runs/{id}`
+> (and the run's postings) every 2 s while the selected run executes.
 
 Wire format:
 
@@ -826,8 +849,8 @@ GET /api/v1/jobs?source=naukri&q=dotnet&page=1&pageSize=25&sort=-lastSeenAt
 
 - `pageSize` max 100; jobs table uses 25/50/100.
 - `sort` uses `field` or `-field` for descending.
-- `POST /runs` and `POST /exports` require `Idempotency-Key`; replay returns the original response.
-- `POST /runs/{id}/cancel` is idempotent: cancelling a terminal run returns `200` with the current state.
+- `POST /runs` and `POST /exports` require `Idempotency-Key`; replay returns the original response. *(Not implemented: `POST /runs` ignores the header; one-run-at-a-time (`409 RUN_IN_PROGRESS`) is the only duplicate guard today.)*
+- `POST /runs/{id}/cancel` is idempotent: cancelling a terminal run returns `200` with the current state. *(Implemented: an executing run is signalled and cancels cooperatively; a paused run that is not executing is cancelled directly.)*
 
 ### 12.7 Generated types
 
@@ -952,6 +975,9 @@ async function sse(req: Request): Promise<Response> {
 
 ### 13.4 Auth and CSRF
 
+> **Not implemented.** The BFF proxies `/api/*` without a session, CSRF
+> check, or bearer token; both processes bind loopback only.
+
 - **Bootstrap:** on first run, generate a 32-byte token, print it once, and store only an Argon2id hash in `~/.config/joblens/cockpit.token` (mode `0600`). For automation, `JOBLENS_COCKPIT_TOKEN` may supply the plaintext; the BFF hashes it in memory at startup.
 - **Login:** the operator pastes the token; `Bun.password.verify` checks it against the stored hash, then sets:
   - `joblens_session` — `HttpOnly; SameSite=Strict; Path=/; Secure` (Secure only with TLS)
@@ -1029,6 +1055,13 @@ Bun auto-loads `.env`, `.env.local`, and `.env.production`; do not add `dotenv`.
 | `/diagnostics` | `doctor`, logs, artifacts, retention |
 | `/settings` | Local preferences; no secrets |
 
+> **As implemented:** a pure hash router (`src/client/lib/router.ts`, no
+> TanStack Router) with seven stops: `#/overview` (01), `#/health` (02),
+> `#/profiles` (03), `#/sources` (04), `#/sessions` (05), `#/runs` (06), and
+> `#/topology` (07). `#/runs` holds the start form, run history, run detail,
+> and postings on one page; selecting a run is page state, not a
+> `/runs/:runId` route. No jobs, exports, diagnostics, or settings pages.
+
 Use TanStack Router with a code-based route tree. The shadcn TanStack Router guide is the reference; do not add a Vite plugin.
 
 ### 14.2 State model
@@ -1088,6 +1121,12 @@ export const qk = {
 
 ### 14.4 Live updates
 
+> **Not implemented as specified.** No `EventSource`: `RunsPage` polls
+> `GET /api/v1/runs/{id}` and `/postings` every 2 s through a `setTimeout`
+> chain (the next poll starts after the last answer, so requests never
+> overlap), skips polls while the tab is hidden, and stops once the run is
+> terminal. The sketch below is the SSE target.
+
 ```ts
 const source = new EventSource(`/api/v1/runs/${runId}/events`);
 
@@ -1145,7 +1184,41 @@ sequenceDiagram
     B->>A: SSE proxy
 ```
 
+> **As implemented:** no `Idempotency-Key`, CSRF/session check, bearer token,
+> or SSE; the run starts in the background and the page polls.
+
+```mermaid
+sequenceDiagram
+    actor O as Operator
+    participant UI as RunsPage
+    participant B as Bun BFF
+    participant A as RunsController
+    participant C as RunCoordinator
+    participant H as RunScrapeHandler
+
+    O->>UI: Pick enabled profile + launchable session, Start
+    UI->>B: POST /api/v1/runs
+    B->>A: proxy (loopback)
+    A->>C: StartRunHandler - IRunLauncher.StartAsync
+    C->>H: HandleAsync(request, started, ct) in a new DI scope
+    H-->>C: started(runId) after gates + first save
+    C-->>A: runId
+    A-->>B: 202 + Location + run
+    B-->>UI: 202 + run
+    UI->>UI: Log RUN_STARTED, select the run
+    loop every 2 s until terminal (skipped while tab hidden)
+        UI->>B: GET /api/v1/runs/:id + /postings
+        B->>A: proxy
+    end
+    H-->>C: run ends, browser released
+```
+
 ### 15.2 Challenge handling
+
+> **As implemented:** no `run.challenge` event, artifact IDs, or resume. A
+> paused run shows its stage in `#/runs` and can be cancelled; evidence is on
+> disk under `{ArtifactsRoot}/runs/{runId}/` (see
+> [Operations Runbook §0](09-operations-runbook.md#0-as-implemented-api--cockpit)).
 
 1. API emits `run.challenge` with `kind`, `evidence`, `cooldown`, and artifact IDs.
 2. UI shows a blocking alert: “Paused for challenge — manual action required.”

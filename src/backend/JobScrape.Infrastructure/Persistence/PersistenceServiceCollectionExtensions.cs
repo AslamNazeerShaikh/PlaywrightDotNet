@@ -1,4 +1,5 @@
 using JobScrape.Application.Abstractions;
+using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
@@ -40,6 +41,7 @@ namespace JobScrape.Infrastructure.Persistence
             services.AddScoped<ISearchProfileRepository, SearchProfileRepository>();
             services.AddScoped<ISearchProfileStore, SearchProfileReadStore>();
             services.AddScoped<ISessionStore, SessionReadStore>();
+            services.AddScoped<IRunStore, RunReadStore>();
 
             // Read stores evaluate time-dependent state; a host that already
             // registered its own clock (or a fake) keeps it.

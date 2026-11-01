@@ -1,6 +1,9 @@
 using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
+using JobScrape.Api.Runs;
 using JobScrape.Application.Features.Health;
+using JobScrape.Application.Features.Runs;
+using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
@@ -73,6 +76,28 @@ namespace JobScrape.Api
             builder.Services.AddTransient<ListSessionsHandler>();
             builder.Services.AddTransient<GetSessionHandler>();
             builder.Services.AddTransient<CreateSessionHandler>();
+            builder.Services.AddTransient<StartRunHandler>();
+            builder.Services.AddTransient<ListRunsHandler>();
+            builder.Services.AddTransient<GetRunHandler>();
+            builder.Services.AddTransient<CancelRunHandler>();
+            builder.Services.AddTransient<ListRunPostingsHandler>();
+            // The scrape itself: scoped, because it holds the run's unit of
+            // work; the coordinator resolves it in a fresh scope per run.
+            builder.Services.AddScoped<RunScrapeHandler>();
+
+            // Runs outlive their request: one coordinator executes them in
+            // the background, cancels on shutdown, and fails runs a crash
+            // left mid-flight on the next start.
+            builder.Services.AddSingleton<RunCoordinator>();
+            builder.Services.AddSingleton<IRunLauncher>(provider =>
+                provider.GetRequiredService<RunCoordinator>()
+            );
+            builder.Services.AddHostedService(provider =>
+                provider.GetRequiredService<RunCoordinator>()
+            );
+
+            // Playwright, the session manager, wall artifacts, and adapters.
+            builder.Services.AddJobScrapeBrowser(builder.Environment.ContentRootPath);
 
             // SQLite through EF Core: one scoped unit of work per request.
             builder.Services.AddJobScrapeDatabase(

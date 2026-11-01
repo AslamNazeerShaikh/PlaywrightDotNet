@@ -31,6 +31,25 @@ namespace JobScrape.Application.Tests.Scraping
         // ---- happy path ----
 
         [Fact]
+        public async Task ReportsTheRunIdOnceRecordedAndNeverForARefusal()
+        {
+            var harness = new ScrapeHarness();
+            harness.Source.Then(Page(null, Job("1")));
+            var reported = new List<ScrapeRunId>();
+
+            var result = await harness.Build().HandleAsync(harness.Request, reported.Add, Ct);
+
+            Assert.Equal(result.Value.RunId, Assert.Single(reported).Value);
+            Assert.Equal(Assert.Single(harness.Store.Runs).Id, reported[0]);
+
+            var refused = new ScrapeHarness();
+            refused.Store.SearchProfiles.Clear();
+            var refusal = await refused.Build().HandleAsync(refused.Request, reported.Add, Ct);
+            Assert.True(refusal.IsFailure);
+            Assert.Single(reported);
+        }
+
+        [Fact]
         public async Task PaginatesPersistsAndCompletes()
         {
             var harness = new ScrapeHarness();

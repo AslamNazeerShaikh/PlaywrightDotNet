@@ -222,6 +222,18 @@ namespace JobScrape.Application.Tests.Scraping
                 return Task.CompletedTask;
             }
 
+            public Task<IReadOnlyList<ScrapeRun>> ListExecutingAsync(
+                CancellationToken cancellationToken
+            )
+            {
+                IReadOnlyList<ScrapeRun> executing = Runs.Where(r =>
+                        !r.IsTerminal
+                        && r.Stage is not (RunStage.PausedForChallenge or RunStage.RateLimited)
+                    )
+                    .ToArray();
+                return Task.FromResult(executing);
+            }
+
             public Task<JobPosting?> FindAsync(
                 SourceKey source,
                 ExternalJobId externalJobId,

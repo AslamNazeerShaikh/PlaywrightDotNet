@@ -262,5 +262,57 @@ namespace JobScrape.Application.Results
                 }
             );
         }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing run.
+        /// </summary>
+        /// <param name="runId">The requested run identifier.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo RunNotFound(Guid runId)
+        {
+            return new ErrorInfo(
+                "RUN_NOT_FOUND",
+                "Run not found.",
+                $"Run '{runId}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["runId"] = runId }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure when a run is already executing. Runs
+        /// execute one at a time: a browser profile holds a single
+        /// persistent context, and sources are paced per process.
+        /// </summary>
+        /// <param name="activeRunId">The executing run, once recorded.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo RunInProgress(Guid? activeRunId)
+        {
+            return new ErrorInfo(
+                "RUN_IN_PROGRESS",
+                "A run is already in progress.",
+                activeRunId is { } id
+                    ? $"Run '{id}' is still executing; wait for it or cancel it."
+                    : "Another run is starting; wait for it or cancel it.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["activeRunId"] = activeRunId }
+            );
+        }
+
+        /// <summary>
+        /// Creates an unavailable failure for a run cancelled before it was
+        /// recorded, because the host is stopping.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unavailable"/>.</returns>
+        public static ErrorInfo RunNotStarted()
+        {
+            return new ErrorInfo(
+                "RUN_NOT_STARTED",
+                "The run did not start.",
+                "The API is stopping; start the run again once it is back.",
+                ErrorKind.Unavailable,
+                new Dictionary<string, object?>()
+            );
+        }
     }
 }

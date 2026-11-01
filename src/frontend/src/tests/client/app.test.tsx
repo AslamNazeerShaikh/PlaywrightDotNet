@@ -282,7 +282,8 @@ describe("ops deck", () => {
       "03SEARCH PROFILES",
       "04SOURCES",
       "05SESSIONS",
-      "06TOPOLOGY",
+      "06RUNS",
+      "07TOPOLOGY",
     ]);
   });
 

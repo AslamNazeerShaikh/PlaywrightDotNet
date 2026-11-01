@@ -46,29 +46,32 @@
 
 ## 3. System context
 
-> **As implemented.** No CLI, scheduler wiring, Playwright sessions, or source
-> adapters exist yet: `SourceKey` names the three future sources, and the
-> session/artifact/adapter ports are declared but have no implementations and
-> no registrations in `Program.cs`. Dashed nodes are declared-not-wired.
+> **As implemented.** No CLI or scheduler exists. The API starts runs on
+> demand (`POST /api/v1/runs`): `RunCoordinator` executes one run at a time
+> through `RunScrapeHandler`, which drives a visible Playwright browser
+> (`BrowserSessionPool`) via `PlaywrightSessionManager` and the only
+> adapter, `NaukriJobSource`. `SourceKey` also names Indeed and LinkedIn,
+> but no adapter exists for them. Dashed nodes are declared-not-wired.
 
 ```mermaid
 flowchart LR
     OP["Operator<br/>browser tab"] --> UI["React cockpit<br/>src/frontend"]
     UI --> BFF["Bun BFF :3000<br/>/healthz · /api/* proxy"]
-    BFF --> API["JobScrape.Api :5207<br/>Health · SearchProfiles controllers"]
-    API --> H["Handlers<br/>GetHealth · GetSearchProfile<br/>RunScrape (unregistered)"]
+    BFF --> API["JobScrape.Api :5207<br/>Health · SearchProfiles · Sources<br/>Sessions · Runs controllers"]
+    API --> H["Handlers<br/>health · profiles · sources · sessions<br/>runs → RunCoordinator → RunScrape"]
     H --> PORTS["Ports<br/>repos · IJobSource · session · artifacts"]
-    PORTS --> IMPL["Infrastructure<br/>EF Core repos · options · runtime"]
+    PORTS --> IMPL["Infrastructure<br/>EF Core repos · options · runtime<br/>Playwright pool · Naukri adapter"]
     IMPL --> DB[("SQLite<br/>artifacts/data/jobscrape.db")]
-    IMPL --> ART["Artifacts<br/>screenshots / HTML / trace"]
-    SRC["Job boards<br/>Naukri · Indeed · LinkedIn"] -.->|no adapters yet| H
-    SES["Browser sessions"] -.->|port only, no impl| H
+    IMPL --> ART["Artifacts<br/>wall screenshot / HTML / assessment"]
+    IMPL --> BRW["Headed browser<br/>persistent profile per session"]
+    BRW --> NK["naukri.com"]
+    SRC["Indeed · LinkedIn"] -.->|no adapters yet| PORTS
 ```
 
 **Actors**
 
 - **Operator:** drives the cockpit, reviews payloads and problem codes.
-- **Target sites:** external, untrusted, rate-limited, and subject to change. No adapter talks to one yet.
+- **Target sites:** external, untrusted, rate-limited, and subject to change. Only Naukri has an adapter; it is reached through a visible browser window on the operator's machine.
 
 **Trust boundaries**
 
@@ -81,21 +84,21 @@ flowchart LR
 ## 4. Containers
 
 > **As implemented.** `JobScrape.Api` is the only composition root. No CLI,
-> TestKit, E2E, exporters, Playwright sessions, source adapters, parsers,
-> or read models exist — the diagram shows only shipped types.
+> TestKit, E2E, or exporters exist — the diagram shows only shipped types.
 
 ```mermaid
 flowchart TB
     subgraph API["JobScrape.Api — composition root"]
-        CTRL["Controllers<br/>Health · SearchProfiles"]
+        CTRL["Controllers<br/>Health · SearchProfiles · Sources<br/>Sessions · Runs"]
         MW["HTTP pipeline<br/>CorrelationMiddleware ·<br/>GlobalExceptionHandler · ErrorMapper"]
-        COMP["Composition<br/>OptionsRegistration · LoggingRegistration"]
+        COMP["Composition<br/>Options · Logging · Database<br/>BrowserRegistration"]
+        RC["Runs/RunCoordinator<br/>IRunLauncher + IHostedService<br/>one run at a time"]
     end
 
     subgraph APP["JobScrape.Application"]
-        UC["Use-case handlers<br/>GetHealth · GetSearchProfile · RunScrape*"]
-        PORTS["Ports<br/>6 repositories · ISearchProfileStore<br/>IJobSource · ISessionManager<br/>IArtifactStore · IDelay"]
-        DTO["DTOs<br/>GetHealthResponse · SearchProfileResponse<br/>SearchPageResult · JobSnapshot · ScrapeRunSummary"]
+        UC["Use-case handlers<br/>health · profiles · sources · sessions<br/>Start/List/Get/Cancel run · run postings<br/>RunScrape"]
+        PORTS["Ports<br/>6 repositories · ISearchProfileStore<br/>ISessionStore · IRunStore · IRunLauncher<br/>IJobSource · ISessionManager<br/>IArtifactStore · IDelay"]
+        DTO["DTOs<br/>GetHealthResponse · SearchProfileResponse<br/>RunResponse · RunPostingResponse<br/>SearchPageResult · JobSnapshot · ScrapeRunSummary"]
         RES["Results<br/>Result / Result<T> · ErrorInfo · ErrorKind"]
     end
 
@@ -110,7 +113,9 @@ flowchart TB
         PERSIST["EF Core repositories +<br/>JobScrapeDbContext + migrations"]
         OPT["Options<br/>Storage · Run · Compliance · Logging · Sources"]
         RUN["Runtime<br/>TimeProviderDelay · SystemRandomSource"]
-        READ["SearchProfileReadStore<br/>(EF, no-tracking)"]
+        READ["Read stores (EF, no-tracking)<br/>SearchProfile · Session · Run"]
+        BROW["Browser<br/>BrowserSessionPool · PlaywrightSessionManager<br/>FileArtifactStore"]
+        NAUK["Sources/Naukri<br/>NaukriJobSource · URL builder<br/>search/detail parsers · challenge classifier"]
     end
 
     CTRL --> UC
@@ -118,18 +123,26 @@ flowchart TB
     COMP --> UC
     COMP --> OPT
     COMP --> RUN
+    COMP --> BROW
     UC --> PORTS
     UC --> DOM
     UC --> RES
+    RC --> PORTS
+    RC --> UC
     PERSIST --> PORTS
     READ --> PORTS
     RUN --> PORTS
+    BROW --> PORTS
+    NAUK --> PORTS
+    NAUK --> BROW
     PERSIST --> DB[("SQLite<br/>artifacts/data/jobscrape.db")]
 ```
 
-`*RunScrapeHandler` is implemented but **not registered** in `Program.cs` and no
-endpoint invokes it yet. `ISessionManager`, `IArtifactStore`, and `IJobSource`
-likewise have **no implementations** — the ports exist, the wiring does not.
+`RunCoordinator` implements `IRunLauncher` (an Application port) because a run
+outlives the request that starts it. Every scrape port is implemented:
+`ISessionManager` → `PlaywrightSessionManager`, `IArtifactStore` →
+`FileArtifactStore`, `IJobSource` → `NaukriJobSource` (the only adapter),
+`IRunStore` → `RunReadStore`.
 
 `JobScrape.Api` is the only composition root. It may reference Domain, Application, and Infrastructure (to bind ports). Infrastructure references Application and Domain. Application references Domain. Domain references nothing (BCL only — enforced by `LayerRulesTests` + `GuardrailTests`).
 
@@ -154,7 +167,7 @@ Every edge above is a `ProjectReference` in `src/backend` (see [Solution & Tooli
 |---|---|---|
 | `JobScrape.Domain` | BCL only | EF Core, Playwright, AngleSharp, HTTP, Serilog, Api |
 | `JobScrape.Application` | Domain, `Microsoft.Extensions.Logging.Abstractions` | EF Core, Playwright, AngleSharp, Api, file system |
-| `JobScrape.Infrastructure` | Application, Domain, EF Core, `Microsoft.Extensions.Options.DataAnnotations` | Api |
+| `JobScrape.Infrastructure` | Application, Domain, EF Core, `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, AngleSharp | Api |
 | `JobScrape.Api` | Domain, Application, Infrastructure (composition root binds the ports) | — |
 
 **Architecture tests** (`JobScrape.Architecture.Tests`: `LayerRulesTests`, `GuardrailTests`, NetArchTest + xUnit) enforce:
@@ -163,7 +176,7 @@ Every edge above is a `ProjectReference` in `src/backend` (see [Solution & Tooli
 - Application references neither Infrastructure nor Api.
 - No production assembly references MediatR, and no production type is mediator-shaped (`IRequest`, `ISender`, `ICommand`, `IQuery`-style buses are banned).
 - Domain has no static mutable state.
-- Repositories live under `JobScrape.Infrastructure.Persistence` (+ `Repositories/`) and implement Application ports; adapters (when they exist) live under Infrastructure and implement `IJobSource`.
+- Repositories live under `JobScrape.Infrastructure.Persistence` (+ `Repositories/`) and implement Application ports; adapters live under Infrastructure (`Sources/Naukri` today) and implement `IJobSource`.
 
 ### 5.1 Composition root (`Program.cs`)
 
@@ -181,7 +194,11 @@ flowchart TB
     OPT --> LOGG["AddJobScrapeLogging<br/>Serilog console JSON + async file"]
     LOGG --> H1["AddTransient GetHealthHandler"]
     H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler<br/>ListSourcesHandler<br/>List/Get/CreateSessionHandler"]
-    H2 --> DB["AddJobScrapeDatabase<br/>Storage:DatabasePath → SQLite file<br/>AddJobScrapePersistence (scoped)"]
+    H2 --> H3["AddTransient Start/List/Get/CancelRunHandler<br/>ListRunPostingsHandler"]
+    H3 --> RSH["AddScoped RunScrapeHandler<br/>(one scope per run)"]
+    RSH --> COORD["AddSingleton RunCoordinator<br/>as IRunLauncher + AddHostedService"]
+    COORD --> BRWS["AddJobScrapeBrowser<br/>JobScrape:Browser options · BrowserSessionPool<br/>ISessionManager (scoped) · IArtifactStore<br/>IJobSource NaukriJobSource · JobSourceRegistry"]
+    BRWS --> DB["AddJobScrapeDatabase<br/>Storage:DatabasePath → SQLite file<br/>AddJobScrapePersistence (scoped)"]
     DB --> BUILD["app = builder.Build()"]
     BUILD --> MAPOA["MapOpenApi (Development only)"]
     MAPOA --> MIG["MigrateInDevelopment<br/>(Database.Migrate, Development only)"]
@@ -192,7 +209,7 @@ flowchart TB
     MAPC --> RUN["app.Run()"]
 ```
 
-Not registered (so unreachable at runtime): `JobSourceRegistry`, `RunScrapeHandler`, `ISessionManager`/`IArtifactStore` implementations, and any `IJobSource` adapter.
+`AddJobScrapeBrowser` lives in `JobScrape.Api/Composition/BrowserRegistration.cs`; it resolves `ProfilesRoot` and `ArtifactsRoot` against the content root into `BrowserSessionSettings`. `BrowserSessionPool` is a singleton, so container disposal on shutdown closes every browser and flushes profile cookies.
 
 ### 5.2 Implemented feature slices
 
@@ -201,12 +218,14 @@ flowchart LR
     subgraph LIVE["live (registered + endpoint + tests)"]
         H1["GET /api/v1/health<br/>GetHealthHandler(TimeProvider)<br/>→ GetHealthResponse"]
         H2["GET/POST /api/v1/search-profiles · GET /{id}<br/>List/Create/GetSearchProfileHandler<br/>→ SearchProfileReadStore + EF repository<br/>→ SearchProfileResponse | Problem"]
+        H4["POST/GET /api/v1/runs · GET /{id}<br/>POST /{id}/cancel · GET /{id}/postings<br/>Start/List/Get/CancelRun · ListRunPostings<br/>→ RunReadStore | Problem"]
     end
-    subgraph CODE["implemented, not wired"]
+    subgraph BG["background (RunCoordinator)"]
         H3["RunScrapeHandler<br/>+ ScrapeStores, settings, session,<br/>artifacts, delay, retry, clock, log<br/>→ Result<ScrapeRunSummary>"]
     end
     H2 --> ERR["ErrorMapper.ToProblem<br/>ErrorKind → status + code + traceId"]
-    H3 -.->|will use| ERR
+    H4 --> ERR
+    H4 -->|IRunLauncher.StartAsync| H3
 ```
 
 | Slice | Endpoint | Handler (ctor) | Ports → implementations | Status |
@@ -215,9 +234,10 @@ flowchart LR
 | Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `SearchProfileReadStore` (SQLite) | Live, tested |
 | Profile list | `GET /api/v1/search-profiles` | `ListSearchProfilesHandler(ISearchProfileStore)` | `SearchProfileReadStore` → `{ items, total }` by name | Live, tested |
 | Sources | `GET /api/v1/sources` | `ListSourcesHandler(SourceSettingsCatalog, ComplianceConsent, ISourceQuotaRepository, ISourceCircuitBreakerRepository, TimeProvider)` | Per source: tier, enabled, `CompliancePolicy` gate under the configured consent (interactive confirmation is per run, so always false here), policy caps, today's quota usage, circuit state; read-only | Live, tested; cockpit `#/sources` |
-| Sessions | `GET /api/v1/sessions`, `GET /api/v1/sessions/{id:guid}`, `POST /api/v1/sessions` | `ListSessionsHandler(ISessionStore)`, `GetSessionHandler(ISessionStore)`, `CreateSessionHandler(IBrowserProfileRepository, IUnitOfWork, TimeProvider)` | `SessionReadStore` (EF no-tracking, `CanLaunch` on the injected clock); create validates with `BrowserProfile.IsValidName` and exact engine/channel names (branded channels need Chromium); `201` + `Location`, `400` field `errors`, `409 SESSION_NAME_TAKEN`, `404 SESSION_NOT_FOUND`. Login/probe are not exposed: no `ISessionManager` implementation exists | Live, tested; cockpit `#/sessions` |
+| Sessions | `GET /api/v1/sessions`, `GET /api/v1/sessions/{id:guid}`, `POST /api/v1/sessions` | `ListSessionsHandler(ISessionStore)`, `GetSessionHandler(ISessionStore)`, `CreateSessionHandler(IBrowserProfileRepository, IUnitOfWork, TimeProvider)` | `SessionReadStore` (EF no-tracking, `CanLaunch` on the injected clock); create validates with `BrowserProfile.IsValidName` and exact engine/channel names (branded channels need Chromium); `201` + `Location`, `400` field `errors`, `409 SESSION_NAME_TAKEN`, `404 SESSION_NOT_FOUND`. Login/probe are not exposed as endpoints; a run verifies its session through `PlaywrightSessionManager` | Live, tested; cockpit `#/sessions` |
 | Profile create | `POST /api/v1/search-profiles` | `CreateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; `201` + `Location`, `400` field `errors`, `409 PROFILE_NAME_TAKEN`; caps default to and may only tighten the source policy (`SourceSettings.DefaultLimits`) | Live, tested; cockpit `#/profiles` |
-| Run scrape | — | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 EF repos via `ScrapeStores` + `IUnitOfWork`; session/artifacts/adapters unimplemented | Code complete, unregistered |
+| Runs | `POST /api/v1/runs` (`{ profileId, browserProfileId, enrich = true }`), `GET /api/v1/runs`, `GET /api/v1/runs/{id:guid}`, `POST /api/v1/runs/{id:guid}/cancel`, `GET /api/v1/runs/{id:guid}/postings` | `StartRunHandler(IRunLauncher, IRunStore, ComplianceConsent)`, `ListRunsHandler(IRunStore)`, `GetRunHandler(IRunStore)`, `CancelRunHandler(IRunLauncher, IScrapeRunRepository, IUnitOfWork, IRunStore, TimeProvider)`, `ListRunPostingsHandler(IRunStore)` | `RunReadStore` (EF no-tracking). Start → `202` + `Location` with the recorded run, or the gate's problem; `409 RUN_IN_PROGRESS` while another run executes; `503 RUN_NOT_STARTED` when the host stops before the run is recorded. List: newest 50 (`ListRunsHandler.Limit`). Cancel is idempotent: an executing run is signalled, a paused run that is not executing is cancelled directly, a terminal run is returned unchanged. Postings: the run's source postings whose `LastSeenAt` falls in `[StartedAt, FinishedAt ?? now]`, max 200 — valid because runs execute one at a time. `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
+| Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 EF repos via `ScrapeStores` + `IUnitOfWork`; `PlaywrightSessionManager`, `FileArtifactStore`, `NaukriJobSource`. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
 
 ---
 
@@ -246,16 +266,20 @@ PlaywrightDotNet/
 │   │   │   ├── Features/SearchProfiles/ (Get/List/Create handlers, store port, request/response DTOs)
 │   │   │   ├── Features/Sources/       (ListSourcesHandler, source status read model)
 │   │   │   ├── Features/Sessions/      (List/Get/Create session handlers, store port, DTOs)
+│   │   │   ├── Features/Runs/          (Start/List/Get/Cancel run, run postings, IRunStore, IRunLauncher, DTOs)
 │   │   │   ├── Features/Scraping/      (RunScrapeHandler, IJobSource, registry, settings)
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
-│   │   │   ├── Configuration/          (Storage/Run/Compliance/Logging/Sources options)
-│   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, migrations)
+│   │   │   ├── Configuration/          (Storage/Run/Compliance/Logging/Browser/Sources options)
+│   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, 3 read stores, migrations)
+│   │   │   ├── Browser/                (BrowserSessionPool, PlaywrightSessionManager, FileArtifactStore, PageText)
+│   │   │   ├── Sources/Naukri/         (NaukriJobSource, URL builder, search/detail parsers, challenge classifier)
 │   │   │   └── Runtime/                (TimeProviderDelay, SystemRandomSource)
 │   │   ├── JobScrape.Api/
-│   │   │   ├── Controllers/            (Health, SearchProfiles, Sources, Sessions)
+│   │   │   ├── Controllers/            (Health, SearchProfiles, Sources, Sessions, Runs)
 │   │   │   ├── Http/                   (ErrorMapper, CorrelationMiddleware, GlobalExceptionHandler)
-│   │   │   ├── Composition/            (OptionsRegistration, LoggingRegistration, DatabaseRegistration)
+│   │   │   ├── Composition/            (Options, Logging, Database, BrowserRegistration)
+│   │   │   ├── Runs/                   (RunCoordinator: background runs, one at a time)
 │   │   │   └── Program.cs              (composition root)
 │   │   ├── JobScrape.Domain.Tests/
 │   │   ├── JobScrape.Application.Tests/
@@ -278,16 +302,18 @@ PlaywrightDotNet/
 
 ### 7.1 Scrape run
 
-> **Code path, not yet reachable.** `RunScrapeHandler.HandleAsync` is fully
-> implemented but nothing registers it (`Program.cs`) and no controller
-> invokes it. The diagram below traces exactly what the code does, so the
-> wiring slice can land without surprises.
+> **Live.** `POST /api/v1/runs` → `StartRunHandler` → `IRunLauncher`
+> (`RunCoordinator`), which resolves `RunScrapeHandler` in a fresh DI scope
+> and calls `HandleAsync(request, started, ct)`. The `started` callback fires
+> once the gates pass and the run's first save lands; the coordinator then
+> returns the run id (the API answers `202`) while the scrape continues in
+> the background. The diagram traces exactly what the handler does.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant CALL as "Caller<br/>(future endpoint / CLI)"
-    participant H as "RunScrapeHandler<br/>HandleAsync(RunScrapeRequest)"
+    participant CALL as "RunCoordinator<br/>(background, own scope)"
+    participant H as "RunScrapeHandler<br/>HandleAsync(request, started, ct)"
     participant PR as ISearchProfileRepository
     participant SET as SourceSettingsCatalog
     participant REG as JobSourceRegistry
@@ -295,11 +321,11 @@ sequenceDiagram
     participant BR as IBrowserProfileRepository
     participant Q as ISourceQuotaRepository
     participant UOW as IUnitOfWork
-    participant SM as "ISessionManager<br/>(port: no implementation)"
-    participant SRC as "IJobSource<br/>(port: no adapters)"
+    participant SM as "ISessionManager<br/>(PlaywrightSessionManager)"
+    participant SRC as "IJobSource<br/>(NaukriJobSource)"
     participant POL as ChallengePolicy
 
-    CALL->>H: HandleAsync(RunScrapeRequest)
+    CALL->>H: HandleAsync(request, started, ct)
     H->>H: Validate (ids + consent)
     H->>PR: GetAsync(profileId)
     PR-->>H: SearchProfile / null
@@ -313,6 +339,7 @@ sequenceDiagram
     H->>H: require same source + CanLaunch
     H->>Q: FindAsync / StartDay + TryStartRun
     H->>H: ScrapeRun.Create + Start + SaveChanges
+    H-->>CALL: started(runId) - API returns 202
     H->>SM: EnsureSessionAsync(source, profileId)
     SM-->>H: ChallengeAssessment
     alt session wall
@@ -357,9 +384,20 @@ sequenceDiagram
 
 Gate failures return typed `Result` errors instead of throwing: `VALIDATION_FAILED`, `PROFILE_NOT_FOUND`, `PROFILE_DISABLED`, `SOURCE_UNAVAILABLE`, `SOURCE_DISABLED`, `COMPLIANCE_BLOCKED`, `SOURCE_COOLING_DOWN`, `BROWSER_PROFILE_NOT_FOUND`, `SESSION_UNAVAILABLE` / `SESSION_RESET_REQUIRED`, `QUOTA_EXCEEDED`. Cancellation records `Run.Cancelled` with partial results and rethrows; unexpected exceptions record `Run.Fail` before reaching the global handler.
 
+**`RunCoordinator`** (`JobScrape.Api/Runs/RunCoordinator.cs`, singleton `IRunLauncher` + `IHostedService`):
+
+- One run at a time: a second start gets `409 RUN_IN_PROGRESS` (with `activeRunId`) while a run executes.
+- Each run gets its own DI scope (its own unit of work); a gate refusal comes back as the start's problem, and a host stop before the run is recorded returns `503 RUN_NOT_STARTED`.
+- `POST /runs/{id}/cancel` signals the executing run's linked token (`TryCancel`); the handler records `Cancelled` with partial results.
+- Host start: runs left in an executing stage (`IScrapeRunRepository.ListExecutingAsync`: pending, starting a session, searching, enriching, persisting) are failed with `Interrupted: the API stopped while the run was executing.`
+- Host stop: the executing run is cancelled cooperatively and awaited within the shutdown timeout.
+- Always: the run's browser is released (`BrowserSessionPool.ReleaseAsync`) and the slot freed, even when closing the browser fails.
+
+**Live verification (2026-11-01):** headed Chromium (`Bundled` channel), profile "dot net developer" in Pune, caps 2 pages / 40 jobs / 3 details. The run completed in ~30 s: 2 pages (the second through native **Next**), 40 new postings, 3 details enriched, 0 walls, session `Healthy`, quota charged 2 pages / 3 details / 1 run.
+
 ### 7.2 Challenge handling
 
-`RunScrapeHandler.StopOnWallAsync` — the only place a wall turns into run state. Verified against `RunScrapeHandler.cs:709-762`, `BlameSession` (844), `ChallengePolicy.Decide`, and `ChallengeAction`:
+`RunScrapeHandler.StopOnWallAsync` — the only place a wall turns into run state. Verified against `RunScrapeHandler.cs:734-787`, `BlameSession` (879), `ChallengePolicy.Decide`, and `ChallengeAction`:
 
 ```mermaid
 sequenceDiagram
@@ -368,7 +406,7 @@ sequenceDiagram
     participant POL as ChallengePolicy.Decide
     participant Q as SourceQuota
     participant CIR as SourceCircuitBreaker
-    participant ART as "IArtifactStore<br/>(port: no implementation)"
+    participant ART as "IArtifactStore<br/>(FileArtifactStore)"
     participant BR as BrowserProfile
     participant R as ScrapeRun
 
@@ -395,10 +433,9 @@ Notes the code forces: `BlameSession` marks `MarkExpired` only for `LoginRequire
 
 ### 7.3 Session verification
 
-> **Port only — no implementation.** `ISessionManager` is declared in
-> `JobScrape.Application/Abstractions` and called by `RunScrapeHandler`
-> before pagination, but no class implements it and nothing registers it,
-> so no run can pass the session gate today. The contract, verbatim:
+> **Implemented by `PlaywrightSessionManager`** (`JobScrape.Infrastructure/Browser`,
+> scoped with the run's unit of work). `RunScrapeHandler` calls it before
+> pagination. The contract, verbatim:
 
 ```csharp
 Task<ChallengeAssessment> EnsureSessionAsync(
@@ -407,13 +444,19 @@ Task<ChallengeAssessment> EnsureSessionAsync(
     CancellationToken cancellationToken);
 ```
 
-When implemented: verify the profile's session (healthy → proceed; wall → `Run.Fail` without retry), never automate credentials — login stays manual.
+What it does:
+
+1. Opens the profile's persistent context through `BrowserSessionPool` (one Playwright persistent context per `BrowserProfile`, in `{ProfilesRoot}/{source}/{name}`; engine → Chromium/Firefox/WebKit, channel → `chrome`/`msedge`/bundled; real window size and the browser's own user agent — no viewport or UA override; headed by default, `JobScrape:Browser:Headless=false`).
+2. For Naukri: warm-up on the home page, a random 1.5–3 s pause, one scroll, then `NaukriChallengeClassifier` on URL, status, title, and body text.
+3. A clean home page marks the profile verified (`MarkVerified`); a navigation failure or timeout returns `TransientError`.
+
+The handler proceeds on `None`; anything else fails the run (`Session not ready: {kind}.`) without retry, and a wall also blames the session (`MarkChallenged` / `MarkExpired`). Credentials are never typed — login stays manual in the visible browser window.
 
 > Manual login is the only supported authentication flow. JobScrape never stores a site password or automates a login form.
 
 ### 7.4 Export
 
-Not implemented: there is no `JobQueryHandler`, no read model, and no exporter in the tree. Export will be specified when the runs vertical needs it; until then this section intentionally has no diagram.
+Not implemented: there is no `JobQueryHandler`, no job read model, and no exporter in the tree (a run's postings are readable through `GET /api/v1/runs/{id}/postings`). Export will be specified when it is needed; until then this section intentionally has no diagram.
 
 ---
 
@@ -440,7 +483,7 @@ public interface IJobSource
         CancellationToken cancellationToken);
 }
 
-public interface ISessionManager   // port only: no implementation, nothing registered
+public interface ISessionManager   // PlaywrightSessionManager (scoped)
 {
     Task<ChallengeAssessment> EnsureSessionAsync(
         SourceKey source,
@@ -463,26 +506,31 @@ public interface IUnitOfWork
 Other ports (all in `JobScrape.Application/Abstractions`, all EF-implemented except noted):
 
 - `ISearchProfileRepository` — `GetAsync`, `AddAsync`
-- `IScrapeRunRepository` — `GetAsync`, `AddAsync`
+- `IScrapeRunRepository` — `GetAsync`, `AddAsync`, `ListExecutingAsync` (runs in an executing stage; used on host start to fail interrupted runs)
 - `IBrowserProfileRepository` — `GetAsync`, `NameExistsAsync`, `AddAsync`
 - `ISessionStore` — `GetAsync`, `ListAsync` (implemented by `SessionReadStore`)
 - `ISourceQuotaRepository` — `FindAsync`, `AddAsync`
 - `ISourceCircuitBreakerRepository` — `FindAsync`, `AddAsync`
-- `IArtifactStore` — `CaptureAsync` (no implementation yet)
+- `IArtifactStore` — `CaptureAsync` (implemented by `FileArtifactStore`, see §12.5)
 - `IDelay` — `WaitAsync` (implemented by `TimeProviderDelay`)
 - `ISearchProfileStore` — `GetAsync`, `ListAsync` (implemented by `SearchProfileReadStore`: EF no-tracking reads mapped to `SearchProfileResponse`)
 - `ISearchProfileRepository` also has `NameExistsAsync` (checks staged and saved profiles; the unique index stays the final guard)
+
+Run ports in `JobScrape.Application/Features/Runs`:
+
+- `IRunStore` — `GetAsync`, `ListAsync(limit)`, `ListPostingsAsync(runId, limit)` (implemented by `RunReadStore`: EF no-tracking reads mapped to `RunResponse` / `RunPostingResponse`)
+- `IRunLauncher` — `StartAsync(RunScrapeRequest)` → run id once recorded, `TryCancel(runId)` (implemented by `RunCoordinator` in the Api host, because a run outlives its request)
 
 Deliberately absent (no such types exist): `IExportWriter`, `IJobReadModel`, `ISkillDemandReadModel`, `IDiskSpace`, `IClock` (use BCL `TimeProvider`), `Specification<T>`, `BootstrapAsync`/`ProbeAsync` session methods, `SessionStatus`, `UpdateAsync` on `IJobPostingRepository`.
 
 ### 8.1.1 Handler collaborators
 
-`RunScrapeHandler` is the application-level orchestrator (implemented, not yet registered — see §7.1). It coordinates, but does not replace, the domain policies and infrastructure ports:
+`RunScrapeHandler` is the application-level orchestrator (registered scoped, executed by `RunCoordinator` — see §7.1). It coordinates, but does not replace, the domain policies and infrastructure ports:
 
 - `SearchProfile` and `ScrapeRun` (domain state) via `ScrapeStores` (repositories + `IUnitOfWork` grouped so the 10-parameter constructor stays readable)
-- `SourceSettingsCatalog` and `JobSourceRegistry` (settings/adapters by source; empty today)
-- `ISessionManager` (port only) and `IJobSource` (no adapters yet)
-- `IArtifactStore.CaptureAsync` (port only)
+- `SourceSettingsCatalog` and `JobSourceRegistry` (settings/adapters by source; holds `NaukriJobSource` today)
+- `ISessionManager` (`PlaywrightSessionManager`) and `IJobSource` (`NaukriJobSource`)
+- `IArtifactStore.CaptureAsync` (`FileArtifactStore`)
 - `CompliancePolicy`, `ChallengePolicy`, `PolitenessPolicy`, `RetryPolicy`, `SourceCircuitBreaker`, `SourceQuota` (domain)
 
 It owns sequencing, cancellation, and outcome mapping. Selectors, browser code, and persistence details stay in Infrastructure; cancellation records partial results and rethrows, unexpected failures are recorded before they reach the global handler.
@@ -526,7 +574,7 @@ Rules:
 
 ### 8.3 Adapter contract tests
 
-No `IJobSource` implementation exists yet, so there is nothing to run. When the first adapter lands, it must pass a shared suite:
+No shared `JobSourceContractTests` suite exists yet. `NaukriJobSource`'s pure parts are fixture-tested in `JobScrape.Infrastructure.Tests/Sources/Naukri` (URL builder, search and detail parsers, challenge classifier); the browser-driving classes (`NaukriJobSource`, `BrowserSessionPool`, `PlaywrightSessionManager`, `FileArtifactStore`) run against real headless Chromium in `JobScrape.Infrastructure.Tests/Browser` (trait `Category=Browser`), with Playwright routes serving the fixtures for every `www.naukri.com` request (no network), and were also verified live (§7.1); `RunsEndpointTests` drive `RunCoordinator` end to end with a fake `IJobSource`. Every adapter must satisfy:
 
 - `Key` is stable and lowercase (`SourceKey` singletons: `naukri`, `indeed`, `linkedin`).
 - `Capabilities` declares what the source supports (`SupportsDetails` today).
@@ -545,16 +593,15 @@ Not implemented: no `Specification<T>` type, no `Queries/` folder, and no read-m
 
 ## 9. Source adapter design
 
-> **Port only — zero implementations.** The contract below is verbatim from
-> `JobScrape.Application/Features/Scraping/IJobSource.cs`. No class implements
-> it, nothing registers one, and `JobSourceRegistry` stays empty, so every
-> box an adapter would be composed of (URL builder, browser session,
-> challenge detector, HTML parser, normalizer) exists only as future work.
-> Do not draw adapter internals until the first adapter lands.
+> **One adapter: `NaukriJobSource`.** The contract below is verbatim from
+> `JobScrape.Application/Features/Scraping/IJobSource.cs`. `NaukriJobSource`
+> (`JobScrape.Infrastructure/Sources/Naukri`) implements it and
+> `BrowserRegistration` registers it as a singleton `IJobSource`, so
+> `JobSourceRegistry` holds Naukri only. Indeed and LinkedIn have no adapter.
 
 ```mermaid
 flowchart LR
-    REG["JobSourceRegistry<br/>Find(source) - empty today"] --> PORT["IJobSource port<br/>Key · Capabilities<br/>SearchPageAsync · GetDetailAsync"]
+    REG["JobSourceRegistry<br/>Find(source) - naukri only"] --> PORT["IJobSource port<br/>Key · Capabilities<br/>SearchPageAsync · GetDetailAsync"]
     PORT --> CTX["SourceRunContext<br/>run + source + profile + criteria"]
     PORT --> REQ["SearchPageRequest<br/>pageNumber + cursor?"]
     PORT --> RESP["SearchPageResult<br/>jobs + nextCursor? + fingerprint? + challenge"]
@@ -563,16 +610,37 @@ flowchart LR
     RESP --> DOM["JobPosting / JobSnapshot<br/>upsert path"]
 ```
 
-Adapter rules (binding on the first implementation, from the port's own doc comments):
+Adapter rules (from the port's own doc comments; `NaukriJobSource` follows them):
 
 - Classify walls in `Challenge` (`ChallengeAssessment.Kind`); never throw for a wall.
 - Never retry: retries are `RunScrapeHandler.FetchWithRetryAsync`'s decision (transient errors only, with backoff and `Retry-After`).
 - Missing detail fields stay null, never faked; malformed cards are dropped by the handler via `DomainException`, never stored.
 - `SourceKey` singletons are the only valid keys (`naukri`, `indeed`, `linkedin`); `TryParse` rejects everything else.
 
-> The composition below (URL builder, page fetcher, challenge detector, HTML parsing, normalizer) is the design for the first adapter — none of it exists. Pagination and extraction tactics likewise belong to adapter implementations, not to this doc, until one lands.
+**`NaukriJobSource` internals** (site rules and selectors: [Site Playbooks §3](08-site-playbooks.md#3-naukri-playbook)):
 
-### 9.1 Pagination strategies (design target — no adapter implements these yet)
+```mermaid
+flowchart TB
+    SP["SearchPageAsync"] --> FIRST{"cursor?"}
+    FIRST -->|"null (page 1)"| GOTO["Goto NaukriUrlBuilder.SearchUrl"]
+    FIRST -->|"next"| NEXT["Click native Next<br/>poll first-card + range fingerprint<br/>40 x 500 ms = 20 s"]
+    GOTO --> WAIT["Wait for cards (15 s)<br/>scroll 4 x 900 px"]
+    NEXT --> WAIT
+    WAIT --> HIDE["Mark computed-invisible cards<br/>data-jobscrape-hidden"]
+    HIDE --> CLS["NaukriChallengeClassifier"]
+    CLS -->|wall| BLK["SearchPageResult.Blocked"]
+    CLS -->|clear| PARSE["NaukriSearchParser (AngleSharp)<br/>jobs · range · first id · has Next"]
+    PARSE --> RES["SearchPageResult<br/>cursor next or null · fingerprint"]
+    GD["GetDetailAsync"] --> DGOTO["Goto job URL<br/>wait for JSON-LD / JD body"]
+    DGOTO --> DCLS["NaukriChallengeClassifier"]
+    DCLS -->|clear| DPARSE["NaukriDetailParser<br/>JSON-LD first, DOM fallback"]
+```
+
+- The page comes from `BrowserSessionPool.Find(browserProfileId)`, opened earlier by `PlaywrightSessionManager`.
+- Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported and the handler's repeated-page guard stops.
+- `PlaywrightException` / `TimeoutException` (unless cancelled) → `TransientError`, which only the handler may retry.
+
+### 9.1 Pagination strategies (Naukri row implemented; the rest is design target)
 
 | Strategy | Used by | Implementation |
 |---|---|---|
@@ -582,14 +650,14 @@ Adapter rules (binding on the first implementation, from the port's own doc comm
 
 Every page result includes a **fingerprint** (first card ID/href + result range text) so a loop cannot silently re-read the same page.
 
-### 9.2 Extraction priority (design target — no parser exists yet)
+### 9.2 Extraction priority (design target; Naukri: JSON-LD first for details, class selectors for cards)
 
 1. **JSON-LD** (`script[type="application/ld+json"]`, `@type: JobPosting`) — most stable, least layout-dependent.
 2. **Semantic DOM** (`article`, `h2 a`, `a[href*="/jobs/view/"]`, `data-testid`) — readable and resilient.
 3. **Stable class substrings** (`[class*="job-card"]`) — fallback only, logged.
 4. **Full-page text/regex** — last resort for fields like salary/posted date; never for identity.
 
-Every selector hit is logged (`selectorHit`), so drift is visible before it breaks the run.
+Target: every selector hit is logged (`selectorHit`), so drift is visible before it breaks the run. Not implemented: `NaukriJobSource` logs only dropped-card counts, and cards parsed through fallback selectors carry `LowConfidence`.
 
 ---
 
@@ -604,7 +672,7 @@ SQLite is the source of truth. CSV/Excel/JSON files are disposable snapshots.
 - Domain repositories return aggregates, not `IQueryable`; each root has a purpose-built contract (`ISearchProfileRepository`, `IScrapeRunRepository`, `IJobPostingRepository`, `IBrowserProfileRepository`, `ISourceQuotaRepository`, `ISourceCircuitBreakerRepository`).
 - No generic `IRepository<T>`.
 - No lazy loading; explicit includes or projections.
-- No tracking for read models; `AsNoTracking()` (applies when read models land — none exist yet).
+- No tracking for read models; `AsNoTracking()` (`SearchProfileReadStore`, `SessionReadStore`, `RunReadStore`).
 
 ### 10.3 Unit of work
 
@@ -735,6 +803,7 @@ Options are bound and validated once at the composition root, then consumed as i
 - `StorageOptions` (`JobScrape:Storage`)
 - `ComplianceOptions` (`JobScrape:Compliance`)
 - `RunOptions` (`JobScrape:Run`)
+- `BrowserOptions` (`JobScrape:Browser`: `Headless=false` — Naukri blocks headless first contact — and `NavigationTimeoutSeconds=45`, range 5–120; registered by `AddJobScrapeBrowser`)
 - `LoggingOptions` (`JobScrape:Logging`)
 - `SourcesOptions` (`JobScrape`, dictionary keyed by source)
 - `ComplianceOptions`
@@ -750,7 +819,7 @@ Validate on startup with DataAnnotations plus custom `IValidateOptions<T>` valid
 
 ### 11.3 Secrets
 
-- **No credentials are stored by JobScrape.** There is no login automation; session verification is a future port implementation.
+- **No credentials are stored by JobScrape.** There is no login automation; `PlaywrightSessionManager` verifies a session by loading the source's home page and never types credentials.
 - Browser profiles contain cookies and are treated as secrets (never committed/shared).
 - Future API keys use user secrets in development and environment variables in production.
 - Logs redact cookies, authorization headers, and form values.
@@ -808,7 +877,7 @@ Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem
 - Serilog structured logs: `RunId`, `Source`, `Page`, `JobId`, `ChallengeKind`, `ElapsedMs`, `TraceId`/`SpanId`, `CorrelationId` (via `CorrelationMiddleware` + span/process/thread/assembly enrichers).
 - Compact JSON console sink plus an async rolling compact-JSON file sink (`artifacts/logs/jobscrape-api-*.jsonl`), 200-file cap or `RetentionDays` (default 90), 10k-event buffer that blocks rather than drops.
 - Both sinks use named message templates, never string interpolation.
-- Artifacts per wall: `IArtifactStore.CaptureAsync` (screenshot, capped HTML, trace) — port declared, no implementation yet.
+- Artifacts per wall: `IArtifactStore.CaptureAsync` → `FileArtifactStore` writes `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` with `assessment.json` (kind, confidence, evidence, URL), `screenshot.png` (full page), and `page.html` (capped at 2,000,000 chars). Best effort: a failed screenshot/HTML capture is logged, not thrown. No Playwright trace is recorded.
 - Redact cookies/auth headers/form values; the global handler returns Problem Details with a trace ID, never stack traces.
 - Full logging/error/resource rules: [Runtime Hardening §2–3](15-runtime-hardening.md#2-structured-logging-with-serilog).
 
@@ -819,6 +888,7 @@ Expected failures return `Result<T>`; the API edge maps them to RFC 9457 Problem
 - `FirstSeenAt` never changes; `LastSeenAt` updates on every successful sighting.
 - Re-running the same page updates no duplicates (`seenJobs` per run + unique index).
 - Detail enrichment updates the same posting; it never creates a second row.
+- `JobPosting.Merge` keeps a stated work mode when the new sighting's location says `Unknown` (Naukri detail headers list cities only), so a detail page never erases a card's `Hybrid`/`Remote`.
 
 ### 12.7 Problem Details mapping
 
@@ -843,27 +913,31 @@ The API returns `application/problem+json` for every error. One mapper (`ErrorMa
 flowchart LR
     subgraph Desk["Developer machine"]
         BFF["Bun BFF :3000<br/>healthz · /api/* proxy · SPA"]
-        API["JobScrape.Api :5207<br/>2 controllers"]
+        API["JobScrape.Api :5207<br/>5 controllers · RunCoordinator"]
         DB[("SQLite<br/>artifacts/data/jobscrape.db")]
-        UI["React cockpit (browser tab)<br/>Overview · Health · Profiles · Topology"]
+        UI["React cockpit (browser tab)<br/>Overview · Health · Profiles · Sources<br/>Sessions · Runs · Topology"]
+        BRW["Visible browser window<br/>Playwright persistent profile"]
     end
     UI --> BFF
     BFF --> API
     API --> DB
+    API --> BRW
+    BRW --> NK["naukri.com"]
 ```
 
 - `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj` (Development serves the OpenAPI document at `/openapi/v1.json`; no Swagger/Scalar UI is registered).
 - `bun run dev` in `src/frontend/` (BFF `:3000` + Tailwind watcher); `DOTNET_API_URL` points the proxy at the API.
-- No scheduler, no CLI, no browser automation, no exports: the deployable surface is the API plus the BFF.
+- Install a Playwright browser once after a build (see [Operations Runbook](09-operations-runbook.md)); a run opens a visible browser window on this machine.
+- No scheduler, no CLI, no exports: the deployable surface is the API plus the BFF.
 
 ### 13.2 Linux server / CI
 
-No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test` per test project (native MTP runner), `dotnet-coverage` merge for the 100% gate, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (there is no network-dependent test today).
+No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test` per test project (native MTP runner), `dotnet-coverage` merge for the 100% gate, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (no automated test touches the network; the Naukri run was verified by hand). The `Category=Browser` tests need Playwright's Chromium installed on the runner (see the runbook's install command).
 
 ### 13.3 API and cockpit (present, v1)
 
-- `JobScrape.Api` is a controller-based ASP.NET Core API (not minimal-API): `HealthController` and `SearchProfilesController` call use-case handlers directly and map `Result` through `ErrorMapper`.
-- The cockpit is a React SPA served by the Bun BFF on loopback (`src/frontend/`); the browser talks to the BFF, the BFF proxies `/api/*` to the API. No read models or run commands are exposed yet.
+- `JobScrape.Api` is a controller-based ASP.NET Core API (not minimal-API): `HealthController`, `SearchProfilesController`, `SourcesController`, `SessionsController`, and `RunsController` call use-case handlers directly and map `Result` through `ErrorMapper`.
+- The cockpit is a React SPA served by the Bun BFF on loopback (`src/frontend/`); the browser talks to the BFF, the BFF proxies `/api/*` to the API. Runs are started, followed (polling), and cancelled from `#/runs`; there is no job explorer or export yet.
 
 The v2 control plane is specified in [Web Cockpit](12-web-cockpit.md) and [ADR-0010](10-adr/0010-react-bun-cockpit.md). It is a React SPA served by a Bun BFF on loopback; the browser never calls a source site, and Playwright stays in Infrastructure. The API is the cockpit’s only backend.
 
@@ -873,7 +947,7 @@ The v2 control plane is specified in [Web Cockpit](12-web-cockpit.md) and [ADR-0
 
 | Asset | Risk | Control |
 |---|---|---|
-| Browser profile/cookies | Account/session takeover | Treat as secrets; never commit/share; directory permissions (`0700`) apply when profiles land on disk (no browser code exists yet) |
+| Browser profile/cookies | Account/session takeover | Treat as secrets; never commit/share; profiles live in `{ProfilesRoot}/{source}/{name}`; the pool creates them with default permissions, so restrict them to the owner (`0700`) yourself |
 | SQLite DB | Personal job-search data | User-scoped path; disk encryption; backup access controls. |
 | Artifacts/HTML | Page content may contain personal data | Local only; retention; redact logs; no upload. |
 | Config/secrets | API keys (future) | User secrets/env vars; no secrets in git. |
@@ -906,7 +980,7 @@ The reusable automation primitives that actually exist:
 - `IJobSource`-style adapter contracts (a new workflow gets its own port, not a generic “scrape anything” interface).
 - `Result` / `ErrorInfo` / `ErrorKind` (typed failures) and `ErrorMapper` (RFC 9457 rendering with `code` + `traceId`).
 
-Not yet built (referenced here as direction, not inventory): browser session factory, challenge detector, artifact capture, quota policy.
+Built but Naukri-shaped: `BrowserSessionPool` (persistent context per browser profile), `NaukriChallengeClassifier`, and `FileArtifactStore` (wall evidence). A generic, source-neutral challenge detector does not exist.
 
 The **Sourcing** domain stays job-specific. A future automation case (e.g., form filling, price monitoring) should get its own bounded context/use case and adapters, reusing the browser/session/pacing infrastructure rather than stretching `JobPosting`.
 

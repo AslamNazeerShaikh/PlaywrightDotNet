@@ -103,7 +103,7 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 | Default | Enabled |
 | Login required? | No for public search/detail |
 | Primary anti-bot | Akamai (observed: `errors.edgesuite.net`) |
-| Headless | Blocked in the old project's measurements; use headed first contact |
+| Headless | Blocked in the old project's measurements; use headed first contact (`JobScrape:Browser:Headless=false` by default) |
 | Pagination | SPA; click native **Next** |
 | Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day |
 
@@ -116,6 +116,8 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 5. Click native **Next**; wait for the result range/first-card fingerprint to change.
 6. Repeat until cap/no next.
 7. Optional detail enrichment with polite delays.
+
+> **As implemented** (`JobScrape.Infrastructure/Sources/Naukri`, verified live 2026-11-01): step 1 is `PlaywrightSessionManager` (home page, random 1.5–3 s pause, one scroll, classify; a clean page marks the session verified). `NaukriJobSource` then waits up to 15 s for `div.srp-jobtuple-wrapper[data-job-id]`, scrolls 4 × 900 px, marks computed-invisible cards (`display`/`visibility`/opacity < 0.15/≤ 1 px/far off-screen) with `data-jobscrape-hidden`, classifies, and parses the HTML offline with AngleSharp (`NaukriSearchParser`). Details go through `NaukriDetailParser` (JSON-LD `JobPosting` first, DOM fallback). Playwright errors and timeouts become `TransientError`; only the run handler retries.
 
 ```mermaid
 sequenceDiagram
@@ -133,10 +135,10 @@ sequenceDiagram
 ### 3.3 URL builders
 
 ```text
-Search (query form, page 1; later pages via native Next):
+Search (query form — not used by the implementation):
 https://www.naukri.com/jobs?k={keywords}&l={location}&experience={years}&jobPostDate={days}&page=1
 
-Search (slug form, page 1):
+Search (slug form, page 1 — NaukriUrlBuilder.SearchUrl; jobs-in-{city} / {kw}-jobs / jobs when a part is empty):
 https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&experience={years}&jobAge={days}
 
 Detail:
@@ -169,10 +171,12 @@ https://www.naukri.com/job-listings-{slug}-{id}
 
 **Do not** rely on one class name; selectors are served variants. Log which fallback matched.
 
+> **Verified live markup (2026-11-01, selector version 1; see the fixture README in `JobScrape.Infrastructure.Tests/Sources/Naukri/Fixtures`):** card `div.srp-jobtuple-wrapper[data-job-id]`; title/link `a.title`; company `a.comp-name`; experience `span.expwdth`; salary `.sal-wrap span[title]`; location `span.locWdth`; snippet `span.job-desc`; skills `ul.tags-gt li.tag-li`; posted `span.job-post-day`; result range `span[class*="count-string"]`; Next is an `a` with text `Next` (`aria-disabled="true"` on the last page). Promoted widgets (`div.srp-job-promotion`, `#urgent-hiring-widget`, `acp-job-promotion`) repeat listed jobs and are not parsed. Detail: JSON-LD first, then `[class*="jd-header-title"]`, `[class*="jd-header-comp-name"] a`, `[class*="jhc__exp__"] span`, `[class*="jhc__salary"] span`, `[class*="jhc__loc"]`, `[class*="jhc__stat"]` (Posted), `[class*="JDC__dang-inner-html"]`, `[class*="key-skill"] a`. Cards found only through the fallback `[aria-label='Job search results'] [data-job-id]` are flagged `LowConfidence`. Selector-hit logging is not implemented; dropped-card counts are logged.
+
 ### 3.5 Pagination invariants
 
-- Capture a page fingerprint before clicking Next: first card href + visible range text (e.g., `21–40 of 442`).
-- After clicking, poll until the fingerprint changes; timeout ~20s.
+- Capture a page fingerprint before clicking Next: first card href + visible range text (e.g., `21–40 of 442`). *(Implemented: first card `data-job-id` + `span[class*="count-string"]` text.)*
+- After clicking, poll until the fingerprint changes; timeout ~20s. *(Implemented: 40 polls × 500 ms.)*
 - If the fingerprint does not change, stop (do not loop).
 - If Next is disabled/absent, stop.
 - Never navigate directly to a `-N` URL for pages 2+.
@@ -223,7 +227,7 @@ Response: stop, screenshot/HTML/trace, cooldown 45–60 min, manual solve, circu
 - `search-challenge.html` — Akamai-style block page.
 - `detail-normal.html` — description/skills/apply.
 - `detail-minimal.html` — missing fields.
-- `pagination-range.html` — range text + first-card fingerprint.
+- `pagination-range.html` — range text + first-card fingerprint. *(Not created; `search-last-page.html` — range `121 - 131 of 131`, Next disabled — covers the last page instead, and the normal/last-page range texts cover the fingerprint.)*
 
 Fixture README must include capture date, URL shape, and selector version.
 
@@ -234,7 +238,7 @@ Fixture README must include capture date, URL shape, and selector version.
 - [ ] Extracts key skills without visiting detail pages.
 - [ ] Pagination clicks Next and detects the range/first-card change.
 - [ ] Direct `-2` navigation is never used.
-- [ ] Challenge fixture yields `ChallengeKind.SoftChallenge` and zero jobs.
+- [ ] Challenge fixture yields `ChallengeKind.AccessDenied` (an Akamai "Access Denied" block page, not a soft challenge) and zero jobs.
 - [ ] Detail parser handles missing salary/company without throwing.
 - [ ] Canonical URLs strip tracking params and keep the numeric ID.
 - [ ] Live canary (1 page, headed) either yields cards or a documented wall.

@@ -116,9 +116,28 @@ function SourceCard({ source, code }: { source: SourceStatus; code: string }) {
 }
 
 /** One daily cap as a labeled bar; a zero cap means the source is blocked for the day. */
-export function Meter({ label, used, cap }: { label: string; used: number; cap: number }) {
+export function Meter({
+  label,
+  used,
+  cap,
+  progress = false,
+}: {
+  label: string;
+  used: number;
+  cap: number;
+  /** Progress toward a goal (a run's caps): reaching the cap is done, not a warning. */
+  progress?: boolean;
+}) {
   const ratio = cap <= 0 ? 1 : Math.min(used / cap, 1);
-  const level = ratio >= 1 ? "full" : ratio >= 0.8 ? "near" : "ok";
+  const level = progress
+    ? ratio >= 1
+      ? "done"
+      : "ok"
+    : ratio >= 1
+      ? "full"
+      : ratio >= 0.8
+        ? "near"
+        : "ok";
   return (
     <div
       className="meter"

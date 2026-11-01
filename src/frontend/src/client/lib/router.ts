@@ -4,7 +4,8 @@
  * configuration. Parsing is pure and unit-tested.
  */
 
-export type DeckRoute = "overview" | "health" | "profiles" | "sources" | "sessions" | "topology";
+export type DeckRoute =
+  "overview" | "health" | "profiles" | "sources" | "sessions" | "runs" | "topology";
 
 export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string }> = [
   { id: "overview", code: "01", label: "Overview" },
@@ -12,7 +13,8 @@ export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string 
   { id: "profiles", code: "03", label: "Search Profiles" },
   { id: "sources", code: "04", label: "Sources" },
   { id: "sessions", code: "05", label: "Sessions" },
-  { id: "topology", code: "06", label: "Topology" },
+  { id: "runs", code: "06", label: "Runs" },
+  { id: "topology", code: "07", label: "Topology" },
 ];
 
 /** Parses a location hash into a route; unknown or empty hashes fall home. */

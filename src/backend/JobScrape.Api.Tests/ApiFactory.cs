@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JobScrape.Api.Tests
 {
@@ -22,11 +24,26 @@ namespace JobScrape.Api.Tests
 
         public bool DeleteLogsOnDispose { get; init; } = true;
 
+        /// <summary>
+        /// Replaces services after the app registered its own (fakes for the
+        /// browser-facing ports, for example).
+        /// </summary>
+        public Action<IServiceCollection>? TestServices { get; init; }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("JobScrape:Logging:Directory", LogDirectory);
             builder.UseSetting("JobScrape:Storage:DatabasePath", DatabasePath);
+            builder.UseSetting("JobScrape:Storage:ArtifactsRoot", Path.Combine(_root, "data"));
+            builder.UseSetting(
+                "JobScrape:Storage:ProfilesRoot",
+                Path.Combine(_root, "data", "profiles")
+            );
+            if (TestServices is not null)
+            {
+                builder.ConfigureTestServices(TestServices);
+            }
         }
 
         public override async ValueTask DisposeAsync()

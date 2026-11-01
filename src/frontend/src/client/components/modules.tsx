@@ -73,15 +73,31 @@ export function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
+/** CamelCase enum names as stable-code tags: "CoolingDown" → "COOLING_DOWN". */
+export function constantCase(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+}
+
 /** Maps a stable error code to its tone for tags and log rows. */
 export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
-  if (code === "OK" || code === "HEALTHY" || code === "CREATED") {
+  if (
+    code === "OK" ||
+    code === "HEALTHY" ||
+    code === "CREATED" ||
+    code === "RUN_STARTED" ||
+    code === "COMPLETED"
+  ) {
     return "ok";
   }
   if (
     code === "VALIDATION_FAILED" ||
     code === "PROFILE_NAME_TAKEN" ||
     code === "SESSION_NAME_TAKEN" ||
+    code === "RUN_IN_PROGRESS" ||
+    code === "QUOTA_EXCEEDED" ||
+    code === "SOURCE_COOLING_DOWN" ||
+    code === "SESSION_COOLING_DOWN" ||
+    code === "CANCELLED" ||
     code === "DOTNET_UNREACHABLE" ||
     code === "BFF_UNREACHABLE"
   ) {
@@ -89,6 +105,8 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
   }
   if (
     code === "PROFILE_NOT_FOUND" ||
+    code === "RUN_NOT_FOUND" ||
+    code === "FAILED" ||
     code === "UNKNOWN" ||
     code === "BAD_RESPONSE" ||
     code === "BFF_NOT_FOUND"

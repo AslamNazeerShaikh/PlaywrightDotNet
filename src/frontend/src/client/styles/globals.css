@@ -1177,6 +1177,23 @@ abbr.abbr {
     padding-left: 12px;
     padding-right: 12px;
   }
+  /* Seven stops do not fit as words at phone width: the rail shows codes,
+     the compass names the page, and link names keep the labels. */
+  .ruler-code,
+  .ruler-pos {
+    display: none;
+  }
+  .ruler-stop-code {
+    margin-right: 0;
+  }
+  .ruler-stop-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

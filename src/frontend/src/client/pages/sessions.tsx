@@ -1,4 +1,4 @@
-import { CodeTag, codeTone, Field, Module } from "../components/modules.tsx";
+import { CodeTag, codeTone, constantCase, Field, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, CreateSessionInput, SessionPayload } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
@@ -228,7 +228,7 @@ function StateRow({ state, text }: { state: SessionPayload["state"]; text: strin
 
 /** COOLING_DOWN-style labels so states read like the deck's other codes. */
 export function stateLabel(state: SessionPayload["state"]): string {
-  return state.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+  return constantCase(state);
 }
 
 export function stateTone(state: SessionPayload["state"]): "ok" | "warn" | "bad" | undefined {

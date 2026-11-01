@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
@@ -27,6 +27,7 @@ import {
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
+import { RunsPage } from "./pages/runs.tsx";
 import { SessionsPage } from "./pages/sessions.tsx";
 import { SourcesPage } from "./pages/sources.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
@@ -76,6 +77,8 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   // refire every [client] effect below and spiral into a fetch loop.
   const fallbackClient = useMemo(createApiClient, []);
   const activeClient = client ?? fallbackClient;
+  // Stable sink for pages that log to the killfeed from their own effects.
+  const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
 
   // Pages sit evenly around the compass rose in tab order.
   const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
@@ -439,6 +442,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             onRefresh={() => void loadSessions()}
           />
         )}
+        {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
         {route === "topology" && <TopologyPage upstream={upstream} />}
       </main>
 

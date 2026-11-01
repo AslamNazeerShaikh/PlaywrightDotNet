@@ -35,7 +35,7 @@ export function RulerTabs({
               onClick={() => onSelect?.(r.id)}
             >
               <span className="ruler-stop-code">{r.code}</span>
-              {r.label.toUpperCase()}
+              <span className="ruler-stop-label">{r.label.toUpperCase()}</span>
             </a>
           ))}
         </div>

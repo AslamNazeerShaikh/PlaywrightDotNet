@@ -2,7 +2,7 @@
 
 > **Purpose:** the exact project layout, package versions, SDK pin, configuration shape, commands, CI, and conventions for Phase 0.
 >
-> **Verified:** 2026-10-29 · .NET SDK `10.0.403` · xUnit `4.0.2` (no Playwright in the tree)
+> **Verified:** 2026-10-29 · .NET SDK `10.0.403` · xUnit `4.0.2` · Playwright/AngleSharp rows re-verified 2026-11-02 (`Microsoft.Playwright 1.64.1`, `AngleSharp 1.8.6`)
 
 ---
 
@@ -27,8 +27,8 @@
 > │   │   ├── NuGet.config
 > │   │   ├── JobScrape.Domain/          (aggregates, value objects, policies, events; BCL only)
 > │   │   ├── JobScrape.Application/     (use cases, ports, Result; refs Domain)
-> │   │   ├── JobScrape.Infrastructure/  (EF Core SQLite, options, runtime; refs Application, Domain)
-> │   │   ├── JobScrape.Api/             (explicit Program.Main, 4 controllers)
+> │   │   ├── JobScrape.Infrastructure/  (EF Core SQLite, options, runtime, Playwright browser, Naukri adapter; refs Application, Domain)
+> │   │   ├── JobScrape.Api/             (explicit Program.Main, 5 controllers, RunCoordinator)
 > │   │   ├── JobScrape.Domain.Tests/
 > │   │   ├── JobScrape.Application.Tests/
 > │   │   ├── JobScrape.Api.Tests/       (WebApplicationFactory integration)
@@ -86,13 +86,13 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | Project | Responsibility | References |
 |---|---|---|
 | `JobScrape.Domain` | Aggregates (`SearchProfile`, `ScrapeRun`, `JobPosting`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`), value objects, policies, domain events. Pure C#, zero packages. | BCL only |
-| `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `ListSources`, `List/Get/CreateSession`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
-| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `SearchProfileReadStore`. | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations` |
-| `JobScrape.Api` | Composition root (`Program.Main`): 4 controllers, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
+| `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `ListSources`, `List/Get/CreateSession`, `Start/List/Get/CancelRun`, `ListRunPostings`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `ISessionStore`, `IRunStore`, `IRunLauncher`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
+| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), read stores (`SearchProfileReadStore`, `SessionReadStore`, `RunReadStore`), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `Browser/` (`BrowserSessionPool`, `PlaywrightSessionManager`, `FileArtifactStore`), `Sources/Naukri/` (`NaukriJobSource`, URL builder, parsers, challenge classifier). | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, `AngleSharp` |
+| `JobScrape.Api` | Composition root (`Program.Main`): 5 controllers (Health, SearchProfiles, Sources, Sessions, Runs), `RunCoordinator` (background runs), `BrowserRegistration`, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
 | `JobScrape.Domain.Tests` | Pure unit tests. | Domain, xUnit |
 | `JobScrape.Application.Tests` | Use-case tests with fakes + `FakeTimeProvider`. | Application, Domain, xUnit |
 | `JobScrape.Api.Tests` | `WebApplicationFactory` integration (endpoints, store). | Api, xUnit, `Serilog.Sinks.InMemory` |
-| `JobScrape.Infrastructure.Tests` | SQLite integration, options validation. | Infrastructure, xUnit |
+| `JobScrape.Infrastructure.Tests` | SQLite integration, options validation, Naukri fixture tests (URL builder, parsers, challenge classifier). | Infrastructure, xUnit |
 | `JobScrape.Architecture.Tests` | Layer/dependency rules (NetArchTest). | Domain, Application, Infrastructure, Api |
 
 **Dependency graph** (every edge is a `ProjectReference` in the corresponding `.csproj`)
@@ -133,9 +133,9 @@ No production project may reference a test project. Domain references nothing. A
 > **Installed today** — every row below is a `PackageReference` in at least
 > one `.csproj`, versioned in `Directory.Packages.props` (central package
 > management + transitive pinning on). Anything else in the pre-rename
-> design matrix (Playwright, `System.CommandLine`, Scalar, NSubstitute,
-> AngleSharp, ClosedXML, …) is approved for later slices but has **no
-> reference in the tree yet** and must not appear in diagrams as installed.
+> design matrix (`System.CommandLine`, Scalar, NSubstitute, ClosedXML, …)
+> is approved for later slices but has **no reference in the tree yet** and
+> must not appear in diagrams as installed.
 
 | Package | Version | Project(s) | Why |
 |---|---|---|---|
@@ -143,6 +143,8 @@ No production project may reference a test project. Domain references nothing. A
 | `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | Infrastructure | Options binding + DataAnnotations validation. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
+| `Microsoft.Playwright` | `1.64.1` | Infrastructure | Headed browser automation: persistent contexts per browser profile, Naukri navigation. |
+| `AngleSharp` | `1.8.6` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
 | `Microsoft.AspNetCore.OpenApi` | `10.0.14` | Api | OpenAPI document generation (Development only). |
 | `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
 | `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
@@ -175,6 +177,8 @@ flowchart LR
     LOG["Microsoft.Extensions<br/>.Logging.Abstractions"]
     OPT["Microsoft.Extensions<br/>.Options.DataAnnotations"]
     EF["Microsoft.EntityFrameworkCore<br/>.Sqlite + .Design"]
+    PW["Microsoft.Playwright"]
+    AS["AngleSharp"]
     OA["Microsoft.AspNetCore.OpenApi"]
     SER["Serilog<br/>AspNetCore + Sinks.Async<br/>+ 6 enrichers + Exceptions<br/>+ Demystifier"]
 
@@ -182,6 +186,8 @@ flowchart LR
     INF --> LOG
     INF --> OPT
     INF --> EF
+    INF --> PW
+    INF --> AS
     API --> OA
     API --> SER
 ```
@@ -284,15 +290,18 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
+    <PackageVersion Include="AngleSharp" Version="1.8.6" />
   </ItemGroup>
 </Project>
 ```
 
-> Anything else (Playwright, `System.CommandLine`, Scalar, `Microsoft.Extensions.Hosting`
-> / `Http` / `Http.Resilience`, `Microsoft.Data.Sqlite`, AngleSharp, ClosedXML,
-> `Microsoft.Playwright.Xunit.v3`, NSubstitute, Verify, MinVer) appears only in
-> the pre-rename design matrix: no `PackageVersion` and no `PackageReference`
-> exists for it today.
+> The real file also pins `Microsoft.Extensions.Hosting` and
+> `Microsoft.Extensions.Http` (`10.0.14`), which no project references.
+> Anything else (`System.CommandLine`, Scalar, `Http.Resilience`,
+> `Microsoft.Data.Sqlite`, ClosedXML, `Microsoft.Playwright.Xunit.v3`,
+> NSubstitute, Verify, MinVer) appears only in the pre-rename design matrix:
+> no `PackageVersion` and no `PackageReference` exists for it today.
 
 ### 4.4 `NuGet.config`
 
@@ -338,7 +347,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 
 ### 5.1 `appsettings.json`
 
-> Design target below (`JobLens:*` sections, Browser block) — **not implemented**. The implemented sections are `JobScrape:Storage` (defaults in code: `DatabasePath: artifacts/data/jobscrape.db`, `ArtifactsRoot: artifacts`, `ProfilesRoot: artifacts/profiles`, `RetentionDays: 30`, `PostingRetentionDays: 180`, `MinimumFreeDiskBytes: 1 GiB`), `JobScrape:Compliance` (`AcknowledgeSourceRisk`, `AllowHighRiskSources`), `JobScrape:Run` (`RetryMaxAttempts: 2`), `JobScrape:Logging` (`Directory: artifacts/logs`, `RetentionDays: 90`, `FileSizeLimitBytes: 100 MiB`), and `JobScrape` sources (dictionary keyed by source name). `InteractiveConfirmation` is per-run consent, not configuration. There is no `Browser` section: no browser code exists.
+> Design target below (`JobLens:*` sections, Browser block) — **not implemented**. The implemented sections are `JobScrape:Storage` (defaults in code: `DatabasePath: artifacts/data/jobscrape.db`, `ArtifactsRoot: artifacts`, `ProfilesRoot: artifacts/profiles`, `RetentionDays: 30`, `PostingRetentionDays: 180`, `MinimumFreeDiskBytes: 1 GiB`), `JobScrape:Compliance` (`AcknowledgeSourceRisk`, `AllowHighRiskSources`), `JobScrape:Run` (`RetryMaxAttempts: 2`), `JobScrape:Browser` (`Headless: false` — Naukri blocks headless first contact — and `NavigationTimeoutSeconds: 45`, range 5–120; no engine/channel/viewport/locale keys: engine and channel are per browser profile, and viewport/UA are never overridden), `JobScrape:Logging` (`Directory: artifacts/logs`, `RetentionDays: 90`, `FileSizeLimitBytes: 100 MiB`), and `JobScrape` sources (dictionary keyed by source name). `InteractiveConfirmation` is per-run consent, not configuration.
 
 ```json
 {
@@ -442,7 +451,7 @@ appsettings.json
 ```
 
 - No credentials are stored. Login is manual.
-- Browser profiles are secrets; treat their directories as owner-only when browser code lands.
+- Browser profiles are secrets; they live in `{ProfilesRoot}/{source}/{name}` (default `artifacts/profiles`), created with default permissions, so make them owner-only yourself.
 - Future API keys: user secrets in development, environment variables in production.
 
 ### 5.3 Options binding
@@ -512,7 +521,7 @@ Exit codes matter for schedulers: a challenge (`3`) should not be treated as a g
 
 ## 7. Bootstrap commands
 
-> Design target — the referenced `JobLens.Cli` project and Playwright install do not exist. Use the loopback stack instead: `dotnet run` the API, `bun run dev` the cockpit (see [Web Cockpit](12-web-cockpit.md)).
+> Design target — the referenced `JobLens.Cli` project does not exist. Use the loopback stack instead: `dotnet run` the API, `bun run dev` the cockpit (see [Web Cockpit](12-web-cockpit.md)), and install a browser as in §7.3.
 
 ### 7.1 macOS / Linux
 
@@ -568,9 +577,19 @@ dotnet run --project src/JobLens.Cli -- search create `
   --max-jobs 40
 ```
 
-### 7.3 Manual Playwright install (fallback — no Playwright package is referenced today)
+### 7.3 Playwright browser install
 
-If the CLI wrapper is unavailable:
+> **As implemented:** `JobScrape.Infrastructure` references `Microsoft.Playwright 1.64.1`, so a build copies the Playwright driver into the API's output. On Linux, no PowerShell is needed:
+>
+> ```bash
+> dotnet build src/backend/JobScrape.slnx
+> src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/linux-x64/node \
+>   src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
+> ```
+>
+> On other OSes the `node/<platform>` folder name differs (or use `pwsh src/backend/JobScrape.Api/bin/Debug/net10.0/playwright.ps1 install chromium`). Alternatively create the session with channel `Chrome` or `Edge` to use an installed browser instead of the bundled Chromium.
+
+Design target (CLI wrapper unavailable):
 
 ```bash
 # macOS/Linux with PowerShell 7
@@ -804,9 +823,9 @@ Plus:
 | Concern | Rule |
 |---|---|
 | Paths | `Path.Combine`, `Environment.GetFolderPath`; never hardcode `/` or `\`. |
-| File permissions | On Unix, profile/data dirs must be owner-only (`0700`) once browser code creates them; no such code paths exist yet. |
+| File permissions | On Unix, profile/data dirs must be owner-only (`0700`); `BrowserSessionPool` creates profile directories with default permissions, so set them yourself. |
 | Shell scripts | Provide `bash` and `pwsh` variants; do not assume `bash` on Windows. |
-| Browser install | No Playwright dependency exists yet; when adapters land, wrap the installer behind an explicit command. |
+| Browser install | Run the Playwright driver's `cli.js install` from the API build output (§7.3); not yet wrapped behind an explicit command. |
 | SQLite | Ensure the parent directory exists; enable WAL; one writer. |
 | Scheduler | Linux `flock`/systemd timer; macOS `launchd`; Windows Task Scheduler “do not start a new instance”. |
 | Case sensitivity | Treat source keys/paths as case-sensitive; use lowercase keys. |
@@ -829,5 +848,5 @@ dotnet publish src/JobScrape.Api -c Release -r linux-x64 --self-contained true
 dotnet publish src/JobScrape.Api -c Release -r win-x64 --self-contained true
 ```
 
-- Browsers are **not** bundled; when adapters land, the release notes must state the Playwright install step and version.
+- Browsers are **not** bundled; the release notes must state the Playwright install step and version (`Microsoft.Playwright 1.64.1` today).
 - Keep a `CHANGELOG.md` once user-visible changes ship; add entries per change.

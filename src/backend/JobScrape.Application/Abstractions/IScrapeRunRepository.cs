@@ -23,5 +23,15 @@ namespace JobScrape.Application.Abstractions
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>A task that completes when the run is staged.</returns>
         Task AddAsync(ScrapeRun run, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Lists runs in an executing stage (pending, starting a session,
+        /// searching, enriching, or persisting): neither paused nor
+        /// terminal. On startup none can still be executing, so these were
+        /// interrupted by a stop.
+        /// </summary>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The tracked runs, oldest first.</returns>
+        Task<IReadOnlyList<ScrapeRun>> ListExecutingAsync(CancellationToken cancellationToken);
     }
 }
