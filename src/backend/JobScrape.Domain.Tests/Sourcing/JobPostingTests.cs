@@ -349,6 +349,52 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void RefreshKeepsAKnownWorkModeWhenTheNewSightingDoesNotStateOne()
+        {
+            // The search card says "Hybrid - Pune, Gurugram"; the detail
+            // header lists the cities only.
+            var posting = JobPosting.Create(
+                Card() with
+                {
+                    Location = new JobLocation(
+                        "Hybrid - Pune, Gurugram",
+                        "Pune",
+                        null,
+                        null,
+                        WorkMode.Hybrid
+                    ),
+                },
+                Now
+            );
+
+            posting.Refresh(
+                Card() with
+                {
+                    Location = new JobLocation(
+                        "Pune, Gurugram",
+                        "Pune",
+                        null,
+                        null,
+                        WorkMode.Unknown
+                    ),
+                },
+                Now.AddMinutes(1)
+            );
+            Assert.Equal("Pune, Gurugram", posting.Location!.Raw);
+            Assert.Equal(WorkMode.Hybrid, posting.Location.WorkMode);
+
+            // A stated mode still replaces the old one.
+            posting.Refresh(
+                Card() with
+                {
+                    Location = new JobLocation("Remote", null, null, null, WorkMode.Remote),
+                },
+                Now.AddMinutes(2)
+            );
+            Assert.Equal(WorkMode.Remote, posting.Location!.WorkMode);
+        }
+
+        [Fact]
         public void RefreshRejectsSightingBeforeFirstSeen()
         {
             var posting = JobPosting.Create(Card(), Now);

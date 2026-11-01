@@ -378,6 +378,35 @@ namespace JobScrape.Domain.Sourcing
         }
 
         /// <summary>
+        /// Merges an observed location: it replaces the current one, except
+        /// that an unstated work mode (<see cref="WorkMode.Unknown"/>) keeps
+        /// the mode a previous sighting stated. A detail header that lists
+        /// only cities must not erase the card's "Hybrid".
+        /// </summary>
+        /// <param name="current">The stored location.</param>
+        /// <param name="observed">The newly observed location, or null when not observed.</param>
+        /// <returns>The merged location.</returns>
+        private static JobLocation? MergeLocation(JobLocation? current, JobLocation? observed)
+        {
+            if (observed is null)
+            {
+                return current;
+            }
+
+            return
+                observed.WorkMode == WorkMode.Unknown
+                && current is { WorkMode: not WorkMode.Unknown }
+                ? new JobLocation(
+                    observed.Raw,
+                    observed.City,
+                    observed.Region,
+                    observed.Country,
+                    current.WorkMode
+                )
+                : observed;
+        }
+
+        /// <summary>
         /// Copies validated fields onto the aggregate. Required fields always
         /// replace; optional fields replace only when observed.
         /// </summary>
@@ -388,7 +417,7 @@ namespace JobScrape.Domain.Sourcing
             Title = fields.Title;
             Company = fields.Company ?? Company;
             CompanyUrl = fields.CompanyUrl ?? CompanyUrl;
-            Location = fields.Location ?? Location;
+            Location = MergeLocation(Location, fields.Location);
             ExperienceRaw = fields.ExperienceRaw ?? ExperienceRaw;
             if (fields.ExperienceMinYears is not null || fields.ExperienceMaxYears is not null)
             {
