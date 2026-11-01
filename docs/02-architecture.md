@@ -180,7 +180,7 @@ flowchart TB
     CLK --> OPT["AddJobScrapeOptions<br/>Storage · Compliance · Run<br/>Logging · Sources + validators"]
     OPT --> LOGG["AddJobScrapeLogging<br/>Serilog console JSON + async file"]
     LOGG --> H1["AddTransient GetHealthHandler"]
-    H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler<br/>ListSourcesHandler"]
+    H1 --> H2["AddTransient Get/List/CreateSearchProfileHandler<br/>ListSourcesHandler<br/>List/Get/CreateSessionHandler"]
     H2 --> DB["AddJobScrapeDatabase<br/>Storage:DatabasePath → SQLite file<br/>AddJobScrapePersistence (scoped)"]
     DB --> BUILD["app = builder.Build()"]
     BUILD --> MAPOA["MapOpenApi (Development only)"]
@@ -215,6 +215,7 @@ flowchart LR
 | Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `SearchProfileReadStore` (SQLite) | Live, tested |
 | Profile list | `GET /api/v1/search-profiles` | `ListSearchProfilesHandler(ISearchProfileStore)` | `SearchProfileReadStore` → `{ items, total }` by name | Live, tested |
 | Sources | `GET /api/v1/sources` | `ListSourcesHandler(SourceSettingsCatalog, ComplianceConsent, ISourceQuotaRepository, ISourceCircuitBreakerRepository, TimeProvider)` | Per source: tier, enabled, `CompliancePolicy` gate under the configured consent (interactive confirmation is per run, so always false here), policy caps, today's quota usage, circuit state; read-only | Live, tested; cockpit `#/sources` |
+| Sessions | `GET /api/v1/sessions`, `GET /api/v1/sessions/{id:guid}`, `POST /api/v1/sessions` | `ListSessionsHandler(ISessionStore)`, `GetSessionHandler(ISessionStore)`, `CreateSessionHandler(IBrowserProfileRepository, IUnitOfWork, TimeProvider)` | `SessionReadStore` (EF no-tracking, `CanLaunch` on the injected clock); create validates with `BrowserProfile.IsValidName` and exact engine/channel names (branded channels need Chromium); `201` + `Location`, `400` field `errors`, `409 SESSION_NAME_TAKEN`, `404 SESSION_NOT_FOUND`. Login/probe are not exposed: no `ISessionManager` implementation exists | Live, tested; cockpit `#/sessions` |
 | Profile create | `POST /api/v1/search-profiles` | `CreateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; `201` + `Location`, `400` field `errors`, `409 PROFILE_NAME_TAKEN`; caps default to and may only tighten the source policy (`SourceSettings.DefaultLimits`) | Live, tested; cockpit `#/profiles` |
 | Run scrape | — | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 EF repos via `ScrapeStores` + `IUnitOfWork`; session/artifacts/adapters unimplemented | Code complete, unregistered |
 
@@ -244,6 +245,7 @@ PlaywrightDotNet/
 │   │   │   ├── Features/Health/        (GetHealthHandler, GetHealthResponse)
 │   │   │   ├── Features/SearchProfiles/ (Get/List/Create handlers, store port, request/response DTOs)
 │   │   │   ├── Features/Sources/       (ListSourcesHandler, source status read model)
+│   │   │   ├── Features/Sessions/      (List/Get/Create session handlers, store port, DTOs)
 │   │   │   ├── Features/Scraping/      (RunScrapeHandler, IJobSource, registry, settings)
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
@@ -251,7 +253,7 @@ PlaywrightDotNet/
 │   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, migrations)
 │   │   │   └── Runtime/                (TimeProviderDelay, SystemRandomSource)
 │   │   ├── JobScrape.Api/
-│   │   │   ├── Controllers/            (Health, SearchProfiles, Sources)
+│   │   │   ├── Controllers/            (Health, SearchProfiles, Sources, Sessions)
 │   │   │   ├── Http/                   (ErrorMapper, CorrelationMiddleware, GlobalExceptionHandler)
 │   │   │   ├── Composition/            (OptionsRegistration, LoggingRegistration, DatabaseRegistration)
 │   │   │   └── Program.cs              (composition root)
@@ -462,7 +464,8 @@ Other ports (all in `JobScrape.Application/Abstractions`, all EF-implemented exc
 
 - `ISearchProfileRepository` — `GetAsync`, `AddAsync`
 - `IScrapeRunRepository` — `GetAsync`, `AddAsync`
-- `IBrowserProfileRepository` — `GetAsync`
+- `IBrowserProfileRepository` — `GetAsync`, `NameExistsAsync`, `AddAsync`
+- `ISessionStore` — `GetAsync`, `ListAsync` (implemented by `SessionReadStore`)
 - `ISourceQuotaRepository` — `FindAsync`, `AddAsync`
 - `ISourceCircuitBreakerRepository` — `FindAsync`, `AddAsync`
 - `IArtifactStore` — `CaptureAsync` (no implementation yet)

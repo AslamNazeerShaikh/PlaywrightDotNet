@@ -131,11 +131,7 @@ namespace JobScrape.Domain.Access
             ArgumentNullException.ThrowIfNull(source);
 
             var trimmed = name?.Trim() ?? string.Empty;
-            if (
-                trimmed.Length is 0 or > MaxNameLength
-                || trimmed[0] == '.'
-                || !trimmed.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')
-            )
+            if (!IsValidName(trimmed))
             {
                 throw new DomainException(
                     $"Browser profile name must be 1..{MaxNameLength} of [A-Za-z0-9._-], not starting with '.'."
@@ -153,6 +149,22 @@ namespace JobScrape.Domain.Access
             }
 
             return new BrowserProfile(BrowserProfileId.New(), trimmed, source, engine, channel);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="name"/> is a safe profile name: 1–64
+        /// characters of letters, digits, <c>.</c>, <c>_</c>, or <c>-</c>, not
+        /// starting with <c>.</c>. The name is also a directory name, so this
+        /// rule is what keeps the user-data directory inside the profiles root.
+        /// Exposed so request validation applies the same rule.
+        /// </summary>
+        /// <param name="name">The trimmed candidate name.</param>
+        /// <returns>True when the name is safe.</returns>
+        public static bool IsValidName(string? name)
+        {
+            return name is { Length: > 0 and <= MaxNameLength }
+                && name[0] != '.'
+                && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-');
         }
 
         /// <summary>

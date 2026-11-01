@@ -73,6 +73,35 @@ export interface SourceList {
   asOf: string;
 }
 
+/** A browser profile and its session health (timestamps ISO UTC). */
+export interface SessionPayload {
+  id: string;
+  name: string;
+  sourceKey: string;
+  engine: "Chromium" | "Firefox" | "WebKit";
+  channel: "Bundled" | "Chrome" | "Edge";
+  state: "New" | "Healthy" | "Challenged" | "CoolingDown" | "Expired" | "ResetRequired";
+  userDataDirectory: string;
+  canLaunch: boolean;
+  cooldownUntil: string | null;
+  consecutiveChallenges: number;
+  lastUsedAt: string | null;
+  lastVerifiedAt: string | null;
+}
+
+export interface SessionList {
+  items: SessionPayload[];
+  total: number;
+}
+
+/** Body of POST /api/v1/sessions. */
+export interface CreateSessionInput {
+  name: string;
+  sourceKey: string;
+  engine: string;
+  channel: string;
+}
+
 /** Body of POST /api/v1/search-profiles. Omitted caps default to the source policy. */
 export interface CreateProfileInput {
   name: string;
@@ -117,6 +146,9 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
       timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
     listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
     listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
+    listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
+    createSession: (input: CreateSessionInput) =>
+      timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
     createProfile: (input: CreateProfileInput) =>
       timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
   };

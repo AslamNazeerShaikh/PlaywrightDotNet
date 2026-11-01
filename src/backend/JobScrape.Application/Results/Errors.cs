@@ -65,6 +65,39 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a conflict for a browser profile name that is already in use.
+        /// </summary>
+        /// <param name="name">The requested name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo SessionNameTaken(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "SESSION_NAME_TAKEN",
+                "Browser profile name already in use.",
+                $"A browser profile named '{name}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing browser profile session.
+        /// </summary>
+        /// <param name="sessionId">The requested profile identifier.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo SessionNotFound(Guid sessionId)
+        {
+            return new ErrorInfo(
+                "SESSION_NOT_FOUND",
+                "Browser profile not found.",
+                $"Browser profile '{sessionId}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["sessionId"] = sessionId }
+            );
+        }
+
+        /// <summary>
         /// Creates a conflict for a run requested from a disabled profile.
         /// </summary>
         /// <param name="profileId">The disabled profile.</param>

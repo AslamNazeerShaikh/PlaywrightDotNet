@@ -169,6 +169,14 @@ export function OverviewPage({
                 </td>
               </tr>
               <tr>
+                <td>GET · POST</td>
+                <td>/api/v1/sessions</td>
+                <td>List/CreateSessionHandler</td>
+                <td>
+                  <CodeTag code="200 · 201 / 400 / 409" tone="warn" />
+                </td>
+              </tr>
+              <tr>
                 <td>GET</td>
                 <td>/api/v1/sources</td>
                 <td>ListSourcesHandler</td>

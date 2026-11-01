@@ -81,6 +81,7 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
   if (
     code === "VALIDATION_FAILED" ||
     code === "PROFILE_NAME_TAKEN" ||
+    code === "SESSION_NAME_TAKEN" ||
     code === "DOTNET_UNREACHABLE" ||
     code === "BFF_UNREACHABLE"
   ) {
@@ -90,4 +91,33 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     return "bad";
   }
   return undefined;
+}
+
+/**
+ * A labeled form field that renders the server's field errors for `name` (from a VALIDATION_FAILED
+ * problem) under its input, so every rule the API enforces is shown where it applies.
+ */
+export function Field({
+  label,
+  name,
+  errors,
+  children,
+}: {
+  label: string;
+  name: string;
+  errors: Record<string, string[]>;
+  children: ReactNode;
+}) {
+  const messages = errors[name] ?? [];
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+      {messages.map((m) => (
+        <span key={m} className="field-error" role="note" data-field={name}>
+          {m}
+        </span>
+      ))}
+    </label>
+  );
 }

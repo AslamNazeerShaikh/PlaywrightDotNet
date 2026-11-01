@@ -9,8 +9,10 @@ import {
   type ApiProblem,
   createApiClient,
   type CreateProfileInput,
+  type CreateSessionInput,
   type HealthPayload,
   type SearchProfilePayload,
+  type SessionPayload,
   type SourceList,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
@@ -25,6 +27,7 @@ import {
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
+import { SessionsPage } from "./pages/sessions.tsx";
 import { SourcesPage } from "./pages/sources.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
 
@@ -57,6 +60,11 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [sources, setSources] = useState<SourceList | null>(null);
   const [sourcesProblem, setSourcesProblem] = useState<ApiProblem | null>(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [sessions, setSessions] = useState<SessionPayload[] | null>(null);
+  const [sessionsProblem, setSessionsProblem] = useState<ApiProblem | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [createSessionProblem, setCreateSessionProblem] = useState<ApiProblem | null>(null);
   const probeBusy = useRef(false);
   const probeRef = useRef<() => void>(() => undefined);
   const linkLogged = useRef(false);
@@ -235,8 +243,46 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setSourcesLoading(false);
   }
 
-  const loadersRef = useRef({ loadProfiles, loadSources });
-  loadersRef.current = { loadProfiles, loadSources };
+  async function loadSessions() {
+    setSessionsLoading(true);
+    const { result } = await activeClient.listSessions();
+    if (result.ok) {
+      setSessions(result.value.items);
+      setSessionsProblem(null);
+      setApiState("live");
+    } else {
+      setSessionsProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+    }
+    setSessionsLoading(false);
+  }
+
+  async function createSession(input: CreateSessionInput): Promise<boolean> {
+    setCreatingSession(true);
+    const { result, at } = await activeClient.createSession(input);
+    setCreatingSession(false);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: clockTime(at),
+        kind: result.ok ? "ok" : "err",
+        code: result.ok ? "CREATED" : result.problem.code,
+        detail: result.ok
+          ? `${result.value.name} · ${result.value.sourceKey}`
+          : result.problem.title,
+      }),
+    );
+    if (!result.ok) {
+      setCreateSessionProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      return false;
+    }
+    setCreateSessionProblem(null);
+    await loadSessions();
+    return true;
+  }
+
+  const loadersRef = useRef({ loadProfiles, loadSources, loadSessions });
+  loadersRef.current = { loadProfiles, loadSources, loadSessions };
 
   // Page data loads whenever its page opens; the ref keeps the effect keyed
   // on the route alone, so renders never refetch.
@@ -246,6 +292,9 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     }
     if (route === "sources") {
       void loadersRef.current.loadSources();
+    }
+    if (route === "sessions") {
+      void loadersRef.current.loadSessions();
     }
   }, [route]);
 
@@ -349,6 +398,17 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             problem={sourcesProblem}
             loading={sourcesLoading}
             onRefresh={() => void loadSources()}
+          />
+        )}
+        {route === "sessions" && (
+          <SessionsPage
+            sessions={sessions}
+            listProblem={sessionsProblem}
+            loading={sessionsLoading}
+            creating={creatingSession}
+            createProblem={createSessionProblem}
+            onCreate={createSession}
+            onRefresh={() => void loadSessions()}
           />
         )}
         {route === "topology" && <TopologyPage upstream={upstream} />}

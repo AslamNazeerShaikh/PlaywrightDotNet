@@ -4,7 +4,7 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import { App } from "../../client/app.tsx";
-import { createApiClient, type FetchImpl } from "../../client/lib/api.ts";
+import { createApiClient, type FetchImpl, type SessionPayload } from "../../client/lib/api.ts";
 import type { DeckRoute } from "../../client/lib/router.ts";
 
 // happy-dom replaces globals (Response, Request, fetch) that the BFF server
@@ -140,6 +140,74 @@ const healthyHandler = (url: string) => {
   return { status: 200, body: { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" } };
 };
 
+/** A stateful fake of the sessions API with one cooling-down profile already saved. */
+function sessionsBackend() {
+  const items: SessionPayload[] = [
+    {
+      id: "s0",
+      name: "cooling",
+      sourceKey: "indeed",
+      engine: "Chromium",
+      channel: "Bundled",
+      state: "CoolingDown",
+      userDataDirectory: "indeed/cooling",
+      canLaunch: false,
+      cooldownUntil: "2026-11-02T09:00:00Z",
+      consecutiveChallenges: 1,
+      lastUsedAt: null,
+      lastVerifiedAt: null,
+    },
+  ];
+  const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
+    const reply = (status: number, body: unknown) => ({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => body,
+    });
+    if (url === "/healthz") {
+      return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+    }
+    if (url === "/api/v1/sessions" && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { name: string; sourceKey: string };
+      if (body.name.includes("/")) {
+        return reply(400, {
+          status: 400,
+          title: "One or more validation errors occurred.",
+          detail: "The request contains invalid fields.",
+          code: "VALIDATION_FAILED",
+          errors: { name: ["Use 1 to 64 letters, digits, '.', '_', or '-'."] },
+        });
+      }
+      if (items.some((s) => s.name === body.name)) {
+        return reply(409, {
+          status: 409,
+          title: "Browser profile name already in use.",
+          detail: "",
+          code: "SESSION_NAME_TAKEN",
+        });
+      }
+      const created: SessionPayload = {
+        ...items[0]!,
+        id: `s${items.length}`,
+        name: body.name,
+        sourceKey: body.sourceKey,
+        state: "New",
+        canLaunch: true,
+        cooldownUntil: null,
+        consecutiveChallenges: 0,
+        userDataDirectory: `${body.sourceKey}/${body.name}`,
+      };
+      items.push(created);
+      return reply(201, created);
+    }
+    if (url === "/api/v1/sessions") {
+      return reply(200, { items, total: items.length });
+    }
+    return reply(200, { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" });
+  };
+  return createApiClient(fetchImpl);
+}
+
 /**
  * A stateful fake of the profiles API: GET lists what POST created, POST validates like the server
  * (missing name → VALIDATION_FAILED with field errors, duplicate → PROFILE_NAME_TAKEN).
@@ -213,7 +281,8 @@ describe("ops deck", () => {
       "02ENGINE HEALTH",
       "03SEARCH PROFILES",
       "04SOURCES",
-      "05TOPOLOGY",
+      "05SESSIONS",
+      "06TOPOLOGY",
     ]);
   });
 
@@ -315,6 +384,37 @@ describe("ops deck", () => {
     expect(
       queries.getAllByRole("meter", { name: "Details used" })[1]?.getAttribute("data-level"),
     ).toBe("full");
+  });
+
+  test("sessions page creates a profile, shows field errors, and flags blocked launches", async () => {
+    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "COOLING_DOWN",
+      ),
+    );
+    expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+      "BLOCKED",
+    );
+
+    fireEvent.change(queries.getByLabelText("Profile name"), { target: { value: "../bad" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE BROWSER PROFILE" }));
+    await waitFor(() => expect(queries.getByRole("note").getAttribute("data-field")).toBe("name"));
+
+    fireEvent.change(queries.getByLabelText("Profile name"), { target: { value: "naukri-main" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE BROWSER PROFILE" }));
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "naukri-main",
+      ),
+    );
+    expect(queries.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(queries.getByLabelText("Profile name"), { target: { value: "naukri-main" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE BROWSER PROFILE" }));
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("SESSION_NAME_TAKEN"),
+    );
   });
 
   test("overview shows the tac-map, its key, feed key, compass, and catalog", async () => {

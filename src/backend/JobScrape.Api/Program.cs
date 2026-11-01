@@ -2,6 +2,7 @@ using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.SearchProfiles;
+using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
 using Serilog;
 
@@ -69,6 +70,9 @@ namespace JobScrape.Api
             builder.Services.AddTransient<ListSearchProfilesHandler>();
             builder.Services.AddTransient<CreateSearchProfileHandler>();
             builder.Services.AddTransient<ListSourcesHandler>();
+            builder.Services.AddTransient<ListSessionsHandler>();
+            builder.Services.AddTransient<GetSessionHandler>();
+            builder.Services.AddTransient<CreateSessionHandler>();
 
             // SQLite through EF Core: one scoped unit of work per request.
             builder.Services.AddJobScrapeDatabase(

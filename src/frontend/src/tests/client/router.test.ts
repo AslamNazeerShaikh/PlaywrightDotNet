@@ -8,6 +8,7 @@ describe("router", () => {
     expect(parseRoute("#/health")).toBe("health");
     expect(parseRoute("#/profiles")).toBe("profiles");
     expect(parseRoute("#/sources")).toBe("sources");
+    expect(parseRoute("#/sessions")).toBe("sessions");
     expect(parseRoute("#/topology")).toBe("topology");
   });
 

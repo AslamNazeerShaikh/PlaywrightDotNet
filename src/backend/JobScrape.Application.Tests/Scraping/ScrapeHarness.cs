@@ -241,6 +241,21 @@ namespace JobScrape.Application.Tests.Scraping
                 return Task.CompletedTask;
             }
 
+            // Explicit: the search-profile port declares the same signature.
+            Task<bool> IBrowserProfileRepository.NameExistsAsync(
+                string name,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(BrowserProfiles.Any(p => p.Name == name));
+            }
+
+            public Task AddAsync(BrowserProfile profile, CancellationToken cancellationToken)
+            {
+                BrowserProfiles.Add(profile);
+                return Task.CompletedTask;
+            }
+
             public Task<BrowserProfile?> GetAsync(
                 BrowserProfileId id,
                 CancellationToken cancellationToken

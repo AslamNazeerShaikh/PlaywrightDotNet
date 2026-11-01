@@ -1,5 +1,5 @@
 import { Abbr } from "../components/legend.tsx";
-import { CodeTag, codeTone, JsonBlock, Module, plural } from "../components/modules.tsx";
+import { CodeTag, codeTone, Field, JsonBlock, Module, plural } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, CreateProfileInput, SearchProfilePayload } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
@@ -298,31 +298,6 @@ export function readForm(data: FormData): CreateProfileInput {
     postedWithinDays: number("postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
   };
-}
-
-function Field({
-  label,
-  name,
-  errors,
-  children,
-}: {
-  label: string;
-  name: string;
-  errors: Record<string, string[]>;
-  children: React.ReactNode;
-}) {
-  const messages = errors[name] ?? [];
-  return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-      {messages.map((m) => (
-        <span key={m} className="field-error" role="note" data-field={name}>
-          {m}
-        </span>
-      ))}
-    </label>
-  );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

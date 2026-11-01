@@ -78,6 +78,21 @@ namespace JobScrape.Domain.Tests.Access
             Assert.Throws<DomainException>(() => Create(name));
         }
 
+        [Theory]
+        [InlineData("naukri-main", true)]
+        [InlineData("a.b_c-1", true)]
+        [InlineData(".hidden", false)]
+        [InlineData("a/b", false)]
+        [InlineData("", false)]
+        [InlineData(null, false)]
+        public void IsValidNameMatchesTheCreateRule(string? name, bool valid)
+        {
+            Assert.Equal(valid, BrowserProfile.IsValidName(name));
+            Assert.False(
+                BrowserProfile.IsValidName(new string('p', BrowserProfile.MaxNameLength + 1))
+            );
+        }
+
         [Fact]
         public void CreateRejectsOverlongName()
         {
