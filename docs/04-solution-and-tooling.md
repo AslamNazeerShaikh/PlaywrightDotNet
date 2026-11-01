@@ -2,7 +2,7 @@
 
 > **Purpose:** the exact project layout, package versions, SDK pin, configuration shape, commands, CI, and conventions for Phase 0.
 >
-> **Verified:** 2026-10-29 · .NET SDK `10.0.403` · xUnit `4.0.2` · Playwright `1.64.1`
+> **Verified:** 2026-10-29 · .NET SDK `10.0.403` · xUnit `4.0.2` (no Playwright in the tree)
 
 ---
 
@@ -25,15 +25,16 @@
 > │   │   ├── Directory.Build.props
 > │   │   ├── Directory.Packages.props
 > │   │   ├── NuGet.config
-> │   │   ├── JobScrape.Domain/
-> │   │   ├── JobScrape.Application/
-> │   │   ├── JobScrape.Infrastructure/
-> │   │   ├── JobScrape.Api/            (explicit Program.Main, controllers)
+> │   │   ├── JobScrape.Domain/          (aggregates, value objects, policies, events; BCL only)
+> │   │   ├── JobScrape.Application/     (use cases, ports, Result; refs Domain)
+> │   │   ├── JobScrape.Infrastructure/  (EF Core SQLite, options, runtime; refs Application, Domain)
+> │   │   ├── JobScrape.Api/             (explicit Program.Main, 2 controllers)
 > │   │   ├── JobScrape.Domain.Tests/
 > │   │   ├── JobScrape.Application.Tests/
-> │   │   ├── JobScrape.Api.Tests/      (WebApplicationFactory integration)
+> │   │   ├── JobScrape.Api.Tests/       (WebApplicationFactory integration)
+> │   │   ├── JobScrape.Infrastructure.Tests/
 > │   │   └── JobScrape.Architecture.Tests/ (NetArchTest layer rules)
-> │   └── frontend/                     (React 19 + Bun walking skeleton)
+> │   └── frontend/                      (React 19 + Bun ops deck: BFF + routed pages)
 > └── .config/dotnet-tools.json         (dotnet-coverage 18.12.0, repo-local)
 > ```
 >
@@ -72,115 +73,133 @@ PlaywrightDotNet/
 
 Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in your chain does not understand `.slnx`, `dotnet sln migrate` / a classic `.sln` is an acceptable fallback; do not maintain both.
 
-> **v2 note:** the web cockpit is a separate Bun package under `web/`, not a .NET project in this solution. See [Web Cockpit](12-web-cockpit.md).
+> **v2 note:** the web cockpit is a separate Bun package under `src/frontend/`, not a .NET project in this solution. See [Web Cockpit](12-web-cockpit.md).
 
 ---
 
 ## 2. Project responsibilities
 
+> **As implemented** (verified against `src/backend/JobScrape.slnx` and every
+> `.csproj`; the `JobLens.*` names below the table are the pre-rename
+> design-doc target).
+
 | Project | Responsibility | References |
 |---|---|---|
-| `JobLens.Domain` | Aggregates, value objects, invariants, policies, domain events. Pure C#. | BCL only |
-| `JobLens.Application` | Use cases, ports, orchestration, Result pattern, specifications, read-model contracts. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
-| `JobLens.Infrastructure` | Playwright sessions, source adapters, parsers, EF Core, exporters, HTTP clients/resilience, diagnostics. | Application, Domain, EF Core, Playwright, AngleSharp, ClosedXML, Polly (via `Microsoft.Extensions.Http.Resilience`) |
-| `JobLens.Cli` | Composition root: commands, DI, configuration, logging, exit codes. | Application, Infrastructure, Hosting, Serilog, System.CommandLine |
-| `JobLens.Api` (v2) | HTTP command surface, Problem Details, OpenAPI; Scalar is Development-only. | Application, Infrastructure, ASP.NET Core, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore` |
-| `JobLens.TestKit` | Builders, fakes, fixture server helpers, test data. | Domain, Application |
-| `JobLens.Domain.Tests` | Pure unit tests. | Domain, TestKit, xUnit |
-| `JobLens.Application.Tests` | Use-case tests with fakes/NSubstitute. | Application, TestKit, xUnit, NSubstitute |
-| `JobLens.Infrastructure.Tests` | Parser fixtures, SQLite integration, options, artifacts. | Infrastructure, TestKit, xUnit |
-| `JobLens.Architecture.Tests` | Layer/dependency rules. | Domain, Application, Infrastructure, NetArchTest |
-| `JobLens.Cli.Tests` | Command parsing, option validation, exit-code mapping, help text. | Cli, Application, TestKit, xUnit |
-| `JobLens.E2E.Tests` | Local fixture server + Playwright browser tests. | Infrastructure, TestKit, `Microsoft.Playwright.Xunit.v3` |
+| `JobScrape.Domain` | Aggregates (`SearchProfile`, `ScrapeRun`, `JobPosting`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`), value objects, policies, domain events. Pure C#, zero packages. | BCL only |
+| `JobScrape.Application` | Use cases (`GetHealth`, `GetSearchProfile`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
+| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `InMemorySearchProfileStore`. | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations` |
+| `JobScrape.Api` | Composition root (`Program.Main`): 2 controllers, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
+| `JobScrape.Domain.Tests` | Pure unit tests. | Domain, xUnit |
+| `JobScrape.Application.Tests` | Use-case tests with fakes + `FakeTimeProvider`. | Application, Domain, xUnit |
+| `JobScrape.Api.Tests` | `WebApplicationFactory` integration (endpoints, store). | Api, xUnit, `Serilog.Sinks.InMemory` |
+| `JobScrape.Infrastructure.Tests` | SQLite integration, options validation. | Infrastructure, xUnit |
+| `JobScrape.Architecture.Tests` | Layer/dependency rules (NetArchTest). | Domain, Application, Infrastructure, Api |
 
-**Dependency graph**
+**Dependency graph** (every edge is a `ProjectReference` in the corresponding `.csproj`)
 
 ```mermaid
 flowchart TB
-    Domain["JobLens.Domain"]
-    App["JobLens.Application"]
-    Infra["JobLens.Infrastructure"]
-    Cli["JobLens.Cli"]
+    Domain["JobScrape.Domain"]
+    App["JobScrape.Application"]
+    Infra["JobScrape.Infrastructure"]
+    Api["JobScrape.Api"]
 
     App --> Domain
     Infra --> App
     Infra --> Domain
-    Cli --> App
-    Cli --> Infra
+    Api --> Domain
+    Api --> App
+    Api --> Infra
 
     DomainTests["Domain.Tests"] --> Domain
     AppTests["Application.Tests"] --> App
+    AppTests --> Domain
+    ApiTests["Api.Tests"] --> Api
     InfraTests["Infrastructure.Tests"] --> Infra
     ArchTests["Architecture.Tests"] --> Domain
     ArchTests --> App
     ArchTests --> Infra
-    CliTests["Cli.Tests"] --> Cli
-    E2E["E2E.Tests"] --> Infra
-    TestKit["TestKit"] --> Domain
-    TestKit --> App
+    ArchTests --> Api
 ```
 
-No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does). Domain/Application may not reference Infrastructure.
+No production project may reference a test project. Domain references nothing. Application references only Domain (+ logging abstractions). Infrastructure references Application and Domain but is referenced by Api only (composition root wires the ports).
 
-`JobLens.Cli` exposes a small `CliApp`/`CommandFactory` seam so tests can parse and invoke commands without spawning a process; `Program.cs` stays a thin entry point.
+> Design-doc target (pre-rename reference): `JobLens.Domain`, `JobLens.Application`, `JobLens.Infrastructure`, `JobLens.Cli`, `JobLens.Api` (v2), `JobLens.TestKit`, `JobLens.*.Tests`, `JobLens.E2E.Tests` — see the tree in §1.
 
 ---
 
 ## 3. Package matrix
 
+> **Installed today** — every row below is a `PackageReference` in at least
+> one `.csproj`, versioned in `Directory.Packages.props` (central package
+> management + transitive pinning on). Anything else in the pre-rename
+> design matrix (Playwright, `System.CommandLine`, Scalar, NSubstitute,
+> AngleSharp, ClosedXML, …) is approved for later slices but has **no
+> reference in the tree yet** and must not appear in diagrams as installed.
+
 | Package | Version | Project(s) | Why |
 |---|---|---|---|
-| `Microsoft.Extensions.Hosting` | `10.0.14` | CLI | DI, configuration, logging, lifetime. |
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
-| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | CLI, API | Options binding + DataAnnotations validation. |
-| `Microsoft.Extensions.Http` | `10.0.14` | Infrastructure (optional) | `IHttpClientFactory` for the optional API fast path / health probes. |
-| `Microsoft.Extensions.Http.Resilience` | `10.0.0` | Infrastructure | Polly v8 HTTP retry, circuit breaker, timeout, fallback. |
-| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | API (v2) | OpenAPI document generation. |
-| `Scalar.AspNetCore` | `2.18.5` | API (v2, Development only) | Interactive local API reference/testing at `/scalar`. |
-| `Microsoft.Playwright` | `1.64.1` | Infrastructure | Browser automation, tracing, persistent contexts. |
+| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | Infrastructure | Options binding + DataAnnotations validation. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
-| `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Explicit provider dependency / pragmas. |
-| `AngleSharp` | `1.8.6` | Infrastructure | HTML parsing with CSS selectors. |
-| `ClosedXML` | `0.105.1` | Infrastructure | Trusted Excel export with hyperlinks. |
-| `Serilog.AspNetCore` | `10.0.0` | CLI, API | Structured logging, request logging, console + file integration. |
-| `Serilog.Sinks.File` | `7.0.0` | CLI, API | Daily rolling JSON text logs with retention. |
-| `Serilog.Sinks.Async` | `2.1.0` | CLI, API | Keep file I/O off the request/run thread. |
-| `Serilog.Enrichers.Environment` | `3.0.1` | CLI, API | Machine and environment names. |
-| `Serilog.Enrichers.Process` | `3.0.0` | CLI, API | Process ID and name. |
-| `Serilog.Enrichers.Thread` | `4.0.0` | CLI, API | Thread ID for pool diagnostics. |
-| `Serilog.Enrichers.Span` | `3.1.0` | CLI, API | `TraceId` / `SpanId` correlation. |
-| `Serilog.Enrichers.AssemblyName` | `2.0.0` | CLI, API | Assembly name/version. |
-| `Serilog.Exceptions` | `8.4.0` | CLI, API | Detailed exception properties. |
-| `Serilog.Enrichers.Demystifier` | `1.0.3` | CLI, API | Readable async stack traces. |
-| `System.CommandLine` | `2.0.14` | CLI | Command parsing, help, validation; `SetAction`/`SetHandler` recommended. |
+| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | Api | OpenAPI document generation (Development only). |
+| `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
+| `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
+| `Serilog.Enrichers.Environment` | `3.0.1` | Api | Machine and environment names. |
+| `Serilog.Enrichers.Process` | `3.0.0` | Api | Process ID and name. |
+| `Serilog.Enrichers.Thread` | `4.0.0` | Api | Thread ID for pool diagnostics. |
+| `Serilog.Enrichers.Span` | `3.1.0` | Api | `TraceId` / `SpanId` correlation. |
+| `Serilog.Enrichers.AssemblyName` | `2.0.0` | Api | Assembly name/version. |
+| `Serilog.Exceptions` | `8.4.0` | Api | Detailed exception properties. |
+| `Serilog.Enrichers.Demystifier` | `1.0.3` | Api | Readable async stack traces. |
 | `xunit.v3` | `4.0.2` | All test projects | Test framework + assertions. |
 | `xunit.runner.visualstudio` | `4.0.1` | All test projects | `dotnet test` / VS Test Explorer. |
-| `Microsoft.NET.Test.Sdk` | `18.11.0` | All test projects | VSTest host. |
-| `Microsoft.Playwright.Xunit.v3` | `1.64.1` | E2E | Official `PageTest` base class. |
-| `NSubstitute` | `6.2.0` | Application/Infrastructure tests | Interaction fakes; BSD-licensed. |
-| `NetArchTest.Rules` | `1.3.2` | Architecture tests | Dependency rules. |
+| `Microsoft.NET.Test.Sdk` | `18.11.0` | All test projects | Test host. |
 | `coverlet.collector` | `10.1.0` | Test projects | Cross-platform coverage (VSTest mode; inert under native MTP). |
 | `Microsoft.Testing.Extensions.CodeCoverage` | `18.12.0` | Test projects | Native MTP `--coverage` provider (see ADR-0015). |
-| `Microsoft.Extensions.TimeProvider.Testing` | `10.11.0` | Tests | `FakeTimeProvider`. |
-| `Verify.XunitV3` | `33.3.4` | Infrastructure tests (optional) | Snapshot parser output. |
-| `Serilog.Sinks.InMemory` | `2.0.0` | Test projects | Assert structured log properties and redaction. |
-| `MinVer` | `8.0.0` | All projects (optional) | SemVer from git tags. |
+| `Microsoft.Extensions.TimeProvider.Testing` | `10.11.0` | Application/Infrastructure tests | `FakeTimeProvider`. |
+| `Microsoft.AspNetCore.Mvc.Testing` | `10.0.14` | Api.Tests | `WebApplicationFactory` integration. |
+| `Serilog.Sinks.InMemory` | `2.0.0` | Api.Tests | Assert structured log properties and redaction. |
+| `NetArchTest.Rules` | `1.3.2` | Architecture tests | Dependency rules. |
 
-**Deliberately absent**
+**External dependency fan-in** (which production layer touches what — derived from the references above, not aspirational)
+
+```mermaid
+flowchart LR
+    DOM["JobScrape.Domain<br/>zero packages"]
+    APP["JobScrape.Application"]
+    INF["JobScrape.Infrastructure"]
+    API["JobScrape.Api"]
+
+    LOG["Microsoft.Extensions<br/>.Logging.Abstractions"]
+    OPT["Microsoft.Extensions<br/>.Options.DataAnnotations"]
+    EF["Microsoft.EntityFrameworkCore<br/>.Sqlite + .Design"]
+    OA["Microsoft.AspNetCore.OpenApi"]
+    SER["Serilog<br/>AspNetCore + Sinks.Async<br/>+ 6 enrichers + Exceptions<br/>+ Demystifier"]
+
+    APP --> LOG
+    INF --> LOG
+    INF --> OPT
+    INF --> EF
+    API --> OA
+    API --> SER
+```
+
+**Deliberately absent** (unchanged policy — none of these are referenced either, same as before)
 
 - `MediatR` and CQRS command/query buses — explicit, constructor-injected use-case handlers are simpler and easier to debug. See [ADR-0011](10-adr/0011-no-cqrs-mediatr.md).
 - `AutoMapper` — explicit mapping is clearer and faster.
 - `FluentValidation` — domain guards, request validation, and options validation are enough.
-- `Ardalis.Specification` and similar — a small in-repo `Specification<T>` base is enough for the query criteria we have.
+- `Ardalis.Specification` and similar — no specification abstraction exists yet; add the smallest one only when the second real query need arrives.
 - `System.CommandLine.NamingConventionBinder` — legacy handler binding; prefer the library-recommended `SetAction`/`SetHandler`.
 - `Newtonsoft.Json` — `System.Text.Json` is the platform default; add Newtonsoft only for a concrete compatibility requirement.
-- `Polly` as a direct package — HTTP resilience is consumed through `Microsoft.Extensions.Http.Resilience` (Polly v8). Add raw Polly only for a measured non-HTTP pipeline.
+- `Polly` as a direct package — no HTTP resilience infrastructure exists yet; add Polly (or `Microsoft.Extensions.Http.Resilience`) only with a measured non-HTTP pipeline need. Never retry a challenge/wall regardless of library.
 - `Dapper` — EF Core handles both writes and read models.
 - `Seq`/ELK/OpenTelemetry exporters — local JSON logs are the v1 baseline; add centralized telemetry only when a real requirement appears.
 - `Selenium` — only if real Safari becomes mandatory.
 - `FluentAssertions` — xUnit assertions are sufficient; avoid the v8 license question.
-- `Moq` — NSubstitute avoids sponsor/license ambiguity.
+- `Moq` — no mocking library is referenced; xUnit assertions and hand-written fakes suffice. Add one only with a concrete need, preferring permissive licensing.
 - Any “stealth”/“undetected” package — explicitly out of policy.
 
 > **License note:** all listed packages are permissive (MIT/BSD/Apache-2.0). Verify in CI with `dotnet list package --include-transitive` and a license scan before release.
@@ -197,6 +216,9 @@ No production project may reference `JobLens.Cli` (only `JobLens.Cli.Tests` does
     "version": "10.0.403",
     "rollForward": "latestFeature",
     "allowPrerelease": false
+  },
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
   }
 }
 ```
@@ -217,13 +239,15 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
+      >true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>
 ```
 
 - `InvariantGlobalization=false` because locale/timezone handling matters (`en-IN`, `Asia/Kolkata`).
-- `GenerateDocumentationFile` can be enabled for Domain/Application if XML docs are maintained; not required for the CLI.
+- `GenerateDocumentationFile=true` globally (ADR-0017): every public type/member carries XML docs; test projects opt out (`false` per test `.csproj`) because test names state the expectation.
 - Warnings are errors from day one; suppress only with a documented justification.
 - AOT/trimming is not a design constraint. Use libraries in their documented configuration; see [Library Usage Policy](16-library-usage-policy.md).
 
@@ -237,21 +261,13 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.5" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
-    <PackageVersion Include="AngleSharp" Version="1.8.6" />
-    <PackageVersion Include="ClosedXML" Version="0.105.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageVersion Include="Serilog.Enrichers.Process" Version="3.0.0" />
@@ -260,23 +276,23 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Serilog.Enrichers.AssemblyName" Version="2.0.0" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageVersion Include="Serilog.Enrichers.Demystifier" Version="1.0.3" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.14" />
-
+    <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageVersion Include="Microsoft.Playwright.Xunit.v3" Version="1.64.1" />
-    <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
-    <PackageVersion Include="Verify.XunitV3" Version="33.3.4" />
-    <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
-    <PackageVersion Include="MinVer" Version="8.0.0" />
+    <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
   </ItemGroup>
 </Project>
 ```
+
+> Anything else (Playwright, `System.CommandLine`, Scalar, `Microsoft.Extensions.Hosting`
+> / `Http` / `Http.Resilience`, `Microsoft.Data.Sqlite`, AngleSharp, ClosedXML,
+> `Microsoft.Playwright.Xunit.v3`, NSubstitute, Verify, MinVer) appears only in
+> the pre-rename design matrix: no `PackageVersion` and no `PackageReference`
+> exists for it today.
 
 ### 4.4 `NuGet.config`
 
@@ -292,7 +308,7 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
 
 ### 4.5 `xunit.runner.json`
 
-Unit/integration tests:
+> Not present in the tree: no `xunit.runner.json` file exists in any test project today, so the runner defaults apply. The template below is the design target for when parallelization or diagnostics need explicit control.
 
 ```json
 {
@@ -320,7 +336,9 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 
 ## 5. Configuration shape
 
-### 5.1 `appsettings.json` (target)
+### 5.1 `appsettings.json`
+
+> Design target below (`JobLens:*` sections, Browser block) — **not implemented**. The implemented sections are `JobScrape:Storage` (defaults in code: `DatabasePath: artifacts/data/jobscrape.db`, `ArtifactsRoot: artifacts`, `ProfilesRoot: artifacts/profiles`, `RetentionDays: 30`, `PostingRetentionDays: 180`, `MinimumFreeDiskBytes: 1 GiB`), `JobScrape:Compliance` (`AcknowledgeSourceRisk`, `AllowHighRiskSources`), `JobScrape:Run` (`RetryMaxAttempts: 2`), `JobScrape:Logging` (`Directory: artifacts/logs`, `RetentionDays: 90`, `FileSizeLimitBytes: 100 MiB`), and `JobScrape` sources (dictionary keyed by source name). `InteractiveConfirmation` is per-run consent, not configuration. There is no `Browser` section: no browser code exists.
 
 ```json
 {
@@ -420,31 +438,32 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 ```text
 appsettings.json
   → appsettings.Local.json (gitignored)
-  → environment variables (JOBLENS_*)
-  → CLI options
+  → environment variables (`JOBSCRAPE_*` by convention)
 ```
 
 - No credentials are stored. Login is manual.
-- Browser profiles are secrets; the directory is created with owner-only permissions on Unix.
+- Browser profiles are secrets; treat their directories as owner-only when browser code lands.
 - Future API keys: user secrets in development, environment variables in production.
 
 ### 5.3 Options binding
 
-Bind each section once at the composition root, validate it at startup, and inject immutable values:
+Bind each section once at the composition root, validate it at startup, and inject immutable values (verified shape from `OptionsRegistration`):
 
 ```csharp
-builder.Services
-    .AddOptions<BrowserOptions>()
-    .Bind(builder.Configuration.GetSection(BrowserOptions.SectionName))
+services
+    .AddOptions<RunOptions>()
+    .BindConfiguration(RunOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddSingleton<IValidateOptions<BrowserOptions>, BrowserOptionsValidator>();
+services.AddSingleton(provider => new RetryPolicy(
+    provider.GetRequiredService<IOptions<RunOptions>>().Value.RetryMaxAttempts,
+    provider.GetRequiredService<IRandomSource>()));
 ```
 
-- Use DataAnnotations for simple ranges and `IValidateOptions<T>` for cross-field rules (delays, caps, LinkedIn consent, writable paths).
+- Use DataAnnotations for simple ranges and `IValidateOptions<T>` for cross-field rules (delays, caps, consent flags).
 - JSON uses `System.Text.Json`; source generation is preferred for hot DTOs, but reflection-based serialization is allowed where it is simpler.
-- Application code receives plain records such as `ScrapeLimits`; it does not read `IConfiguration` or `IOptions<T>`.
+- Application code receives plain records such as `SourceSettingsCatalog` and `RunLimits`; it does not read `IConfiguration` or `IOptions<T>`.
 - Prefer `IOptions<T>`; use `IOptionsSnapshot<T>` only for scoped API reloads and `IOptionsMonitor<T>` only in long-lived services that must observe changes.
 - Safety-critical values never fall back to unsafe defaults. Invalid configuration fails startup.
 
@@ -454,7 +473,7 @@ Full rules and test cases: [Application Patterns §4](14-application-patterns.md
 
 ## 6. Target CLI surface
 
-> These commands are the design target for v1. Names may be refined during Phase 0, but the verbs and behavior should remain.
+> Design target — **no CLI exists in the tree**. The commands below define the intended surface; names may be refined, but the verbs and behavior should remain. Nothing here runs today.
 
 | Command | Purpose |
 |---|---|
@@ -492,6 +511,8 @@ Exit codes matter for schedulers: a challenge (`3`) should not be treated as a g
 ---
 
 ## 7. Bootstrap commands
+
+> Design target — the referenced `JobLens.Cli` project and Playwright install do not exist. Use the loopback stack instead: `dotnet run` the API, `bun run dev` the cockpit (see [Web Cockpit](12-web-cockpit.md)).
 
 ### 7.1 macOS / Linux
 
@@ -547,7 +568,7 @@ dotnet run --project src/JobLens.Cli -- search create `
   --max-jobs 40
 ```
 
-### 7.3 Manual Playwright install (fallback)
+### 7.3 Manual Playwright install (fallback — no Playwright package is referenced today)
 
 If the CLI wrapper is unavailable:
 
@@ -569,15 +590,17 @@ On Linux CI, prefer the official Playwright Docker image or `install --with-deps
 # One-time tool install; pin the version in .config/dotnet-tools.json.
 dotnet tool install --global dotnet-ef
 
-dotnet ef migrations add InitialCreate \
-  --project src/JobLens.Infrastructure \
-  --startup-project src/JobLens.Cli \
+dotnet ef migrations add <Name> \
+  --project src/backend/JobScrape.Infrastructure \
+  --startup-project src/backend/JobScrape.Api \
   --output-dir Persistence/Migrations
 
 dotnet ef database update \
-  --project src/JobLens.Infrastructure \
-  --startup-project src/JobLens.Cli
+  --project src/backend/JobScrape.Infrastructure \
+  --startup-project src/backend/JobScrape.Api
 ```
+
+`JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only; runtime code registers the context through `AddJobScrapePersistence`. The current baseline is `202611010743_InitialCreate` (6 tables; see [Architecture §10.4](02-architecture.md#104-schema-overview)).
 
 Rules:
 
@@ -589,6 +612,8 @@ Rules:
 ---
 
 ## 9. CI outline
+
+> No workflow file exists in the repo yet — this is the outline to implement, not a description of CI today. `Category` filters, E2E projects, `doctor`, and TRX artifacts below do not exist yet.
 
 ```mermaid
 flowchart LR
@@ -655,17 +680,17 @@ jobs:
 
 | Kind | Convention | Example |
 |---|---|---|
-| Namespace | `JobLens.<Layer>.<Feature>` | `JobLens.Domain.Sourcing` |
+| Namespace | `JobScrape.<Layer>.<Feature>` | `JobScrape.Domain.Sourcing` |
 | Aggregate | Noun, sealed class | `ScrapeRun` |
 | Value object | Noun, `record`/`readonly record struct` | `SourceKey`, `RunLimits` |
 | Port | `I` + capability | `IJobSource`, `IJobPostingRepository` |
-| Adapter | `<Source>Adapter` | `NaukriAdapter` |
-| Parser | `<Source><Page>Parser` | `NaukriSearchPageParser` |
+| Adapter | `<Source>Adapter` | *(none implemented yet — naming reserved)* |
+| Parser | `<Source><Page>Parser` | *(none implemented yet — naming reserved)* |
 | Use case | `<Verb><Noun>Handler` | `RunScrapeHandler` |
 | Policy | `<Concern>Policy` | `PolitenessPolicy` |
-| Options | `<Area>Options` | `BrowserOptions` |
+| Options | `<Area>Options` | `RunOptions` |
 | Test | `<Type>Tests` | `ScrapeRunTests` |
-| Test data | `<Type>Builder` | `JobPostingBuilder` |
+| Test data | inline fakes/builders in test projects | `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`) |
 
 ### 10.2 Code rules
 
@@ -740,27 +765,29 @@ playwright-report/
 
 ## 11. Quality gates
 
-Every pull request / phase exit:
+Every pull request / phase exit (verified counts, 2026-11-01 — all green, zero failures):
 
-```bash
-dotnet build -warnaserror
-dotnet format --verify-no-changes
-dotnet test --filter "Category!=Live&Category!=E2E"
-dotnet test tests/JobLens.E2E.Tests
-dotnet list package --vulnerable --include-transitive
-```
+| Suite | Command | Tests |
+|---|---|---|
+| `JobScrape.Domain.Tests` | `dotnet run --project src/backend/JobScrape.Domain.Tests` | 368 |
+| `JobScrape.Application.Tests` | `dotnet run --project src/backend/JobScrape.Application.Tests` | 92 |
+| `JobScrape.Infrastructure.Tests` | `dotnet run --project src/backend/JobScrape.Infrastructure.Tests` | 32 |
+| `JobScrape.Api.Tests` | `dotnet run --project src/backend/JobScrape.Api.Tests` | 42 |
+| `JobScrape.Architecture.Tests` | `dotnet run --project src/backend/JobScrape.Architecture.Tests` | 15 |
+| Frontend (`bun test` + `bun check`) | `bun test`, `bun check` in `src/frontend/` | 47 |
+
+549 backend + 47 frontend = **596 tests, 0 failed.**
 
 > **Backend note (native MTP, `src/backend/`):** `global.json` opts into the
-> Microsoft.Testing.Platform runner, so commands use the native form with no
-> bridge separator — `dotnet test --solution JobScrape.slnx` (all) or
-> `dotnet test --project JobScrape.Api.Tests/JobScrape.Api.Tests.csproj`
-> (single). Coverage:
-> `dotnet test --project <Tests> --coverage --coverage-output <name>.cobertura.xml --coverage-output-format cobertura`,
-> then merge per-project files with the repo-local `dotnet-coverage` tool.
+> Microsoft.Testing.Platform runner, so tests execute with
+> `dotnet run --project <Tests>` (no `dotnet test` VSTest bridge on .NET 10).
+> Coverage comes from the per-project
+> `Microsoft.Testing.Extensions.CodeCoverage` extension, merged with the
+> repo-local `dotnet-coverage` tool (`.config/dotnet-tools.json`).
 > Format: `dotnet tool run csharpier format .` before commit,
 > `dotnet tool run csharpier check .` in gates (see ADR-0016).
-> Feature 1 gate: 23/23 green, 100% line + branch on production code
-> (`Program` excluded as composition root, verified by boot + integration).
+> 100% line + branch on production code (`Program` excluded as composition
+> root, verified by boot + integration).
 
 Plus:
 
@@ -777,9 +804,9 @@ Plus:
 | Concern | Rule |
 |---|---|
 | Paths | `Path.Combine`, `Environment.GetFolderPath`; never hardcode `/` or `\`. |
-| File permissions | On Unix, set profile/data dirs to owner-only (`0700`) via `File.SetUnixFileMode`. |
+| File permissions | On Unix, profile/data dirs must be owner-only (`0700`) once browser code creates them; no such code paths exist yet. |
 | Shell scripts | Provide `bash` and `pwsh` variants; do not assume `bash` on Windows. |
-| Browser install | `doctor --install-browsers` wraps Playwright's installer; `pwsh` is optional. |
+| Browser install | No Playwright dependency exists yet; when adapters land, wrap the installer behind an explicit command. |
 | SQLite | Ensure the parent directory exists; enable WAL; one writer. |
 | Scheduler | Linux `flock`/systemd timer; macOS `launchd`; Windows Task Scheduler “do not start a new instance”. |
 | Case sensitivity | Treat source keys/paths as case-sensitive; use lowercase keys. |
@@ -789,18 +816,18 @@ Plus:
 
 ## 13. Versioning and release
 
+> No release flow exists (no MinVer, no CHANGELOG, no publish profiles). The shape below is the target for the first release.
+
 - SemVer: `MAJOR.MINOR.PATCH`.
 - `0.x` during development; `1.0.0` only after the release checklist.
-- MinVer reads git tags; CI builds without tags get a pre-release version.
 - Publish per RID:
 
 ```bash
-dotnet publish src/JobLens.Cli -c Release -r osx-arm64 --self-contained true
-dotnet publish src/JobLens.Cli -c Release -r linux-x64 --self-contained true
-dotnet publish src/JobLens.Cli -c Release -r win-x64 --self-contained true
+# Target shape for the first release (no CLI project exists yet):
+dotnet publish src/JobScrape.Api -c Release -r osx-arm64 --self-contained true
+dotnet publish src/JobScrape.Api -c Release -r linux-x64 --self-contained true
+dotnet publish src/JobScrape.Api -c Release -r win-x64 --self-contained true
 ```
 
-> Do not enable `PublishSingleFile` for v1 without a spike. Playwright ships driver/browser assets that are easier to ship as a directory; single-file extraction can break the driver path.
-
-- Browsers are **not** bundled; the release notes must state the Playwright install step and version.
-- Keep a `CHANGELOG.md` from Phase 0; add entries per user-visible change.
+- Browsers are **not** bundled; when adapters land, the release notes must state the Playwright install step and version.
+- Keep a `CHANGELOG.md` once user-visible changes ship; add entries per change.
