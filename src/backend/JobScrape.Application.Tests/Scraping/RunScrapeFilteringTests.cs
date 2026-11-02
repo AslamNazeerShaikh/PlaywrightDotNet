@@ -170,15 +170,13 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
-        public async Task RepeatedCardsAcrossPagesAreCountedOnce()
+        public async Task RepeatedCardsAreCountedOnceAndProgressKeepsSeenIds()
         {
             var harness = new ScrapeHarness();
             harness.Source.Then(Page("next", Job("1")), Page(null, Job("2"), Job("1")));
 
             await RunOkAsync(harness);
 
-            // The repeated first card on page 2 is seen once; the run's own
-            // progress record proves the seed set survived both pages.
             var progress = Assert.Single(harness.Store.Progress);
             Assert.Equal(2, progress.PagesCompleted);
             Assert.Equal(["1", "2"], progress.SeenExternalIds.Order());
