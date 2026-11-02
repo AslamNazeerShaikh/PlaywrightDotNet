@@ -99,7 +99,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
         public async Task DetailsAreBlockedWithoutFetching()
         {
             await using var pool = new BrowserSessionPool(
-                new BrowserSessionSettings("profiles", "artifacts", false, TimeSpan.FromSeconds(5))
+                new BrowserSessionSettings("profiles", "artifacts", false, TimeSpan.FromSeconds(5), null, null)
             );
             var source = new LinkedInJobSource(
                 pool,

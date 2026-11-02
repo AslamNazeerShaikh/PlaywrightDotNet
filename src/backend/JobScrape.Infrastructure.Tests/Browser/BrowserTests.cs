@@ -64,7 +64,9 @@ namespace JobScrape.Infrastructure.Tests.Browser
                 Path.Combine(_root, "profiles"),
                 Path.Combine(_root, "artifacts"),
                 Headless: true,
-                TimeSpan.FromSeconds(10)
+                TimeSpan.FromSeconds(10),
+                AdblockMode: null,
+                ExtensionDir: null
             );
         }
 

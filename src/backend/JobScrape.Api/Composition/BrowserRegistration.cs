@@ -37,6 +37,9 @@ namespace JobScrape.Api.Composition
                 .BindConfiguration(BrowserOptions.SectionName)
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<BrowserOptions>>(
+                new BrowserOptionsValidator(contentRoot)
+            );
             services.AddSingleton(provider =>
             {
                 var storage = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
@@ -45,7 +48,11 @@ namespace JobScrape.Api.Composition
                     Path.GetFullPath(storage.ProfilesRoot, contentRoot),
                     Path.GetFullPath(storage.ArtifactsRoot, contentRoot),
                     browser.Headless,
-                    TimeSpan.FromSeconds(browser.NavigationTimeoutSeconds)
+                    TimeSpan.FromSeconds(browser.NavigationTimeoutSeconds),
+                    browser.AdblockMode,
+                    browser.ExtensionDir is null
+                        ? null
+                        : Path.GetFullPath(browser.ExtensionDir, contentRoot)
                 );
             });
             // Singleton: the container disposes it on shutdown, closing every
