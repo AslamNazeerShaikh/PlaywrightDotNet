@@ -1,5 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    ".opencode/pstack-models.md"
+  ],
   "mcp": {
     "servers": {
       "github": {
