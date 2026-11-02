@@ -1537,10 +1537,12 @@ abbr.abbr {
     transparent
   );
   animation: scan-drop 9s linear infinite;
+  transition: background 0.7s ease, box-shadow 0.7s ease, filter 0.7s ease;
 }
 
 .scanbeam.scanbeam-red {
   mix-blend-mode: screen;
+  transition: background 0.7s ease, box-shadow 0.7s ease, filter 0.7s ease;
   background: linear-gradient(
     180deg,
     transparent,

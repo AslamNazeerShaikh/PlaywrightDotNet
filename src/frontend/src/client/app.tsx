@@ -336,7 +336,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     let glowTimer: ReturnType<typeof setTimeout> | null = null;
     let offTimer: ReturnType<typeof setTimeout> | null = null;
     const schedule = () => {
-      const delay = 2000 + Math.random() * 5000;
+      const delay = 3000 + Math.random() * 6000;
       glowTimer = setTimeout(() => {
         if (cancelled) return;
         setScanRed(true);
@@ -344,7 +344,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
           if (cancelled) return;
           setScanRed(false);
           schedule();
-        }, 250 + Math.random() * 450);
+        }, 900 + Math.random() * 700);
       }, delay);
     };
     schedule();
