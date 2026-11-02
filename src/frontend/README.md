@@ -34,7 +34,7 @@
 | Command                                   | What it does                                             |
 | ----------------------------------------- | -------------------------------------------------------- |
 | `bun install`                             | Resolve + install; writes `bun.lock` (committed).        |
-| `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel. Start with `NODE_EXTRA_CA_CERTS` exported (see [HTTPS dev loop](#https-dev-loop)). |
+| `bun run dev`                             | BFF with HMR (`:3000`, HTTPS) + Tailwind watcher, in parallel. Needs the one-time cert setup below; no manual export (scripts carry `NODE_EXTRA_CA_CERTS`). |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
 | `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
