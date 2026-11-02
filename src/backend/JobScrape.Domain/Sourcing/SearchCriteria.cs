@@ -163,8 +163,8 @@ namespace JobScrape.Domain.Sourcing
                 && ExperienceYears == other.ExperienceYears
                 && PostedWithinDays == other.PostedWithinDays
                 && RemoteOnly == other.RemoteOnly
-                && Locations.SequenceEqual(other.Locations, StringComparer.Ordinal)
-                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.Ordinal);
+                && Locations.SequenceEqual(other.Locations, StringComparer.OrdinalIgnoreCase)
+                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -180,12 +180,12 @@ namespace JobScrape.Domain.Sourcing
             hash.Add(RemoteOnly);
             foreach (var location in Locations)
             {
-                hash.Add(location, StringComparer.Ordinal);
+                hash.Add(location, StringComparer.OrdinalIgnoreCase);
             }
 
             foreach (var skill in RequiredSkills)
             {
-                hash.Add(skill, StringComparer.Ordinal);
+                hash.Add(skill, StringComparer.OrdinalIgnoreCase);
             }
 
             return hash.ToHashCode();

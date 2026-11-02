@@ -200,6 +200,16 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void EqualCriteriaIgnoreSkillAndLocationCase()
+        {
+            var first = Create(locations: ["Pune"], requiredSkills: ["C#"]);
+            var second = Create(locations: ["pune"], requiredSkills: ["c#"]);
+
+            Assert.Equal(first, second);
+            Assert.Equal(first.GetHashCode(), second.GetHashCode());
+        }
+
+        [Fact]
         public void DifferentCriteriaAreNotEqual()
         {
             var baseline = Create();
