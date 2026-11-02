@@ -1,0 +1,6 @@
+# EF Core migrations are tool-generated (dotnet ef migrations add). Marking
+# them as generated code is a classification, not a suppression: analyzers
+# skip generated code by design (docs/06-testing-strategy.md §13 also
+# excludes generated migrations from coverage).
+[**/Persistence/Migrations/*.cs]
+generated_code = true

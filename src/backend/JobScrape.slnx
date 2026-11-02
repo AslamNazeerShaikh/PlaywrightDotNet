@@ -6,5 +6,6 @@
   <Project Path="JobScrape.Architecture.Tests/JobScrape.Architecture.Tests.csproj" />
   <Project Path="JobScrape.Domain.Tests/JobScrape.Domain.Tests.csproj" />
   <Project Path="JobScrape.Domain/JobScrape.Domain.csproj" />
+  <Project Path="JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj" />
   <Project Path="JobScrape.Infrastructure/JobScrape.Infrastructure.csproj" />
 </Solution>

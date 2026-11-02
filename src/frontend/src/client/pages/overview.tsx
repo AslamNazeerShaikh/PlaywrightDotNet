@@ -154,6 +154,38 @@ export function OverviewPage({
               </tr>
               <tr>
                 <td>GET</td>
+                <td>/api/v1/search-profiles</td>
+                <td>ListSearchProfilesHandler</td>
+                <td>
+                  <CodeTag code="200 · items+total" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>POST</td>
+                <td>/api/v1/search-profiles</td>
+                <td>CreateSearchProfileHandler</td>
+                <td>
+                  <CodeTag code="201 / 400+errors / 409" tone="warn" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET · POST</td>
+                <td>/api/v1/sessions</td>
+                <td>List/CreateSessionHandler</td>
+                <td>
+                  <CodeTag code="200 · 201 / 400 / 409" tone="warn" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/sources</td>
+                <td>ListSourcesHandler</td>
+                <td>
+                  <CodeTag code="200 · gate+quota+circuit" tone="ok" />
+                </td>
+              </tr>
+              <tr>
+                <td>GET</td>
                 <td>/api/v1/search-profiles/{"{id}"}</td>
                 <td>GetSearchProfileHandler</td>
                 <td>

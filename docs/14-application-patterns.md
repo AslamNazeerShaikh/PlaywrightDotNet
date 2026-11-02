@@ -1,8 +1,8 @@
 # Application Patterns
 
-> **Purpose:** define the four patterns that shape JobLens application code — **Result**, **Options**, **Specification**, and **Problem Details** — and the explicit decision **not** to use CQRS or MediatR.
+> **Purpose:** define the patterns that shape JobScrape application code — **Result**, **Options**, and **Problem Details** — and the explicit decision **not** to use CQRS or MediatR. Specifications and read models are deferred (no `Queries/` folder, no read-model ports exist yet).
 >
-> **Scope:** `JobLens.Application`, the CLI edge, and the v2 .NET API edge. Infrastructure implements the ports; Domain stays pure.
+> **Scope:** `JobScrape.Application` and the `JobScrape.Api` edge. Infrastructure implements the ports; Domain stays pure.
 >
 > **Rule:** these are small, hand-rolled patterns. No pattern library is added until a second use case proves it needs one.
 
@@ -12,23 +12,18 @@
 
 | Pattern | Lives in | Solves | Does not solve |
 |---|---|---|---|
-| **Result** | `JobLens.Application/Results` | Expected failures without exceptions; typed errors at the use-case boundary | Programmer errors or invariant violations |
-| **Options** | Composition root (`Cli`, later `Api`) | Strongly typed, validated configuration | Per-request data or secrets storage |
-| **Specification** | `JobLens.Application/Queries` | Reusable, composable query criteria | Domain behavior or authorization |
-| **Problem Details** | API edge (`JobLens.Api`, v2) | One HTTP error contract for the cockpit | CLI output or SSE event payloads |
+| **Result** | `JobScrape.Application/Results` | Expected failures without exceptions; typed errors at the use-case boundary | Programmer errors or invariant violations |
+| **Options** | Composition root (`JobScrape.Api`) | Strongly typed, validated configuration | Per-request data or secrets storage |
+| **Problem Details** | API edge (`JobScrape.Api`) | One HTTP error contract for the cockpit | Anything but HTTP errors |
 
-The intended flow:
+The intended flow (as implemented — two endpoints, two handlers, one mapper):
 
 ```mermaid
 flowchart LR
-    A["CLI command / API endpoint"] --> B["Use-case handler"]
+    A["API endpoint<br/>HealthController · SearchProfilesController"] --> B["Use-case handler<br/>GetHealth · GetSearchProfile"]
     B --> C{"Result"}
-    C -->|Success| D["DTO / resource"]
-    C -->|Failure| E["CLI exit code"]
-    C -->|Failure| F["Problem Details<br/>application/problem+json"]
-    B --> G["Specification"]
-    G --> H["IJobReadModel"]
-    H --> I["EF Core / SQLite"]
+    C -->|Success| D["DTO / resource<br/>200 + JSON"]
+    C -->|Failure| F["Problem Details<br/>application/problem+json<br/>code + traceId"]
     O["Options<br/>validated at startup"] --> A
 ```
 
@@ -38,19 +33,17 @@ flowchart LR
 
 ### 2.1 Decision
 
-Use **explicit use-case handlers** and **typed read-model ports**. Do not add CQRS command/query buses, MediatR, or a mediator.
+Use **explicit use-case handlers** and **typed ports**. Do not add CQRS command/query buses, MediatR, or a mediator.
 
-A handler here is an ordinary class with a constructor and a method:
+A handler here is an ordinary class with a constructor and a method (shape of the real `GetSearchProfileHandler`; `RunScrapeHandler` follows the same shape with ten constructor ports):
 
 ```csharp
-public sealed class RunScrapeHandler(
-    ISearchProfileRepository profiles,
-    JobSourceRegistry sources,
-    CompliancePolicy compliance,
-    TimeProvider clock)
+public sealed class GetSearchProfileHandler
 {
-    public Task<Result<ScrapeRunSummary>> HandleAsync(
-        RunScrapeRequest request,
+    public GetSearchProfileHandler(ISearchProfileStore store) { ... }
+
+    public Task<Result<SearchProfileResponse>> HandleAsync(
+        Guid id,
         CancellationToken cancellationToken)
     {
         // explicit orchestration
@@ -58,7 +51,9 @@ public sealed class RunScrapeHandler(
 }
 ```
 
-`RunScrapeHandler` is not an `IRequestHandler<,>`. It is resolved by constructor injection and called directly by the CLI command or API endpoint.
+`GetSearchProfileHandler` is not an `IRequestHandler<,>`. It is resolved by constructor injection and called directly by the API controller (`SearchProfilesController.GetAsync`), which maps success to 200 and failure through `ErrorMapper.ToProblem`.
+
+**Scope note:** the scrape slice (`RunScrapeHandler` + its ten ports) is implemented but unregistered and uninvoked; the two live verticals are health and profile lookup.
 
 ### 2.2 Banned
 
@@ -79,7 +74,7 @@ Do not add or introduce:
 | `IMediator.Send` | Constructor-injected handler, called directly |
 | `PipelineBehavior` | ASP.NET Core middleware/endpoint filter, DI decorator, or an explicit call |
 | `INotification` / `IPublisher` | Explicit domain-event handling after persistence |
-| `IQuery` / query handler | A filter object plus `IJobReadModel` method |
+| `IQuery` / query handler | A request record plus a repository query method |
 | `ICommand` / command handler | A request record plus a write-side use-case handler |
 
 ### 2.4 Why
@@ -88,18 +83,18 @@ Do not add or introduce:
 - **Fewer moving parts:** no assembly scanning, no handler registration, no pipeline ordering.
 - **Debuggable:** a stack trace names the handler; it does not pass through a mediator.
 - **Testable:** instantiate the handler with fakes; no mediator test harness.
-- **Small surface:** two entry points (CLI, API) do not justify a bus.
+- **Small surface:** two endpoints do not justify a bus.
 - **Honest boundaries:** a method call is clearer than a message that happens to be in-process.
 
 ### 2.5 Allowed read/write separation
 
 The project still separates **shapes** where it helps:
 
-- Write-side aggregates protect invariants (`JobPosting`, `ScrapeRun`, `BrowserProfile`).
-- Read-side ports return DTOs (`IJobReadModel`, `ISkillDemandReadModel`) and never expose `IQueryable`.
+- Write-side aggregates protect invariants (`JobPosting`, `ScrapeRun`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`, `SearchProfile`).
+- Read paths return DTOs (today: `GetHealthResponse`, `SearchProfileResponse`, `ScrapeRunSummary`); repositories never expose `IQueryable`.
 - The API may use different request/response models for reads and writes.
 
-That is **not** CQRS in the command/query bus sense. There is no separate command store, no event sourcing, no event-driven read-model projection pipeline, and no mediator.
+That is **not** CQRS in the command/query bus sense. There is no separate command store, no event sourcing, no event-driven read-model projection pipeline, no read-model ports, and no mediator.
 
 ### 2.6 Enforcement
 
@@ -205,28 +200,30 @@ public sealed class Result
 }
 ```
 
-A non-generic `Result` covers operations with no return value. Keep both in `JobLens.Application/Results`; do not add a third-party result library for this.
+A non-generic `Result` covers operations with no return value. Keep both in `JobScrape.Application/Results`; do not add a third-party result library for this.
 
 ### 3.3 Error codes
 
-Codes use uppercase snake case and are stable across releases. The cockpit maps codes to messages and actions; it must not parse `Detail`.
+Codes use uppercase snake case and are stable across releases. The cockpit maps codes to messages and actions; it must not parse `Detail`. Every code below exists in `Errors` today (verified exhaustively):
 
-| `ErrorKind` | Example `Code` | HTTP status (API) |
+| `ErrorKind` | Actual `Code`(s) | HTTP status (API) |
 |---|---|---|
 | `Validation` | `VALIDATION_FAILED` | `400` |
-| `NotFound` | `PROFILE_NOT_FOUND` | `404` |
-| `Conflict` | `RUN_ALREADY_ACTIVE` | `409` |
+| `NotFound` | `PROFILE_NOT_FOUND`, `BROWSER_PROFILE_NOT_FOUND` | `404` |
+| `Conflict` | `PROFILE_DISABLED`, `SOURCE_DISABLED` | `409` |
 | `Forbidden` | `COMPLIANCE_BLOCKED` | `403` |
-| `RateLimited` | `RATE_LIMITED` | `429` |
+| `RateLimited` | *(no code defined yet)* | `429` |
 | `QuotaExceeded` | `QUOTA_EXCEEDED` | `429` |
-| `Challenge` | `SOURCE_CHALLENGE` | `409` |
-| `CoolingDown` | `SOURCE_COOLING_DOWN` | `423` |
-| `SourceChanged` | `SOURCE_CHANGED` | `502` |
+| `Challenge` | *(no code defined yet)* | `409` |
+| `CoolingDown` | `SOURCE_COOLING_DOWN`, `SESSION_COOLING_DOWN`, `SESSION_RESET_REQUIRED` | `423` |
+| `SourceChanged` | *(no code defined yet)* | `502` |
 | `Unavailable` | `SOURCE_UNAVAILABLE` | `503` |
-| `Storage` | `STORAGE_LOW_DISK` | `507` |
+| `Storage` | *(no code defined yet)* | `507` |
 | `Unexpected` | `INTERNAL_ERROR` | `500` |
 
-`ErrorKind` is an application concept, not an HTTP status. The API edge performs the mapping; the CLI maps the same kinds to exit codes and stderr messages.
+(All `SESSION_*` codes surface as `CoolingDown`/`423`, including resets — see `Errors.SessionUnavailable`.)
+
+`ErrorKind` is an application concept, not an HTTP status. Only the API edge performs the mapping; there is no CLI mapping today.
 
 ### 3.4 Handler example
 
@@ -235,16 +232,16 @@ public async Task<Result<ScrapeRunSummary>> HandleAsync(
     RunScrapeRequest request,
     CancellationToken cancellationToken)
 {
-    var profile = await _profiles.GetAsync(request.ProfileId, cancellationToken);
+    var profile = await _stores.Profiles.GetAsync(request.ProfileId, cancellationToken);
     if (profile is null)
-        return Result.Fail<ScrapeRunSummary>(Errors.ProfileNotFound(request.ProfileId));
+        return Result.Fail<ScrapeRunSummary>(Errors.ProfileNotFound(request.ProfileId.Value));
 
-    var compliance = _compliance.CanRun(profile.Source, request.Acknowledgment);
-    if (compliance.IsBlocked)
+    var compliance = CompliancePolicy.CanRun(profile.Source, request.Consent);
+    if (!compliance.IsAllowed)
         return Result.Fail<ScrapeRunSummary>(
-            Errors.ComplianceBlocked(compliance.Reason));
+            Errors.ComplianceBlocked(profile.Source, compliance.Reason!));
 
-    var source = _sources.Get(profile.Source);
+    var source = _sources.Find(profile.Source);
     if (source is null)
         return Result.Fail<ScrapeRunSummary>(Errors.SourceUnavailable(profile.Source));
 
@@ -282,61 +279,55 @@ public async Task<Result<ScrapeRunSummary>> HandleAsync(
 
 Options are bound **once at the composition root** and validated at startup. Configuration is not read deep inside the application.
 
-- `JobLens.Cli` (v1) and `JobLens.Api` (v2) own binding, validation, and lifetimes.
-- `JobLens.Infrastructure` may inject `IOptions<BrowserOptions>` when it owns the resource (for example, Playwright).
-- `JobLens.Application` receives plain records/value objects (`ScrapeLimits`, `ComplianceSettings`), not `IConfiguration` or `IOptions<T>`.
-- `JobLens.Domain` never sees configuration.
+- `JobScrape.Api` owns binding, validation, and lifetimes (the only composition root).
+- `JobScrape.Infrastructure` binds the six option sections; cross-field rules live in `IValidateOptions<T>` validators.
+- `JobScrape.Application` receives plain records/value objects (`SourceSettingsCatalog`, `RetryPolicy`, `RunLimits`), not `IConfiguration` or `IOptions<T>`.
+- `JobScrape.Domain` never sees configuration.
 
 ### 4.2 Bind and validate
 
-Options classes are grouped by section. Use `init` properties, DataAnnotations for simple ranges, and `IValidateOptions<T>` for cross-field rules.
+Options classes are grouped by section (`JobScrape:*`). Use `init` properties, DataAnnotations for simple ranges, and `IValidateOptions<T>` for cross-field rules. Example from the tree (`StorageOptions`; the same shape holds for `Run`, `Logging`, and `Sources` sections):
 
 ```csharp
-public sealed class BrowserOptions
+public sealed class StorageOptions
 {
-    public const string SectionName = "JobLens:Browser";
+    public const string SectionName = "JobScrape:Storage";
 
-    [Required]
-    public string DefaultEngine { get; init; } = "Chromium";
+    public string DatabasePath { get; init; } = "artifacts/data/jobscrape.db";
 
-    [Range(1, 300)]
-    public int NavigationTimeoutSeconds { get; init; } = 45;
+    public string ArtifactsRoot { get; init; } = "artifacts";
 
-    [Range(0, 60_000)]
-    public int SlowMoMs { get; init; } = 40;
-
-    public bool Headless { get; init; }
+    public long MinimumFreeDiskBytes { get; init; } = 1L << 30;
 }
 ```
 
 ```csharp
-builder.Services
-    .AddOptions<BrowserOptions>()
-    .Bind(builder.Configuration.GetSection(BrowserOptions.SectionName))
+services
+    .AddOptions<StorageOptions>()
+    .BindConfiguration(StorageOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddSingleton<IValidateOptions<BrowserOptions>, BrowserOptionsValidator>();
+services.AddSingleton<IValidateOptions<SourcesOptions>, SourcesOptionsValidator>();
 ```
 
-Cross-field validation belongs in a validator, not in the handler.
-
-Cross-field validation belongs in a validator, not in the handler:
+Cross-field validation belongs in a validator, not in the handler. `SourcesOptionsValidator` is registered the same way; handler code then receives derived values (`SourceSettingsCatalog` built once by `SourceSettingsMapper`, `RetryPolicy` built from `RunOptions.RetryMaxAttempts`), never `IOptions<T>`.
 
 ```csharp
-public sealed class BrowserOptionsValidator : IValidateOptions<BrowserOptions>
+public sealed class SourcesOptionsValidator : IValidateOptions<SourcesOptions>
 {
-    public ValidateOptionsResult Validate(string? name, BrowserOptions options)
+    public ValidateOptionsResult Validate(string? name, SourcesOptions options)
     {
-        if (options.NavigationTimeoutSeconds <= 0)
-            return ValidateOptionsResult.Fail("NavigationTimeoutSeconds must be positive.");
-
-        return ValidateOptionsResult.Success;
+        // Per source key: must parse to a known SourceKey; DataAnnotations
+        // must pass; caps/delays must satisfy the RunLimits domain ranges;
+        // enabling a non-Standard tier requires the matching
+        // Compliance:AcknowledgeSourceRisk / AllowHighRiskSources flags.
+        // Failure text names the offending Sources:<key> section.
     }
 }
 ```
 
-The existing validation set in [Architecture §11.2](02-architecture.md#112-options-pattern) still applies: caps, delays, LinkedIn consent, writable directories, and valid browser channels.
+The validation set in [Architecture §11.2](02-architecture.md#112-options-pattern) still applies: caps, delays, consent flags.
 
 ### 4.3 Lifetimes
 
@@ -348,157 +339,41 @@ The existing validation set in [Architecture §11.2](02-architecture.md#112-opti
 
 Rules:
 
-- CLI uses `IOptions<T>`; there is no configuration reload during a run.
+- The API uses `IOptions<T>`; there is no configuration reload during a run.
 - Never inject `IOptionsSnapshot<T>` into a singleton.
 - Prefer `IOptions<T>` unless a real reload requirement exists.
 - Options are immutable after binding; do not mutate `Options.Value`.
-- Do not use `serviceProvider.GetRequiredService<IOptions<T>>()`; inject the interface or the bound record.
+- Do not use `serviceProvider.GetRequiredService<IOptions<T>>()` outside composition; inject the interface or the bound record.
 - Safety-critical values (caps, compliance gates) must never silently fall back to unsafe defaults.
 
 ### 4.4 Secrets
 
-- No credentials are stored by JobLens; login is manual.
+- No credentials are stored by JobScrape; login is manual.
 - Future API keys use user secrets in development and environment variables in production.
 - Never bind secrets into options that are logged or serialized.
 - Browser profiles are secrets even though they are not options.
 
 ### 4.5 Testing
 
-- Test invalid values fail validation: non-positive caps, `minDelay > maxDelay`, LinkedIn enabled without consent, non-writable profile root.
+- Test invalid values fail validation: non-positive caps, `minDelay > maxDelay`, unknown source keys, high-risk sources without consent flags.
 - Test `ValidateOnStart` fails the host instead of starting with bad configuration.
 - Test defaults are safe and documented.
-- Keep options tests in `JobLens.Infrastructure.Tests` (validation) or `JobLens.Cli.Tests` (binding and startup).
+- Keep options tests in `JobScrape.Infrastructure.Tests` (validation).
 
 ---
 
 ## 5. Specification pattern
 
-### 5.1 When to use it
+> **Deferred — not implemented.** There is no `Queries/` folder, no `ISpecification<T>`, and no read-model ports. Identity lookups (`GetAsync`/`FindAsync` by id) are repository methods and stay that way. When the **second** real filter need arrives (the first being a plain id lookup), add the smallest composable specification type that EF Core can translate — and only then. The rules below are the design to follow at that point, kept brief until it exists:
 
-Use a specification when a **named, reusable business predicate** appears in more than one query, or when composition makes a query readable:
-
-- active postings within the retention window;
-- postings posted within the last N days;
-- postings matching structured profile filters (source, remote, experience);
-- postings from enabled, compliant sources.
-
-Do not create a specification for:
-
-- a single `Where(x => x.Id == id)` lookup;
-- authorization or compliance decisions (those are policies);
-- write-side invariants (those belong in aggregates/value objects);
-- ad-hoc reporting that reads a dedicated read model.
-
-### 5.2 Shape
-
-Specifications live in `JobLens.Application/Queries` and expose an expression tree, not an `IQueryable`.
-
-```csharp
-public interface ISpecification<T>
-{
-    Expression<Func<T, bool>> ToExpression();
-    bool IsSatisfiedBy(T candidate);
-}
-
-public abstract class Specification<T> : ISpecification<T>
-{
-    private readonly Lazy<Func<T, bool>> _compiled;
-
-    protected Specification() => _compiled = new(() => ToExpression().Compile());
-
-    public abstract Expression<Func<T, bool>> ToExpression();
-
-    public bool IsSatisfiedBy(T candidate) => _compiled.Value(candidate);
-
-    public Specification<T> And(Specification<T> other) => new AndSpecification<T>(this, other);
-    public Specification<T> Or(Specification<T> other) => new OrSpecification<T>(this, other);
-    public Specification<T> Not() => new NotSpecification<T>(this);
-}
-
-public sealed class ActivePostingSpecification(
-    DateTimeOffset now,
-    int retentionDays) : Specification<JobPosting>
-{
-    public override Expression<Func<JobPosting, bool>> ToExpression() =>
-        job => job.Status == JobPostingStatus.Active
-            && job.LastSeenAt >= now.AddDays(-retentionDays);
-}
-```
-
-`Specification<T>` is a small in-repo base class that caches the compiled predicate for `IsSatisfiedBy` and implements `And`, `Or`, and `Not` by replacing the parameter in the expression tree. The helper specification types are private nested classes in the same file. Do not use `Expression.Invoke` for EF Core queries; it is not reliably translatable. A parameter-replacing `ExpressionVisitor` is the supported composition mechanism.
-
-Example specifications:
-
-```csharp
-public sealed class PostedWithinSpecification(
-    DateTimeOffset now,
-    int days) : Specification<JobPosting>
-{
-    public override Expression<Func<JobPosting, bool>> ToExpression() =>
-        job => job.PostedAt >= now.AddDays(-days);
-}
-
-public sealed class EnabledSourceSpecification(
-    IReadOnlyCollection<SourceKey> enabledSources) : Specification<JobPosting>
-{
-    public override Expression<Func<JobPosting, bool>> ToExpression() =>
-        job => enabledSources.Contains(job.Source);
-}
-```
-
-Composition:
-
-```csharp
-var specification = new ActivePostingSpecification(now, retentionDays)
-    .And(new PostedWithinSpecification(now, criteria.PostedWithinDays))
-    .And(new EnabledSourceSpecification(enabledSources));
-```
-
-Keyword matching is deliberately not shown here: it depends on tokenization and ranking, so it belongs in a named read-model query rather than a naive `Contains` expression.
-
-### 5.3 Query flow
-
-```mermaid
-flowchart LR
-    A["API / CLI filter"] --> B["Compose specification"]
-    B --> C["IJobReadModel.QueryAsync(spec, page, ct)"]
-    C --> D["EF Core translates expression"]
-    D --> E["SQLite"]
-    E --> F["PagedResult<JobListItem>"]
-```
-
-The read-model port accepts the specification; it never returns `IQueryable`:
-
-```csharp
-public interface IJobReadModel
-{
-    Task<PagedResult<JobListItem>> QueryAsync(
-        ISpecification<JobPosting> specification,
-        JobSort sort,
-        PageRequest page,
-        CancellationToken cancellationToken);
-}
-```
-
-### 5.4 Rules
-
-- One specification = one business predicate; compose rather than inherit deep hierarchies.
-- The expression must be EF Core translatable: no custom methods, no client-side evaluation, no `Compile()` inside the expression.
-- Normalize missing values before filtering. If `PostedAt` is absent, the read model applies the documented `FirstSeenAt` fallback once; specifications assume a normalized value.
-- `IsSatisfiedBy` is for domain tests and in-memory checks, not for filtering database rows.
-- Specifications filter; they do not authorize, mutate, or persist.
-- Do not put `Include`, tracking, or projection into a specification. The read model owns projection.
-- No generic repository with `Find(ISpecification<T>)`. The read model exposes named query methods.
-- Keep the generated SQL observable: log slow queries and verify the specification translates in integration tests.
+- One specification = one business predicate; compose (`And`/`Or`/`Not`) rather than inherit deep hierarchies.
+- The expression must be EF Core translatable: no custom methods, no client-side evaluation, no `Compile()` inside the expression; a parameter-replacing `ExpressionVisitor` is the composition mechanism (never `Expression.Invoke`).
+- Normalize missing values before filtering.
+- `IsSatisfiedBy` is for domain tests and in-memory checks, not for database rows.
+- Specifications filter; they do not authorize, mutate, persist, or project (`Include`/tracking/projection belong to the read model).
+- No generic repository with `Find(ISpecification<T>)`; read models expose named query methods.
 - If a predicate is used once, write the LINQ inline; a specification is not a ceremony requirement.
-
-### 5.5 Testing
-
-- Unit test `IsSatisfiedBy` with boundary values (inclusive/exclusive dates, empty keywords).
-- Integration test each specification against SQLite and assert the row count, not just the SQL string.
-- Test `And`/`Or`/`Not` composition, especially overlapping parameters.
-- Use `ToQueryString()` in tests to catch client evaluation.
-- Add an index when a specification becomes a hot path; measure before adding one.
+- Integration-test each specification against SQLite (row counts, `ToQueryString()` for client evaluation); add an index when one becomes a hot path.
 
 ---
 
@@ -506,27 +381,28 @@ public interface IJobReadModel
 
 ### 6.1 Contract
 
-The v2 API returns errors as **RFC 9457 Problem Details** with content type `application/problem+json`. The standard members are `type`, `title`, `status`, `detail`, and `instance`. JobLens adds:
+The API returns errors as **RFC 9457 Problem Details** with content type `application/problem+json`. The standard members are `type`, `title`, `status`, `detail`, and `instance`. JobScrape adds (verified in `ErrorMapper` + `GlobalExceptionHandler`):
 
 | Extension | Purpose |
 |---|---|
-| `code` | Stable machine-readable code (`QUOTA_EXCEEDED`) |
-| `traceId` | Correlation ID for logs and support |
-| `errors` | Field-level validation errors (only for `400`) |
-| `retryAfter` | ISO 8601 UTC timestamp when retry is safe (optional) |
+| `code` | Stable machine-readable code (`PROFILE_NOT_FOUND`, `INTERNAL_ERROR`) |
+| `traceId` | Correlation ID for logs and support (Activity id or trace identifier) |
+
+> **Known defect (verified live 2026-11-01):** `ErrorMapper` passes the field-error map to `Results.ValidationProblem`, but the rendered 400 body carries NO `errors` member today (only `code` + `traceId` alongside the standard members), and its `type` is the framework default `https://tools.ietf.org/html/rfc9110#section-15.5.1`, not a `jobscrape.local` URI. Do not build cockpit or test expectations on an `errors` member or a stable 400 `type` until this is fixed. The intended contract keeps both; see the `errors` row the mapper code already prepares.
 
 ### 6.2 Example
 
+A real miss, exactly as the edge renders it (`GET /api/v1/search-profiles/{id:guid}` for an unknown id):
+
 ```json
 {
-  "type": "https://joblens.local/problems/quota-exceeded",
-  "title": "Source quota exceeded",
-  "status": 429,
-  "detail": "The daily detail cap for source 'naukri' has been reached.",
-  "instance": "/api/v1/runs",
-  "code": "QUOTA_EXCEEDED",
-  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-  "retryAfter": "2026-10-30T00:00:00Z"
+  "type": "https://jobscrape.local/problems/profile-not-found",
+  "title": "Search profile not found.",
+  "status": 404,
+  "detail": "Search profile '00000000-0000-0000-0000-000000000000' does not exist.",
+  "instance": "/api/v1/search-profiles/00000000-0000-0000-0000-000000000000",
+  "code": "PROFILE_NOT_FOUND",
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 
@@ -534,63 +410,71 @@ Validation uses `ValidationProblemDetails`:
 
 ```json
 {
-  "type": "https://joblens.local/problems/validation-failed",
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
   "title": "One or more validation errors occurred.",
   "status": 400,
   "detail": "The request contains invalid fields.",
-  "instance": "/api/v1/search-profiles",
+  "instance": "/api/v1/search-profiles/00000000-0000-0000-0000-000000000000",
   "code": "VALIDATION_FAILED",
-  "errors": {
-    "keywords": ["At least one keyword is required."],
-    "experienceYears": ["Must be between 0 and 50."]
-  }
+  "traceId": "00-456cd528b1864c160a9f34b77529329-f5be82b9ca1f23e8-00"
 }
 ```
 
+(Verified live: the field map (`{"id": [...]}`) does not appear on the wire today — see the defect note in §6.1.)
+
 ### 6.3 Result → HTTP mapping
 
-One mapper owns the translation. Endpoints do not hand-build problem objects.
+One mapper owns the translation (`JobScrape.Api/Http/ErrorMapper.cs`). Endpoints do not hand-build problem objects. Abbreviated — see the file for the XML docs:
 
 ```csharp
 public static IResult ToProblem(this ErrorInfo error)
 {
     if (error.Kind == ErrorKind.Validation)
     {
-        var errors = error.Metadata?["errors"] as IDictionary<string, string[]>
-            ?? new Dictionary<string, string[]>();
-        return Results.ValidationProblem(errors, title: error.Title, detail: error.Detail);
+        var errors = error.Metadata?.TryGetValue("errors", out var raw) == true
+            && raw is IReadOnlyDictionary<string, string[]> typed
+                ? typed
+                : new Dictionary<string, string[]>();
+        return Results.ValidationProblem(
+            (IDictionary<string, string[]>)errors,
+            title: error.Title,
+            detail: error.Detail,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = error.Code,
+                ["traceId"] = Activity.Current?.Id ?? "unknown",
+            });
     }
 
     var status = error.Kind switch
     {
-        ErrorKind.Validation => StatusCodes.Status400BadRequest,
-        ErrorKind.NotFound => StatusCodes.Status404NotFound,
-        ErrorKind.Conflict => StatusCodes.Status409Conflict,
-        ErrorKind.Forbidden => StatusCodes.Status403Forbidden,
-        ErrorKind.RateLimited => StatusCodes.Status429TooManyRequests,
-        ErrorKind.QuotaExceeded => StatusCodes.Status429TooManyRequests,
-        ErrorKind.Challenge => StatusCodes.Status409Conflict,
-        ErrorKind.CoolingDown => StatusCodes.Status423Locked,
-        ErrorKind.SourceChanged => StatusCodes.Status502BadGateway,
-        ErrorKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
-        ErrorKind.Storage => StatusCodes.Status507InsufficientStorage,
-        _ => StatusCodes.Status500InternalServerError
+        ErrorKind.NotFound => 404,
+        ErrorKind.Conflict => 409,
+        ErrorKind.Forbidden => 403,
+        ErrorKind.RateLimited => 429,
+        ErrorKind.QuotaExceeded => 429,
+        ErrorKind.Challenge => 409,
+        ErrorKind.CoolingDown => 423,
+        ErrorKind.SourceChanged => 502,
+        ErrorKind.Unavailable => 503,
+        ErrorKind.Storage => 507,
+        _ => 500,
     };
 
     return Results.Problem(
-        type: $"https://joblens.local/problems/{error.Code.ToLowerInvariant().Replace('_', '-')}",
+        type: $"https://jobscrape.local/problems/{error.Code.ToLowerInvariant().Replace('_', '-')}",
         title: error.Title,
         detail: error.Detail,
         statusCode: status,
         extensions: new Dictionary<string, object?>
         {
             ["code"] = error.Code,
-            ["traceId"] = Activity.Current?.Id ?? "unknown"
+            ["traceId"] = Activity.Current?.Id ?? "unknown",
         });
 }
 ```
 
-The validation branch uses `Results.ValidationProblem` so the `errors` dictionary is generated correctly; the switch maps the remaining kinds.
+The validation branch uses `Results.ValidationProblem` so the `errors` dictionary is generated correctly; the switch maps the remaining kinds. (On the wire today the `errors` member is missing — see §6.1 defect note.)
 
 ### 6.4 Registration
 
@@ -605,13 +489,17 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
-app.UseExceptionHandler();
-app.UseStatusCodePages();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+app.UseMiddleware<CorrelationMiddleware>();   // X-Correlation-Id in + out
+app.UseExceptionHandler();                   // GlobalExceptionHandler → safe 500
+app.UseSerilogRequestLogging(...);
+app.MapControllers();
 ```
 
-- `UseExceptionHandler` catches unhandled exceptions and produces a safe `500`.
-- `IExceptionHandler` maps known infrastructure exceptions when a safe public message exists.
-- Do not catch `OperationCanceledException` and turn it into a problem response; let the request abort.
+- `UseExceptionHandler` catches unhandled exceptions; `GlobalExceptionHandler` logs once with full detail and writes a safe 500 (`INTERNAL_ERROR` + trace id, never the exception message). `OperationCanceledException` is not handled — the request aborts.
+- `CorrelationMiddleware` echoes `X-Correlation-Id` and scopes logs with it (+ request id); client-supplied ids are reused only when short and alphanumeric.
+- `UseStatusCodePages` is **not** registered: only mapped results and the global handler produce bodies.
 - The BFF proxies the API response unchanged and preserves `Content-Type`.
 
 ### 6.5 Rules
@@ -627,20 +515,19 @@ app.UseStatusCodePages();
 - Log `5xx` at error level with `traceId`; log `4xx` at information/debug level.
 - Add every documented problem response to OpenAPI and regenerate the cockpit types.
 
-### 6.6 CLI and SSE
+### 6.6 Not yet: CLI and SSE
 
-- **CLI:** `Result.Error` maps to a documented exit code and a stderr message. There is no HTTP envelope.
-- **SSE:** a failed run emits a typed event (`run.failed`) with `code`, `message`, and `runId`. Do not send a Problem Details document mid-stream.
-- **BFF:** forwards Problem Details from the .NET API; it does not re-wrap the body.
+Neither exists: no CLI project, no SSE/events, no exit-code mapping. When they arrive, the contract is fixed now — `ErrorInfo.Code` is the shared vocabulary (`code` member in HTTP, exit-code/message mapping later), and Problem Details stays HTTP-only.
+
+**BFF:** forwards Problem Details from the .NET API unchanged; it never re-wraps the body (verified: `proxy.ts` streams the upstream response).
 
 ### 6.7 Testing
 
-- Integration-test every `ErrorKind` → status, content type, `code`, and `traceId`.
-- Assert a `500` never contains `detail` with a stack trace, SQL, or file path.
-- Assert validation errors use the request field names.
-- Snapshot the problem body for stable contracts; update the snapshot intentionally.
-- Verify OpenAPI lists `application/problem+json` for every error response.
-- Verify the cockpit handles unknown `code` values without crashing.
+- Unit-test every `ErrorKind` → status mapping (`KindMapsToExpectedStatus` covers all 12).
+- Integration-test the two live endpoints for status codes and stable `code`s (`SearchProfilesEndpointTests`, `HealthEndpointTests`).
+- Assert a `500` never contains `detail` with a stack trace, SQL, or file path (the global handler only emits a static message).
+- Assert validation errors use the request field names — once the §6.1 defect is fixed.
+- Verify the cockpit falls back to `UNKNOWN` for unrecognized `code` values instead of crashing.
 
 ---
 
@@ -650,21 +537,20 @@ app.UseStatusCodePages();
 Options (validated at startup)
         │
         ▼
-CLI command / API endpoint
-        │  binds request
+API endpoint (controller)
+        │  binds route + CancellationToken
         ▼
-Use-case handler ──► Specification ──► IJobReadModel ──► EF Core/DTO
+Use-case handler ──► EF Core via port + IUnitOfWork
         │
         ▼
-Result<T> ──► CLI exit code
-        └────► Problem Details (API)
+Result<T> ──► Ok → 200 + DTO
+        └────► Fail → Problem Details (ErrorMapper)
 ```
 
 - Options never flow into Domain.
-- Specifications never leak `IQueryable`.
+- No specifications exist; identity lookups are repository methods.
 - Handlers return `Result`, not HTTP responses.
 - Only the API edge knows HTTP status codes.
-- Only the CLI edge knows process exit codes.
 - The BFF and React cockpit consume the stable `code` and `type`, not error prose.
 
 ---

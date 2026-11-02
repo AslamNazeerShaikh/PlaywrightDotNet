@@ -24,32 +24,9 @@ namespace JobScrape.Api.Http
         {
             ArgumentNullException.ThrowIfNull(error);
 
-            // Validation uses ValidationProblem so the errors dictionary is
-            // rendered correctly; every other kind shares the switch below.
-            // The extensions carry the stable code contract (§6.1): the
-            // default ValidationProblem shape has no code member, and the
-            // cockpit maps codes, never prose.
-            if (error.Kind == ErrorKind.Validation)
-            {
-                var errors =
-                    error.Metadata?.TryGetValue("errors", out var raw) == true
-                    && raw is IReadOnlyDictionary<string, string[]> typed
-                        ? typed
-                        : new Dictionary<string, string[]>();
-                return Results.ValidationProblem(
-                    (IDictionary<string, string[]>)errors,
-                    title: error.Title,
-                    detail: error.Detail,
-                    extensions: new Dictionary<string, object?>
-                    {
-                        ["code"] = error.Code,
-                        ["traceId"] = Activity.Current?.Id ?? "unknown",
-                    }
-                );
-            }
-
             var status = error.Kind switch
             {
+                ErrorKind.Validation => StatusCodes.Status400BadRequest,
                 ErrorKind.NotFound => StatusCodes.Status404NotFound,
                 ErrorKind.Conflict => StatusCodes.Status409Conflict,
                 ErrorKind.Forbidden => StatusCodes.Status403Forbidden,
@@ -68,12 +45,38 @@ namespace JobScrape.Api.Http
                 title: error.Title,
                 detail: error.Detail,
                 statusCode: status,
-                extensions: new Dictionary<string, object?>
-                {
-                    ["code"] = error.Code,
-                    ["traceId"] = Activity.Current?.Id ?? "unknown",
-                }
+                extensions: Extensions(error)
             );
+        }
+
+        /// <summary>
+        /// The JobScrape extension members: the stable <c>code</c>, the
+        /// <c>traceId</c>, and for validation the field-level <c>errors</c>.
+        /// Errors travel as an extension rather than through
+        /// <c>Results.ValidationProblem</c>: MVC's problem writer rebuilds
+        /// the body from the standard members plus extensions, so the
+        /// validation-specific <c>Errors</c> property would be dropped on the
+        /// wire.
+        /// </summary>
+        /// <param name="error">The typed failure.</param>
+        /// <returns>The extension members.</returns>
+        private static Dictionary<string, object?> Extensions(ErrorInfo error)
+        {
+            var extensions = new Dictionary<string, object?>
+            {
+                ["code"] = error.Code,
+                ["traceId"] = Activity.Current?.Id ?? "unknown",
+            };
+            if (error.Kind == ErrorKind.Validation)
+            {
+                extensions["errors"] =
+                    error.Metadata?.TryGetValue("errors", out var raw) == true
+                    && raw is IReadOnlyDictionary<string, string[]> typed
+                        ? typed
+                        : new Dictionary<string, string[]>();
+            }
+
+            return extensions;
         }
     }
 }

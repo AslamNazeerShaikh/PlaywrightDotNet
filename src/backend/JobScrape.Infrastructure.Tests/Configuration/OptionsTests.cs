@@ -1,0 +1,259 @@
+using System.ComponentModel.DataAnnotations;
+using JobScrape.Domain.Common;
+using JobScrape.Infrastructure.Configuration;
+using JobScrape.Infrastructure.Runtime;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
+using Xunit;
+
+namespace JobScrape.Infrastructure.Tests.Configuration
+{
+    public sealed class OptionsTests
+    {
+        private static SourceOptions Naukri(bool enabled = true)
+        {
+            return new SourceOptions
+            {
+                Enabled = enabled,
+                BaseUrl = "https://www.naukri.com",
+                MaxPagesPerSearch = 3,
+                MaxJobsPerRun = 60,
+                MaxDetailsPerRun = 60,
+                MinDelayMs = 2500,
+                MaxDelayMs = 6000,
+                DailyPageCap = 25,
+                DailyDetailCap = 60,
+                DailyRunCap = 2,
+                ChallengeCooldownMinutes = 45,
+            };
+        }
+
+        private static ValidateOptionsResult Validate(
+            Dictionary<string, SourceOptions> sources,
+            bool acknowledge = false,
+            bool allowHighRisk = false
+        )
+        {
+            var validator = new SourcesOptionsValidator(
+                Options.Create(
+                    new ComplianceOptions
+                    {
+                        AcknowledgeSourceRisk = acknowledge,
+                        AllowHighRiskSources = allowHighRisk,
+                    }
+                )
+            );
+            return validator.Validate(null, new SourcesOptions { Sources = sources });
+        }
+
+        [Fact]
+        public void ShippedNaukriDefaultsAreValid()
+        {
+            Assert.True(Validate(new() { ["naukri"] = Naukri() }).Succeeded);
+        }
+
+        [Fact]
+        public void UnknownSourceFails()
+        {
+            var result = Validate(new() { ["monster"] = Naukri() });
+
+            Assert.Contains("Sources:monster: unknown source.", result.Failures!);
+        }
+
+        [Fact]
+        public void AnnotationViolationsAreReportedPerSource()
+        {
+            var result = Validate(
+                new()
+                {
+                    ["naukri"] = new SourceOptions
+                    {
+                        BaseUrl = "not a url",
+                        MaxPagesPerSearch = 0,
+                        DailyRunCap = -1,
+                    },
+                }
+            );
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(3, result.Failures!.Count());
+            Assert.All(
+                result.Failures!,
+                failure => Assert.StartsWith("Sources:naukri:", failure, StringComparison.Ordinal)
+            );
+        }
+
+        [Fact]
+        public void DelayWindowMustBeValidForTheDomain()
+        {
+            var result = Validate(
+                new()
+                {
+                    ["naukri"] = new SourceOptions
+                    {
+                        Enabled = true,
+                        BaseUrl = "https://www.naukri.com",
+                        MaxPagesPerSearch = 3,
+                        MaxJobsPerRun = 60,
+                        MinDelayMs = 9000,
+                        MaxDelayMs = 6000,
+                    },
+                }
+            );
+
+            Assert.Contains("Sources:naukri: maxDelay must be >= minDelay.", result.Failures!);
+        }
+
+        [Fact]
+        public void EnabledRestrictedSourceNeedsAcknowledgment()
+        {
+            var sources = new Dictionary<string, SourceOptions> { ["indeed"] = Naukri() };
+
+            Assert.False(Validate(sources).Succeeded);
+            Assert.True(Validate(sources, acknowledge: true).Succeeded);
+        }
+
+        [Fact]
+        public void EnabledHighRiskSourceNeedsBothFlags()
+        {
+            var sources = new Dictionary<string, SourceOptions> { ["linkedin"] = Naukri() };
+
+            var none = Validate(sources);
+            var ackOnly = Validate(sources, acknowledge: true);
+
+            Assert.Equal(2, none.Failures!.Count());
+            Assert.Contains(
+                ackOnly.Failures!,
+                f => f.Contains("AllowHighRiskSources", StringComparison.Ordinal)
+            );
+            Assert.True(Validate(sources, acknowledge: true, allowHighRisk: true).Succeeded);
+        }
+
+        [Fact]
+        public void DisabledRiskySourcesNeedNoConsent()
+        {
+            Assert.True(
+                Validate(
+                    new()
+                    {
+                        ["indeed"] = Naukri(enabled: false),
+                        ["linkedin"] = Naukri(enabled: false),
+                    }
+                ).Succeeded
+            );
+        }
+
+        [Fact]
+        public void ValidatorRejectsNullArguments()
+        {
+            Assert.Throws<ArgumentNullException>(() => new SourcesOptionsValidator(null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                new SourcesOptionsValidator(Options.Create(new ComplianceOptions())).Validate(
+                    null,
+                    null!
+                )
+            );
+            Assert.Throws<ArgumentNullException>(() => SourcesOptionsValidator.ToRunLimits(null!));
+            Assert.Throws<ArgumentNullException>(() => SourceSettingsMapper.ToCatalog(null!));
+        }
+
+        [Fact]
+        public void MapperBuildsTheApplicationCatalog()
+        {
+            var catalog = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase) { ["NAUKRI"] = Naukri() },
+                }
+            );
+
+            var settings = catalog.Find(SourceKey.Naukri);
+            Assert.NotNull(settings);
+            Assert.True(settings.Enabled);
+            Assert.Equal(25, settings.DailyPageCap);
+            Assert.Equal(60, settings.DailyDetailCap);
+            Assert.Equal(2, settings.DailyRunCap);
+            Assert.Equal(TimeSpan.FromMinutes(45), settings.ChallengeCooldown);
+            Assert.Null(catalog.Find(SourceKey.Indeed));
+        }
+
+        [Fact]
+        public void ToRunLimitsUsesTheConfiguredCaps()
+        {
+            var limits = SourcesOptionsValidator.ToRunLimits(Naukri());
+
+            Assert.Equal(3, limits.MaxPages);
+            Assert.Equal(TimeSpan.FromMilliseconds(2500), limits.MinDelay);
+            Assert.Equal(TimeSpan.FromMilliseconds(6000), limits.MaxDelay);
+        }
+
+        [Fact]
+        public void StorageRunAndLoggingDefaultsAreValidAndBoundsAreEnforced()
+        {
+            static bool IsValid(object options)
+            {
+                return Validator.TryValidateObject(
+                    options,
+                    new ValidationContext(options),
+                    null,
+                    true
+                );
+            }
+
+            Assert.True(IsValid(new StorageOptions()));
+            Assert.True(IsValid(new RunOptions()));
+            Assert.True(IsValid(new LoggingOptions()));
+            Assert.False(IsValid(new StorageOptions { MinimumFreeDiskBytes = 0 }));
+            Assert.False(IsValid(new StorageOptions { DatabasePath = "" }));
+            Assert.False(IsValid(new RunOptions { RetryMaxAttempts = 4 }));
+            Assert.False(IsValid(new LoggingOptions { RetentionDays = 0 }));
+            Assert.False(IsValid(new LoggingOptions { FileSizeLimitBytes = 1024 }));
+        }
+
+        [Fact]
+        public void SystemRandomSourceStaysInRange()
+        {
+            var random = new SystemRandomSource();
+
+            for (var i = 0; i < 1000; i++)
+            {
+                Assert.InRange(random.NextInt32(5, 8), 5, 7);
+            }
+        }
+
+        [Fact]
+        public async Task TimeProviderDelayWaitsOnTheInjectedClock()
+        {
+            var clock = new FakeTimeProvider();
+            var delay = new TimeProviderDelay(clock);
+
+            var wait = delay.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken
+            );
+            Assert.False(wait.IsCompleted);
+            clock.Advance(TimeSpan.FromSeconds(5));
+            await wait;
+
+            Assert.True(wait.IsCompletedSuccessfully);
+        }
+
+        [Fact]
+        public async Task TimeProviderDelayHonorsCancellationAndRejectsNegative()
+        {
+            var delay = new TimeProviderDelay(new FakeTimeProvider());
+            using var cts = new CancellationTokenSource();
+
+            var wait = delay.WaitAsync(TimeSpan.FromHours(1), cts.Token);
+            await cts.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => wait);
+            // The guard throws synchronously, before any task exists.
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                _ = delay.WaitAsync(TimeSpan.FromSeconds(-1), CancellationToken.None);
+            });
+            Assert.Throws<ArgumentNullException>(() => new TimeProviderDelay(null!));
+        }
+    }
+}

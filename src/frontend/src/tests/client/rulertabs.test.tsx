@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 describe("ruler tabs", () => {
-  test("lists the four pages with section codes, current marked", () => {
+  test("lists every page with section codes, current marked", () => {
     const queries = render(<RulerTabs route="health" />);
 
     const stops = queries.getAllByRole("link");
@@ -29,8 +29,12 @@ describe("ruler tabs", () => {
       "01OVERVIEW",
       "02ENGINE HEALTH",
       "03SEARCH PROFILES",
-      "04TOPOLOGY",
+      "04SOURCES",
+      "05SESSIONS",
+      "06RUNS",
+      "07TOPOLOGY",
     ]);
+    expect(queries.getByText("NAV // 07 STOPS")).toBeDefined();
     expect(
       queries.getByRole("link", { name: "02 ENGINE HEALTH" }).getAttribute("aria-current"),
     ).toBe("page");
@@ -38,11 +42,11 @@ describe("ruler tabs", () => {
 
   test("blip sits on the active stop with section digits", () => {
     const first = render(<RulerTabs route="overview" />);
-    expect(first.getByText("01/04")).toBeDefined();
+    expect(first.getByText("01/07")).toBeDefined();
     cleanup();
 
     const last = render(<RulerTabs route="topology" />);
-    expect(last.getByText("04/04")).toBeDefined();
+    expect(last.getByText("07/07")).toBeDefined();
   });
 
   test("selecting a stop navigates", () => {

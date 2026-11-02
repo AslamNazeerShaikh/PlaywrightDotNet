@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
@@ -8,8 +8,12 @@ import {
   type ApiClient,
   type ApiProblem,
   createApiClient,
+  type CreateProfileInput,
+  type CreateSessionInput,
   type HealthPayload,
   type SearchProfilePayload,
+  type SessionPayload,
+  type SourceList,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
@@ -22,7 +26,10 @@ import {
 } from "./lib/telemetry.ts";
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
-import { type LookupRecord, ProfilesPage } from "./pages/profiles.tsx";
+import { ProfilesPage } from "./pages/profiles.tsx";
+import { RunsPage } from "./pages/runs.tsx";
+import { SessionsPage } from "./pages/sessions.tsx";
+import { SourcesPage } from "./pages/sources.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
 
 /**
@@ -45,21 +52,36 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [samples, setSamples] = useState<Sample[]>([]);
   const [events, setEvents] = useState<LogEvent[]>([]);
 
-  const [profile, setProfile] = useState<SearchProfilePayload | null>(null);
-  const [profileProblem, setProfileProblem] = useState<ApiProblem | null>(null);
-  const [looking, setLooking] = useState(false);
-  const [history, setHistory] = useState<LookupRecord[]>([]);
+  const [profiles, setProfiles] = useState<SearchProfilePayload[] | null>(null);
+  const [profilesProblem, setProfilesProblem] = useState<ApiProblem | null>(null);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createProblem, setCreateProblem] = useState<ApiProblem | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [sources, setSources] = useState<SourceList | null>(null);
+  const [sourcesProblem, setSourcesProblem] = useState<ApiProblem | null>(null);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [sessions, setSessions] = useState<SessionPayload[] | null>(null);
+  const [sessionsProblem, setSessionsProblem] = useState<ApiProblem | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [createSessionProblem, setCreateSessionProblem] = useState<ApiProblem | null>(null);
   const probeBusy = useRef(false);
+  const lastProbeAt = useRef(0);
   const probeRef = useRef<() => void>(() => undefined);
+  // Latest-wins tickets per list: a response may only write state while its
+  // request is still the newest one for that list.
+  const tickets = useRef({ profiles: 0, sources: 0, sessions: 0 });
   const linkLogged = useRef(false);
   // Default client must be identity-stable: a fresh object per render would
   // refire every [client] effect below and spiral into a fetch loop.
   const fallbackClient = useMemo(createApiClient, []);
   const activeClient = client ?? fallbackClient;
+  // Stable sink for pages that log to the killfeed from their own effects.
+  const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
 
-  const now = useNow();
-  const heading =
-    route === "overview" ? 0 : route === "health" ? 90 : route === "profiles" ? 180 : 270;
+  // Pages sit evenly around the compass rose in tab order.
+  const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
   const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
   const stats = latencyStats(samples);
 
@@ -119,74 +141,195 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       return;
     }
     probeBusy.current = true;
+    lastProbeAt.current = Date.now();
     setChecking(true);
-    const { result, ms, at } = await activeClient.fetchHealth();
-    const ok = result.ok;
-    setSamples((s) => pushSample(s, { label: "health", ms, at: Date.parse(at), ok }));
-    if (ok) {
-      setHealth(result.value);
-      setProblem(null);
-      setApiState("live");
-    } else {
-      setHealth(null);
-      setProblem(result.problem);
-      // A 502/0 proves the plane is down; any other answer proves it lives.
-      setApiState(planeDown(result.problem) ? "down" : "live");
+    // finally: a throw must not leave the busy flag set, or every later
+    // probe (auto and manual) would return early forever.
+    try {
+      const { result, ms, at } = await activeClient.fetchHealth();
+      const ok = result.ok;
+      setSamples((s) => pushSample(s, { label: "health", ms, at: Date.parse(at), ok }));
+      if (ok) {
+        setHealth(result.value);
+        setProblem(null);
+        setApiState("live");
+      } else {
+        setHealth(null);
+        setProblem(result.problem);
+        // A 502/0 proves the plane is down; any other answer proves it lives.
+        setApiState(planeDown(result.problem) ? "down" : "live");
+      }
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: ok ? "ok" : "err",
+          code: ok ? "HEALTHY" : result.problem.code,
+          detail: ok
+            ? `engine healthy in ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
+            : result.problem.title,
+        }),
+      );
+    } finally {
+      setChecking(false);
+      probeBusy.current = false;
     }
-    setEvents((e) =>
-      pushEvent(e, {
-        at: clockTime(at),
-        kind: ok ? "ok" : "err",
-        code: ok ? "HEALTHY" : result.problem.code,
-        detail: ok
-          ? `engine healthy in ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
-          : result.problem.title,
-      }),
-    );
-    setChecking(false);
-    probeBusy.current = false;
   }
 
   probeRef.current = checkHealth;
 
   // Auto-probe: first hit lands on mount so the deck opens with data, then one
-  // every 10s. The busy flag keeps a slow proxy from stacking probes; the
-  // manual button rides the same path.
+  // per interval while the deck is visible. A hidden tab skips its ticks and
+  // probes once on return if the last probe is stale, so a background deck
+  // costs the API nothing. The busy flag keeps a slow proxy from stacking
+  // probes; the manual button rides the same path.
   useEffect(() => {
+    const poll = () => {
+      if (shouldProbe(document.visibilityState, lastProbeAt.current, Date.now())) {
+        probeRef.current();
+      }
+    };
     probeRef.current();
-    const timer = setInterval(() => {
-      probeRef.current();
-    }, 10_000);
-    return () => clearInterval(timer);
+    const timer = setInterval(poll, PROBE_INTERVAL_MS);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", poll);
+    };
   }, []);
 
-  async function lookupProfile(id: string) {
-    setLooking(true);
-    const { result, ms, at } = await activeClient.fetchProfile(id);
-    const code = result.ok ? "OK" : result.problem.code;
+  async function loadProfiles() {
+    const ticket = ++tickets.current.profiles;
+    setProfilesLoading(true);
+    const { result, at } = await activeClient.listProfiles();
+    if (ticket !== tickets.current.profiles) {
+      return;
+    }
     if (result.ok) {
-      setProfile(result.value);
-      setProfileProblem(null);
+      setProfiles(result.value.items);
+      setProfilesProblem(null);
       setApiState("live");
     } else {
-      setProfile(null);
-      setProfileProblem(result.problem);
+      setProfilesProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+    }
+    setProfilesLoading(false);
+  }
+
+  async function createProfile(input: CreateProfileInput): Promise<boolean> {
+    setCreating(true);
+    const { result, at } = await activeClient.createProfile(input);
+    setCreating(false);
+    if (!result.ok) {
+      setCreateProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setCreateProblem(null);
+    setSelectedProfileId(result.value.id);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: clockTime(at),
+        kind: "ok",
+        code: "CREATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
+      }),
+    );
+    await loadProfiles();
+    return true;
+  }
+
+  async function loadSources() {
+    const ticket = ++tickets.current.sources;
+    setSourcesLoading(true);
+    const { result } = await activeClient.listSources();
+    if (ticket !== tickets.current.sources) {
+      return;
+    }
+    if (result.ok) {
+      setSources(result.value);
+      setSourcesProblem(null);
+      setApiState("live");
+    } else {
+      setSourcesProblem(result.problem);
       setApiState(planeDown(result.problem) ? "down" : "live");
     }
-    const outcome = (result.ok ? "ok" : "err") as LookupRecord["outcome"];
-    setHistory((h) => [{ id, at: clockTime(at), outcome, code }, ...h].slice(0, 20));
+    setSourcesLoading(false);
+  }
+
+  async function loadSessions() {
+    const ticket = ++tickets.current.sessions;
+    setSessionsLoading(true);
+    const { result } = await activeClient.listSessions();
+    if (ticket !== tickets.current.sessions) {
+      return;
+    }
+    if (result.ok) {
+      setSessions(result.value.items);
+      setSessionsProblem(null);
+      setApiState("live");
+    } else {
+      setSessionsProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+    }
+    setSessionsLoading(false);
+  }
+
+  async function createSession(input: CreateSessionInput): Promise<boolean> {
+    setCreatingSession(true);
+    const { result, at } = await activeClient.createSession(input);
+    setCreatingSession(false);
     setEvents((e) =>
       pushEvent(e, {
         at: clockTime(at),
         kind: result.ok ? "ok" : "err",
-        code,
+        code: result.ok ? "CREATED" : result.problem.code,
         detail: result.ok
           ? `${result.value.name} · ${result.value.sourceKey}`
           : result.problem.title,
       }),
     );
-    setLooking(false);
+    if (!result.ok) {
+      setCreateSessionProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      return false;
+    }
+    setCreateSessionProblem(null);
+    await loadSessions();
+    return true;
   }
+
+  const loadersRef = useRef({ loadProfiles, loadSources, loadSessions });
+  loadersRef.current = { loadProfiles, loadSources, loadSessions };
+
+  // Page data loads whenever its page opens; the ref keeps the effect keyed
+  // on the route alone, so renders never refetch.
+  useEffect(() => {
+    if (route === "profiles") {
+      void loadersRef.current.loadProfiles();
+    }
+    if (route === "sources") {
+      void loadersRef.current.loadSources();
+    }
+    if (route === "sessions") {
+      void loadersRef.current.loadSessions();
+    }
+  }, [route]);
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
@@ -204,9 +347,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
           <span className="brand-sub">LOCAL CONTROL PLANE</span>
         </div>
         <div className="cmdbar-meta">
-          <span className="clock" aria-label="Current UTC time">
-            {now} UTC
-          </span>
+          <UtcClock />
           <span className="pill" title="BFF self-check">
             <span className={`dot${bffLive ? " live" : ""}`} /> BFF {bffLive ? "LIVE" : "…"}
           </span>
@@ -271,13 +412,37 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         )}
         {route === "profiles" && (
           <ProfilesPage
-            profile={profile}
-            problem={profileProblem}
-            looking={looking}
-            history={history}
-            onLookup={lookupProfile}
+            profiles={profiles}
+            listProblem={profilesProblem}
+            loading={profilesLoading}
+            creating={creating}
+            createProblem={createProblem}
+            selectedId={selectedProfileId}
+            onSelect={setSelectedProfileId}
+            onCreate={createProfile}
+            onRefresh={() => void loadProfiles()}
           />
         )}
+        {route === "sources" && (
+          <SourcesPage
+            sources={sources}
+            problem={sourcesProblem}
+            loading={sourcesLoading}
+            onRefresh={() => void loadSources()}
+          />
+        )}
+        {route === "sessions" && (
+          <SessionsPage
+            sessions={sessions}
+            listProblem={sessionsProblem}
+            loading={sessionsLoading}
+            creating={creatingSession}
+            createProblem={createSessionProblem}
+            onCreate={createSession}
+            onRefresh={() => void loadSessions()}
+          />
+        )}
+        {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
         {route === "topology" && <TopologyPage upstream={upstream} />}
       </main>
 
@@ -286,6 +451,36 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         IBM Plex Mono
       </footer>
     </div>
+  );
+}
+
+/** Health auto-probe cadence. */
+export const PROBE_INTERVAL_MS = 10_000;
+
+/**
+ * Whether the auto-probe should hit the API now: only for a visible deck, and only when the last
+ * probe is about one interval old (a tab flipping back and forth must not fire a probe each time).
+ * One second of slack keeps timer jitter from skipping a regular tick.
+ */
+export function shouldProbe(
+  visibility: DocumentVisibilityState,
+  lastProbeAt: number,
+  now: number,
+): boolean {
+  return visibility === "visible" && now - lastProbeAt >= PROBE_INTERVAL_MS - 1000;
+}
+
+/**
+ * UTC clock. It owns its one-second tick so only this span re-renders: held in App, the tick
+ * re-rendered the whole deck every second (the profiler showed 25-54 components per commit).
+ */
+function UtcClock() {
+  useRenderLog("UtcClock");
+  const now = useNow();
+  return (
+    <span className="clock" aria-label="Current UTC time">
+      {now} UTC
+    </span>
   );
 }
 

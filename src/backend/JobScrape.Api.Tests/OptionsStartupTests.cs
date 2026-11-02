@@ -1,0 +1,60 @@
+using JobScrape.Application.Features.Scraping;
+using JobScrape.Domain.Access;
+using JobScrape.Domain.Common;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Xunit;
+
+namespace JobScrape.Api.Tests
+{
+    public sealed class OptionsStartupTests : IClassFixture<ApiFactory>
+    {
+        private readonly ApiFactory _factory;
+
+        public OptionsStartupTests(ApiFactory factory)
+        {
+            _factory = factory;
+        }
+
+        [Fact]
+        public void ShippedConfigurationStartsAndBuildsTheCatalog()
+        {
+            using var client = _factory.CreateClient();
+            var services = _factory.Services;
+
+            var catalog = services.GetRequiredService<SourceSettingsCatalog>();
+            Assert.True(catalog.Find(SourceKey.Naukri)!.Enabled);
+            Assert.False(catalog.Find(SourceKey.Indeed)!.Enabled);
+            Assert.False(catalog.Find(SourceKey.LinkedIn)!.Enabled);
+            Assert.Equal(
+                TimeSpan.FromMinutes(45),
+                catalog.Find(SourceKey.Naukri)!.ChallengeCooldown
+            );
+            Assert.False(
+                services
+                    .GetRequiredService<RetryPolicy>()
+                    .ShouldRetry(ChallengeKind.TransientError, 2)
+            );
+        }
+
+        [Theory]
+        [InlineData("JobScrape:Sources:linkedin:Enabled", "true")]
+        [InlineData("JobScrape:Sources:indeed:Enabled", "true")]
+        [InlineData("JobScrape:Sources:naukri:MaxPagesPerSearch", "0")]
+        [InlineData("JobScrape:Sources:naukri:MinDelayMs", "500")]
+        [InlineData("JobScrape:Storage:MinimumFreeDiskBytes", "0")]
+        [InlineData("JobScrape:Run:RetryMaxAttempts", "9")]
+        [InlineData("JobScrape:Logging:RetentionDays", "0")]
+        public void UnsafeConfigurationFailsStartup(string key, string value)
+        {
+            using var factory = _factory.WithWebHostBuilder(builder =>
+                builder.UseSetting(key, value)
+            );
+
+            var error = Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+
+            Assert.NotEmpty(error.Failures);
+        }
+    }
+}

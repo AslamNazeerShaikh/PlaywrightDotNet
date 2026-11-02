@@ -10,7 +10,24 @@ namespace JobScrape.Application.Tests
         public async Task ReturnsProfileOnHit()
         {
             var id = Guid.NewGuid();
-            var expected = new SearchProfileResponse(id, "Backend", "naukri");
+            var expected = new SearchProfileResponse(
+                id,
+                "Backend",
+                "naukri",
+                "c#",
+                ["Pune"],
+                null,
+                null,
+                false,
+                3,
+                60,
+                60,
+                2500,
+                6000,
+                true,
+                DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch
+            );
             var handler = new GetSearchProfileHandler(new StubStore(expected));
 
             var result = await handler.HandleAsync(id, TestContext.Current.CancellationToken);
@@ -73,6 +90,13 @@ namespace JobScrape.Application.Tests
             {
                 WasCalled = true;
                 return Task.FromResult(_profile);
+            }
+
+            public Task<IReadOnlyList<SearchProfileResponse>> ListAsync(
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult<IReadOnlyList<SearchProfileResponse>>([]);
             }
         }
     }

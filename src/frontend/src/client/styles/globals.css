@@ -334,7 +334,11 @@ a:hover {
 .ruler-ticks {
   height: 12px;
   background:
-    repeating-linear-gradient(90deg, var(--sig) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(
+      90deg,
+      var(--sig) 0 1px,
+      transparent 1px calc(100% / var(--stops, 4))
+    ),
     repeating-linear-gradient(90deg, var(--line-hi) 0 1px, transparent 1px 10px);
   background-size:
     100% 12px,
@@ -345,9 +349,10 @@ a:hover {
   margin-bottom: 2px;
 }
 
+/* One column per page; RulerTabs sets --stops from the route table. */
 .ruler-stops {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stops, 4), minmax(0, 1fr));
 }
 
 .ruler-stop {
@@ -602,6 +607,12 @@ a:hover {
   border: 1px solid var(--sig-line);
 }
 
+/* Ghost text stays the signal color in light mode too: the light-theme
+   ".btn { color: #fff }" rule is more specific than ".btn-ghost" alone. */
+[data-theme="light"] .btn-ghost {
+  color: var(--sig);
+}
+
 .field {
   display: grid;
   gap: 5px;
@@ -612,6 +623,85 @@ a:hover {
   color: var(--dim);
   font-size: var(--text-label);
   letter-spacing: 0.06em;
+}
+
+/* Inline server-side field error under its input (VALIDATION_FAILED). */
+.field > .field-error {
+  color: var(--red);
+  font-size: var(--text-label);
+  overflow-wrap: anywhere;
+}
+
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 0 10px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--dim);
+  font-size: var(--text-label);
+  letter-spacing: 0.06em;
+}
+
+/* A table cell action that reads as text but is a real, focusable button. */
+.row-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sig);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+/* Quota meter: used / cap as a bar; turns amber near the cap, red at it. */
+.meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+  font-size: var(--text-label);
+  color: var(--dim);
+}
+
+.meter-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter-bar {
+  height: 100%;
+  background: var(--sig);
+}
+
+.meter[data-level="near"] .meter-bar {
+  background: var(--amber);
+}
+
+.meter[data-level="full"] .meter-bar {
+  background: var(--red);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+tr[aria-selected="true"] td {
+  background: rgba(52, 211, 153, 0.08);
 }
 
 .input,
@@ -811,6 +901,15 @@ table.data tr:last-child td {
   flex: 1;
   height: 40px;
   min-width: 0;
+  position: relative;
+  /* Size container: the needle reads the tape's scale from it. */
+  container-type: size;
+}
+
+.compass-dial > svg:first-child {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .compass-page {
@@ -820,9 +919,20 @@ table.data tr:last-child td {
   white-space: nowrap;
 }
 
+/* The needle overlays the tape at the same scale: the tape SVG fits its box
+   (meet), so its scale is min(height/46, width/640). A standalone element's
+   transform animates on the compositor; inside the tape it repainted the
+   whole strip, glow filter included, every frame. */
 .compass-needle {
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: min(100%, 100cqw * 46 / 640);
+  aspect-ratio: 12 / 46;
+  translate: -50% -50%;
+  /* Pivot at the needle tip (y = 4 of 46). */
+  transform-origin: 50% 8.7%;
+  will-change: transform;
   animation: needle-hunt 5s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 4px var(--brand-3));
 }
@@ -1067,6 +1177,23 @@ abbr.abbr {
     padding-left: 12px;
     padding-right: 12px;
   }
+  /* Seven stops do not fit as words at phone width: the rail shows codes,
+     the compass names the page, and link names keep the labels. */
+  .ruler-code,
+  .ruler-pos {
+    display: none;
+  }
+  .ruler-stop-code {
+    margin-right: 0;
+  }
+  .ruler-stop-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1298,6 +1425,98 @@ abbr.abbr {
 
 .flow-dash {
   animation: dash-flow 1.6s linear infinite;
+}
+
+/* Tac-map motion (components/tacmap.tsx). Keyframes, not SMIL: SMIL forced a
+   style recalc every frame. transform-origin comes inline from the map's HQ
+   coordinates; the tracer waypoints match its node positions. */
+.tac-sweep {
+  animation: tac-sweep 7s linear infinite;
+}
+
+@keyframes tac-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scale keeps the stroke hairline while the ring grows (r 17 to 70, 95). */
+.tac-ping {
+  vector-effect: non-scaling-stroke;
+  animation: tac-ping 3s linear infinite;
+}
+
+.tac-ping-wide {
+  animation: tac-ping-wide 4.5s linear 1.5s infinite backwards;
+}
+
+@keyframes tac-ping {
+  from {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(4.12);
+    opacity: 0;
+  }
+}
+
+@keyframes tac-ping-wide {
+  from {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(5.59);
+    opacity: 0;
+  }
+}
+
+/* Browser (320,46) → BFF (320,180) → .NET (534,180): the corner sits at
+   134 of 348 units, 38.5% of the run, so the packet keeps one speed. */
+.tac-trace-api {
+  animation: tac-trace-api 2.4s linear infinite;
+}
+
+@keyframes tac-trace-api {
+  0% {
+    transform: translate(320px, 46px);
+  }
+  38.5% {
+    transform: translate(320px, 180px);
+  }
+  100% {
+    transform: translate(534px, 180px);
+  }
+}
+
+/* BFF (320,180) → store (320,314). */
+.tac-trace-store {
+  animation: tac-trace-store 3.4s linear infinite;
+}
+
+@keyframes tac-trace-store {
+  from {
+    transform: translate(320px, 180px);
+  }
+  to {
+    transform: translate(320px, 314px);
+  }
+}
+
+/* Sparkline sheen: the band crosses the clipped area once every 4s. */
+.spark-sheen {
+  transform-box: fill-box;
+  animation: spark-sheen 4s linear infinite;
+}
+
+@keyframes spark-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 /* ---- ambient life: the deck breathes behind the content ----

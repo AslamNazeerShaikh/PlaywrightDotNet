@@ -21,6 +21,28 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public void RunErrorsCarryTheirCodesKindsAndIds()
+        {
+            var runId = Guid.NewGuid();
+
+            var missing = Errors.RunNotFound(runId);
+            Assert.Equal(("RUN_NOT_FOUND", ErrorKind.NotFound), (missing.Code, missing.Kind));
+            Assert.Equal(runId, missing.Metadata!["runId"]);
+
+            var busy = Errors.RunInProgress(runId);
+            Assert.Equal(("RUN_IN_PROGRESS", ErrorKind.Conflict), (busy.Code, busy.Kind));
+            Assert.Contains(runId.ToString(), busy.Detail, StringComparison.Ordinal);
+            Assert.Contains(
+                "starting",
+                Errors.RunInProgress(null).Detail,
+                StringComparison.Ordinal
+            );
+
+            var stopped = Errors.RunNotStarted();
+            Assert.Equal(("RUN_NOT_STARTED", ErrorKind.Unavailable), (stopped.Code, stopped.Kind));
+        }
+
+        [Fact]
         public void ValidationFailedRejectsNullDetail()
         {
             Assert.Throws<ArgumentNullException>(() =>
