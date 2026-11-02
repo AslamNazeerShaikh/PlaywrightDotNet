@@ -110,12 +110,13 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 ### 3.2 Search flow
 
 1. Optional warm-up: home page, pause, scroll once.
-2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `experience`, `jobAge`).
+2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `experience`, `jobAge`, `sort=date` when a recency window is set).
 3. Wait for `a[href*="/job-listings-"]`; scroll to trigger lazy cards.
 4. Classify challenge; extract visible cards.
 5. Click native **Next**; wait for the result range/first-card fingerprint to change.
-6. Repeat until cap/no next.
-7. Optional detail enrichment with polite delays.
+6. Repeat until cap/no next. The handler drops cards older than the posted-within window (unknown dates pass; detail enrichment fills them) and cards whose observed skills definitively miss the profile's key skills, re-checking the merged skill set after every refresh.
+7. Optional detail enrichment with polite delays. Each detail's posted date is cross-checked against the card's: disagreements are logged with both values, counted in run stats, and the detail date wins. The resume position (pages completed, next cursor, seen ids) is saved after every page.
+8. Export the run's postings to CSV/XLSX, named `{source}-{profile}-{stamp}-{shortId}-postings.{csv,xlsx}` with hyperlinked posting URLs.
 
 > **As implemented** (`JobScrape.Infrastructure/Sources/Naukri`, verified live 2026-11-01): step 1 is `PlaywrightSessionManager` (home page, random 1.5–3 s pause, one scroll, classify; a clean page marks the session verified). `NaukriJobSource` then waits up to 15 s for `div.srp-jobtuple-wrapper[data-job-id]`, scrolls 4 × 900 px, marks computed-invisible cards (`display`/`visibility`/opacity < 0.15/≤ 1 px/far off-screen) with `data-jobscrape-hidden`, classifies, and parses the HTML offline with AngleSharp (`NaukriSearchParser`). Details go through `NaukriDetailParser` (JSON-LD `JobPosting` first, DOM fallback). Playwright errors and timeouts become `TransientError`; only the run handler retries.
 
@@ -139,7 +140,9 @@ Search (query form — not used by the implementation):
 https://www.naukri.com/jobs?k={keywords}&l={location}&experience={years}&jobPostDate={days}&page=1
 
 Search (slug form, page 1 — NaukriUrlBuilder.SearchUrl; jobs-in-{city} / {kw}-jobs / jobs when a part is empty):
-https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&experience={years}&jobAge={days}
+https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&experience={years}&jobAge={days}&sort=date
+
+`jobAge` and `sort=date` appear only when the profile sets a posted-within window. Both are best-effort hints; the run handler re-checks every posted date and drops stale cards.
 
 Detail:
 https://www.naukri.com/job-listings-{slug}-{id}
@@ -242,6 +245,7 @@ Fixture README must include capture date, URL shape, and selector version.
 - [ ] Detail parser handles missing salary/company without throwing.
 - [ ] Canonical URLs strip tracking params and keep the numeric ID.
 - [ ] Live canary (1 page, headed) either yields cards or a documented wall.
+- [ ] 24 h skill-match flow: profile with key skills (e.g. `C#, .NET, ASP.NET Core`) and posted-within 1 day keeps matching fresh postings, drops stale and skill-mismatched cards, counts card/detail date disagreements, and exports an XLSX whose posting URLs open as hyperlinks.
 
 ### 3.10 Known pitfalls (from the old project)
 
