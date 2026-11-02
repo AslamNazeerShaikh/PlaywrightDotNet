@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
 import { RulerTabs } from "./components/rulertabs.tsx";
 import { Scramble } from "./components/scramble.tsx";
@@ -80,9 +79,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   // Stable sink for pages that log to the killfeed from their own effects.
   const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
 
-  // Pages sit evenly around the compass rose in tab order.
-  const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
-  const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
   const stats = latencyStats(samples);
 
   // Theme lives on <html> so body-level surfaces (page grid texture,
@@ -376,7 +372,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         </div>
       </header>
 
-      <Compass heading={heading} page={pageLabel} />
 
       <RulerTabs
         route={route}
