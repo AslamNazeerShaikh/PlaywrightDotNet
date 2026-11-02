@@ -1518,14 +1518,14 @@ abbr.abbr {
   }
 }
 
-/* ---- scanbeam: orange base beam with smooth red glow pulse ---- */
+/* ---- scanbeam: ambient scan line ---- */
 .scanbeam {
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
   height: 18vh;
-  z-index: 15;
+  z-index: 1;
   pointer-events: none;
   will-change: transform;
   background: linear-gradient(
@@ -1538,33 +1538,6 @@ abbr.abbr {
     transparent
   );
   animation: scan-drop 9s linear infinite;
-}
-
-/* Red glow layer fades in and out smoothly; never swaps the base gradient. */
-.scanbeam::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 1s ease;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(251, 146, 60, 0.0),
-    rgba(239, 68, 68, 0.5),
-    rgba(220, 38, 38, 0.75),
-    rgba(239, 68, 68, 0.5),
-    rgba(251, 146, 60, 0.0),
-    transparent
-  );
-  box-shadow: 0 0 70px 14px rgba(239, 68, 68, 0.4), 0 0 140px 36px rgba(248, 113, 113, 0.2);
-  filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.55));
-  mix-blend-mode: screen;
-}
-
-.scanbeam.scanbeam-red::after {
-  opacity: 1;
 }
 
 @keyframes scan-drop {

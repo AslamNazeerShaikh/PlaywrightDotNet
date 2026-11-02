@@ -41,7 +41,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
   const [theme, setTheme] = useState<"dark" | "light">("light");
-  const [scanRed, setScanRed] = useState(false);
   const [upstream, setUpstream] = useState("https://localhost:5208");
   const [bffLive, setBffLive] = useState(false);
   const [apiState, setApiState] = useState<"unknown" | "live" | "down">("unknown");
@@ -328,33 +327,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     }
   }, [route]);
 
-  useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-    let cancelled = false;
-    let glowTimer: ReturnType<typeof setTimeout> | null = null;
-    let offTimer: ReturnType<typeof setTimeout> | null = null;
-    const schedule = () => {
-      const delay = 3000 + Math.random() * 6000;
-      glowTimer = setTimeout(() => {
-        if (cancelled) return;
-        setScanRed(true);
-        offTimer = setTimeout(() => {
-          if (cancelled) return;
-          setScanRed(false);
-          schedule();
-        }, 900 + Math.random() * 700);
-      }, delay);
-    };
-    schedule();
-    return () => {
-      cancelled = true;
-      if (glowTimer !== null) clearTimeout(glowTimer);
-      if (offTimer !== null) clearTimeout(offTimer);
-    };
-  }, []);
-
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
       <div className="aurora" aria-hidden="true">
@@ -362,7 +334,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         <div className="aurora-blob blob-2" />
         <div className="aurora-blob blob-3" />
       </div>
-      <div className={`scanbeam${scanRed ? " scanbeam-red" : ""}`} aria-hidden="true" />
+      <div className="scanbeam" aria-hidden="true" />
       <header className="cmdbar">
         <div className="brand">
           <span className="brand-mark">
