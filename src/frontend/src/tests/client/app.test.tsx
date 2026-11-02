@@ -46,6 +46,7 @@ const savedProfile = {
   experienceYears: 6,
   postedWithinDays: 7,
   remoteOnly: false,
+  requiredSkills: ["C#"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,

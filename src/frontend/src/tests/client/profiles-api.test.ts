@@ -10,8 +10,9 @@ const profile = {
   keywords: "c#",
   locations: ["Pune"],
   experienceYears: 6,
-  postedWithinDays: null,
+  postedWithinDays: 1,
   remoteOnly: false,
+  requiredSkills: ["C#", "ASP.NET Core"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,
@@ -48,8 +49,9 @@ describe("profiles api", () => {
       keywords: "c#",
       locations: ["Pune"],
       experienceYears: 6,
-      postedWithinDays: null,
+      postedWithinDays: 1,
       remoteOnly: false,
+      requiredSkills: ["C#", "ASP.NET Core"],
     };
 
     const { result } = await createApiClient(fetchImpl).createProfile(input);
@@ -81,6 +83,7 @@ describe("profiles api", () => {
       experienceYears: null,
       postedWithinDays: null,
       remoteOnly: false,
+      requiredSkills: [],
     });
 
     expect(result.ok).toBe(false);
@@ -120,6 +123,7 @@ describe("profile form", () => {
     data.set("locations", " Pune, ,Hyderabad ,");
     data.set("experienceYears", "6");
     data.set("postedWithinDays", " ");
+    data.set("requiredSkills", " C#, ,ASP.NET Core ,");
 
     expect(readForm(data)).toEqual({
       name: "backend",
@@ -129,6 +133,7 @@ describe("profile form", () => {
       experienceYears: 6,
       postedWithinDays: null,
       remoteOnly: false,
+      requiredSkills: ["C#", "ASP.NET Core"],
     });
   });
 

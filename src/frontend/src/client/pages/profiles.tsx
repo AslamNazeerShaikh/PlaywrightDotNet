@@ -99,6 +99,15 @@ export function ProfilesPage({
               autoComplete="off"
             />
           </Field>
+          <Field label="KEY SKILLS (COMMA-SEPARATED)" name="requiredSkills" errors={fieldErrors}>
+            <input
+              className="input"
+              name="requiredSkills"
+              aria-label="Key skills"
+              placeholder="C#, ASP.NET Core"
+              autoComplete="off"
+            />
+          </Field>
           <div className="field-pair">
             <Field label="EXPERIENCE (YRS)" name="experienceYears" errors={fieldErrors}>
               <input
@@ -220,6 +229,12 @@ export function ProfilesPage({
                   />
                   <DetailRow label="Remote only" value={selected.remoteOnly ? "yes" : "no"} />
                   <DetailRow
+                    label="Key skills"
+                    value={
+                      selected.requiredSkills.length > 0 ? selected.requiredSkills.join(", ") : "—"
+                    }
+                  />
+                  <DetailRow
                     label="Caps"
                     value={`${plural(selected.maxPages, "page")} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
@@ -297,6 +312,10 @@ export function readForm(data: FormData): CreateProfileInput {
     experienceYears: number("experienceYears"),
     postedWithinDays: number("postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
+    requiredSkills: text("requiredSkills")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== ""),
   };
 }
 

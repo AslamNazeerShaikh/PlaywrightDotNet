@@ -246,6 +246,7 @@ export function RunsPage({
               ))}
             </select>
           </Field>
+          {profile !== null && <p className="status-line">{profileInputs(profile)}</p>}
           <label className="check">
             <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked /> VISIT DETAIL
             PAGES (DESCRIPTION, SKILLS)
@@ -471,6 +472,20 @@ function RunDetail({
       )}
     </>
   );
+}
+
+/** One line of what the chosen profile will search: keywords, place, and filters. */
+export function profileInputs(profile: SearchProfilePayload): string {
+  const place = profile.remoteOnly ? "remote" : profile.locations.join(", ") || "—";
+  const experience =
+    profile.experienceYears === null ? "any exp" : `${profile.experienceYears} yrs`;
+  const recency =
+    profile.postedWithinDays === null ? "any date" : `last ${profile.postedWithinDays}d`;
+  const skills =
+    profile.requiredSkills.length === 0
+      ? "no skill filter"
+      : `skills: ${profile.requiredSkills.join(", ")}`;
+  return `Inputs: ${profile.keywords} · ${place} · ${experience} · ${recency} · ${skills}`;
 }
 
 /** Tone for a run stage tag: finished well, finished badly, waiting on a person, or moving. */

@@ -20,6 +20,7 @@ export interface SearchProfilePayload {
   experienceYears: number | null;
   postedWithinDays: number | null;
   remoteOnly: boolean;
+  requiredSkills: string[];
   maxPages: number;
   maxJobs: number;
   maxDetails: number;
@@ -111,6 +112,7 @@ export interface CreateProfileInput {
   experienceYears: number | null;
   postedWithinDays: number | null;
   remoteOnly: boolean;
+  requiredSkills: string[];
 }
 
 /** GET /api/v1/runs/{id}: a scrape run's stage, counters, and caps. Timestamps are UTC ISO. */

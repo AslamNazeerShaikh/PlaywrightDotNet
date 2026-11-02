@@ -44,6 +44,7 @@ function profile(id: string, name: string): SearchProfilePayload {
     experienceYears: null,
     postedWithinDays: null,
     remoteOnly: false,
+    requiredSkills: [],
     maxPages: 3,
     maxJobs: 60,
     maxDetails: 60,

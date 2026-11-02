@@ -10,7 +10,13 @@ import {
   type StartRunInput,
 } from "../../client/lib/api.ts";
 import type { LogEvent } from "../../client/lib/telemetry.ts";
-import { runDuration, RunsPage, stageTone, upsertRun } from "../../client/pages/runs.tsx";
+import {
+  profileInputs,
+  runDuration,
+  RunsPage,
+  stageTone,
+  upsertRun,
+} from "../../client/pages/runs.tsx";
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -74,6 +80,56 @@ describe("run helpers", () => {
     expect(runDuration({ ...baseRun, finishedAt: "2026-11-02T08:03:05Z" }, 0)).toBe("3 m 05 s");
     expect(runDuration({ ...baseRun, startedAt: null }, start)).toBe("—");
   });
+
+  test("profileInputs names every search input on one line", () => {
+    expect(
+      profileInputs({
+        id: "p1",
+        name: "backend",
+        sourceKey: "naukri",
+        keywords: "asp.net core c#",
+        locations: ["Pune", "Hyderabad"],
+        experienceYears: 6,
+        postedWithinDays: 1,
+        remoteOnly: false,
+        requiredSkills: ["C#", "ASP.NET Core"],
+        maxPages: 3,
+        maxJobs: 60,
+        maxDetails: 60,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        enabled: true,
+        createdAt: "2026-11-02T08:00:00Z",
+        updatedAt: "2026-11-02T08:00:00Z",
+      }),
+    ).toBe(
+      "Inputs: asp.net core c# · Pune, Hyderabad · 6 yrs · last 1d · skills: C#, ASP.NET Core",
+    );
+  });
+
+  test("profileInputs falls back when filters are absent", () => {
+    expect(
+      profileInputs({
+        id: "p1",
+        name: "remote",
+        sourceKey: "naukri",
+        keywords: "c#",
+        locations: [],
+        experienceYears: null,
+        postedWithinDays: null,
+        remoteOnly: true,
+        requiredSkills: [],
+        maxPages: 3,
+        maxJobs: 60,
+        maxDetails: 60,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        enabled: true,
+        createdAt: "2026-11-02T08:00:00Z",
+        updatedAt: "2026-11-02T08:00:00Z",
+      }),
+    ).toBe("Inputs: c# · remote · any exp · any date · no skill filter");
+  });
 });
 
 /**
@@ -93,7 +149,20 @@ function runsBackend() {
     });
     if (url === "/api/v1/search-profiles") {
       return reply(200, {
-        items: [{ id: "p1", name: "backend", sourceKey: "naukri", enabled: true }],
+        items: [
+          {
+            id: "p1",
+            name: "backend",
+            sourceKey: "naukri",
+            keywords: "asp.net core c#",
+            locations: ["Pune", "Hyderabad"],
+            experienceYears: 6,
+            postedWithinDays: 1,
+            remoteOnly: false,
+            requiredSkills: ["C#", "ASP.NET Core"],
+            enabled: true,
+          },
+        ],
         total: 1,
       });
     }
@@ -206,9 +275,9 @@ describe("runs page", () => {
       timeout: 6000,
     });
     await waitFor(() =>
-      expect(
-        queries.getByRole("table", { name: "Postings" }).textContent,
-      ).toContain("Senior .NET Developer"),
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
     );
     const csv = queries.getByRole("link", { name: "CSV" });
     expect(csv.getAttribute("href")).toBe("/api/v1/runs/r1/postings/export?format=csv");
@@ -234,6 +303,10 @@ describe("runs page", () => {
     const { client } = runsBackend();
     const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    expect(queries.getByText(/^Inputs: /).textContent).toContain(
+      "Inputs: asp.net core c# · Pune, Hyderabad · 6 yrs · last 1d · skills: C#, ASP.NET Core",
+    );
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
     await waitFor(() => expect(queries.getByRole("button", { name: "CANCEL RUN" })).toBeDefined());
