@@ -24,11 +24,11 @@ export function Module({
 }) {
   useRenderLog(`Module:${title}`);
   return (
-    <section className={`module ${span}`} aria-label={title} id="modules-section-1">
-      <div className="module-head" id="modules-div-2">
+    <section className={`module ${span}`} aria-label={title}>
+      <div className="module-head">
         <span className="module-code">{code}</span>
-        <h2 className="module-title" id="modules-h2-3">
-          <Scramble text={title} duration={825} ariaHidden  id="modules-scramble-4"/>
+        <h2 className="module-title">
+          <Scramble text={title} duration={825} ariaHidden />
         </h2>
         {note !== undefined && <span className="module-note">{note}</span>}
       </div>
@@ -48,7 +48,7 @@ export function Stat({
 }) {
   useRenderLog(`Stat:${label}`);
   return (
-    <div className="stat" id="modules-div-5">
+    <div className="stat">
       <div className="stat-label">{label}</div>
       <div className={`stat-value${tone !== undefined ? ` ${tone}` : ""}`}>{value}</div>
     </div>
@@ -133,7 +133,7 @@ export function Field({
 }) {
   const messages = errors[name] ?? [];
   return (
-    <label className="field" id="modules-label-6">
+    <label className="field">
       <span>{label}</span>
       {children}
       {messages.map((m) => (

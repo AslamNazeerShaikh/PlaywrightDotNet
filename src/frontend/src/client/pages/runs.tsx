@@ -193,9 +193,9 @@ export function RunsPage({
 
   return (
     <>
-      <div className="page-head" id="runs-div-1">
-        <h1 id="runs-h1-2">
-          <Scramble text="OPS-DECK // RUNS"  id="runs-scramble-3"/>
+      <div className="page-head">
+        <h1>
+          <Scramble text="OPS-DECK // RUNS" />
         </h1>
         <p>
           Start a scrape, follow it live, and read what it found. One run at a time; caps and quotas
@@ -210,12 +210,12 @@ export function RunsPage({
         note={
           <>
             POST /api/v1/runs. A browser window opens: Naukri blocks{" "}
-            <Abbr term="headless" full="a browser without a visible window"  id="runs-abbr-4"/> first contact.
+            <Abbr term="headless" full="a browser without a visible window" /> first contact.
           </>
         }
       >
-        <form onSubmit={start} aria-label="Start a run" noValidate id="runs-form-5">
-          <Field label="SEARCH PROFILE" name="profileId" errors={fieldErrors} id="runs-field-6">
+        <form onSubmit={start} aria-label="Start a run" noValidate>
+          <Field label="SEARCH PROFILE" name="profileId" errors={fieldErrors}>
             <select
               className="input"
               name="profileId"
@@ -231,7 +231,7 @@ export function RunsPage({
               ))}
             </select>
           </Field>
-          <Field label="SESSION" name="browserProfileId" errors={fieldErrors} id="runs-field-7">
+          <Field label="SESSION" name="browserProfileId" errors={fieldErrors}>
             <select
               className="input"
               name="browserProfileId"
@@ -247,8 +247,8 @@ export function RunsPage({
             </select>
           </Field>
           {profile !== null && <p className="status-line">{profileInputs(profile)}</p>}
-          <label className="check" id="runs-label-8">
-            <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked  id="runs-input-9"/> VISIT DETAIL
+          <label className="check">
+            <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked /> VISIT DETAIL
             PAGES (DESCRIPTION, SKILLS)
           </label>
           <button
@@ -265,8 +265,8 @@ export function RunsPage({
           </p>
         )}
         {startProblem !== null && (
-          <p className="alert" role="alert" id="runs-p-10">
-            <CodeTag code={startProblem.code} tone={codeTone(startProblem.code)}  id="runs-codetag-11"/>{" "}
+          <p className="alert" role="alert">
+            <CodeTag code={startProblem.code} tone={codeTone(startProblem.code)} />{" "}
             {startProblem.title}
             {startProblem.detail !== "" ? ` — ${startProblem.detail}` : ""}
           </p>
@@ -278,7 +278,7 @@ export function RunsPage({
         title="Run history"
         span="span-7"
         note="GET /api/v1/runs, newest first. Select a run to follow it."
-       id="runs-module-12">
+      >
         <button
           type="button"
           className="btn btn-ghost"
@@ -288,8 +288,8 @@ export function RunsPage({
           {loading ? "LOADING…" : "REFRESH"}
         </button>
         {listProblem !== null && (
-          <p className="alert" role="alert" id="runs-p-13">
-            <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)}  id="runs-codetag-14"/>{" "}
+          <p className="alert" role="alert">
+            <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
             {listProblem.title}
           </p>
         )}
@@ -297,10 +297,10 @@ export function RunsPage({
           <p className="status-line">No runs yet. Start one to see it here.</p>
         )}
         {runs !== null && runs.length > 0 && (
-          <div className="tbl-wrap" style={{ marginTop: "10px" }} id="runs-div-15">
-            <table className="data" aria-label="Runs" id="runs-table-16">
-              <thead id="runs-thead-17">
-                <tr id="runs-tr-18">
+          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
+            <table className="data" aria-label="Runs">
+              <thead>
+                <tr>
                   <th>Started (UTC)</th>
                   <th>Profile</th>
                   <th>Stage</th>
@@ -313,7 +313,7 @@ export function RunsPage({
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.id} aria-selected={r.id === selectedId}>
-                    <td id="runs-td-19">
+                    <td>
                       <button
                         type="button"
                         className="row-btn"
@@ -326,8 +326,8 @@ export function RunsPage({
                       </button>
                     </td>
                     <td>{`${r.profileName ?? "—"} · ${r.sourceKey}`}</td>
-                    <td id="runs-td-20">
-                      <CodeTag code={constantCase(r.stage)} tone={stageTone(r.stage)}  id="runs-codetag-21"/>
+                    <td>
+                      <CodeTag code={constantCase(r.stage)} tone={stageTone(r.stage)} />
                     </td>
                     <td>{`${r.pagesFetched}/${r.maxPages}`}</td>
                     <td>{`${r.postingsFound} · ${r.postingsNew}`}</td>
@@ -385,10 +385,10 @@ export function RunsPage({
             {selected.isTerminal ? "This run saw no postings." : "No postings yet."}
           </p>
         ) : (
-          <div className="tbl-wrap" id="runs-div-22">
-            <table className="data" aria-label="Postings" id="runs-table-23">
-              <thead id="runs-thead-24">
-                <tr id="runs-tr-25">
+          <div className="tbl-wrap">
+            <table className="data" aria-label="Postings">
+              <thead>
+                <tr>
                   <th>Title</th>
                   <th>Company</th>
                   <th>Location</th>
@@ -400,12 +400,12 @@ export function RunsPage({
               </thead>
               <tbody>
                 {postings.map((p) => (
-                  <tr key={p.id} id="runs-tr-26">
-                    <td id="runs-td-27">
+                  <tr key={p.id}>
+                    <td>
                       <a href={p.url} target="_blank" rel="noopener noreferrer">
                         {p.title}
                       </a>{" "}
-                      {p.isNew && <CodeTag code="NEW" tone="ok"  id="runs-codetag-28"/>}
+                      {p.isNew && <CodeTag code="NEW" tone="ok" />}
                     </td>
                     <td>{p.company ?? "—"}</td>
                     <td>{p.location ?? "—"}</td>
@@ -438,7 +438,7 @@ function RunDetail({
     <>
       <div className="tag-row" role="list" aria-label="Run stages">
         {RUN_STAGES.map((stage, i) => (
-          <span key={stage} role="listitem" id="runs-span-29">
+          <span key={stage} role="listitem">
             <CodeTag
               code={constantCase(stage)}
               tone={stage === run.stage ? stageTone(run.stage) : i < reached ? "ok" : undefined}
@@ -446,8 +446,8 @@ function RunDetail({
           </span>
         ))}
         {reached === -1 && (
-          <span role="listitem" id="runs-span-30">
-            <CodeTag code={constantCase(run.stage)} tone={stageTone(run.stage)}  id="runs-codetag-31"/>
+          <span role="listitem">
+            <CodeTag code={constantCase(run.stage)} tone={stageTone(run.stage)} />
           </span>
         )}
       </div>
@@ -457,10 +457,10 @@ function RunDetail({
         {run.pauseReason !== null ? ` — paused: ${run.pauseReason}` : ""}
         {run.retryAt !== null ? ` · retry after ${stamp(run.retryAt)} UTC` : ""}
       </p>
-      <div className="field-pair" id="runs-div-32">
-        <Meter label="Pages" used={run.pagesFetched} cap={run.maxPages} progress  id="runs-meter-33"/>
-        <Meter label="Postings" used={run.postingsFound} cap={run.maxJobs} progress  id="runs-meter-34"/>
-        <Meter label="Details" used={run.detailsFetched} cap={run.maxDetails} progress  id="runs-meter-35"/>
+      <div className="field-pair">
+        <Meter label="Pages" used={run.pagesFetched} cap={run.maxPages} progress />
+        <Meter label="Postings" used={run.postingsFound} cap={run.maxJobs} progress />
+        <Meter label="Details" used={run.detailsFetched} cap={run.maxDetails} progress />
       </div>
       <p className="status-line">
         {`${plural(run.postingsNew, "new posting")} · ${plural(run.postingsUpdated, "update")} · ${plural(run.challenges, "wall")} · ${plural(run.failures, "failure")}`}

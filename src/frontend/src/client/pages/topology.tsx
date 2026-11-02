@@ -12,9 +12,9 @@ export function TopologyPage({ upstream }: { upstream: string }) {
   useRenderLog("TopologyPage");
   return (
     <>
-      <div className="page-head" id="topology-div-1">
-        <h1 id="topology-h1-2">
-          <Scramble text="OPS-DECK // TOPOLOGY"  id="topology-scramble-3"/>
+      <div className="page-head">
+        <h1>
+          <Scramble text="OPS-DECK // TOPOLOGY" />
         </h1>
         <p>Two processes, one same-origin contract. Browser never touches the API directly.</p>
       </div>
@@ -24,7 +24,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         title="Request lifecycle"
         span="span-7"
         note="Three paths through the same proxy: hit, miss, plane down."
-       id="topology-module-4">
+      >
         <svg
           className="diagram"
           viewBox="0 0 640 300"
@@ -48,10 +48,10 @@ export function TopologyPage({ upstream }: { upstream: string }) {
           label="Sequence key"
           items={[
             { key: "hit", swatch: <Wire color="var(--sig)" />, text: "happy path — 200" },
-            { key: "miss", swatch: <Wire color="var(--red)"  id="topology-wire-5"/>, text: "miss path — 404 + code" },
+            { key: "miss", swatch: <Wire color="var(--red)" />, text: "miss path — 404 + code" },
             {
               key: "down",
-              swatch: <Wire color="var(--amber)"  id="topology-wire-6"/>,
+              swatch: <Wire color="var(--amber)" />,
               text: "plane down — self-loop answers 502",
             },
           ]}
@@ -64,40 +64,40 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         span="span-5"
         note={
           <>
-            Loopback-only. No <Abbr term="CORS" full="Cross-Origin Resource Sharing"  id="topology-abbr-7"/>, no
+            Loopback-only. No <Abbr term="CORS" full="Cross-Origin Resource Sharing" />, no
             cross-origin calls, ever.
           </>
         }
       >
-        <div className="tbl-wrap" id="topology-div-8">
-          <table className="data" id="topology-table-9">
-            <thead id="topology-thead-10">
-              <tr id="topology-tr-11">
+        <div className="tbl-wrap">
+          <table className="data">
+            <thead>
+              <tr>
                 <th>Process</th>
                 <th>Binds</th>
                 <th>Owns</th>
               </tr>
             </thead>
-            <tbody id="topology-tbody-12">
-              <tr id="topology-tr-13">
-                <td id="topology-td-14">
-                  <Abbr term="BFF" full="Backend for Frontend"  id="topology-abbr-15"/> (Bun.serve)
+            <tbody>
+              <tr>
+                <td>
+                  <Abbr term="BFF" full="Backend for Frontend" /> (Bun.serve)
                 </td>
                 <td>127.0.0.1:3000</td>
-                <td id="topology-td-16">
-                  /healthz, /api/* proxy, <Abbr term="SPA" full="Single-Page Application"  id="topology-abbr-17"/> static,{" "}
-                  <Abbr term="HMR" full="Hot Module Replacement"  id="topology-abbr-18"/> in dev
+                <td>
+                  /healthz, /api/* proxy, <Abbr term="SPA" full="Single-Page Application" /> static,{" "}
+                  <Abbr term="HMR" full="Hot Module Replacement" /> in dev
                 </td>
               </tr>
-              <tr id="topology-tr-19">
-                <td id="topology-td-20">
-                  <Abbr term="API" full="Application Programming Interface: the .NET data plane"  id="topology-abbr-21"/>{" "}
+              <tr>
+                <td>
+                  <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
                   (ASP.NET)
                 </td>
                 <td>localhost:5208</td>
                 <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
               </tr>
-              <tr id="topology-tr-22">
+              <tr>
                 <td>Upstream</td>
                 <td>{upstream}</td>
                 <td>DOTNET_API_URL; the single wire between processes</td>
@@ -116,37 +116,37 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         title="Layer contract"
         span="span-12"
         note="Who may talk to whom, enforced by construction."
-       id="topology-module-23">
-        <div className="tbl-wrap" id="topology-div-24">
-          <table className="data" id="topology-table-25">
-            <thead id="topology-thead-26">
-              <tr id="topology-tr-27">
+      >
+        <div className="tbl-wrap">
+          <table className="data">
+            <thead>
+              <tr>
                 <th>From</th>
                 <th>To</th>
                 <th>Via</th>
                 <th>Forbidden</th>
               </tr>
             </thead>
-            <tbody id="topology-tbody-28">
-              <tr id="topology-tr-29">
+            <tbody>
+              <tr>
                 <td>React pages</td>
                 <td>BFF</td>
                 <td>Same-origin fetch to /api/*</td>
                 <td>Direct API URLs, CORS workarounds</td>
               </tr>
-              <tr id="topology-tr-30">
+              <tr>
                 <td>BFF proxy</td>
-                <td id="topology-td-31">.NET API</td>
+                <td>.NET API</td>
                 <td>Loopback fetch, hop-by-hop headers stripped</td>
                 <td>Forwarding cookies or auth headers it does not own</td>
               </tr>
-              <tr id="topology-tr-32">
+              <tr>
                 <td>API controller</td>
                 <td>Handler → store</td>
                 <td>Constructor-injected use-case handler</td>
                 <td>Mediator, CQRS buses, generic repositories</td>
               </tr>
-              <tr id="topology-tr-33">
+              <tr>
                 <td>Failures</td>
                 <td>Browser</td>
                 <td>Result → RFC 9457 + stable code + traceId</td>
@@ -162,7 +162,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         title="Deck glossary"
         span="span-12"
         note="Every abbreviation on the deck, expanded once. Hover any dotted term anywhere for its meaning."
-       id="topology-module-34">
+      >
         <Glossary
           terms={[
             {
@@ -216,7 +216,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
               hint: "Never opened. The browser talks same-origin to the BFF; the BFF talks loopback to the API.",
             },
           ]}
-         id="topology-glossary-35"/>
+        />
       </Module>
     </>
   );
@@ -224,7 +224,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
 
 function lifeline(x: number, label: string) {
   return (
-    <g key={label} id="topology-g-36">
+    <g key={label}>
       <rect
         x={x - 58}
         y={8}
@@ -232,7 +232,7 @@ function lifeline(x: number, label: string) {
         height="26"
         rx="3"
         style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
-       id="topology-rect-37"/>
+      />
       <text
         x={x}
         y={25}
@@ -249,7 +249,7 @@ function lifeline(x: number, label: string) {
         y2={292}
         style={{ stroke: "var(--line)" }}
         strokeDasharray="4 4"
-       id="topology-line-38"/>
+      />
     </g>
   );
 }
@@ -257,13 +257,13 @@ function lifeline(x: number, label: string) {
 function arrow(x1: number, x2: number, y: number, color: string, label: string, self = false) {
   if (self) {
     return (
-      <g key={`${label}-${y}`} id="topology-g-39">
+      <g key={`${label}-${y}`}>
         <path
           d={`M ${x1} ${y} h 34 v 14 h -34`}
           fill="none"
           style={{ stroke: color }}
           strokeWidth="1.5"
-         id="topology-path-40"/>
+        />
         <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
           {label}
         </text>
@@ -272,8 +272,8 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
   }
   const left = x1 < x2;
   return (
-    <g key={`${label}-${y}`} id="topology-g-41">
-      <line x1={x1} y1={y} x2={x2} y2={y} style={{ stroke: color }} strokeWidth="1.5"  id="topology-line-42"/>
+    <g key={`${label}-${y}`}>
+      <line x1={x1} y1={y} x2={x2} y2={y} style={{ stroke: color }} strokeWidth="1.5" />
       <polygon
         points={
           left
@@ -281,7 +281,7 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
             : `${x2},${y} ${x2 + 7},${y - 3.5} ${x2 + 7},${y + 3.5}`
         }
         style={{ fill: color }}
-       id="topology-polygon-43"/>
+      />
       <text
         x={left ? x1 + 6 : x2 + 6}
         y={y - 5}

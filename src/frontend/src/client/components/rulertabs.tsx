@@ -20,11 +20,11 @@ export function RulerTabs({
   const left = `${((index * 2 + 1) / (stops * 2)) * 100}%`;
 
   return (
-    <nav className="ruler" aria-label="Deck pages" id="rulertabs-nav-1">
+    <nav className="ruler" aria-label="Deck pages">
       <span className="ruler-code">NAV // {String(stops).padStart(2, "0")} STOPS</span>
       {/* --stops drives both the section ticks and the stop columns. */}
-      <div className="ruler-track" style={{ "--stops": stops } as React.CSSProperties} id="rulertabs-div-2">
-        <div className="ruler-ticks" aria-hidden="true"  id="rulertabs-div-3"/>
+      <div className="ruler-track" style={{ "--stops": stops } as React.CSSProperties}>
+        <div className="ruler-ticks" aria-hidden="true" />
         <div className="ruler-stops">
           {ROUTES.map((r) => (
             <a
@@ -39,11 +39,11 @@ export function RulerTabs({
             </a>
           ))}
         </div>
-        <span key={route} className="ruler-blip" style={{ left }} aria-hidden="true" id="rulertabs-span-4">
-          <span className="ruler-ping"  id="rulertabs-span-5"/>
+        <span key={route} className="ruler-blip" style={{ left }} aria-hidden="true">
+          <span className="ruler-ping" />
         </span>
       </div>
-      <span className="ruler-pos" aria-hidden="true" id="rulertabs-span-6">
+      <span className="ruler-pos" aria-hidden="true">
         <strong>
           {String(index + 1).padStart(2, "0")}/{String(stops).padStart(2, "0")}
         </strong>

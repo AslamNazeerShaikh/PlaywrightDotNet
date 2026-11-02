@@ -328,29 +328,29 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   }, [route]);
 
   return (
-    <div className="deck-root" data-density={density} data-theme={theme} id="app-div-1">
-      <div className="aurora" aria-hidden="true" id="app-div-2">
-        <div className="aurora-blob blob-1"  id="app-div-3"/>
-        <div className="aurora-blob blob-2"  id="app-div-4"/>
-        <div className="aurora-blob blob-3"  id="app-div-5"/>
+    <div className="deck-root" data-density={density} data-theme={theme}>
+      <div className="aurora" aria-hidden="true">
+        <div className="aurora-blob blob-1" />
+        <div className="aurora-blob blob-2" />
+        <div className="aurora-blob blob-3" />
       </div>
-      <div className="scanbeam" aria-hidden="true"  id="app-div-6"/>
-      <header className="cmdbar" id="app-header-7">
-        <div className="brand" id="app-div-8">
-          <span className="brand-mark" id="app-span-9">
-            <Scramble text="JOBSCRAPE//OPS-DECK" duration={1350}  id="app-scramble-10"/>
+      <div className="scanbeam" aria-hidden="true" />
+      <header className="cmdbar">
+        <div className="brand">
+          <span className="brand-mark">
+            <Scramble text="JOBSCRAPE//OPS-DECK" duration={1350} />
           </span>
           <span className="brand-sub">LOCAL CONTROL PLANE</span>
         </div>
-        <div className="cmdbar-meta" id="app-div-11">
-          <UtcClock id="app-utcclock-12"/>
-          <span className="pill" title="BFF self-check" id="app-span-13">
-            <span className={`dot${bffLive ? " live" : ""}`}  id="app-span-14"/> BFF {bffLive ? "LIVE" : "…"}
+        <div className="cmdbar-meta">
+          <UtcClock />
+          <span className="pill" title="BFF self-check">
+            <span className={`dot${bffLive ? " live" : ""}`} /> BFF {bffLive ? "LIVE" : "…"}
           </span>
-          <span className="pill" title="Upstream data-plane URL reported by the BFF" id="app-span-15">
+          <span className="pill" title="Upstream data-plane URL reported by the BFF">
             <span
               className={`dot${apiState === "live" ? " live" : apiState === "down" ? " bad" : ""}`}
-             id="app-span-16"/>{" "}
+            />{" "}
             API {apiState.toUpperCase()} · {upstream}
           </span>
           <button
@@ -393,7 +393,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             samples={samples}
             events={events}
             apiState={apiState}
-           id="app-overviewpage-17"/>
+          />
         )}
         {route === "health" && (
           <HealthPage
@@ -403,7 +403,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             samples={samples}
             stats={stats}
             onCheck={checkHealth}
-           id="app-healthpage-18"/>
+          />
         )}
         {route === "profiles" && (
           <ProfilesPage
@@ -437,12 +437,12 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             onRefresh={() => void loadSessions()}
           />
         )}
-        {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent}  id="app-runspage-19"/>}
-        {route === "topology" && <TopologyPage upstream={upstream}  id="app-topologypage-20"/>}
+        {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
+        {route === "topology" && <TopologyPage upstream={upstream} />}
       </main>
 
-      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "11px" }} id="app-footer-21">
-        <CodeTag code="STABLE-CODES"  id="app-codetag-22"/> UI branches on codes, never prose · Bun + React, no Node ·
+      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "11px" }}>
+        <CodeTag code="STABLE-CODES" /> UI branches on codes, never prose · Bun + React, no Node ·
         IBM Plex Mono
       </footer>
     </div>
