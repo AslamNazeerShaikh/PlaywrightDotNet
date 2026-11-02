@@ -36,7 +36,7 @@ export function TacMap({
   const nodes = [
     { x: 320, y: 46, label: "BROWSER", sub: "deck", state: "var(--sig)" },
     { x: 320, y: 180, label: "BFF :3000", sub: "HQ", state: "var(--sig)" },
-    { x: 534, y: 180, label: ".NET :5207", sub: "data plane", state: wire },
+    { x: 534, y: 180, label: ".NET :5208", sub: "data plane", state: wire },
     { x: 320, y: 314, label: "STORE", sub: "in-memory", state: wire },
   ];
   const links: Array<[number, number]> = [

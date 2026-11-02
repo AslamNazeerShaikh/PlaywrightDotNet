@@ -42,7 +42,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
   const [theme, setTheme] = useState<"dark" | "light">("light");
-  const [upstream, setUpstream] = useState("http://127.0.0.1:5207");
+  const [upstream, setUpstream] = useState("https://localhost:5208");
   const [bffLive, setBffLive] = useState(false);
   const [apiState, setApiState] = useState<"unknown" | "live" | "down">("unknown");
 

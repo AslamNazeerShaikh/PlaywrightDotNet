@@ -605,47 +605,74 @@ On Linux CI, prefer the official Playwright Docker image or `install --with-deps
 
 > **As implemented:** `src/backend/JobScrape.Api/Properties/launchSettings.json`
 > serves `http://localhost:5207;https://localhost:5208` on the `http` profile,
-> and the cockpit BFF defaults to the HTTPS upstream
-> (`DOTNET_API_URL=https://localhost:5208` in `src/frontend/.env.example`).
+> the cockpit BFF defaults to the HTTPS upstream
+> (`DOTNET_API_URL=https://localhost:5208` in `src/frontend/.env.example`)
+> and serves the deck itself over `https://127.0.0.1:3000`
+> (`BFF_TLS_CERT_FILE`/`BFF_TLS_KEY_FILE` in the same file, loaded by
+> `loadTls` in `src/frontend/src/server/index.ts`; both-or-neither, missing
+> files fail startup with the fix).
 
-One-time setup per developer machine:
+One-time setup per developer machine (repo root):
 
 ```bash
 # 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
 dotnet dev-certs https --trust
 
-# 2. Export its public cert where the BFF expects it (gitignored, per machine).
+# 2. Export its public cert (BFF -> API trust; gitignored, per machine).
 mkdir -p src/frontend/.certs
 dotnet dev-certs https --export-path src/frontend/.certs/devcert.pem \
   --format Pem --no-password
 
-# 3. Copy env and start the BFF with the cert exported in the shell.
+# 3. Export a cert/key pair so the BFF can serve HTTPS itself.
+# Password is a throwaway: the files stay gitignored on this machine.
+dotnet dev-certs https --export-path src/frontend/.certs/localhost.pfx \
+  --format Pfx -p jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -clcerts -nokeys \
+  -out src/frontend/.certs/localhost-cert.pem -passin pass:jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -nocerts -nodes \
+  -out src/frontend/.certs/localhost-key.pem -passin pass:jobscrape-dev-only
+rm src/frontend/.certs/localhost.pfx
+chmod 600 src/frontend/.certs/localhost-key.pem
+
+# 4. Copy env and start both servers.
 cp src/frontend/.env.example src/frontend/.env
-cd src/frontend && NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun run dev
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
+cd src/frontend && bun run dev
 ```
+
+`bun run dev` needs no manual export: `dev:server` and `api:types` bake in
+`NODE_EXTRA_CA_CERTS=./.certs/devcert.pem` (Bun builds its CA store before
+`.env` loads, so a `.env`-only value would leave the proxy at
+`502 DOTNET_UNREACHABLE`).
 
 Files involved:
 
 | File | Change | Committed? |
 |---|---|---|
 | `src/backend/JobScrape.Api/Properties/launchSettings.json` | `applicationUrl` gains `https://localhost:5208` | Yes |
-| `src/frontend/.env.example` | HTTPS default + `NODE_EXTRA_CA_CERTS` documentation | Yes |
+| `src/frontend/.env.example` | HTTPS default, CA path, `BFF_TLS_*` pair | Yes |
 | `src/frontend/.gitignore` | Ignores `.certs/` | Yes |
+| `src/frontend/package.json` | `dev:server`/`api:types` carry `NODE_EXTRA_CA_CERTS` | Yes |
+| `src/frontend/src/server/config.ts` | `tlsCertFile`/`tlsKeyFile` + both-or-neither rule | Yes |
+| `src/frontend/src/server/index.ts` | `loadTls` + scheme-aware `Bun.serve` | Yes |
 | `src/frontend/.env` | Local overrides | No (gitignored) |
-| `src/frontend/.certs/devcert.pem` | Exported public dev cert | No (gitignored) |
+| `src/frontend/.certs/` | `devcert.pem`, `localhost-cert.pem`, `localhost-key.pem` | No (gitignored) |
 | `src/frontend/README.md` (`HTTPS dev loop`) | Full per-machine steps | Yes |
 
 Rules:
 
-- `NODE_EXTRA_CA_CERTS` must be exported in the shell: Bun builds its CA
-  store before `.env` loads, so a `.env`-only value leaves the BFF proxy at
-  `502 DOTNET_UNREACHABLE`. Verified failure signature without the export:
-  `UNABLE_TO_VERIFY_LEAF_SIGNATURE` in `fetch`.
-- Regenerate per machine with steps 1–2 above (never copy the cert between
-  machines); if the cert expires, re-run the same steps.
-- No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`.
+- Regenerate per machine with steps 1–3 above (never copy the cert or key
+  between machines); if the cert expires or `fetch` fails with
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run the same steps.
+- No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`
+  plus both `BFF_TLS_*` lines commented out for a plain-http BFF.
+- Browsers: Chrome/Safari accept `https://127.0.0.1:3000` via the step-1
+  keychain trust. Firefox uses its own store: import `localhost-cert.pem`
+  or add a one-time exception.
 - Verify with `curl https://localhost:5208/api/v1/health` (direct) and
-  `curl http://localhost:3000/api/v1/health` (through the BFF proxy).
+  `curl -k https://127.0.0.1:3000/api/v1/health` (through the BFF proxy;
+  `-k` only because curl on some platforms ignores the keychain trust —
+  the BFF-to-API hop itself is fully verified).
 
 ---
 

@@ -8,16 +8,27 @@ export interface CockpitConfig {
   port: number;
   /** Base URL of the .NET data plane, without a trailing slash. */
   dotnetApiUrl: string;
+  /** PEM cert file for serving the deck over HTTPS. Undefined = plain HTTP. */
+  tlsCertFile?: string;
+  /** PEM key file for serving the deck over HTTPS. Undefined = plain HTTP. */
+  tlsKeyFile?: string;
 }
 
 const DEFAULT_PORT = 3000;
-/** Matches this repo: `JobScrape.Api` launches on 5207 in Development. */
-const DEFAULT_DOTNET_API_URL = "http://127.0.0.1:5207";
+/** Matches this repo: `JobScrape.Api` serves HTTPS on 5208 in Development. */
+const DEFAULT_DOTNET_API_URL = "https://localhost:5208";
 
 export function parseConfig(env: Record<string, string | undefined>): CockpitConfig {
   const port = parsePort(env["PORT"]);
   const dotnetApiUrl = parseApiUrl(env["DOTNET_API_URL"]);
-  return { port, dotnetApiUrl };
+  const tlsCertFile = parseOptionalPath(env["BFF_TLS_CERT_FILE"]);
+  const tlsKeyFile = parseOptionalPath(env["BFF_TLS_KEY_FILE"]);
+  if ((tlsCertFile === undefined) !== (tlsKeyFile === undefined)) {
+    throw new Error(
+      "Invalid TLS config: BFF_TLS_CERT_FILE and BFF_TLS_KEY_FILE must be set together.",
+    );
+  }
+  return { port, dotnetApiUrl, tlsCertFile, tlsKeyFile };
 }
 
 function parsePort(raw: string | undefined): number {
@@ -43,4 +54,11 @@ function parseApiUrl(raw: string | undefined): string {
     throw new Error(`Invalid DOTNET_API_URL: ${JSON.stringify(raw)}. Only http(s) is supported.`);
   }
   return url.toString().replace(/\/+$/, "");
+}
+
+function parseOptionalPath(raw: string | undefined): string | undefined {
+  if (raw === undefined || raw === "") {
+    return undefined;
+  }
+  return raw;
 }

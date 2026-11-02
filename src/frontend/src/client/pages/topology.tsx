@@ -33,7 +33,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         >
           {lifeline(40, "BROWSER")}
           {lifeline(230, "BFF :3000")}
-          {lifeline(420, ".NET :5207")}
+          {lifeline(420, ".NET :5208")}
           {lifeline(580, "STORE")}
           {arrow(40, 230, 46, "var(--sig)", "GET /api/v1/…")}
           {arrow(230, 420, 70, "var(--sig)", "proxy → loopback")}
@@ -94,7 +94,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
                   <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
                   (ASP.NET)
                 </td>
-                <td>127.0.0.1:5207</td>
+                <td>localhost:5208</td>
                 <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
               </tr>
               <tr>
@@ -173,7 +173,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             {
               abbr: "API",
               full: "Application Programming Interface",
-              hint: "The .NET data plane on :5207. Controllers, handlers, and the store live here.",
+              hint: "The .NET data plane on :5208 (https; :5207 http fallback). Controllers, handlers, and the store live here.",
             },
             {
               abbr: "HQ",

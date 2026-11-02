@@ -48,41 +48,60 @@ Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
 
 ## HTTPS dev loop
 
-The BFF talks to the API over HTTPS (`https://localhost:5208`, the API's
-`https` applicationUrl in
-`src/backend/JobScrape.Api/Properties/launchSettings.json`). Bun does not
-read the macOS keychain, so the dev cert must be trusted **and** exported.
-One-time setup per machine:
+Both hops are TLS in the local loop: the API serves
+`https://localhost:5208` (its `https` applicationUrl in
+`src/backend/JobScrape.Api/Properties/launchSettings.json`), the BFF
+proxies to it, and the deck itself is served over `https://127.0.0.1:3000`
+using the same dev cert (its SANs cover `localhost` and `127.0.0.1`).
+Bun does not read the macOS keychain, so the dev cert must be trusted
+**and** exported. One-time setup per machine (run from the repo root):
 
 ```bash
 # 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
 dotnet dev-certs https --trust
 
-# 2. Export its public cert where the BFF expects it (gitignored).
+# 2. Export its public cert (BFF -> API trust) ...
 mkdir -p src/frontend/.certs
 dotnet dev-certs https --export-path src/frontend/.certs/devcert.pem \
   --format Pem --no-password
 
-# 3. Copy env and start the BFF with the cert exported in the shell.
+# 3. ... plus a cert/key pair so the BFF can serve HTTPS itself.
+# Password is a throwaway: the files stay gitignored on this machine.
+dotnet dev-certs https --export-path src/frontend/.certs/localhost.pfx \
+  --format Pfx -p jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -clcerts -nokeys \
+  -out src/frontend/.certs/localhost-cert.pem -passin pass:jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -nocerts -nodes \
+  -out src/frontend/.certs/localhost-key.pem -passin pass:jobscrape-dev-only
+rm src/frontend/.certs/localhost.pfx
+chmod 600 src/frontend/.certs/localhost-key.pem
+
+# 4. Copy env and start both servers.
 cp src/frontend/.env.example src/frontend/.env
-NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun run dev
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
+cd src/frontend && bun run dev
 ```
 
-Verify: `curl https://localhost:5208/api/v1/health` (API) and
-`curl http://localhost:3000/api/v1/health` (BFF proxy, must return
-`healthy`, not `DOTNET_UNREACHABLE`).
+`bun run dev` needs no manual export: `dev:server` and `api:types` bake in
+`NODE_EXTRA_CA_CERTS=./.certs/devcert.pem` (Bun builds its CA store before
+`.env` loads, so a `.env`-only value would leave the proxy at
+`502 DOTNET_UNREACHABLE`).
+
+Verify: `curl https://localhost:5208/api/v1/health` (API),
+`curl https://127.0.0.1:3000/api/v1/health` (BFF proxy, must return
+`healthy`), and open `https://127.0.0.1:3000/#/overview` in the browser —
+Chrome/Safari accept it via the keychain trust from step 1. Firefox uses
+its own cert store: import `localhost-cert.pem` under
+Settings → Privacy & Security → Certificates, or add a one-time exception.
 
 Notes:
 
-- `NODE_EXTRA_CA_CERTS` must be exported in the shell, not just present in
-  `.env`: Bun builds its CA store before `.env` loads, so a `.env`-only
-  value leaves the proxy at `502 DOTNET_UNREACHABLE`. The committed
-  `.env.example` documents the same path.
 - Regenerate per machine, never commit: `.env` and `.certs/` are gitignored.
   If the cert expires or `fetch` fails with
-  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run steps 1–2.
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run steps 1–3.
 - No-cert fallback: `DOTNET_API_URL=http://127.0.0.1:5207` needs no trust
-  or export.
+  or export; comment out `BFF_TLS_CERT_FILE`/`BFF_TLS_KEY_FILE` for a
+  plain-http BFF.
 - `launchSettings.json` keeps both URLs (`5207` http, `5208` https) so plain
   `dotnet run --launch-profile http` serves both with no extra flags.
 

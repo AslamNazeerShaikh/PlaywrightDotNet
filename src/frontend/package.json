@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "bun --hot src/server/index.ts",
+    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/index.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
@@ -16,7 +16,7 @@
     "format:check": "bun fmt --check src package.json bunfig.toml",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "api:types": "bunx --bun openapi-typescript@7.13.0 http://127.0.0.1:5207/openapi/v1.json -o ./src/shared/contracts.ts",
+    "api:types": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bunx --bun openapi-typescript@7.13.0 https://localhost:5208/openapi/v1.json -o ./src/shared/contracts.ts",
     "audit": "bun audit"
   },
   "dependencies": {
