@@ -518,6 +518,11 @@ build/
 # Local Playwright browser binaries when PLAYWRIGHT_BROWSERS_PATH=0
 ms-playwright/
 
+# Unpacked uBlock Origin Lite build and its downloaded archive. The
+# pinned fetch script is committed; its output is not.
+vendor/ubol-chrome-max/
+vendor/*.xpi
+
 # Graphify local state (graph outputs are committed; caches and machine paths are not)
 graphify-out/cache/
 graphify-out/.graphify_python
