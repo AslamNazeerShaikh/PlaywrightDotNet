@@ -1,5 +1,6 @@
 using JobScrape.Domain.Access;
 using JobScrape.Infrastructure.Browser;
+using JobScrape.Infrastructure.Configuration;
 using Xunit;
 
 namespace JobScrape.Infrastructure.Tests.Browser
@@ -74,7 +75,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
         private BrowserSessionSettings Settings(
             bool headless,
             bool withDir,
-            string? mode = JobScrape.Infrastructure.Configuration.BrowserOptions.UbolMax
+            string? mode = BrowserOptions.UbolMax
         )
         {
             var dir = Dir();

@@ -214,6 +214,7 @@ namespace JobScrape.Infrastructure.Browser
                 $"--load-extension={_settings.ExtensionDir}",
             ];
         }
+
         [LoggerMessage(
             Level = LogLevel.Warning,
             Message = "Adblock extension directory {ExtensionDir} is missing; launching without the blocker. Run vendor/download-ubol.sh to fetch it."
