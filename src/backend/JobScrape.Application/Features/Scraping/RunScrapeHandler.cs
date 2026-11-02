@@ -837,8 +837,8 @@ namespace JobScrape.Application.Features.Scraping
         /// than the posted-within window are stale, and cards whose observed
         /// skills definitively miss the required list are out of scope.
         /// Postings with no observed skills stay candidates for enrichment.
-        /// After each merge the surviving skill set is re-checked, because a
-        /// card replaces (not unions) stored skills.
+        /// The gate reads the snapshot alone: a merge replaces stored skills
+        /// with observed ones, so a passing snapshot leaves matching skills.
         /// A posting is counted once per run; a card that fails domain
         /// validation is dropped with a warning (docs/02-architecture.md §12.1).
         /// </summary>
@@ -902,14 +902,7 @@ namespace JobScrape.Application.Features.Scraping
                     }
 
                     var existing = await _stores.Postings.FindAsync(source, id, cancellationToken);
-                    if (
-                        IsSkillMismatch(
-                            criteria,
-                            (existing?.Skills ?? [])
-                                .Select(skill => skill.Name)
-                                .Concat(snapshot.Skills)
-                        )
-                    )
+                    if (IsSkillMismatch(criteria, snapshot.Skills))
                     {
                         LogCardDropped(
                             _logger,
@@ -931,17 +924,6 @@ namespace JobScrape.Application.Features.Scraping
                     {
                         before = posting.ContentHash;
                         posting.Refresh(snapshot, now);
-                    }
-
-                    if (IsSkillMismatch(criteria, posting.Skills.Select(skill => skill.Name)))
-                    {
-                        LogCardDropped(
-                            _logger,
-                            scope.Run.Id.Value,
-                            snapshot.ExternalJobId,
-                            "skill mismatch"
-                        );
-                        continue;
                     }
 
                     if (before is null)
