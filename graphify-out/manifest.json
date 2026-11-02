@@ -66,9 +66,9 @@
     "semantic_hash": "479c9821eebdd0a733534cdba0763c99"
   },
   "docs/08-site-playbooks.md": {
-    "mtime": 1793616355.6600826,
-    "seen": 1793616963.1099641,
-    "ast_hash": "9d6458b31a405ecc70e072421472212d",
+    "mtime": 1793628083.8749533,
+    "seen": 1793628476.744185,
+    "ast_hash": "16861657a8294621e9ad9f0b51aa8686",
     "semantic_hash": ""
   },
   "docs/09-operations-runbook.md": {
@@ -420,9 +420,9 @@
     "semantic_hash": "cb9242a15231f433cbff5acc0aa22644"
   },
   "src/backend/JobScrape.Api.Tests/SearchProfilesEndpointTests.cs": {
-    "mtime": 1793604852.5909517,
-    "seen": 1793606170.349569,
-    "ast_hash": "5565420ef56f0944aafc6d6bf260a3a1",
+    "mtime": 1793627673.462165,
+    "seen": 1793628476.743702,
+    "ast_hash": "4c482f5301f739d58a0509a6e213b1f2",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Controllers/SearchProfilesController.cs": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/GetSearchProfileHandlerTests.cs": {
-    "mtime": 1793604852.5945306,
-    "seen": 1793606170.349581,
-    "ast_hash": "4a0d30d7af9cd24eb52ce670aaae0515",
+    "mtime": 1793627040.805526,
+    "seen": 1793628476.743718,
+    "ast_hash": "d3e05c3a7fd90adc38edf2c666d90f7f",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/SearchProfiles/GetSearchProfileHandler.cs": {
@@ -462,9 +462,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/SearchProfiles/SearchProfileResponse.cs": {
-    "mtime": 1793604852.5971313,
-    "seen": 1793606170.349605,
-    "ast_hash": "cbef20fcfc5a644d75a6cfe126ce41ff",
+    "mtime": 1793627040.806325,
+    "seen": 1793628476.7437592,
+    "ast_hash": "968a6bff4455b9e80695d55ddea4b910",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Results/Errors.cs": {
@@ -486,9 +486,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/lib/api.ts": {
-    "mtime": 1793604852.6059098,
-    "seen": 1793606170.349677,
-    "ast_hash": "cb7e5e8e40900fb0a5008b95443c9093",
+    "mtime": 1793627893.8888135,
+    "seen": 1793628476.743896,
+    "ast_hash": "ff4af9d900af7617ddca84c5a011e156",
     "semantic_hash": ""
   },
   "src/frontend/src/client/main.tsx": {
@@ -522,9 +522,9 @@
     "semantic_hash": "467a94ab485d1d8766878fc36a40cebc"
   },
   "src/frontend/src/tests/client/app.test.tsx": {
-    "mtime": 1793604852.6068823,
-    "seen": 1793606170.349683,
-    "ast_hash": "934d85421d7bcb599513f498ae96c877",
+    "mtime": 1793628011.1166441,
+    "seen": 1793628476.743905,
+    "ast_hash": "24a4fa4ce80437778f313f2eb9500e8b",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/server/config.test.ts": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/profiles.tsx": {
-    "mtime": 1793604852.606395,
-    "seen": 1793606170.3496802,
-    "ast_hash": "e970db3e220dbb748a794f8163ea2f85",
+    "mtime": 1793628049.6793647,
+    "seen": 1793628476.7438998,
+    "ast_hash": "d29ac73a166b8eefe94c33315f2fee55",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/topology.tsx": {
@@ -684,9 +684,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/RunStatsTests.cs": {
-    "mtime": 1793523193.7093287,
-    "seen": 1793606170.349623,
-    "ast_hash": "d74c99a1fdfb880c886fb0ad115f81cf",
+    "mtime": 1793627041.836868,
+    "seen": 1793628476.743784,
+    "ast_hash": "35c33cb4e74fe9ef758cd2b0450bef17",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/SalaryAndLocationTests.cs": {
@@ -696,21 +696,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/ScrapeRunTests.cs": {
-    "mtime": 1793523193.7095149,
-    "seen": 1793606170.349623,
-    "ast_hash": "2c5baa242a432bfafdff464c4ca512e4",
+    "mtime": 1793627040.8065414,
+    "seen": 1793628476.743786,
+    "ast_hash": "96625e951560ed05e2463e6588a45d0b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/SearchCriteriaTests.cs": {
-    "mtime": 1793523193.7095895,
-    "seen": 1793606170.3496242,
-    "ast_hash": "d8cb16c3942ec51c526819326b0c5e6c",
+    "mtime": 1793627040.8066404,
+    "seen": 1793628476.743787,
+    "ast_hash": "8d07ceb0c61a47c3fa9dd6636cc2103a",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/SearchProfileTests.cs": {
-    "mtime": 1793523193.709689,
-    "seen": 1793606170.3496242,
-    "ast_hash": "1f13b4557cb4d6903cb6781402659bca",
+    "mtime": 1793627040.806733,
+    "seen": 1793628476.743787,
+    "ast_hash": "c3b04ae13231e30ea4938d5cec1cbdf1",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Abstractions/AggregateRoot.cs": {
@@ -894,9 +894,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/RunStats.cs": {
-    "mtime": 1793523193.7131639,
-    "seen": 1793606170.3496451,
-    "ast_hash": "2df93f8f1a8cbc3f01a0193554ad66d1",
+    "mtime": 1793627041.837005,
+    "seen": 1793628476.7438211,
+    "ast_hash": "e16c725aa0fdc6dba8be87591b93cb8c",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/SalaryPeriod.cs": {
@@ -912,9 +912,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/ScrapeRun.cs": {
-    "mtime": 1793523193.7134314,
-    "seen": 1793606170.349646,
-    "ast_hash": "2d7a9e8b0492d7e7f368e6a4c5d1625d",
+    "mtime": 1793627041.8371375,
+    "seen": 1793628476.743823,
+    "ast_hash": "642cec9fe34490fcbb9f18f4b004a97c",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/ScrapeRunStarted.cs": {
@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/SearchCriteria.cs": {
-    "mtime": 1793523193.713663,
-    "seen": 1793606170.349647,
-    "ast_hash": "5d90d88f5111ec9559f81bae35d5bab4",
+    "mtime": 1793627040.8070579,
+    "seen": 1793628476.7438238,
+    "ast_hash": "908daf74d278cc86d5c0d66f7e630ac3",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/SearchPageFetched.cs": {
@@ -1200,9 +1200,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/Scraping/ScrapeHarness.cs": {
-    "mtime": 1793604852.594987,
-    "seen": 1793606170.3495848,
-    "ast_hash": "045b3ea3595eaf6035bd45500a94d677",
+    "mtime": 1793627620.3213973,
+    "seen": 1793628476.743725,
+    "ast_hash": "f2cb1fb28b14972a9c1479c01d27e5f5",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/Scraping/SourceCatalogTests.cs": {
@@ -1296,9 +1296,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Scraping/RunScrapeHandler.cs": {
-    "mtime": 1793604852.5964203,
-    "seen": 1793606170.349598,
-    "ast_hash": "6becbca43dabd0402b298af040f2a476",
+    "mtime": 1793627620.6281881,
+    "seen": 1793628476.7437491,
+    "ast_hash": "4e76152dbe93fd6d644c237b6dc7b7b9",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Scraping/RunScrapeRequest.cs": {
@@ -1314,9 +1314,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Scraping/ScrapeStores.cs": {
-    "mtime": 1793523193.7073765,
-    "seen": 1793606170.3496,
-    "ast_hash": "ba84c310e731702f351ba684de574655",
+    "mtime": 1793627113.0441139,
+    "seen": 1793628476.7437508,
+    "ast_hash": "bca4fadc53e3ee4d28c394bf4d4abda3",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Scraping/SearchPageRequest.cs": {
@@ -1368,9 +1368,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Sourcing/RehydrationTests.cs": {
-    "mtime": 1793523193.7092106,
-    "seen": 1793606170.349622,
-    "ast_hash": "df2be3f35cf1f2c3f33b70f7554d8d62",
+    "mtime": 1793627041.8367536,
+    "seen": 1793628476.743783,
+    "ast_hash": "ba2cbeb16311d428f22fd54eabeffb6b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj": {
@@ -1380,15 +1380,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/PersistenceTests.cs": {
-    "mtime": 1793523193.714556,
-    "seen": 1793606170.34965,
-    "ast_hash": "ca3f73a6f8114bf9acb01dc256433ebe",
+    "mtime": 1793627621.1332803,
+    "seen": 1793628476.7438312,
+    "ast_hash": "3aa6f28d3fe1b1e5abeb462f610a893c",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/RunScrapeOnSqliteTests.cs": {
-    "mtime": 1793604852.599665,
-    "seen": 1793606170.3496509,
-    "ast_hash": "d1f6787ac9dba9f0d4526b8646a0629d",
+    "mtime": 1793627040.807721,
+    "seen": 1793628476.743832,
+    "ast_hash": "fc68d824fb3cfc070fb0d47fe369db5b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/TestDatabase.cs": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/DomainConverters.cs": {
-    "mtime": 1793523193.7160017,
-    "seen": 1793606170.349662,
-    "ast_hash": "87055f0e46f18065e6ff33e1c5829f09",
+    "mtime": 1793627128.2406802,
+    "seen": 1793628476.743859,
+    "ast_hash": "aea2b1780c6b8138f6c8fde1500c2b22",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/JobScrapeDbContext.cs": {
-    "mtime": 1793523193.7160785,
-    "seen": 1793606170.349662,
-    "ast_hash": "c74a71d9bf0d225ea004cc682a0655fc",
+    "mtime": 1793627146.8794973,
+    "seen": 1793628476.74386,
+    "ast_hash": "fb9b776e3b8a3a5ce35ae09f4650f9d8",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/JobScrapeDesignTimeFactory.cs": {
@@ -1464,15 +1464,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Migrations/JobScrapeDbContextModelSnapshot.cs": {
-    "mtime": 1793523193.716508,
-    "seen": 1793606170.349664,
-    "ast_hash": "e1f8b54019ceaec5bcbd93152c4555fe",
+    "mtime": 1793627452.4773762,
+    "seen": 1793628476.743863,
+    "ast_hash": "96f83fe87c4f3b7aa69087c740b288df",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs": {
-    "mtime": 1793604852.6030262,
-    "seen": 1793606170.349664,
-    "ast_hash": "9553e9b348e915317e74c334a0ee1b40",
+    "mtime": 1793627146.87579,
+    "seen": 1793628476.743864,
+    "ast_hash": "d7fdfdf122bc55986d521429ca943f34",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/BrowserProfileRepository.cs": {
@@ -1644,21 +1644,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/CreateSearchProfileHandlerTests.cs": {
-    "mtime": 1793604852.5943623,
-    "seen": 1793606170.349579,
-    "ast_hash": "05513080a24141e2467cde6fb8e26a30",
+    "mtime": 1793627040.8054237,
+    "seen": 1793628476.743715,
+    "ast_hash": "fe324f4c5ecfffa439c31aa91dad9c09",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/SearchProfiles/CreateSearchProfileHandler.cs": {
-    "mtime": 1793604852.5967534,
-    "seen": 1793606170.349602,
-    "ast_hash": "a784e442f15a9c69c748e8129e1e944e",
+    "mtime": 1793627040.8060863,
+    "seen": 1793628476.743755,
+    "ast_hash": "578af1c90b3ad40939970fb9dd89c03b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/SearchProfiles/CreateSearchProfileRequest.cs": {
-    "mtime": 1793604852.5968041,
-    "seen": 1793606170.3496032,
-    "ast_hash": "2a1bf61c12e9091c3944ac823aeb73c7",
+    "mtime": 1793627040.8062217,
+    "seen": 1793628476.743755,
+    "ast_hash": "3bede6fc66b066645b27171c8bb8f2f1",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/SearchProfiles/ListSearchProfilesHandler.cs": {
@@ -1674,9 +1674,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/SearchProfileReadStoreTests.cs": {
-    "mtime": 1793604852.5997155,
-    "seen": 1793606170.3496509,
-    "ast_hash": "171f8843c4b14ae7680c7d4c83a3b2c8",
+    "mtime": 1793627040.807834,
+    "seen": 1793628476.743833,
+    "ast_hash": "5e2b1e01675e2658fd1394166b747f02",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/SearchProfileReadStore.cs": {
@@ -1686,9 +1686,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/profiles-api.test.ts": {
-    "mtime": 1793604852.6069946,
-    "seen": 1793606170.349689,
-    "ast_hash": "6ed54110fc39532ca6a10068374ff4f5",
+    "mtime": 1793627917.6453283,
+    "seen": 1793628476.7439082,
+    "ast_hash": "b9e4634e35e6b5a6d69d36c300d3ce27",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api.Tests/SourcesEndpointTests.cs": {
@@ -1848,15 +1848,15 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/perf.test.tsx": {
-    "mtime": 1793604852.6069381,
-    "seen": 1793606170.349688,
-    "ast_hash": "3e26d8f4c35e519b0162bbda1e43cba2",
+    "mtime": 1793628022.5164802,
+    "seen": 1793628476.743907,
+    "ast_hash": "2f149200135dffbaceebe859b9357cca",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api.Tests/RunsEndpointTests.cs": {
-    "mtime": 1793616214.924784,
-    "seen": 1793616963.109507,
-    "ast_hash": "a5ee8b0a0d3be63267175fe5eda335c1",
+    "mtime": 1793628281.2711024,
+    "seen": 1793628476.7437,
+    "ast_hash": "91f67e7ba5b9a99059aeee5b9e6bf132",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Composition/BrowserRegistration.cs": {
@@ -1878,9 +1878,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/RunHandlersTests.cs": {
-    "mtime": 1793616196.7803912,
-    "seen": 1793616963.109527,
-    "ast_hash": "a7d24738adf6b5596406a3982becb1c8",
+    "mtime": 1793627040.8056254,
+    "seen": 1793628476.743721,
+    "ast_hash": "20aabb7ee3fe43397990e3b53643bbe7",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Runs/CancelRunHandler.cs": {
@@ -1962,15 +1962,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Browser/BrowserTests.cs": {
-    "mtime": 1793604852.599331,
-    "seen": 1793606170.349649,
-    "ast_hash": "f9ef3651d63795b8e1c1b75d3359b7ef",
+    "mtime": 1793627040.8072689,
+    "seen": 1793628476.743828,
+    "ast_hash": "dfe40a1d2bb03c3c95a799e143c37d9f",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/RunReadStoreTests.cs": {
-    "mtime": 1793604852.5995622,
-    "seen": 1793606170.34965,
-    "ast_hash": "f1816037fc6b403214e8a2291570d258",
+    "mtime": 1793627040.8075922,
+    "seen": 1793628476.7438312,
+    "ast_hash": "e2109f79760683b07dbc6b74e03651e0",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Naukri/NaukriChallengeClassifierTests.cs": {
@@ -1998,9 +1998,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Naukri/NaukriUrlBuilderTests.cs": {
-    "mtime": 1793604852.6011083,
-    "seen": 1793606170.349654,
-    "ast_hash": "5d43885c3ea1061cf0acd9ca20d99346",
+    "mtime": 1793627621.380707,
+    "seen": 1793628476.743843,
+    "ast_hash": "b0b08e71a77d68cb491b476ab6222089",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Browser/BrowserSessionPool.cs": {
@@ -2094,21 +2094,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Naukri/NaukriUrlBuilder.cs": {
-    "mtime": 1793604852.6041813,
-    "seen": 1793606170.349673,
-    "ast_hash": "eaea8f5a7ad3b1dabf21207dffdc50a9",
+    "mtime": 1793627622.6464994,
+    "seen": 1793628476.743888,
+    "ast_hash": "4dd6724d860e8d91fb3a2f57276b05ac",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/runs.tsx": {
-    "mtime": 1793616310.5765486,
-    "seen": 1793616963.109697,
-    "ast_hash": "b16cc0e80375a7633b4c6b2aca18fa4c",
+    "mtime": 1793628049.679642,
+    "seen": 1793628476.743901,
+    "ast_hash": "6dee35e6246baf7445c44c3982473175",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/runs.test.tsx": {
-    "mtime": 1793616336.883485,
-    "seen": 1793616963.109706,
-    "ast_hash": "f0291edf16ab3247f46539586098057b",
+    "mtime": 1793628049.6445942,
+    "seen": 1793628476.7439098,
+    "ast_hash": "04f32c17d1c37ae9c94f99ece821f5ca",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Naukri/Fixtures/README.md": {
@@ -5562,15 +5562,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/ExportRunPostingsHandlerTests.cs": {
-    "mtime": 1793616227.113036,
-    "seen": 1793616963.109523,
-    "ast_hash": "83c0d49eafd3829c2abe02e9a2162e0f",
+    "mtime": 1793627847.587908,
+    "seen": 1793628476.743716,
+    "ast_hash": "5ea192752314facd0c304e9ffcee9f25",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Runs/ExportFile.cs": {
-    "mtime": 1793616074.2390287,
-    "seen": 1793616963.10954,
-    "ast_hash": "d1887f2cef9a55865caa91946fe9f8db",
+    "mtime": 1793627700.766195,
+    "seen": 1793628476.743736,
+    "ast_hash": "a969095c8398f7a0b5cd32609b090be8",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Runs/ExportFormat.cs": {
@@ -5586,21 +5586,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Runs/ExportRunPostingsHandler.cs": {
-    "mtime": 1793616077.8078272,
-    "seen": 1793616963.109542,
-    "ast_hash": "29a68a6bdc714ca0623a8f2547a8900a",
+    "mtime": 1793627848.0735254,
+    "seen": 1793628476.7437382,
+    "ast_hash": "806e3c25f482601b8d405e0a2d8b51cf",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Runs/IPostingExportWriter.cs": {
-    "mtime": 1793616063.813017,
-    "seen": 1793616963.109544,
-    "ast_hash": "c5c7f51a5eaea780fb75a7c805d755fa",
+    "mtime": 1793627700.7661953,
+    "seen": 1793628476.743739,
+    "ast_hash": "02d3a707bf8c01032360c34c3e6e2fbb",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Export/PostingWriterTests.cs": {
-    "mtime": 1793616236.3278975,
-    "seen": 1793616963.109632,
-    "ast_hash": "318b4a141ce342f9af6e7130832c910b",
+    "mtime": 1793627848.5712018,
+    "seen": 1793628476.74383,
+    "ast_hash": "6a52f98d013540794e6a0db2fd3a363f",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Indeed/IndeedChallengeClassifierTests.cs": {
@@ -5628,15 +5628,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Indeed/IndeedUrlBuilderTests.cs": {
-    "mtime": 1793615672.4510684,
-    "seen": 1793616963.10964,
-    "ast_hash": "cf1832115c2a8c9e3f661b2ca275cc16",
+    "mtime": 1793627040.8079576,
+    "seen": 1793628476.7438369,
+    "ast_hash": "dc716ec5f167dab52ce70b2ca13663e1",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/LinkedIn/LinkedInChallengeClassifierTests.cs": {
-    "mtime": 1793615975.9160023,
-    "seen": 1793616963.10964,
-    "ast_hash": "7944adb413badf1fbc9461f19aaf72b4",
+    "mtime": 1793627040.8080626,
+    "seen": 1793628476.7438378,
+    "ast_hash": "6628f2557d2230b8a305dc3dad2bc5b9",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/LinkedIn/LinkedInSearchParserTests.cs": {
@@ -5652,21 +5652,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/LinkedIn/LinkedInUrlBuilderTests.cs": {
-    "mtime": 1793615911.8988082,
-    "seen": 1793616963.109642,
-    "ast_hash": "ee53a060642b4dd359b1f2ab64a6cf8e",
+    "mtime": 1793627040.8081737,
+    "seen": 1793628476.74384,
+    "ast_hash": "e5ebea57e7db2ea9926a5c296bb9fe99",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Export/CsvPostingWriter.cs": {
-    "mtime": 1793616145.4594305,
-    "seen": 1793616963.109654,
-    "ast_hash": "a9f96e2ec06dda7909850ec75beb69b8",
+    "mtime": 1793627848.818339,
+    "seen": 1793628476.7438521,
+    "ast_hash": "c2cf27bdea128fd668ea8d12a0b8c062",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Export/ExcelPostingWriter.cs": {
-    "mtime": 1793616145.4594302,
-    "seen": 1793616963.1096551,
-    "ast_hash": "ba97576931bc1b5d447e9b47c4ecf7c1",
+    "mtime": 1793627723.3136156,
+    "seen": 1793628476.743853,
+    "ast_hash": "64304bbad8292e8690397ca22d3171de",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Export/ExportColumns.cs": {
@@ -5835,6 +5835,66 @@
     "mtime": 1793615890.0590098,
     "seen": 1793616963.109987,
     "ast_hash": "bb84183bcac7318a9c24361b4239cc82",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Application.Tests/Scraping/RunScrapeFilteringTests.cs": {
+    "mtime": 1793628200.8842595,
+    "seen": 1793628476.743723,
+    "ast_hash": "35561a1417b10cfcf69116753db50271",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Application/Abstractions/IScrapeRunProgressRepository.cs": {
+    "mtime": 1793627109.7693338,
+    "seen": 1793628476.7437289,
+    "ast_hash": "6284562def72b93235704651a7edbb58",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Domain.Tests/Sourcing/ScrapeRunProgressTests.cs": {
+    "mtime": 1793627541.0941803,
+    "seen": 1793628476.743786,
+    "ast_hash": "e74294685c4baf2bdf8d46a3736e476d",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Domain.Tests/Sourcing/SkillMatcherTests.cs": {
+    "mtime": 1793627040.8067966,
+    "seen": 1793628476.743788,
+    "ast_hash": "2dac174f72366b1b81f147c884b3dc2e",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Domain/Sourcing/ScrapeRunProgress.cs": {
+    "mtime": 1793627267.3789322,
+    "seen": 1793628476.743823,
+    "ast_hash": "372c519f8aa522487033858aca50ade6",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Domain/Sourcing/SkillMatcher.cs": {
+    "mtime": 1793627040.8071306,
+    "seen": 1793628476.7438269,
+    "ast_hash": "ba9b085b1d6462f1dd175bf948619df5",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Configurations/ScrapeRunProgressConfiguration.cs": {
+    "mtime": 1793627134.7890549,
+    "seen": 1793628476.743857,
+    "ast_hash": "8ec652b7671889b2624a9d1b05b40acb",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102135052_AddScrapeRunProgress.Designer.cs": {
+    "mtime": 1793627452.4772065,
+    "seen": 1793628476.743862,
+    "ast_hash": "7ae6b8f64c580eded3053317f635ba1e",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102135052_AddScrapeRunProgress.cs": {
+    "mtime": 1793627452.4770787,
+    "seen": 1793628476.743863,
+    "ast_hash": "fba87a2e62200b1406e1397a0adf5073",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Repositories/ScrapeRunProgressRepository.cs": {
+    "mtime": 1793627134.7890463,
+    "seen": 1793628476.7438662,
+    "ast_hash": "c964b013c3646d5e14d8d8b7f4f91900",
     "semantic_hash": ""
   }
 }

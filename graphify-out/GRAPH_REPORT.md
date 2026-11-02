@@ -1,17 +1,17 @@
 # Graph Report - PlaywrightDotNet  (2026-11-02)
 
 ## Corpus Check
-- 937 files · ~743,687 words
+- 947 files · ~748,509 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 395 file(s) not represented in the graph (top: .out 134, .csv 53, .exit 44)
 
 ## Summary
-- 9446 nodes · 18283 edges · 580 communities (447 shown, 133 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1414 edges (avg confidence: 0.84)
+- 9538 nodes · 18682 edges · 575 communities (451 shown, 124 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1469 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d903a2f8`
+- Built from commit: `2b7a3c4a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,9 +28,9 @@
 - Solution Layout (JobLens.slnx)
 - compilerOptions
 - index.ts
-- FakeSource
+- RunCoordinator
 - Web cockpit (v2 control plane)
-- 08-principles.md
+- Benchmark checklist
 - Build Performance Baseline & Optimization
 - Playwright for .NET
 - ir.ts
@@ -38,7 +38,7 @@
 - github
 - validate_data.py
 - Conventional Commits
-- ScrapeHarness
+- RunScrapeHandlerTests
 - .opencode/README.md
 - Non-negotiables
 - ECC - OpenCode Instructions
@@ -65,7 +65,7 @@
 - ListSourcesHandler.HandleAsync
 - design_system.py
 - argparse
-- SearchCriteria
+- Json
 - api.ts
 - JobPosting
 - types.ts
@@ -100,12 +100,12 @@
 - Serilog structured logging with redaction
 - AggregateRoot
 - Prerequisites
-- ContentHash
+- SourceKey
 - Cockpit Favicon Icon
 - Step 2: Recommend diagnostic tools
 - UI Styling Skill
 - BrowserProfileTests
-- RunScope
+- SourceCircuitBreaker
 - Theory
 - NaukriJsonLd
 - Code Conventions and csharpier workflow
@@ -113,14 +113,14 @@
 - bash
 - Fixes
 - JobScrapeDbContext
-- BrowserTests.cs
+- ApiFactory
 - SourceCircuitBreaker
 - labels.ts
 - Detecting OutputPath and IntermediateOutputPath Clashes
 - ADR-0014: Use Libraries as Designed; AOT Is Not a Constraint
-- SourceKey
+- ErrorInfo
 - system_globalization
-- test_design_system_mode.py
+- ScrapeHarness
 - Design System
 - DesignSystemGenerator
 - Grade Tests
@@ -136,7 +136,7 @@
 - source-playbook.md
 - Generate Testability Wrappers
 - Workflow
-- NaukriSearchParserTests
+- marks.ts
 - 05-build-and-clean.md
 - slide_search_core.py
 - Result
@@ -144,7 +144,7 @@
 - IRandomSource
 - Find Untested Sources
 - MSBuild Item Management Patterns
-- run.ts
+- config-fuzz.test.ts
 - SessionResponse
 - CLI-first (System.CommandLine + Hosting + Serilog)
 - JobScrape.Api.Tests
@@ -154,7 +154,7 @@
 - JobScrape.Architecture.Tests
 - Test Anti-Pattern Detection
 - JobScrape.Application.Tests
-- CreateSearchProfileHandler.HandleAsync
+- Task
 - Assertion Diversity Analysis
 - ChallengeAction
 - Tailwind CSS Utility Reference
@@ -167,7 +167,7 @@
 - MSBuild Extension Points
 - JobScrape.Infrastructure
 - Eval Command
-- StorageOptions
+- LoggingOptions
 - app.tsx
 - runs.tsx
 - policy.ts
@@ -180,8 +180,8 @@
 - cli.ts
 - JobScrape.Api
 - Migration Checklist: Legacy → SDK-style
-- Resolve a Testability Obstacle
-- scripts
+- SourceQuota
+- ScrapeHarness.Job
 - pstack on OpenCode
 - Workflow
 - spacing
@@ -192,8 +192,8 @@
 - Test Trait Tagging
 - Refactor Clean Command
 - pstack
-- JobScrape.Application.Features.Runs
-- ScrapeRun
+- JobScrape.Application.Results
+- SearchCriteria
 - Banner Design - Multi-Format Creative Banner System
 - Coverage Analysis
 - Form & Input Components
@@ -211,11 +211,11 @@
 - Eliminate Redundant Restores
 - IndeedSearchParser.Parse
 - Logo Usage Rules
-- BrowserTests
+- BrowserProfile
 - JobLens
 - Component Specifications
 - Documentation Types
-- DomainExceptionTests.cs
+- Design red flags
 - html-token-validator.py
 - Verification Checklist
 - shadcn/ui Accessibility Patterns
@@ -316,12 +316,12 @@
 - generate-slide.py
 - card
 - radius
-- policy.test.ts
+- fetch-background.py
 - Ruby Extension
 - fontSize
 - Routing by Task Type
 - shadcn/ui Theming & Customization
-- TestTailwindConfigGenerator
+- TailwindConfigGenerator
 - test_relevance_evaluator.py
 - Asset Organization Guide
 - Notes verification map
@@ -344,6 +344,7 @@
 - PowerShell Extension
 - Design Principles
 - MSBuild anti-pattern catalog
+- ErrorKind
 - extract-colors.cjs
 - .NET Extension
 - Java Extension
@@ -371,7 +372,7 @@
 - Common Bottlenecks
 - Optimizing MSBuild Incremental Builds
 - Layout Patterns
-- TailwindConfigGenerator
+- @happy-dom/global-registrator
 - Epistemics
 - Memory & String Patterns
 - update.md
@@ -384,7 +385,7 @@
 - Go Test Framework Reference (`testing` package, testify)
 - Python Test Frameworks Reference (pytest, unittest)
 - TypeScript / JavaScript Test Frameworks Reference (Jest, Vitest, Mocha, Jasmine, node:test)
-- .test_node_check_parses_generated_config
+- RunScrapeFilteringTests
 - TestDomainDetection
 - TestSearchDomains
 - Collections & LINQ Patterns
@@ -411,8 +412,9 @@
 - Comparing benchmark results
 - Additional MSBuild anti-patterns
 - compilerOptions
-- main
+- IndeedUrlBuilder.SearchUrl
 - OptionsTests
+- LinkedInUrlBuilder.SearchUrl
 - 2. Structured logging with Serilog
 - I/O, Serialization & General Patterns
 - sync-brand-to-tokens.cjs
@@ -424,7 +426,7 @@
 - Slide Strategies
 - JobPosting.Create
 - Async & Concurrency Patterns
-- BM25
+- logo/core.py
 - CoreCLR Crash Dump Collection
 - Choosing a CopyToOutputDirectory Mode
 - Word the prompt
@@ -432,12 +434,15 @@
 - compilerOptions
 - Regex Patterns
 - .NET Pipeline Examples
-- Java Pipeline Examples
+- IServiceCollection
 - Kotlin Pipeline Examples
 - PowerShell Pipeline Examples
-- Python Pipeline Examples
+- C++ Pipeline Examples
 - Rust Pipeline Examples
 - dotnet-monitor
+- SessionState
+- StorageOptions
+- ExportColumns
 - logo/search.py
 - 3. Result pattern
 - 3. Global exception handling and error logging
@@ -447,6 +452,7 @@
 - Techniques
 - Prompts worth copying
 - HTML Slide Template
+- principle-guard-the-context-window/SKILL.md
 - SearchPageParser
 - Explicit Risk/CRAP Analysis
 - Coverage Analysis — setup and discovery
@@ -505,28 +511,23 @@
 - create.md
 - LinkedInFields
 - CanonicalUrl.Create
-- PostingTextValueTests
-- SalaryRange
+- Steer with principle names
+- poteto-agent.md
 - LinkedInSearchParser.Parse
 - NaukriDetailParser.Parse
-- config-fuzz.test.ts
-- SearchProfileId
+- The pstack guide
+- ScrapeRunId.New
 - JobSnapshot
-- IElement
+- Prove It Works
 - primitive
-- SearchCriteriaTests
+- Fact
 - Find-UntestedSources.cs
-- JobLocation
-- sessions.tsx
-- DataQualityIssues
+- profiles.tsx
 - Go Pipeline Examples
 - input
-- TimeSpan
-- Result
 - $type
 - $type
 - radius
-- CircuitState
 - 50
 - 800
 - destructive
@@ -538,27 +539,27 @@
 - white
 
 ## God Nodes (most connected - your core abstractions)
-1. `DomainException` - 138 edges
-2. `JobScrape.Domain.Common` - 116 edges
-3. `JobScrape.Domain.Sourcing` - 108 edges
-4. `ScrapeHarness` - 102 edges
-5. `JobPosting` - 77 edges
+1. `DomainException` - 141 edges
+2. `JobScrape.Domain.Common` - 122 edges
+3. `JobScrape.Domain.Sourcing` - 117 edges
+4. `ScrapeHarness` - 111 edges
+5. `JobPosting` - 78 edges
 6. `JobScrape.Domain.Access` - 76 edges
 7. `SourceKey` - 70 edges
-8. `ScrapeRun` - 62 edges
-9. `JobSnapshot` - 60 edges
-10. `TailwindConfigGenerator` - 58 edges
+8. `ScrapeRun` - 63 edges
+9. `JobSnapshot` - 62 edges
+10. `InMemoryStore` - 59 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Parameterized Test Display Names` --references--> `Text`  [INFERRED]
+  .opencode/skills/code-testing-extensions/extensions/powershell.md → src/backend/JobScrape.Domain/Common/Text.cs
 - `AP-18: Apparently redundant transitive project references` --references--> `App()`  [INFERRED]
   .opencode/skills/msbuild/references/antipatterns/additional-antipatterns.md → src/frontend/src/client/app.tsx
 - `2. Types used in this repository` --references--> `build()`  [INFERRED]
   docs/13-conventional-commits.md → .opencode/skills/statechart/scripts/test/labels.ts
-- `Parameterized Test Display Names` --references--> `Text`  [INFERRED]
-  .opencode/skills/code-testing-extensions/extensions/powershell.md → src/backend/JobScrape.Domain/Common/Text.cs
+- `Step 2: Select the smallest safe seam` --references--> `IDelay`  [INFERRED]
+  .opencode/skills/testability-obstacle/SKILL.md → src/backend/JobScrape.Application/Abstractions/IDelay.cs
 - `Audit the log against the transcript` --references--> `start()`  [INFERRED]
-  .opencode/skills/show-me-your-work/SKILL.md → src/frontend/src/client/pages/runs.tsx
-- `Logging a row` --references--> `start()`  [INFERRED]
   .opencode/skills/show-me-your-work/SKILL.md → src/frontend/src/client/pages/runs.tsx
 
 ## Import Cycles
@@ -578,23 +579,23 @@
 - **xml docs enforcement flow** — docs_04_solution_and_tooling_code_conventions, docs_10_adr_0017_xml_documentation_rule_xml_doc_build_rule, docs_10_adr_readme_adr_index [INFERRED]
 - **** — docs_12_web_cockpit_control_plane, docs_12_web_cockpit_bun_bff, docs_12_web_cockpit_dotnet_data_plane [INFERRED]
 
-## Communities (580 total, 133 thin omitted)
+## Communities (575 total, 124 thin omitted)
 
 ### Community 0 - "useRenderLog"
-Cohesion: 0.15
-Nodes (39): Abbr(), Cross(), Diamond(), Dot(), Glossary(), GlossaryTerm, Legend(), LegendItem (+31 more)
+Cohesion: 0.19
+Nodes (29): react, Abbr(), Cross(), Diamond(), Dot(), Glossary(), GlossaryTerm, Legend() (+21 more)
 
 ### Community 1 - "RunsEndpointTests.cs"
-Cohesion: 0.10
-Nodes (4): JobScrape.Api.Tests, JobScrape.Api.Http, JobScrape.Application.Features.Health, JobScrape.Api.Controllers
+Cohesion: 0.09
+Nodes (4): JobScrape.Api.Tests, JobScrape.Api.Http, JobScrape.Api.Controllers, JobScrape.Application.Features.Sessions
 
 ### Community 2 - "2. Structured logging with Serilog"
 Cohesion: 0.07
 Nodes (28): 1. Baseline decisions, 4.1 Client construction, 4.2 Retry policy, 4.3 Timeouts, 4.4 Fallbacks, 4.5 Response and stream disposal, 4. HTTP clients and Polly resilience, 5.1 Rules (+20 more)
 
 ### Community 3 - "package.json"
-Cohesion: 0.07
-Nodes (36): happy-dom, @happy-dom/global-registrator, react, react-dom, tailwindcss, @tailwindcss/cli, @testing-library/react, @types/bun (+28 more)
+Cohesion: 0.05
+Nodes (42): happy-dom, react-dom, tailwindcss, @tailwindcss/cli, @types/bun, @types/react, @types/react-dom, dependencies (+34 more)
 
 ### Community 4 - "Common adapter blueprint"
 Cohesion: 0.08
@@ -609,8 +610,8 @@ Cohesion: 0.10
 Nodes (20): Modular Monolith with Clean Architecture and inward dependency rule, Decision gates G0–G5, First 15 commits, Phase 0 — Foundation, Phase 1 — Domain + Application, Phase 2 — Browser + Session, Phase 3 — Naukri slice, Phase 4 — Indeed + LinkedIn (+12 more)
 
 ### Community 8 - "xunit"
-Cohesion: 0.11
-Nodes (6): JobScrape.Application.Results, JobScrape.Application.Tests, JobScrape.Domain.Tests.Abstractions, JobScrape.Domain.Tests.Common, JobScrape.Application.Tests.Scraping, JobScrape.Domain.Tests.Sourcing
+Cohesion: 0.09
+Nodes (6): JobScrape.Domain.Tests.Access, JobScrape.Domain.Tests, JobScrape.Architecture.Tests, JobScrape.Domain.Tests.Abstractions, JobScrape.Domain.Tests.Common, JobScrape.Domain.Tests.Sourcing
 
 ### Community 9 - "Solution Layout (JobLens.slnx)"
 Cohesion: 0.10
@@ -621,20 +622,20 @@ Cohesion: 0.09
 Nodes (21): compilerOptions, allowImportingTsExtensions, allowJs, isolatedModules, jsx, lib, module, moduleDetection (+13 more)
 
 ### Community 11 - "index.ts"
-Cohesion: 0.11
-Nodes (18): RFC-9110, submit(), readForm(), CockpitConfig, parseApiUrl(), parseConfig(), parseOptionalPath(), parsePort() (+10 more)
+Cohesion: 0.13
+Nodes (15): RFC-9110, CockpitConfig, parseApiUrl(), parseConfig(), parseOptionalPath(), parsePort(), apiProxy(), createHandler() (+7 more)
 
-### Community 12 - "FakeSource"
-Cohesion: 0.18
-Nodes (7): CleanSessions, FakeSource, Capabilities, Entered, Key, RunsEndpointTests, Ct
+### Community 12 - "RunCoordinator"
+Cohesion: 0.09
+Nodes (14): ActiveRun, BrowserProfileId, Cancellation, Finished, RunId, Started, RunCoordinator, FakeSource (+6 more)
 
 ### Community 13 - "Web cockpit (v2 control plane)"
 Cohesion: 0.11
 Nodes (25): Deferred API/dashboard (post-Phase 3), Same-origin Bun BFF, React + Bun web cockpit (v2.0), shadcn/ui copy-in components, HTTP/JSON commands + Server-Sent Events transport, Backend-first scaffold, Explicit Main + block namespaces, Architecture Decision Record (ADR) (+17 more)
 
-### Community 14 - "08-principles.md"
-Cohesion: 0.04
-Nodes (33): Steer with principle names, Steering in practice, The 24, briefly, Before you run anything, Benchmark checklist, Other perf material, Report, The questions (+25 more)
+### Community 14 - "Benchmark checklist"
+Cohesion: 0.40
+Nodes (5): Before you run anything, Benchmark checklist, Other perf material, Report, The questions
 
 ### Community 15 - "Build Performance Baseline & Optimization"
 Cohesion: 0.05
@@ -645,8 +646,8 @@ Cohesion: 0.22
 Nodes (11): Playwright for .NET, Public Browser Diagnostics, WebKit Is Not Safari, xUnit.net v3, BrowserSessionFactory, ISessionManager, BrowserProfile, Live Canary Tests (+3 more)
 
 ### Community 17 - "ir.ts"
-Cohesion: 0.08
-Nodes (76): fenced(), forever(), report(), stepsOf(), Answers, append(), Arrow, ascending() (+68 more)
+Cohesion: 0.07
+Nodes (80): fenced(), forever(), report(), stepsOf(), Answers, append(), Arrow, ascending() (+72 more)
 
 ### Community 18 - "2. Library-specific guidance"
 Cohesion: 0.14
@@ -657,20 +658,16 @@ Cohesion: 0.17
 Nodes (12): headers, oauth, type, url, Authorization, mcp, servers, github (+4 more)
 
 ### Community 20 - "validate_data.py"
-Cohesion: 0.05
-Nodes (48): detect_domain(), _load_csv(), search(), search_all(), _search_csv(), read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons (+40 more)
+Cohesion: 0.06
+Nodes (44): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, TestGeneratedCatalogContract, _catalog_date(), _check_app_interface_contract() (+36 more)
 
 ### Community 21 - "Conventional Commits"
 Cohesion: 0.15
 Nodes (13): 1.1 Header, 1.2 Body, 1.3 Footers, 1.4 Breaking changes, 1. Format, 2.1 Scopes, 2. Types used in this repository, 3.1 Examples (+5 more)
 
-### Community 22 - "ScrapeHarness"
-Cohesion: 0.05
-Nodes (33): Program, ApiFactory, DatabasePath, DeleteLogsOnDispose, LogDirectory, TestServices, DatabaseRegistrationTests, HealthEndpointTests (+25 more)
-
 ### Community 23 - ".opencode/README.md"
-Cohesion: 0.08
-Nodes (14): Poteto subagent, If you only remember one thing, The pstack guide, Authoring or modifying a skill, Autonomous run, Autopilot-full, Autopilot-stack, Babysit (+6 more)
+Cohesion: 0.05
+Nodes (32): Authoring or modifying a skill, Autonomous run, Autopilot-full, Autopilot-stack, Babysit, Eval, Opening a PR, Pause safely (+24 more)
 
 ### Community 24 - "Non-negotiables"
 Cohesion: 0.09
@@ -681,8 +678,8 @@ Cohesion: 0.06
 Nodes (35): After Writing/Editing Code, Agent Orchestration, API Response Format, Available Agents, Before Committing, Build Troubleshooting, Code Quality Checklist, Coding Style (+27 more)
 
 ### Community 26 - "CancellationToken"
-Cohesion: 0.03
-Nodes (66): IBrowserProfileRepository, IJobPostingRepository, IScrapeRunRepository, ISearchProfileRepository, ISourceCircuitBreakerRepository, ISourceQuotaRepository, IUnitOfWork, ScrapeStores (+58 more)
+Cohesion: 0.04
+Nodes (44): IBrowserProfileRepository, IJobPostingRepository, IScrapeRunProgressRepository, IScrapeRunRepository, ISearchProfileRepository, ISourceCircuitBreakerRepository, IUnitOfWork, ScrapeStores (+36 more)
 
 ### Community 27 - "Per-source circuit breaker"
 Cohesion: 0.12
@@ -694,7 +691,7 @@ Nodes (9): Idempotent upsert by (SourceKey, ExternalJobId), IJobPostingRepositor
 
 ### Community 29 - "chart.test.ts"
 Cohesion: 0.06
-Nodes (53): Lines, parseDot(), parseState(), unescapeDot(), markTexts(), readMarks(), ruleNames(), BRACKET (+45 more)
+Nodes (61): boundRun(), chartRun(), configText(), readCounterexample(), initialOnlyProperties(), readChecks(), readSpec(), readVerdict() (+53 more)
 
 ### Community 30 - "ShadcnInstaller"
 Cohesion: 0.05
@@ -709,8 +706,8 @@ Cohesion: 0.25
 Nodes (9): UI design in src/frontend, ui-skills catalog router, BFF API proxy, .NET data plane API localhost 5207, Bun React TypeScript Tailwind stack, JobScrape Cockpit control plane, globals.css stylesheet link, main.tsx module entry (+1 more)
 
 ### Community 33 - "PolicyTests"
-Cohesion: 0.21
-Nodes (6): IRandomSource, PolitenessPolicy, RetryPolicy, PolicyTests, ScriptedRandom, LastRange
+Cohesion: 0.23
+Nodes (5): PolitenessPolicy, RetryPolicy, PolicyTests, ScriptedRandom, LastRange
 
 ### Community 34 - "Phase 0 open decisions (D1-D12 with recommended defaults)"
 Cohesion: 0.09
@@ -745,44 +742,44 @@ Cohesion: 0.06
 Nodes (35): Banner Design (Built-in), Banner: Design Rules, Banner: Quick Size Reference, Banner: Top Art Styles, Banner: Workflow, CIP Design (Built-in), CIP: Generate Brief, CIP: Generate Mockups (+27 more)
 
 ### Community 42 - "pipeline.test.ts"
-Cohesion: 0.06
-Nodes (28): commanderPackagePath, currentInstallKey(), ensureDependenciesInstalled(), installKeyPath, nodeModulesDirectory, checker, killGroup(), messageOf() (+20 more)
+Cohesion: 0.05
+Nodes (39): commanderPackagePath, currentInstallKey(), ensureDependenciesInstalled(), installKeyPath, nodeModulesDirectory, checker, CheckResult, Verdict (+31 more)
 
 ### Community 43 - "IReadOnlyList"
-Cohesion: 0.08
-Nodes (24): ExportFile, ExportFormat, Csv, Xlsx, ExportPosting, ExportRunPostingsHandler, IPostingExportWriter, Format (+16 more)
+Cohesion: 0.12
+Nodes (20): ExportFile, ExportFormat, Csv, Xlsx, ExportPosting, ExportRunPostingsHandler, IPostingExportWriter, Format (+12 more)
 
 ### Community 44 - "json"
-Cohesion: 0.05
-Nodes (12): test_sync_parses_bundled_starter_template(), format_brief(), format_results(), main(), main(), _run(), test_flags_hardcoded_hex_sharing_line_with_token(), test_token_only_line_reports_no_violation() (+4 more)
+Cohesion: 0.04
+Nodes (22): test_sync_parses_bundled_starter_template(), build_cip_prompt(), check_logo_required(), generate_cip_set(), generate_with_nano_banana(), load_env(), load_logo_image(), main() (+14 more)
 
 ### Community 45 - "DomainException"
-Cohesion: 0.10
-Nodes (10): DomainException, PageStats, PostingsFound, PostingsNew, PostingsUpdated, RunCompleted, RunRateLimited, ScrapeRunStarted (+2 more)
+Cohesion: 0.05
+Nodes (41): CircuitOpened, ScrapeRunId, Value, DomainException, PageStats, PostingsFound, PostingsNew, PostingsUpdated (+33 more)
 
 ### Community 46 - "ListSourcesHandler.HandleAsync"
-Cohesion: 0.08
-Nodes (17): JobScrape.Application.Features.Sources, SourcesController, SourcesEndpointTests, Ct, ListSourcesHandler, SourceCircuit, SourceGate, SourceListResponse (+9 more)
+Cohesion: 0.10
+Nodes (15): JobScrape.Application.Features.Sources, SourcesEndpointTests, Ct, SourceCircuit, SourceGate, SourceListResponse, SourcePolicy, SourceQuotaUsage (+7 more)
 
 ### Community 47 - "design_system.py"
-Cohesion: 0.05
-Nodes (24): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides() (+16 more)
+Cohesion: 0.03
+Nodes (30): ansi_ljust(), _contrast_ratio(), _derive_dark_palette(), _detect_page_type(), _filter_anti_patterns_for_mode(), format_ascii_box(), format_markdown(), format_master_md() (+22 more)
 
 ### Community 48 - "argparse"
-Cohesion: 0.06
-Nodes (24): build_cip_prompt(), check_logo_required(), generate_cip_set(), generate_with_nano_banana(), load_env(), load_logo_image(), main(), generate_html() (+16 more)
+Cohesion: 0.11
+Nodes (13): apply_color(), apply_viewbox_size(), extract_svgs(), generate_batch(), generate_icon(), generate_sizes(), load_env(), main() (+5 more)
 
-### Community 49 - "SearchCriteria"
-Cohesion: 0.06
-Nodes (18): SearchCriteria, ExperienceYears, Keywords, Locations, PostedWithinDays, RemoteOnly, CriteriaJson, Json (+10 more)
+### Community 49 - "Json"
+Cohesion: 0.08
+Nodes (12): SalaryPeriod, Day, Hour, Month, Week, Year, CriteriaJson, Json (+4 more)
 
 ### Community 50 - "api.ts"
 Cohesion: 0.08
-Nodes (33): RFC-9457, PROBE_INTERVAL_MS, shouldProbe(), ApiClient, ApiResult, createApiClient(), CreateProfileInput, FetchImpl (+25 more)
+Nodes (34): RFC-9457, PROBE_INTERVAL_MS, shouldProbe(), ApiClient, ApiResult, createApiClient(), CreateProfileInput, FetchImpl (+26 more)
 
 ### Community 51 - "JobPosting"
-Cohesion: 0.04
-Nodes (45): JobPostingId, Value, CompanyName, Value, ExternalJobId, Value, JobPosting, ApplyUrl (+37 more)
+Cohesion: 0.03
+Nodes (58): Text, CompanyName, Value, DataQualityIssues, DescriptionMissing, MissingCompany, MissingLocation, None (+50 more)
 
 ### Community 52 - "types.ts"
 Cohesion: 0.05
@@ -810,19 +807,23 @@ Nodes (19): $type, $value, $type, $value, $type, $value, $type, $value (+11 more
 
 ### Community 71 - "csv"
 Cohesion: 0.05
-Nodes (13): generate_css_for_background(), get_background_image(), get_curated_images(), get_overlay_css(), get_pexels_search_url(), load_backgrounds_config(), load_brand_colors(), main() (+5 more)
+Nodes (8): _rows(), TestNativeDesktopStackFreshness, read_rows(), TestStyleTaxonomy, read_rows(), TestTextLayoutDataContracts, _rows(), TestWebStackFreshness
 
 ### Community 72 - "JobScrape.Domain.Common"
-Cohesion: 0.07
-Nodes (8): JobScrape.Domain.Sourcing, JobScrape.Domain.Tests.Access, JobScrape.Application.Abstractions, JobScrape.Infrastructure.Persistence.Repositories, JobScrape.Domain.Common, JobScrape.Application.Features.Scraping, JobScrape.Domain.Abstractions, JobScrape.Domain.Access
+Cohesion: 0.05
+Nodes (14): JobScrape.Infrastructure.Browser, JobScrape.Domain.Sourcing, JobScrape.Infrastructure.Tests.Browser, JobScrape.Application.Abstractions, JobScrape.Infrastructure.Persistence.Repositories, JobScrape.Domain.Common, JobScrape.Application.Features.Scraping, JobScrape.Domain.Abstractions (+6 more)
 
 ### Community 83 - "AggregateRoot"
-Cohesion: 0.27
+Cohesion: 0.28
 Nodes (6): AggregateRoot, DomainEvents, DomainEvent, AggregateRootTests, TestEvent, TestRoot
 
 ### Community 84 - "Prerequisites"
 Cohesion: 0.06
 Nodes (34): Accessibility, Available Domains, Available Stacks, Common Rules for Professional UI, Common Sticking Points, Example Workflow, How to Use This Skill, Icons & Visual Elements (+26 more)
+
+### Community 85 - "SourceKey"
+Cohesion: 0.08
+Nodes (25): CleanSessions, ISessionManager, JobSourceRegistry, SourceSettings, SourceSettingsCatalog, All, CreateSearchProfileHandler, CreateSearchProfileRequest (+17 more)
 
 ### Community 87 - "Step 2: Recommend diagnostic tools"
 Cohesion: 0.06
@@ -832,25 +833,21 @@ Nodes (34): Common Commands, Hyper-V containers, Installation, PerfView, Process
 Cohesion: 0.08
 Nodes (24): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+16 more)
 
-### Community 90 - "RunScope"
-Cohesion: 0.17
-Nodes (12): RunScope, Adapter, ArtifactDirectory, Browser, Circuit, Context, Enrich, HitWall (+4 more)
+### Community 90 - "SourceCircuitBreaker"
+Cohesion: 0.09
+Nodes (20): RunScope, Adapter, ArtifactDirectory, Browser, Circuit, Context, Enrich, HitWall (+12 more)
 
 ### Community 91 - "Theory"
-Cohesion: 0.08
-Nodes (5): SourceKeyTests, TextTests, PageStatsTests, RehydrationTests, RunLimitsTests
+Cohesion: 0.05
+Nodes (10): SalaryRange, Currency, Max, Min, Period, PostingTextValueTests, RehydrationTests, RunLimitsTests (+2 more)
 
 ### Community 92 - "NaukriJsonLd"
-Cohesion: 0.07
-Nodes (24): ExportColumns, IndeedJsonLd, Company, DatePosted, DescriptionHtml, Localities, LocationType, Skills (+16 more)
+Cohesion: 0.08
+Nodes (24): SkillMatcher, IndeedJsonLd, Company, DatePosted, DescriptionHtml, Localities, LocationType, Skills (+16 more)
 
 ### Community 93 - "Code Conventions and csharpier workflow"
 Cohesion: 0.23
 Nodes (12): CI Outline restore build test E2E coverage, Code Conventions and csharpier workflow, Solution and Tooling, Options binding and startup validation, Solution and Tooling, csharpier formatting ownership, ADR-0016 C# style guides and csharpier formatting, C# style guides ktaranov plus Google (+4 more)
-
-### Community 94 - "GuardrailTests"
-Cohesion: 0.12
-Nodes (3): JobScrape.Architecture.Tests, GuardrailTests, LayerRulesTests
 
 ### Community 95 - "bash"
 Cohesion: 0.11
@@ -861,12 +858,12 @@ Cohesion: 0.08
 Nodes (23): Add missing indexes, Bound change detection in growing imports, Capture SQL and query counts, Choose tracking for the actual result graph, Common Pitfalls, Compile hot, frequently-executed queries, Control SQL parameterization and database plan reuse, Filter and paginate; prefer keyset over offset (+15 more)
 
 ### Community 97 - "JobScrapeDbContext"
-Cohesion: 0.11
-Nodes (16): RunStage, Cancelled, Completed, Enriching, Failed, PausedForChallenge, Pending, Persisting (+8 more)
+Cohesion: 0.10
+Nodes (17): RunStage, Cancelled, Completed, Enriching, Failed, PausedForChallenge, Pending, Persisting (+9 more)
 
-### Community 99 - "SourceCircuitBreaker"
-Cohesion: 0.09
-Nodes (19): ChallengeKind, AccessDenied, Captcha, LoginRequired, None, RateLimited, SoftChallenge, SourceChanged (+11 more)
+### Community 98 - "ApiFactory"
+Cohesion: 0.07
+Nodes (14): CorrelationMiddleware, Program, ApiFactory, DatabasePath, DeleteLogsOnDispose, LogDirectory, TestServices, RuntimeHardeningTests (+6 more)
 
 ### Community 100 - "labels.ts"
 Cohesion: 0.06
@@ -880,33 +877,33 @@ Nodes (22): Common Causes and Fixes, Detecting OutputPath and IntermediateOutput
 Cohesion: 0.25
 Nodes (8): ADR-0014: Use Libraries as Designed; AOT Is Not a Constraint, Alternatives considered, Consequences, Context, Decision, Negative / trade-offs, Positive, References
 
-### Community 103 - "SourceKey"
-Cohesion: 0.04
-Nodes (26): ErrorMapper, ErrorMapperTests, ErrorInfo, ErrorKind, Challenge, Conflict, CoolingDown, Forbidden (+18 more)
+### Community 103 - "ErrorInfo"
+Cohesion: 0.11
+Nodes (6): ErrorMapper, ErrorMapperTests, ErrorInfo, Errors, ScrapeErrorsTests, Cases
 
 ### Community 104 - "system_globalization"
-Cohesion: 0.08
-Nodes (7): JobScrape.Infrastructure.Sources.Naukri, JobScrape.Infrastructure.Tests.Sources.Naukri, JobScrape.Infrastructure.Sources.Indeed, JobScrape.Infrastructure.Tests.Sources.LinkedIn, JobScrape.Infrastructure.Tests.Sources.Indeed, JobScrape.Infrastructure.Sources.LinkedIn, JobScrape.Domain
+Cohesion: 0.07
+Nodes (8): JobScrape.Infrastructure.Sources.Naukri, JobScrape.Infrastructure.Tests.Sources.Naukri, JobScrape.Infrastructure.Sources.Indeed, JobScrape.Infrastructure.Tests.Sources.LinkedIn, JobScrape.Infrastructure.Tests.Sources.Indeed, JobScrape.Infrastructure.Sources.LinkedIn, JobScrape.Infrastructure.Export, JobScrape.Domain
 
-### Community 105 - "test_design_system_mode.py"
-Cohesion: 0.06
-Nodes (15): _contrast_ratio(), _derive_dark_palette(), _filter_anti_patterns_for_mode(), _palette_is_dark(), _query_wants_dark(), _relative_luminance(), _resolve_color_mode(), _select_palette_for_mode() (+7 more)
+### Community 105 - "ScrapeHarness"
+Cohesion: 0.09
+Nodes (14): ScrapeHarness, Artifacts, Browser, Clock, Consent, Delay, Logger, Profile (+6 more)
 
 ### Community 106 - "Design System"
 Cohesion: 0.09
 Nodes (22): Best Practices, Chart.js Integration, Command, Component Spec Pattern, Contextual Decision Flow, Decision System CSVs, Design System, Integration (+14 more)
 
 ### Community 107 - "DesignSystemGenerator"
-Cohesion: 0.07
-Nodes (6): DesignSystemGenerator, TestReasoningMatch, read_rows(), TestLandingAndStackContract, TestReasoningContract, TestEndToEndCoherence
+Cohesion: 0.06
+Nodes (12): DesignSystemGenerator, apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), _validate_action(), TestReasoningMatch, read_rows(), split_values() (+4 more)
 
 ### Community 108 - "Grade Tests"
 Cohesion: 0.09
 Nodes (22): 1. Summary, 2. Per-test table, A. Assertion strength, B. Structure & focus, C. Anti-pattern hygiene, Combining sub-grades, Common Pitfalls, Grade Tests (+14 more)
 
 ### Community 109 - "microsoft_entityframeworkcore"
-Cohesion: 0.09
-Nodes (6): JobScrape.Infrastructure.Persistence, JobScrape.Infrastructure.Persistence.Migrations, JobScrape.Infrastructure.Tests.Persistence, JobScrape.Application.Features.Sessions, JobScrape.Infrastructure.Persistence.Configurations, JobScrape.Application.Features.SearchProfiles
+Cohesion: 0.08
+Nodes (8): JobScrape.Infrastructure.Persistence, JobScrape.Infrastructure.Persistence.Migrations, JobScrape.Infrastructure.Tests.Persistence, JobScrape.Infrastructure.Persistence.Configurations, InitialCreate, AddScrapeRunProgress, JobScrapeDbContextModelSnapshot, UtcTicksConverter
 
 ### Community 110 - "Code Testing Skill"
 Cohesion: 0.10
@@ -929,16 +926,16 @@ Cohesion: 0.10
 Nodes (20): Ask how without starting the work, Catch up on a chat you left running, Check independent slices in parallel, Fix a bug through a failing test, Get a second opinion on a design, Get the reply in plain words, Keep a run honest while you're away, Prototype before you pick (+12 more)
 
 ### Community 115 - "Guid"
-Cohesion: 0.04
-Nodes (36): Step 2: Select the smallest safe seam, BrowserRegistration, CorrelationMiddleware, GlobalExceptionHandler, ActiveRun, BrowserProfileId, Cancellation, Finished (+28 more)
+Cohesion: 0.06
+Nodes (18): GlobalExceptionHandler, NoDelay, CapturingLogger, Entries, IDelay, RunScrapeHandler, ScrapeRunSummary, CapturingLogger (+10 more)
 
 ### Community 116 - "github.ts"
 Cohesion: 0.09
-Nodes (43): failedCheck(), pendingCheck(), at(), buildReviewThreads(), checkDetails(), ChecksUnavailable, CommandResult, enumValue() (+35 more)
+Nodes (45): failedCheck(), pendingCheck(), at(), buildReviewThreads(), checkDetails(), ChecksUnavailable, CommandResult, discoverStack() (+37 more)
 
 ### Community 117 - "messages.ts"
 Cohesion: 0.08
-Nodes (36): Colors, Render a chart, firstLine(), pad(), plainText(), PREFIX, printed(), render() (+28 more)
+Nodes (35): Colors, Render a chart, firstLine(), pad(), plainText(), PREFIX, printed(), render() (+27 more)
 
 ### Community 118 - "source-playbook.md"
 Cohesion: 0.04
@@ -952,6 +949,10 @@ Nodes (19): Common Pitfalls, Default implementation — delegate to the real sta
 Cohesion: 0.10
 Nodes (19): Common pitfalls, Inputs / Prerequisites, Prerequisites, Purpose, setup-local-sdk, Step 10 — Create team install scripts, Step 11 — Verify SDK resolution, Step 12 — Summarize and explain cleanup (+11 more)
 
+### Community 121 - "marks.ts"
+Cohesion: 0.15
+Nodes (24): Lines, parseDot(), parseState(), unescapeDot(), markTexts(), readMarks(), ruleNames(), BRACKET (+16 more)
+
 ### Community 122 - "05-build-and-clean.md"
 Cohesion: 0.06
 Nodes (22): Comment Sicko, Build the change and clean the diff, Clean before you commit, Load the TypeScript rules by name, Prompt each build playbook with what you know, Strip the comments with `/no-comments`, Write the failing test first with `/tdd`, No comments (+14 more)
@@ -961,12 +962,16 @@ Cohesion: 0.08
 Nodes (17): format_context(), format_result(), main(), BM25, calculate_pattern_break(), detect_domain(), get_background_config(), get_color_for_emotion() (+9 more)
 
 ### Community 124 - "Result"
-Cohesion: 0.05
-Nodes (31): HealthController, RunsController, GetHealthHandler, GetHealthResponse, CancelRunHandler, GetRunHandler, IRunLauncher, IRunStore (+23 more)
+Cohesion: 0.06
+Nodes (31): HealthController, RunsController, SourcesController, GetHealthHandler, GetHealthResponse, CancelRunHandler, GetRunHandler, IRunLauncher (+23 more)
 
 ### Community 125 - "JobScrape.Infrastructure.Configuration"
-Cohesion: 0.11
-Nodes (8): JobScrape.Api.Composition, JobScrape.Infrastructure.Configuration, JobScrape.Infrastructure.Runtime, JobScrape.Infrastructure.Tests.Configuration, LoggingRegistration, BrowserOptions, Headless, NavigationTimeoutSeconds
+Cohesion: 0.09
+Nodes (11): JobScrape.Api.Composition, JobScrape.Application.Features.Health, JobScrape.Infrastructure.Configuration, JobScrape.Api, JobScrape.Infrastructure.Runtime, JobScrape.Infrastructure.Tests.Configuration, BrowserRegistration, LoggingRegistration (+3 more)
+
+### Community 126 - "IRandomSource"
+Cohesion: 0.22
+Nodes (5): MinRandom, IRandomSource, SystemRandomSource, FixedRandom, MinRandom
 
 ### Community 127 - "Find Untested Sources"
 Cohesion: 0.11
@@ -976,13 +981,13 @@ Nodes (18): Find Untested Sources, How it works, How it works, Limitations (be h
 Cohesion: 0.06
 Nodes (32): Batching rules, Common Pitfalls, Conditional Item Inclusion, Cross-product batching, Exclude Pattern — Set Subtraction on Include, Generated files in source tree, Include — Add Items, Include / Remove / Update — Three Operations (+24 more)
 
-### Community 129 - "run.ts"
-Cohesion: 0.07
-Nodes (56): boundRun(), chartRun(), configText(), isListField(), ListField, NAME, readConfig(), Section (+48 more)
+### Community 129 - "config-fuzz.test.ts"
+Cohesion: 0.06
+Nodes (39): isListField(), ListField, NAME, readConfig(), Section, SECTIONS, shown(), Token (+31 more)
 
 ### Community 130 - "SessionResponse"
-Cohesion: 0.08
-Nodes (16): SessionsController, SessionsEndpointTests, Ct, CreateSessionHandler, CreateSessionRequest, GetSessionHandler, ISessionStore, ListSessionsHandler (+8 more)
+Cohesion: 0.13
+Nodes (12): SessionsController, CreateSessionHandler, CreateSessionRequest, GetSessionHandler, ISessionStore, ListSessionsHandler, SessionListResponse, SessionResponse (+4 more)
 
 ### Community 131 - "CLI-first (System.CommandLine + Hosting + Serilog)"
 Cohesion: 0.25
@@ -993,8 +998,8 @@ Cohesion: 0.20
 Nodes (10): Microsoft.AspNetCore.Mvc.Testing, Serilog.Sinks.InMemory, JobScrape.Api.Tests, net10.0, coverlet.collector, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio (+2 more)
 
 ### Community 133 - "ChallengeAssessment"
-Cohesion: 0.05
-Nodes (46): NoArtifacts, IJobSource, Capabilities, Key, JobDetailResult, JobReference, JobSourceRegistry, SearchPageRequest (+38 more)
+Cohesion: 0.04
+Nodes (46): NoArtifacts, IArtifactStore, IJobSource, Capabilities, Key, JobDetailResult, JobReference, SearchPageRequest (+38 more)
 
 ### Community 134 - "Workflow"
 Cohesion: 0.11
@@ -1016,9 +1021,9 @@ Nodes (17): Common Pitfalls, Critical -- Tests that give false confidence, High 
 Cohesion: 0.22
 Nodes (9): JobScrape.Application.Tests, net10.0, coverlet.collector, Microsoft.Extensions.TimeProvider.Testing, Microsoft.NET.Test.Sdk, Microsoft.Testing.Extensions.CodeCoverage, xunit.runner.visualstudio, xunit.v3 (+1 more)
 
-### Community 139 - "CreateSearchProfileHandler.HandleAsync"
-Cohesion: 0.08
-Nodes (18): SearchProfilesController, SourceSettings, SourceSettingsCatalog, All, CreateSearchProfileHandler, CreateSearchProfileRequest, GetSearchProfileHandler, ISearchProfileStore (+10 more)
+### Community 139 - "Task"
+Cohesion: 0.06
+Nodes (26): SearchProfilesController, RunPostingListResponse, RunPostingResponse, GetSearchProfileHandler, ISearchProfileStore, ListSearchProfilesHandler, SearchProfileResponse, CreateSearchProfileHandlerTests (+18 more)
 
 ### Community 140 - "Assertion Diversity Analysis"
 Cohesion: 0.12
@@ -1044,6 +1049,10 @@ Nodes (38): devDependencies, fast-check@4.5.3, name, private, scripts, test, typ
 Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
 
+### Community 146 - "NaukriChallengeClassifier.Classify"
+Cohesion: 0.09
+Nodes (11): ChallengeKind, AccessDenied, Captcha, LoginRequired, None, RateLimited, SoftChallenge, SourceChanged (+3 more)
+
 ### Community 147 - "Workflow"
 Cohesion: 0.12
 Nodes (16): ASP.NET Core Web API, Common Pitfalls, Inputs / prerequisites, More Info, Step 1: Determine the API style, Step 2: Define request and response types, Step 3: Implement the endpoints, Step 4: Wire up OpenAPI (+8 more)
@@ -1064,21 +1073,21 @@ Nodes (10): AngleSharp, ClosedXML, Microsoft.EntityFrameworkCore.Design, Microso
 Cohesion: 0.12
 Nodes (15): Criterion Breakdown, Eval Command, Evaluation Framework, Evaluation Process, Evaluation Report, Evidence, Grader Types, Overall: [PASS/FAIL] (Score: X/100) (+7 more)
 
-### Community 152 - "StorageOptions"
-Cohesion: 0.11
-Nodes (14): DatabaseRegistration, LoggingOptions, Directory, FileSizeLimitBytes, RetentionDays, RunOptions, RetryMaxAttempts, StorageOptions (+6 more)
+### Community 152 - "LoggingOptions"
+Cohesion: 0.29
+Nodes (6): LoggingOptions, Directory, FileSizeLimitBytes, RetentionDays, RunOptions, RetryMaxAttempts
 
 ### Community 153 - "app.tsx"
 Cohesion: 0.17
-Nodes (25): App(), checkHealth(), createProfile(), createSession(), loadProfiles(), loadSessions(), loadSources(), clockTime() (+17 more)
+Nodes (24): App(), checkHealth(), createProfile(), createSession(), loadProfiles(), loadSessions(), loadSources(), clockTime() (+16 more)
 
 ### Community 154 - "runs.tsx"
 Cohesion: 0.09
-Nodes (33): Audit the log against the transcript, Composing this skill, Cross-model review of the trail, Logging a row, Reviewing the trail, Rules, Show me your work, The format (+25 more)
+Nodes (32): Audit the log against the transcript, Composing this skill, Cross-model review of the trail, Logging a row, Reviewing the trail, Rules, Show me your work, The format (+24 more)
 
 ### Community 155 - "policy.ts"
-Cohesion: 0.10
-Nodes (41): main(), discoverStack(), orderStack(), resolveChecks(), activeRows(), applyQueueSnapshot(), assessGitHubMerge(), AUTOMATION_TOKENS (+33 more)
+Cohesion: 0.09
+Nodes (45): main(), resolveChecks(), activeRows(), applyQueueSnapshot(), assessGitHubMerge(), AUTOMATION_TOKENS, blockerVerdict(), ciBlocker() (+37 more)
 
 ### Community 156 - "color"
 Cohesion: 0.11
@@ -1101,8 +1110,8 @@ Cohesion: 0.06
 Nodes (35): 1. Visual Communication First, 2. Minimal Text Integration, 3. Expert Craftsmanship, 4. Systematic Patterns, Analog Meditation, Approach, Canvas Boundaries, Canvas Design System (+27 more)
 
 ### Community 162 - "cli.ts"
-Cohesion: 0.11
-Nodes (24): CliOptions, CliRuntime, nonNegativeNumber(), parseArgs(), positiveInteger(), positiveNumber(), prNumber(), RawOptions (+16 more)
+Cohesion: 0.10
+Nodes (26): CliOptions, CliRuntime, nonNegativeNumber(), parseArgs(), positiveInteger(), positiveNumber(), prNumber(), RawOptions (+18 more)
 
 ### Community 163 - "JobScrape.Api"
 Cohesion: 0.15
@@ -1112,13 +1121,9 @@ Nodes (13): Microsoft.AspNetCore.OpenApi, Serilog.AspNetCore, Serilog.Enrichers.
 Cohesion: 0.12
 Nodes (15): Central Package Management Migration, Common Migration Issues, Complete Before/After Example, Directory.Build Consolidation, Identifying Legacy vs SDK-style Projects, Migration Checklist: Legacy → SDK-style, MSBuild Modernization: Legacy to SDK-style Migration, Step 1: Replace Project Root Element (+7 more)
 
-### Community 165 - "Resolve a Testability Obstacle"
+### Community 165 - "SourceQuota"
 Cohesion: 0.14
-Nodes (13): Common Pitfalls, Inputs, Output Contract, Resolve a Testability Obstacle, Step 1: Prove the obstacle, Step 3: Preserve behavior and API shape, Step 4: Keep production defaults wired, Step 5: Write deterministic tests (+5 more)
-
-### Community 166 - "scripts"
-Cohesion: 0.12
-Nodes (16): scripts, api:types, audit, build, build:client, build:css, build:server, dev (+8 more)
+Nodes (10): ISourceQuotaRepository, SourceQuota, Challenges, DetailsFetched, PagesFetched, QuotaDate, RunsStarted, Source (+2 more)
 
 ### Community 167 - "pstack on OpenCode"
 Cohesion: 0.13
@@ -1133,16 +1138,16 @@ Cohesion: 0.06
 Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
 
 ### Community 170 - "GeneratedRegex"
-Cohesion: 0.10
-Nodes (4): IndeedChallengeClassifier, LinkedInChallengeClassifier, NaukriChallengeClassifier, NaukriFields
+Cohesion: 0.08
+Nodes (9): WorkMode, Hybrid, Onsite, Remote, Unknown, IndeedChallengeClassifier, LinkedInChallengeClassifier, NaukriChallengeClassifier (+1 more)
 
 ### Community 171 - "Common Bottlenecks"
 Cohesion: 0.13
 Nodes (14): 1. ResolveAssemblyReference (RAR) Slowness, 2. Roslyn Analyzers and Source Generators, 3. Serialization Bottlenecks (Single-threaded targets), 4. Excessive File I/O (Copy tasks), 5. Evaluation Overhead, 6. NuGet Restore in Build, 7. Large Project Count and Graph Shape, Alternate flow when MCP is unavailable: binlog replay to text logs (+6 more)
 
 ### Community 172 - "Detect Static Dependencies"
-Cohesion: 0.12
-Nodes (15): Common Pitfalls, Detect Static Dependencies, Execution Contract, Inputs, Response Guidelines, Step 1: Determine scan scope, Step 2: Search for static dependency patterns, Step 3: Aggregate and rank results (+7 more)
+Cohesion: 0.06
+Nodes (29): Common Pitfalls, Detect Static Dependencies, Execution Contract, Inputs, Response Guidelines, Step 1: Determine scan scope, Step 2: Search for static dependency patterns, Step 3: Aggregate and rank results (+21 more)
 
 ### Community 173 - "Including Generated Files Into Your Build"
 Cohesion: 0.13
@@ -1160,13 +1165,13 @@ Nodes (13): Before Removing, Consolidation Phase, Consolidation Strategies, Dete
 Cohesion: 0.14
 Nodes (14): automations, examples, get started, install, just use [`/poteto-mode`](./skills/poteto-mode/SKILL.md), license, make it yours, not shipped here (+6 more)
 
-### Community 177 - "JobScrape.Application.Features.Runs"
-Cohesion: 0.09
-Nodes (6): JobScrape.Api.Runs, JobScrape.Infrastructure.Tests.Export, JobScrape.Api, JobScrape.Application.Features.Runs, JobScrape.Infrastructure.Export, RunIds
+### Community 177 - "JobScrape.Application.Results"
+Cohesion: 0.06
+Nodes (13): JobScrape.Application.Results, JobScrape.Api.Runs, JobScrape.Application.Tests, JobScrape.Infrastructure.Tests.Export, JobScrape.Application.Features.Runs, JobScrape.Application.Tests.Scraping, JobScrape.Application.Features.SearchProfiles, RunIds (+5 more)
 
-### Community 178 - "ScrapeRun"
-Cohesion: 0.07
-Nodes (27): ScrapeRunId, Value, RunCancelled, RunFailed, RunPausedForChallenge, RunStats, Challenges, DetailsFetched (+19 more)
+### Community 178 - "SearchCriteria"
+Cohesion: 0.16
+Nodes (9): SearchCriteria, ExperienceYears, Keywords, Locations, PostedWithinDays, RemoteOnly, RequiredSkills, NaukriUrlBuilder (+1 more)
 
 ### Community 179 - "Banner Design - Multi-Format Creative Banner System"
 Cohesion: 0.14
@@ -1181,8 +1186,8 @@ Cohesion: 0.06
 Nodes (32): Accordion, Alert, Alert Dialog, Avatar, Badge, Button, Card, Checkbox (+24 more)
 
 ### Community 182 - "DateTimeOffset"
-Cohesion: 0.10
-Nodes (18): RunLimits, MaxDelay, MaxDetails, MaxJobs, MaxPages, MinDelay, SearchProfile, CreatedAt (+10 more)
+Cohesion: 0.11
+Nodes (17): RunLimits, MaxDelay, MaxDetails, MaxJobs, MaxPages, MinDelay, SearchProfile, CreatedAt (+9 more)
 
 ### Community 183 - "Tailwind CSS Responsive Design"
 Cohesion: 0.06
@@ -1201,8 +1206,8 @@ Cohesion: 0.15
 Nodes (12): agent, planner, refactor-cleaner, instructions, description, mode, prompt, description (+4 more)
 
 ### Community 187 - "DateTimeOffset"
-Cohesion: 0.11
-Nodes (16): HealthPayload, QuotaDecision, QuotaKind, Details, Pages, Runs, SourceQuota, Challenges (+8 more)
+Cohesion: 0.18
+Nodes (6): QuotaDecision, QuotaKind, Details, Pages, Runs, SourceQuotaTests
 
 ### Community 188 - "C# Expert"
 Cohesion: 0.15
@@ -1230,15 +1235,15 @@ Nodes (12): Common Pitfalls, Eliminate Redundant Restores, Inputs, Output, Step 
 
 ### Community 194 - "IndeedSearchParser.Parse"
 Cohesion: 0.11
-Nodes (6): IndeedSearchPage, IndeedSearchParser, IndeedChallengeClassifierTests, IndeedDetailParserTests, IndeedSearchParserTests, IndeedTestPages
+Nodes (5): IndeedSearchPage, IndeedChallengeClassifierTests, IndeedDetailParserTests, IndeedSearchParserTests, IndeedTestPages
 
 ### Community 195 - "Logo Usage Rules"
 Cohesion: 0.07
 Nodes (28): Absolute Don'ts, Approved Backgrounds, Before Using Logo, Clear Space, Co-branding, Color Rules, Color Usage, Color Variants (+20 more)
 
-### Community 196 - "BrowserTests"
-Cohesion: 0.06
-Nodes (18): BrowserChannel, Bundled, Chrome, Edge, BrowserEngine, Chromium, Firefox, WebKit (+10 more)
+### Community 196 - "BrowserProfile"
+Cohesion: 0.07
+Nodes (25): BrowserChannel, Bundled, Chrome, Edge, BrowserEngine, Chromium, Firefox, WebKit (+17 more)
 
 ### Community 197 - "JobLens"
 Cohesion: 0.13
@@ -1251,6 +1256,10 @@ Nodes (28): Alert, Anatomy, Anatomy, Anatomy, Anatomy, Anatomy, Badge, Button (+
 ### Community 199 - "Documentation Types"
 Cohesion: 0.17
 Nodes (11): API Documentation, Avoid, Code Comments, Documentation Quality, Documentation Types, Good Documentation, Guides, README.md (+3 more)
+
+### Community 200 - "Design red flags"
+Cohesion: 0.11
+Nodes (17): Design red flags, Hand-synced list, Importable internals, Information leakage, Pass-through method, Shallow module, Split ownership, Temporal decomposition (+9 more)
 
 ### Community 201 - "html-token-validator.py"
 Cohesion: 0.13
@@ -1370,7 +1379,7 @@ Nodes (9): Communication artifacts, Content, Filler, Jargon, Language, Patterns 
 
 ### Community 230 - "C++ Pipeline Examples"
 Cohesion: 0.07
-Nodes (24): C++ Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test, Common Errors (+16 more)
+Nodes (24): Python Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test, Common Errors (+16 more)
 
 ### Community 231 - "Build Fix Command"
 Cohesion: 0.25
@@ -1397,8 +1406,8 @@ Cohesion: 0.25
 Nodes (7): Cursor-only features, Models, Paths, pstack in OpenCode, setup-pstack, Subagent fields, Tools
 
 ### Community 237 - "Design red flags"
-Cohesion: 0.05
-Nodes (35): Design red flags, Hand-synced list, Importable internals, Information leakage, Pass-through method, Shallow module, Split ownership, Temporal decomposition (+27 more)
+Cohesion: 0.10
+Nodes (18): Alternatives considered, Next implementation step, Open questions and risks, Problem, Rationale template, Shape, Synthesis decision, Tradeoffs accepted (+10 more)
 
 ### Community 238 - "Build Performance Baseline & Optimization"
 Cohesion: 0.07
@@ -1461,7 +1470,7 @@ Cohesion: 0.29
 Nodes (6): 1. Establish what failed, 2. Match the host's workspace and SDK, 3. Capture the real launch error, 4. Choose a policy-safe recovery, 5. Verify and report, Troubleshoot Binlog MCP Startup
 
 ### Community 253 - "NaukriDetailParser.Build"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (3): NaukriDetailParser, NaukriHtml, NaukriSearchParser
 
 ### Community 254 - "Asset Approval Checklist"
@@ -1585,8 +1594,8 @@ Cohesion: 0.40
 Nodes (4): ComplianceTier, HighRisk, Restricted, Standard
 
 ### Community 284 - "code-testing-extensions/SKILL.md"
-Cohesion: 0.15
-Nodes (3): Available Extension Files, Code Testing Extensions, Usage
+Cohesion: 0.10
+Nodes (10): Java Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test, Available Extension Files (+2 more)
 
 ### Community 285 - "Remove AI code slop"
 Cohesion: 0.50
@@ -1613,7 +1622,7 @@ Cohesion: 0.08
 Nodes (24): Accessibility, Accessibility Requirements, ARIA States, Color Contrast, Color Variants, Disabled States, Error Messages, Error States (+16 more)
 
 ### Community 334 - "cip/core.py"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (7): BM25, detect_domain(), get_cip_brief(), _load_csv(), search(), search_all(), _search_csv()
 
 ### Community 335 - "Swift Extension"
@@ -1648,9 +1657,9 @@ Nodes (12): $type, $value, bg, bg, padding, shadow, card, bg (+4 more)
 Cohesion: 0.11
 Nodes (27): $type, $value, lg, sm, $type, $value, $type, $value (+19 more)
 
-### Community 343 - "policy.test.ts"
-Cohesion: 0.15
-Nodes (10): fakeReader(), context(), openSnapshot(), options, pullRequest(), NonEmpty, PollingOptions, ProgressVerdict (+2 more)
+### Community 343 - "fetch-background.py"
+Cohesion: 0.16
+Nodes (9): generate_css_for_background(), get_background_image(), get_curated_images(), get_overlay_css(), get_pexels_search_url(), load_backgrounds_config(), load_brand_colors(), main() (+1 more)
 
 ### Community 344 - "Ruby Extension"
 Cohesion: 0.10
@@ -1667,6 +1676,10 @@ Nodes (19): Banner Design Tasks, Brand Identity Tasks, Component Creation, Corpo
 ### Community 347 - "shadcn/ui Theming & Customization"
 Cohesion: 0.10
 Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
+
+### Community 348 - "TailwindConfigGenerator"
+Cohesion: 0.03
+Nodes (4): main(), TailwindConfigGenerator, TestGeneratedConfigIsValidJs, TestTailwindConfigGenerator
 
 ### Community 349 - "test_relevance_evaluator.py"
 Cohesion: 0.12
@@ -1733,7 +1746,7 @@ Cohesion: 0.12
 Nodes (16): Ask by default, Bugbot triage, Candidate learnings from recent babysits, Contract-test drift claims are cheaply verifiable — run the test first, Decision rubric, Existing framework or component invariant covers the warning, Intentional UI or design-system visual changes, Learned pattern format (+8 more)
 
 ### Community 366 - "OptionsRegistration.AddJobScrapeOptions"
-Cohesion: 0.21
+Cohesion: 0.22
 Nodes (8): OptionsRegistration, ComplianceOptions, AcknowledgeSourceRisk, AllowHighRiskSources, SourceSettingsMapper, SourcesOptions, Sources, SourcesOptionsValidator
 
 ### Community 367 - "Design Principles"
@@ -1742,7 +1755,7 @@ Nodes (15): 22 Art Direction Styles, Banner Sizes & Art Direction Styles Referen
 
 ### Community 368 - "PowerShell Extension"
 Cohesion: 0.12
-Nodes (16): Build Commands, Common Errors, Cross-Platform, First-Test Sanity Loop, Harness Discovery Check, Mocking Rules, Non-Obvious Assertions, Pester v5 Discovery vs Run (Critical) (+8 more)
+Nodes (17): Build Commands, Common Errors, Cross-Platform, First-Test Sanity Loop, Harness Discovery Check, Mocking Rules, Non-Obvious Assertions, Parameterized Test Display Names (+9 more)
 
 ### Community 369 - "Design Principles"
 Cohesion: 0.12
@@ -1751,6 +1764,10 @@ Nodes (15): 22 Art Direction Styles, Banner Sizes & Art Direction Styles Referen
 ### Community 370 - "MSBuild anti-pattern catalog"
 Cohesion: 0.12
 Nodes (16): AP-01: Exec for operations with built-in tasks, AP-02: Unquoted string comparisons, AP-03: Hardcoded absolute paths, AP-04: Restating SDK defaults, AP-05: Redundant file lists in SDK-style projects, AP-06: Package DLL HintPaths instead of package references, AP-07: Build-only packages exposed to consumers, AP-08: Copy-pasted shared properties (+8 more)
+
+### Community 371 - "ErrorKind"
+Cohesion: 0.14
+Nodes (13): ErrorKind, Challenge, Conflict, CoolingDown, Forbidden, NotFound, QuotaExceeded, RateLimited (+5 more)
 
 ### Community 372 - "extract-colors.cjs"
 Cohesion: 0.20
@@ -1761,7 +1778,7 @@ Cohesion: 0.13
 Nodes (14): Build Commands, Common CS Error Codes, `.csproj` / `.sln` Handling, Harness Discovery Check, Lint Command, MSTest Template, .NET Extension, Project Reference Validation (+6 more)
 
 ### Community 374 - "Java Extension"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (14): Build Commands, Build Tool Detection, Common Errors, Dependency Installation (Last Resort), Java Extension, JUnit 5 Template, Lint Command, Mocking Rules (+6 more)
 
 ### Community 375 - "Python Extension"
@@ -1789,8 +1806,8 @@ Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
 ### Community 382 - "view.ts"
-Cohesion: 0.09
-Nodes (25): checkView(), Inspect, isFunction(), isPlainObject(), isString(), Json, json(), jsonVars() (+17 more)
+Cohesion: 0.18
+Nodes (14): checkView(), Inspect, isFunction(), isPlainObject(), isString(), Json, json(), jsonVars() (+6 more)
 
 ### Community 383 - "TypeScript patterns"
 Cohesion: 0.13
@@ -1851,6 +1868,10 @@ Nodes (14): Additional Diagnostic Techniques, Common Fixes, Common Mistakes to A
 ### Community 398 - "Layout Patterns"
 Cohesion: 0.14
 Nodes (13): Card Styles, Component Variants, CSS Structures, Feature Grid (3 columns), Layout Decision Flow, Layout Patterns, Layout Selection by Use Case, Metric Styles (+5 more)
+
+### Community 399 - "@happy-dom/global-registrator"
+Cohesion: 0.23
+Nodes (8): @happy-dom/global-registrator, @testing-library/react, @testing-library/react@16.3.3, Compass(), cardinals(), gridLines(), TacMap(), samples
 
 ### Community 400 - "Epistemics"
 Cohesion: 0.14
@@ -1941,8 +1962,8 @@ Cohesion: 0.17
 Nodes (12): Assertion APIs, Capability tags, Exception Handling — Idiomatic Alternatives, Integration Test Markers, Language-specific calibration notes, Mystery Guest — Common PowerShell Patterns, PowerShell Test Framework Reference (Pester v5), Setup/Teardown (+4 more)
 
 ### Community 425 - "Ruby Test Frameworks Reference (RSpec, Minitest)"
-Cohesion: 0.18
-Nodes (10): Assertion APIs, Capability tags, Exception Handling — Idiomatic Alternatives, Integration Test Markers, Mystery Guest — Common Ruby/Rails Patterns, Ruby Test Frameworks Reference (RSpec, Minitest), Setup/Teardown, Skip/Ignore Annotations (+2 more)
+Cohesion: 0.15
+Nodes (12): context(), Assertion APIs, Capability tags, Exception Handling — Idiomatic Alternatives, Integration Test Markers, Mystery Guest — Common Ruby/Rails Patterns, Ruby Test Frameworks Reference (RSpec, Minitest), Setup/Teardown (+4 more)
 
 ### Community 426 - "Rust Test Framework Reference (built-in `#[test]`, `cargo test`)"
 Cohesion: 0.17
@@ -2033,12 +2054,16 @@ Cohesion: 0.20
 Nodes (9): Common Structures, Duarte Sparkline Pattern, Matching Strategy to Context, Product Demo (6 slides), Sales Pitch (9 slides), Search Commands, Slide Strategies, Strategy Selection (+1 more)
 
 ### Community 451 - "JobPosting.Create"
-Cohesion: 0.19
-Nodes (5): ContentHash, Value, JobPostingUpdated, JobPostingTests, InvalidSnapshots
+Cohesion: 0.13
+Nodes (6): ContentHash, Value, JobPostingUpdated, ContentHashTests, JobPostingTests, InvalidSnapshots
 
 ### Community 452 - "Async & Concurrency Patterns"
 Cohesion: 0.22
 Nodes (8): Async & Concurrency Patterns, Avoid False Sharing with Thread-Local State, Detection, Don't Expose Async Wrappers for Sync Methods, Don't Expose Sync Wrappers for Async Methods, Patterns Requiring Manual Review, Use Channels for Producer/Consumer, Use ValueTask for Hot Paths with Frequent Sync Completion
+
+### Community 453 - "logo/core.py"
+Cohesion: 0.12
+Nodes (6): BM25, detect_domain(), _load_csv(), search(), search_all(), _search_csv()
 
 ### Community 454 - "CoreCLR Crash Dump Collection"
 Cohesion: 0.22
@@ -2064,10 +2089,6 @@ Nodes (7): Choose the Right Regex Engine Mode, Detection, Patterns Requiring Man
 Cohesion: 0.25
 Nodes (7): .NET Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
 
-### Community 461 - "Java Pipeline Examples"
-Cohesion: 0.25
-Nodes (7): Java Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
-
 ### Community 462 - "Kotlin Pipeline Examples"
 Cohesion: 0.25
 Nodes (7): Kotlin Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
@@ -2076,9 +2097,9 @@ Nodes (7): Kotlin Pipeline Examples, Sample Final Report, Sample Fix Cycle, Samp
 Cohesion: 0.25
 Nodes (7): PowerShell Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
 
-### Community 464 - "Python Pipeline Examples"
+### Community 464 - "C++ Pipeline Examples"
 Cohesion: 0.25
-Nodes (7): Python Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
+Nodes (7): C++ Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
 
 ### Community 465 - "Rust Pipeline Examples"
 Cohesion: 0.25
@@ -2087,6 +2108,14 @@ Nodes (7): Rust Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample
 ### Community 466 - "dotnet-monitor"
 Cohesion: 0.25
 Nodes (7): Common Commands, dotnet-monitor, Installation, Kubernetes Sidecar Setup, REST API Endpoints, Security Guidance (Production), Trade-offs
+
+### Community 467 - "SessionState"
+Cohesion: 0.25
+Nodes (7): SessionState, Challenged, CoolingDown, Expired, Healthy, New, ResetRequired
+
+### Community 468 - "StorageOptions"
+Cohesion: 0.29
+Nodes (7): StorageOptions, ArtifactsRoot, DatabasePath, MinimumFreeDiskBytes, PostingRetentionDays, ProfilesRoot, RetentionDays
 
 ### Community 471 - "3. Result pattern"
 Cohesion: 0.29
@@ -2176,6 +2205,10 @@ Nodes (3): Coverage Analysis — ReportGenerator HTML/CSV reports, Step 7: Gener
 Cohesion: 0.67
 Nodes (4): padding-y, padding-y, $type, $value
 
+### Community 497 - "IndeedFields"
+Cohesion: 0.12
+Nodes (4): IndeedDetailParser, IndeedFields, IndeedHtml, IndeedSearchParser
+
 ### Community 498 - "Generate binary logs"
 Cohesion: 0.50
 Nodes (4): Generate binary logs, Preserve the operation, Privacy and retention, Verify the artifact, including on failure
@@ -2253,56 +2286,48 @@ Cohesion: 0.50
 Nodes (3): CHECK_DEADLOCK breaks, NoDeadlock breaks, UserNoDeadlock
 
 ### Community 518 - "Orchestrate"
-Cohesion: 0.67
+Cohesion: 0.50
 Nodes (3): Orchestrate, Supervision, Topology
 
+### Community 547 - "LinkedInFields"
+Cohesion: 0.15
+Nodes (3): LinkedInFields, LinkedInHtml, LinkedInSearchParser
+
 ### Community 548 - "CanonicalUrl.Create"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (5): CanonicalUrl, Value, CanonicalUrlTests, PlaybookExamples, Rejected
 
-### Community 549 - "PostingTextValueTests"
-Cohesion: 0.12
-Nodes (3): Parameterized Test Display Names, Text, PostingTextValueTests
-
-### Community 550 - "SalaryRange"
-Cohesion: 0.11
-Nodes (12): SalaryPeriod, Day, Hour, Month, Week, Year, SalaryRange, Currency (+4 more)
+### Community 549 - "Steer with principle names"
+Cohesion: 0.67
+Nodes (3): Steer with principle names, Steering in practice, The 24, briefly
 
 ### Community 551 - "LinkedInSearchParser.Parse"
 Cohesion: 0.18
 Nodes (4): LinkedInSearchPage, LinkedInChallengeClassifierTests, LinkedInSearchParserTests, LinkedInTestPages
 
-### Community 553 - "config-fuzz.test.ts"
-Cohesion: 0.11
-Nodes (18): BREAKS, COMMENTS, GAPS, here, INSERTS, isRecord(), KEYWORDS, MODEL (+10 more)
-
-### Community 554 - "SearchProfileId"
+### Community 554 - "ScrapeRunId.New"
 Cohesion: 0.15
-Nodes (3): SearchProfileId, Value, StronglyTypedIdTests
+Nodes (4): JobPostingId, Value, StronglyTypedIdTests, ScrapeRunProgressTests
 
 ### Community 555 - "JobSnapshot"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (21): JobSnapshot, ApplyUrl, Company, CompanyUrl, Description, ExperienceMaxYears, ExperienceMinYears, ExperienceRaw (+13 more)
 
 ### Community 557 - "primitive"
 Cohesion: 0.18
 Nodes (19): $type, $value, $type, $value, 500, 600, blue, green (+11 more)
 
+### Community 558 - "Fact"
+Cohesion: 0.04
+Nodes (14): DatabaseRegistrationTests, HealthEndpointTests, HealthPayload, OptionsStartupTests, ErrorInfoTests, ErrorsTests, ResultTests, SourceKeyTests (+6 more)
+
 ### Community 559 - "Find-UntestedSources.cs"
 Cohesion: 0.18
 Nodes (4): AnalysisState, Decl, DiagnosticRecord, ProjectLookup
 
-### Community 560 - "JobLocation"
-Cohesion: 0.17
-Nodes (11): JobLocation, City, Country, Raw, Region, WorkMode, WorkMode, Hybrid (+3 more)
-
-### Community 561 - "sessions.tsx"
-Cohesion: 0.29
-Nodes (9): Field(), CreateSessionInput, SOURCES, CHANNELS, ENGINES, SessionsPage(), stateLabel(), StateRow() (+1 more)
-
-### Community 562 - "DataQualityIssues"
-Cohesion: 0.22
-Nodes (8): DataQualityIssues, DescriptionMissing, MissingCompany, MissingLocation, None, ParseLowConfidence, PostedDateUnknown, SalaryUnknown
+### Community 561 - "profiles.tsx"
+Cohesion: 0.14
+Nodes (26): CodeTag(), codeTone(), Field(), plural(), ApiProblem, CreateSessionInput, SourceStatus, CodeRow() (+18 more)
 
 ### Community 563 - "Go Pipeline Examples"
 Cohesion: 0.25
@@ -2311,10 +2336,6 @@ Nodes (7): Go Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample G
 ### Community 564 - "input"
 Cohesion: 0.29
 Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
-
-### Community 566 - "Result"
-Cohesion: 0.33
-Nodes (5): Result, Error, IsFailure, IsSuccess, Value
 
 ### Community 567 - "$type"
 Cohesion: 0.60
@@ -2327,10 +2348,6 @@ Nodes (5): $type, $value, border, border, border
 ### Community 569 - "radius"
 Cohesion: 0.60
 Nodes (5): radius, radius, radius, $type, $value
-
-### Community 570 - "CircuitState"
-Cohesion: 0.40
-Nodes (4): CircuitState, Closed, HalfOpen, Open
 
 ### Community 571 - "50"
 Cohesion: 0.67
@@ -2369,24 +2386,24 @@ Cohesion: 0.67
 Nodes (3): white, $type, $value
 
 ## Knowledge Gaps
-- **567 isolated node(s):** `LogDirectory`, `DatabasePath`, `DeleteLogsOnDispose`, `TestServices`, `net10.0` (+562 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4779 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **133 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **577 isolated node(s):** `LogDirectory`, `DatabasePath`, `DeleteLogsOnDispose`, `TestServices`, `net10.0` (+572 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4788 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **124 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `build()` connect `build` to `labels.ts`, `Conventional Commits`, `C++ Pipeline Examples`, `Find Untested Sources`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **Are the 56 inferred relationships involving `DomainException` (e.g. with `BrowserProfile.Create()` and `BrowserProfile.EnsureCanLaunch()`) actually correct?**
-  _`DomainException` has 56 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.103) - this node is a cross-community bridge._
+- **Are the 57 inferred relationships involving `DomainException` (e.g. with `BrowserProfile.Create()` and `BrowserProfile.EnsureCanLaunch()`) actually correct?**
+  _`DomainException` has 57 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `LogDirectory`, `DatabasePath`, `DeleteLogsOnDispose` to the rest of the system?**
-  _567 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `useRenderLog` be split into smaller, more focused modules?**
-  _Cohesion score 0.1493212669683258 - nodes in this community are weakly interconnected._
-- **Why does `Step 2: Select the smallest safe seam` connect `Guid` to `Detect Static Dependencies`, `Resolve a Testability Obstacle`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
+  _577 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `RunsEndpointTests.cs` be split into smaller, more focused modules?**
-  _Cohesion score 0.09957325746799431 - nodes in this community are weakly interconnected._
-- **Why does `Random` connect `Detect Static Dependencies` to `Guid`, `labels.ts`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+  _Cohesion score 0.09268292682926829 - nodes in this community are weakly interconnected._
+- **Why does `Random` connect `Detect Static Dependencies` to `labels.ts`?**
+  _High betweenness centrality (0.095) - this node is a cross-community bridge._
+- **Should `2. Structured logging with Serilog` be split into smaller, more focused modules?**
+  _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
+- **Why does `Step 2: Select the smallest safe seam` connect `Detect Static Dependencies` to `Guid`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
