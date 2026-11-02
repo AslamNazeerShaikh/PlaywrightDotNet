@@ -533,3 +533,5 @@ graphify-out/.needs_update
 graphify-out/[0-9]*/
 graphify-out/*.sig
 
+# Claude Code machine-local settings
+.claude/settings.local.json
