@@ -21,6 +21,7 @@ export interface SearchProfilePayload {
   postedWithinDays: number | null;
   remoteOnly: boolean;
   requiredSkills: string[];
+  companies: string[];
   maxPages: number;
   maxJobs: number;
   maxDetails: number;
@@ -120,6 +121,7 @@ export interface CreateProfileInput {
   postedWithinDays: number | null;
   remoteOnly: boolean;
   requiredSkills: string[];
+  companies: string[];
 }
 
 /** Body of PUT /api/v1/search-profiles/{id}. The source is immutable. */
@@ -131,6 +133,7 @@ export interface UpdateProfileInput {
   postedWithinDays: number | null;
   remoteOnly: boolean;
   requiredSkills: string[];
+  companies: string[];
   maxPages: number | null;
   maxJobs: number | null;
   maxDetails: number | null;
@@ -144,6 +147,7 @@ export interface RunPayload {
   id: string;
   profileId: string;
   profileName: string | null;
+  companies: string[];
   sourceKey: string;
   stage: string;
   isTerminal: boolean;

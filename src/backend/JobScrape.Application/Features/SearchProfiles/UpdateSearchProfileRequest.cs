@@ -17,6 +17,7 @@ namespace JobScrape.Application.Features.SearchProfiles
     /// <param name="MinDelayMs">Shortest delay, at least the source default.</param>
     /// <param name="MaxDelayMs">Longest delay, at least the source default and within the hard cap.</param>
     /// <param name="RequiredSkills">Optional key skills; a posting is kept when any one matches.</param>
+    /// <param name="Companies">Optional company names for the include and exclude exports.</param>
     /// <param name="Enabled">Whether new runs may start.</param>
     public sealed record UpdateSearchProfileRequest(
         string? Name,
@@ -31,6 +32,7 @@ namespace JobScrape.Application.Features.SearchProfiles
         int? MinDelayMs,
         int? MaxDelayMs,
         IReadOnlyList<string>? RequiredSkills,
+        IReadOnlyList<string>? Companies,
         bool Enabled
     );
 }

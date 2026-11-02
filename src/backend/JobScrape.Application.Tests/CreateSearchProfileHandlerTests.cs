@@ -36,6 +36,8 @@ namespace JobScrape.Application.Tests
                     25,
                     60,
                     2,
+                    NaukriPolicy.MaxPages,
+                    NaukriPolicy.MaxJobs,
                     TimeSpan.FromMinutes(45),
                     NaukriPolicy
                 ),
@@ -45,6 +47,8 @@ namespace JobScrape.Application.Tests
                     4,
                     8,
                     1,
+                    NaukriPolicy.MaxPages,
+                    NaukriPolicy.MaxJobs,
                     TimeSpan.FromHours(1),
                     NaukriPolicy
                 ),
@@ -77,6 +81,54 @@ namespace JobScrape.Application.Tests
             return Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
                 result.Error.Metadata!["errors"]
             );
+        }
+
+        [Fact]
+        public async Task AcceptsAPageCapUpToTheCeiling()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var settings = new SourceSettings(
+                SourceKey.Naukri,
+                true,
+                25,
+                60,
+                2,
+                1000,
+                20_000,
+                TimeSpan.FromMinutes(45),
+                NaukriPolicy
+            );
+            var handler = new CreateSearchProfileHandler(
+                store,
+                store,
+                new SourceSettingsCatalog([settings]),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                Valid() with { MaxPages = 500, MaxJobs = 10_000 },
+                Ct
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(500, result.Value.MaxPages);
+            Assert.Equal(10_000, result.Value.MaxJobs);
+        }
+
+        [Fact]
+        public async Task RejectsMoreThanTheCompanyLimit()
+        {
+            var (handler, _) = Create();
+            var companies = Enumerable
+                .Range(0, SearchCriteria.MaxCompanies + 1)
+                .Select(index => $"Company {index}")
+                .ToArray();
+
+            var errors = FieldErrors(
+                await handler.HandleAsync(Valid() with { Companies = companies }, Ct)
+            );
+
+            Assert.Contains("companies", errors.Keys);
         }
 
         [Fact]

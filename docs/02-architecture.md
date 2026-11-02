@@ -813,7 +813,7 @@ Validate on startup with DataAnnotations plus custom `IValidateOptions<T>` valid
 
 - Every `Sources:<key>` parses via `SourceKey.TryParse` (unknown keys fail with the section path).
 - Per-source DataAnnotations validate (caps, delays, cooldowns within range).
-- `RunLimits` domain ranges hold (`maxPages` 1–30, `maxJobs` 1–1000, `maxDetails` 0–1000, delay 1s–2m).
+- `RunLimits` domain ranges hold (`maxPages` 1–1000, `maxJobs` 1–20 000, `maxDetails` 0–1000, delay 1s–2m).
 - Enabling a non-`Standard` tier requires `Compliance:AcknowledgeSourceRisk = true`; `HighRisk` additionally requires `Compliance:AllowHighRiskSources = true`.
 - `StorageOptions` ranges hold (retention 1–3650 days, `MinimumFreeDiskBytes ≥ 1`); `RunOptions.RetryMaxAttempts` is 1–3.
 

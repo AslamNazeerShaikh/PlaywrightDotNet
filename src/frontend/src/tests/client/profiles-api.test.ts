@@ -13,6 +13,7 @@ const profile = {
   postedWithinDays: 1,
   remoteOnly: false,
   requiredSkills: ["C#", "ASP.NET Core"],
+  companies: ["Infosys", "TCS"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,
@@ -52,6 +53,7 @@ describe("profiles api", () => {
       postedWithinDays: 1,
       remoteOnly: false,
       requiredSkills: ["C#", "ASP.NET Core"],
+      companies: ["Infosys", "TCS"],
     };
 
     const { result } = await createApiClient(fetchImpl).createProfile(input);
@@ -76,6 +78,7 @@ describe("profiles api", () => {
       postedWithinDays: 1,
       remoteOnly: false,
       requiredSkills: ["C#"],
+      companies: ["Infosys", "TCS"],
       maxPages: 2,
       maxJobs: 20,
       maxDetails: 10,
@@ -114,6 +117,7 @@ describe("profiles api", () => {
       postedWithinDays: null,
       remoteOnly: false,
       requiredSkills: [],
+      companies: [],
     });
 
     expect(result.ok).toBe(false);
@@ -164,6 +168,7 @@ describe("profile form", () => {
       postedWithinDays: null,
       remoteOnly: false,
       requiredSkills: ["C#", "ASP.NET Core"],
+      companies: [],
     });
   });
 
@@ -181,6 +186,7 @@ describe("profile form", () => {
     data.set("keywords", " asp.net ");
     data.set("locations", " Pune, ,Hyderabad ,");
     data.set("requiredSkills", " C#, ,ASP.NET Core ,");
+    data.set("companies", " Infosys, ,TCS ,");
     data.set("experienceYears", "6");
     data.set("postedWithinDays", "");
     data.set("maxPages", "2");
@@ -199,6 +205,7 @@ describe("profile form", () => {
       postedWithinDays: null,
       remoteOnly: true,
       requiredSkills: ["C#", "ASP.NET Core"],
+      companies: ["Infosys", "TCS"],
       maxPages: 2,
       maxJobs: 20,
       maxDetails: 10,

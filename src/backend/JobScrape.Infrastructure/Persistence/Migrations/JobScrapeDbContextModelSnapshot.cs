@@ -262,6 +262,11 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Companies")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("companies");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER")
                         .HasColumnName("created_at");

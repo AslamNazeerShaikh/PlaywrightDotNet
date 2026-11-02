@@ -307,6 +307,18 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task HighPageCapStopsAtTheLastAvailablePage()
+        {
+            var harness = new ScrapeHarness(maxPages: 600);
+            harness.Source.Then(Page(null, Job("1")));
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(1, summary.Stats.PagesFetched);
+        }
+
+        [Fact]
         public async Task NoDailyRunCapAllowsAnotherRun()
         {
             var harness = new ScrapeHarness();

@@ -24,6 +24,8 @@ namespace JobScrape.Application.Tests.Scraping
                 25,
                 60,
                 2,
+                DefaultLimits.MaxPages,
+                DefaultLimits.MaxJobs,
                 TimeSpan.FromMinutes(45),
                 DefaultLimits
             );

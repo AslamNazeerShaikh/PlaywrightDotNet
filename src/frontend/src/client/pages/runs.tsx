@@ -148,6 +148,7 @@ export function RunsPage({
   const profile = profiles.find((p) => p.id === profileId) ?? null;
   const usable = sessions.filter((s) => s.sourceKey === profile?.sourceKey);
   const selected = runs?.find((r) => r.id === selectedId) ?? null;
+  const selectedCompanies = selected?.companies ?? [];
   const fieldErrors = startProblem?.errors ?? {};
 
   async function start(event: React.FormEvent<HTMLFormElement>) {
@@ -365,16 +366,63 @@ export function RunsPage({
         note="What the selected run saw, most recent first. Titles open the posting on the source."
       >
         {selected !== null && postings !== null && postings.length > 0 && (
-          <p className="status-line">
-            Export:{" "}
-            <a href={`/api/v1/runs/${selected.id}/postings/export?format=csv`} download>
-              CSV
-            </a>{" "}
-            ·{" "}
-            <a href={`/api/v1/runs/${selected.id}/postings/export?format=xlsx`} download>
-              XLSX
-            </a>
-          </p>
+          <>
+            <p className="status-line">
+              Export all:{" "}
+              <a
+                href={`/api/v1/runs/${selected.id}/postings/export?format=csv`}
+                download
+                aria-label="Export all as CSV"
+              >
+                CSV
+              </a>{" "}
+              ·{" "}
+              <a
+                href={`/api/v1/runs/${selected.id}/postings/export?format=xlsx`}
+                download
+                aria-label="Export all as XLSX"
+              >
+                XLSX
+              </a>
+            </p>
+            {selectedCompanies.length > 0 && (
+              <p className="status-line">
+                Only companies ({selectedCompanies.length}):{" "}
+                <a
+                  href={`/api/v1/runs/${selected.id}/postings/export?format=csv&group=only`}
+                  download
+                  aria-label="Export only companies as CSV"
+                >
+                  CSV
+                </a>{" "}
+                ·{" "}
+                <a
+                  href={`/api/v1/runs/${selected.id}/postings/export?format=xlsx&group=only`}
+                  download
+                  aria-label="Export only companies as XLSX"
+                >
+                  XLSX
+                </a>
+                {" · "}
+                Exclude companies ({selectedCompanies.length}):{" "}
+                <a
+                  href={`/api/v1/runs/${selected.id}/postings/export?format=csv&group=exclude`}
+                  download
+                  aria-label="Export exclude companies as CSV"
+                >
+                  CSV
+                </a>{" "}
+                ·{" "}
+                <a
+                  href={`/api/v1/runs/${selected.id}/postings/export?format=xlsx&group=exclude`}
+                  download
+                  aria-label="Export exclude companies as XLSX"
+                >
+                  XLSX
+                </a>
+              </p>
+            )}
+          </>
         )}
         {selected === null || postings === null ? (
           <p className="status-line">

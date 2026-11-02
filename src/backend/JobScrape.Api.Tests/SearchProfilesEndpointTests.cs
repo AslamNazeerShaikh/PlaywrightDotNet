@@ -11,6 +11,8 @@ namespace JobScrape.Api.Tests
     {
         private static readonly string[] Pune = ["Pune"];
         private static readonly string[] CSharp = ["C#"];
+        private static readonly string[] Companies = ["Infosys", "TCS"];
+        private static readonly string[] InfosysOnly = ["Infosys"];
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -26,6 +28,7 @@ namespace JobScrape.Api.Tests
                 postedWithinDays = 7,
                 remoteOnly = false,
                 requiredSkills = new[] { "C#", "ASP.NET Core" },
+                companies = Companies,
             };
         }
 
@@ -58,6 +61,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal("naukri-dotnet-pune", profile.Name);
             Assert.Equal(["Pune", "Hyderabad"], profile.Locations);
             Assert.Equal(["C#", "ASP.NET Core"], profile.RequiredSkills);
+            Assert.Equal(["Infosys", "TCS"], profile.Companies);
             Assert.True(profile.Enabled);
 
             // Omitted caps default to the shipped naukri policy limits.
@@ -150,7 +154,7 @@ namespace JobScrape.Api.Tests
                     keywords = "c#",
                     locations = Pune,
                     remoteOnly = false,
-                    maxPages = 30,
+                    maxPages = 1001,
                     minDelayMs = 1000,
                 },
                 Ct
@@ -280,6 +284,7 @@ namespace JobScrape.Api.Tests
                     postedWithinDays = 1,
                     remoteOnly = false,
                     requiredSkills = CSharp,
+                    companies = InfosysOnly,
                     maxPages = 2,
                     maxJobs = 20,
                     maxDetails = 10,
@@ -296,6 +301,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal("naukri", updated.SourceKey);
             Assert.Equal("dotnet", updated.Keywords);
             Assert.Equal(["Pune"], updated.Locations);
+            Assert.Equal(["Infosys"], updated.Companies);
             Assert.Equal(2, updated.MaxPages);
             Assert.Equal(20, updated.MaxJobs);
             Assert.Equal(10, updated.MaxDetails);
@@ -407,7 +413,7 @@ namespace JobScrape.Api.Tests
                     keywords = "dotnet",
                     locations = Pune,
                     remoteOnly = false,
-                    maxPages = 30,
+                    maxPages = 1001,
                     maxJobs = 20,
                     maxDetails = 10,
                     minDelayMs = 1000,

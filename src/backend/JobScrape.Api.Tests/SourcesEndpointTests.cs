@@ -32,7 +32,7 @@ namespace JobScrape.Api.Tests
             Assert.True(naukri.Enabled);
             Assert.True(naukri.Gate.Allowed);
             Assert.Equal(new SourcePolicy(3, 60, 60, 2500, 6000, 45), naukri.Policy);
-            Assert.Equal(25, naukri.Quota.PageCap);
+            Assert.Equal(1000, naukri.Quota.PageCap);
             Assert.Equal(0, naukri.Quota.PagesUsed);
             Assert.Null(naukri.Quota.RunCap);
             Assert.Equal("Closed", naukri.Circuit.State);

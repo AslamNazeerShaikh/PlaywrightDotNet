@@ -28,6 +28,7 @@ namespace JobScrape.Api.Tests
         private static readonly string[] Pune = ["Pune"];
 
         private static readonly string[] DotNetSkills = ["C#", "ASP.NET Core"];
+        private static readonly string[] Contoso = ["Contoso"];
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -59,6 +60,7 @@ namespace JobScrape.Api.Tests
                     sourceKey = "naukri",
                     keywords = "c#",
                     locations = Pune,
+                    companies = Contoso,
                 },
                 Ct
             );
@@ -118,6 +120,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
             Assert.Equal($"/api/v1/runs/{run!.Id}", started.Headers.Location!.OriginalString);
             Assert.Equal("backend", run.ProfileName);
+            Assert.Equal(["Contoso"], run.Companies);
 
             var done = await WaitAsync(client, run.Id, r => r.IsTerminal);
             Assert.Equal("Completed", done.Stage);
@@ -159,6 +162,35 @@ namespace JobScrape.Api.Tests
             var xlsxName = xlsx.Content.Headers.ContentDisposition!.FileNameStar!;
             Assert.StartsWith("naukri-backend-", xlsxName, StringComparison.Ordinal);
             Assert.EndsWith("-postings.xlsx", xlsxName, StringComparison.Ordinal);
+
+            using var only = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=only",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, only.StatusCode);
+            var onlyText = await only.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("101", onlyText, StringComparison.Ordinal);
+            Assert.DoesNotContain("102", onlyText, StringComparison.Ordinal);
+            Assert.EndsWith(
+                "-postings-only-companies.csv",
+                only.Content.Headers.ContentDisposition!.FileNameStar!,
+                StringComparison.Ordinal
+            );
+
+            using var exclude = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=exclude",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, exclude.StatusCode);
+            var excludeText = await exclude.Content.ReadAsStringAsync(Ct);
+            Assert.DoesNotContain("101", excludeText, StringComparison.Ordinal);
+            Assert.Contains("102", excludeText, StringComparison.Ordinal);
+
+            using var badGroup = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=nope",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, badGroup.StatusCode);
 
             using var badFormat = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=pdf",
@@ -540,6 +572,7 @@ namespace JobScrape.Api.Tests
                     ExternalJobId = id,
                     Url = $"https://www.naukri.com/job-listings-dev-{id}",
                     Title = $"Developer {id}",
+                    Company = id == "101" ? "Contoso" : "Fabrikam",
                     Skills = skills ?? [],
                     PostedAt = postedAt,
                 };

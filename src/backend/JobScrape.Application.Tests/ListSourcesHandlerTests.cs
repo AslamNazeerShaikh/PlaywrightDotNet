@@ -25,7 +25,17 @@ namespace JobScrape.Application.Tests
 
         private static SourceSettings Settings(SourceKey source, bool enabled = true)
         {
-            return new SourceSettings(source, enabled, 25, 60, 2, TimeSpan.FromMinutes(45), Policy);
+            return new SourceSettings(
+                source,
+                enabled,
+                25,
+                60,
+                2,
+                Policy.MaxPages,
+                Policy.MaxJobs,
+                TimeSpan.FromMinutes(45),
+                Policy
+            );
         }
 
         private static ListSourcesHandler Create(

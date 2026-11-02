@@ -718,8 +718,10 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > `[StartedAt, FinishedAt ?? now]` window, max 200 — valid because runs execute
 > one at a time), and `GET /api/v1/runs/{id}/postings/export?format=csv|xlsx`
 > (`text/csv` with BOM, or a `Jobs`-sheet workbook with posting-URL
-> hyperlinks; max 5000 rows; `400 EXPORT_FORMAT_UNSUPPORTED` for anything
-> else). New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
+> hyperlinks; max 20 000 rows; `400 EXPORT_FORMAT_UNSUPPORTED` for anything
+> else). Add `group=only` or `group=exclude` to split the file by the
+> run's company snapshot; `400 EXPORT_GROUP_UNSUPPORTED` for anything else
+> and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
 > run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
 > before the run was recorded); gate refusals keep their own codes
 > (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).

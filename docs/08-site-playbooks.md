@@ -105,7 +105,7 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 | Primary anti-bot | Akamai (observed: `errors.edgesuite.net`) |
 | Headless | Blocked in the old project's measurements; use headed first contact (`JobScrape:Browser:Headless=false` by default) |
 | Pagination | SPA; click native **Next** |
-| Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day |
+| Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day; the shipped policy allows larger runs when the operator sets them |
 
 ### 3.2 Search flow
 
@@ -116,7 +116,7 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 5. Click native **Next**; wait for the result range/first-card fingerprint to change.
 6. Repeat until cap/no next. The handler drops cards older than the posted-within window (unknown dates pass; detail enrichment fills them) and cards whose observed skills definitively miss the profile's key skills, re-checking the merged skill set after every refresh.
 7. Optional detail enrichment with polite delays. Each detail's posted date is cross-checked against the card's: disagreements are logged with both values, counted in run stats, and the detail date wins. The resume position (pages completed, next cursor, seen ids) is saved after every page.
-8. Export the run's postings to CSV/XLSX, named `{source}-{profile}-{stamp}-{shortId}-postings.{csv,xlsx}` with hyperlinked posting URLs.
+8. Export the run's postings to CSV/XLSX, named `{source}-{profile}-{stamp}-{shortId}-postings.{csv,xlsx}` with hyperlinked posting URLs. When the profile has company names, `group=only` adds `-only-companies` and `group=exclude` adds `-exclude-companies` to the name.
 
 > **As implemented** (`JobScrape.Infrastructure/Sources/Naukri`, verified live 2026-11-01): step 1 is `PlaywrightSessionManager` (home page, random 1.5–3 s pause, one scroll, classify; a clean page marks the session verified). `NaukriJobSource` then waits up to 15 s for `div.srp-jobtuple-wrapper[data-job-id]`, scrolls 4 × 900 px, marks computed-invisible cards (`display`/`visibility`/opacity < 0.15/≤ 1 px/far off-screen) with `data-jobscrape-hidden`, classifies, and parses the HTML offline with AngleSharp (`NaukriSearchParser`). Details go through `NaukriDetailParser` (JSON-LD `JobPosting` first, DOM fallback). Playwright errors and timeouts become `TransientError`; only the run handler retries.
 
@@ -205,13 +205,13 @@ The old project and third-party scrapers use Naukri's private search API:
 
 | Cap | Default |
 |---|---|
-| Pages/search | 3 |
-| Jobs/run | 60 |
+| Pages/search | 3 (ceiling 1000) |
+| Jobs/run | 60 (ceiling 20000) |
 | Details/run | 60 |
 | Delay | 2.5–6.0s |
-| Pages/day | 25 |
+| Pages/day | 1000 |
 | Details/day | 60 |
-| Runs/day | 2 |
+| Runs/day | no cap by default |
 
 Challenge signals:
 

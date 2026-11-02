@@ -10,9 +10,9 @@ namespace JobScrape.Domain.Sourcing
     /// outcome. Illegal transitions throw <see cref="DomainException"/>;
     /// the application layer decides which transition to request.
     /// <para>
-    /// The run snapshots the profile's source and limits at creation, so it
-    /// can never point at a profile of another source and later profile
-    /// edits never change a run in flight.
+    /// The run snapshots the profile's source, limits, and company list at
+    /// creation, so it can never point at a profile of another source and
+    /// later profile edits never change a run in flight.
     /// </para>
     /// </summary>
     public sealed class ScrapeRun : AggregateRoot
@@ -28,12 +28,14 @@ namespace JobScrape.Domain.Sourcing
         /// <param name="profileId">The executed profile.</param>
         /// <param name="source">The profile's source.</param>
         /// <param name="limits">The profile's caps at creation.</param>
+        /// <param name="companies">The profile's company list at creation.</param>
         /// <param name="createdAt">Creation time.</param>
         private ScrapeRun(
             ScrapeRunId id,
             SearchProfileId profileId,
             SourceKey source,
             RunLimits limits,
+            IReadOnlyList<string> companies,
             DateTimeOffset createdAt
         )
         {
@@ -41,6 +43,7 @@ namespace JobScrape.Domain.Sourcing
             ProfileId = profileId;
             Source = source;
             Limits = limits;
+            Companies = companies;
             CreatedAt = createdAt;
             Stage = RunStage.Pending;
             Stats = RunStats.Empty;
@@ -65,6 +68,12 @@ namespace JobScrape.Domain.Sourcing
         /// Gets the caps this run enforces, snapshotted from the profile.
         /// </summary>
         public RunLimits Limits { get; }
+
+        /// <summary>
+        /// Gets the company names used to split this run's export,
+        /// snapshotted from the profile.
+        /// </summary>
+        public IReadOnlyList<string> Companies { get; }
 
         /// <summary>
         /// Gets the current lifecycle stage.
@@ -136,6 +145,7 @@ namespace JobScrape.Domain.Sourcing
                 profile.Id,
                 profile.Source,
                 profile.Limits,
+                profile.Criteria.Companies,
                 now
             );
         }

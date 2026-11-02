@@ -299,6 +299,22 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a validation failure for a company-split export when the
+        /// run has no company list.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo ExportCompaniesMissing()
+        {
+            return new ErrorInfo(
+                "EXPORT_COMPANIES_MISSING",
+                "Company filter is empty.",
+                "Add company names to the profile before using this export.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates a validation failure for an export format no writer renders.
         /// </summary>
         /// <param name="format">The requested format, echoed in metadata.</param>

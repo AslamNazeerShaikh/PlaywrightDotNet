@@ -386,10 +386,12 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "BaseUrl": "https://www.naukri.com",
         "MaxPagesPerSearch": 3,
         "MaxJobsPerRun": 60,
+        "MaxPagesCeiling": 1000,
+        "MaxJobsCeiling": 20000,
         "MaxDetailsPerRun": 60,
         "MinDelayMs": 2500,
         "MaxDelayMs": 6000,
-        "DailyPageCap": 25,
+        "DailyPageCap": 1000,
         "DailyDetailCap": 60,
         "UnlimitedRunCap": true,
         "ChallengeCooldownMinutes": 45
@@ -436,7 +438,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 }
 ```
 
-> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page.
+> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page. A profile may set `maxPages` up to `MaxPagesCeiling` and `maxJobs` up to `MaxJobsCeiling`; `MaxPagesPerSearch` and `MaxJobsPerRun` stay the new-profile defaults. The run stops when the site has fewer pages, so a high limit never invents pages.
 
 ### 5.2 Precedence and secrets
 

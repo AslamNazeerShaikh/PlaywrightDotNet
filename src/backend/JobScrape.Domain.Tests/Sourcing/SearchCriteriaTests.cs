@@ -11,7 +11,8 @@ namespace JobScrape.Domain.Tests.Sourcing
             int? experienceYears = 6,
             int? postedWithinDays = 7,
             bool remoteOnly = false,
-            string?[]? requiredSkills = null
+            string?[]? requiredSkills = null,
+            string?[]? companies = null
         )
         {
             return new SearchCriteria(
@@ -20,7 +21,8 @@ namespace JobScrape.Domain.Tests.Sourcing
                 experienceYears,
                 postedWithinDays,
                 remoteOnly,
-                requiredSkills ?? []
+                requiredSkills ?? [],
+                companies ?? []
             );
         }
 
@@ -76,6 +78,27 @@ namespace JobScrape.Domain.Tests.Sourcing
             var criteria = Create(locations: [" Pune ", "", null, "pune", "New   Delhi", "  "]);
 
             Assert.Equal(["Pune", "New Delhi"], criteria.Locations);
+        }
+
+        [Fact]
+        public void NormalizesAndDeduplicatesCompanies()
+        {
+            var criteria = Create(
+                companies: [" Infosys ", "", null, "infosys", "Tata   Consultancy", "  "]
+            );
+
+            Assert.Equal(["Infosys", "Tata Consultancy"], criteria.Companies);
+        }
+
+        [Fact]
+        public void RejectsTooManyCompanies()
+        {
+            var companies = Enumerable
+                .Range(0, SearchCriteria.MaxCompanies + 1)
+                .Select(index => $"Company {index}")
+                .ToArray();
+
+            Assert.Throws<DomainException>(() => Create(companies: companies));
         }
 
         [Fact]
@@ -202,8 +225,16 @@ namespace JobScrape.Domain.Tests.Sourcing
         [Fact]
         public void EqualCriteriaIgnoreSkillAndLocationCase()
         {
-            var first = Create(locations: ["Pune"], requiredSkills: ["C#"]);
-            var second = Create(locations: ["pune"], requiredSkills: ["c#"]);
+            var first = Create(
+                locations: ["Pune"],
+                requiredSkills: ["C#"],
+                companies: ["Infosys"]
+            );
+            var second = Create(
+                locations: ["pune"],
+                requiredSkills: ["c#"],
+                companies: ["infosys"]
+            );
 
             Assert.Equal(first, second);
             Assert.Equal(first.GetHashCode(), second.GetHashCode());
@@ -221,6 +252,7 @@ namespace JobScrape.Domain.Tests.Sourcing
             Assert.NotEqual(baseline, Create(postedWithinDays: 3));
             Assert.NotEqual(baseline, Create(remoteOnly: true));
             Assert.NotEqual(baseline, Create(requiredSkills: ["C#"]));
+            Assert.NotEqual(baseline, Create(companies: ["Infosys"]));
             Assert.False(baseline.Equals(null));
         }
     }

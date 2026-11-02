@@ -79,7 +79,8 @@ namespace JobScrape.Application.Features.SearchProfiles
                     input.ExperienceYears,
                     input.PostedWithinDays,
                     input.RemoteOnly,
-                    input.RequiredSkills ?? []
+                    input.RequiredSkills ?? [],
+                    input.Companies ?? []
                 ),
                 new RunLimits(
                     input.MaxPages ?? defaults.MaxPages,
@@ -154,11 +155,36 @@ namespace JobScrape.Application.Features.SearchProfiles
                     $"At most {SearchCriteria.MaxRequiredSkills} required skills are allowed.",
                 ];
             }
+
+            var companies = (input.Companies ?? [])
+                .Select(Text.Collapse)
+                .Where(company => company.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+            if (companies > SearchCriteria.MaxCompanies)
+            {
+                errors["companies"] =
+                [
+                    $"At most {SearchCriteria.MaxCompanies} companies are allowed.",
+                ];
+            }
+            else if (
+                (input.Companies ?? [])
+                    .Select(Text.Collapse)
+                    .Any(company => company.Length > CompanyName.MaxLength)
+            )
+            {
+                errors["companies"] =
+                [
+                    $"Each company name must be at most {CompanyName.MaxLength} characters.",
+                ];
+            }
         }
 
         /// <summary>
-        /// Checks the requested caps against the source policy: counts may
-        /// only go down, delays may only go up.
+        /// Checks the requested caps against the source policy: counts must
+        /// stay within the source ceiling, delays at or above the source
+        /// minimum.
         /// </summary>
         /// <param name="input">The field set.</param>
         /// <param name="settings">The source settings.</param>
@@ -172,14 +198,20 @@ namespace JobScrape.Application.Features.SearchProfiles
             var defaults = settings.DefaultLimits;
             var policy = $"the {settings.Source} policy";
 
-            if (input.MaxPages is < 1 || input.MaxPages > defaults.MaxPages)
+            if (input.MaxPages is < 1 || input.MaxPages > settings.MaxPagesCeiling)
             {
-                errors["maxPages"] = [$"Must be between 1 and {defaults.MaxPages} ({policy})."];
+                errors["maxPages"] =
+                [
+                    $"Must be between 1 and {settings.MaxPagesCeiling} ({policy}).",
+                ];
             }
 
-            if (input.MaxJobs is < 1 || input.MaxJobs > defaults.MaxJobs)
+            if (input.MaxJobs is < 1 || input.MaxJobs > settings.MaxJobsCeiling)
             {
-                errors["maxJobs"] = [$"Must be between 1 and {defaults.MaxJobs} ({policy})."];
+                errors["maxJobs"] =
+                [
+                    $"Must be between 1 and {settings.MaxJobsCeiling} ({policy}).",
+                ];
             }
 
             if (input.MaxDetails is < 0 || input.MaxDetails > defaults.MaxDetails)

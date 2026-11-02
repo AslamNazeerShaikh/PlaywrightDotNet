@@ -35,6 +35,7 @@ const baseRun: RunPayload = {
   id: "r1",
   profileId: "p1",
   profileName: "backend",
+  companies: ["Infosys", "TCS"],
   sourceKey: "naukri",
   stage: "Searching",
   isTerminal: false,
@@ -93,6 +94,7 @@ describe("run helpers", () => {
         postedWithinDays: 1,
         remoteOnly: false,
         requiredSkills: ["C#", "ASP.NET Core"],
+        companies: [],
         maxPages: 3,
         maxJobs: 60,
         maxDetails: 60,
@@ -119,6 +121,7 @@ describe("run helpers", () => {
         postedWithinDays: null,
         remoteOnly: true,
         requiredSkills: [],
+        companies: [],
         maxPages: 3,
         maxJobs: 60,
         maxDetails: 60,
@@ -136,7 +139,7 @@ describe("run helpers", () => {
  * A stateful fake of the runs API: POST starts a run that advances one stage per poll and completes
  * with two postings; a second POST while it executes answers RUN_IN_PROGRESS.
  */
-function runsBackend() {
+function runsBackend(companies: string[] = ["Infosys", "TCS"]) {
   const runs: RunPayload[] = [];
   const calls: string[] = [];
   let polls = 0;
@@ -160,6 +163,7 @@ function runsBackend() {
             postedWithinDays: 1,
             remoteOnly: false,
             requiredSkills: ["C#", "ASP.NET Core"],
+            companies: ["Infosys", "TCS"],
             enabled: true,
           },
         ],
@@ -194,6 +198,7 @@ function runsBackend() {
       }
       const run = {
         ...baseRun,
+        companies,
         id: `r${runs.length + 1}`,
         stage: "StartingSession",
         pagesFetched: 0,
@@ -279,10 +284,20 @@ describe("runs page", () => {
         "Senior .NET Developer",
       ),
     );
-    const csv = queries.getByRole("link", { name: "CSV" });
+    const csv = queries.getByRole("link", { name: "Export all as CSV" });
     expect(csv.getAttribute("href")).toBe("/api/v1/runs/r1/postings/export?format=csv");
-    const xlsx = queries.getByRole("link", { name: "XLSX" });
+    const xlsx = queries.getByRole("link", { name: "Export all as XLSX" });
     expect(xlsx.getAttribute("href")).toBe("/api/v1/runs/r1/postings/export?format=xlsx");
+    const onlyCsv = queries.getByRole("link", { name: "Export only companies as CSV" });
+    expect(onlyCsv.getAttribute("href")).toBe(
+      "/api/v1/runs/r1/postings/export?format=csv&group=only",
+    );
+    const excludeXlsx = queries.getByRole("link", {
+      name: "Export exclude companies as XLSX",
+    });
+    expect(excludeXlsx.getAttribute("href")).toBe(
+      "/api/v1/runs/r1/postings/export?format=xlsx&group=exclude",
+    );
     expect(queries.getByRole("status").textContent).toContain("COMPLETED");
     expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
     // Run meters measure progress: a cap reached is done, never the quota red.
@@ -297,6 +312,25 @@ describe("runs page", () => {
     const settled = calls.filter((c) => c === "GET /api/v1/runs/r1").length;
     await new Promise((resolve) => setTimeout(resolve, 2500));
     expect(calls.filter((c) => c === "GET /api/v1/runs/r1").length).toBe(settled);
+  }, 15_000);
+
+  test("hides company split links when the run has no company list", async () => {
+    const { client } = runsBackend([]);
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    expect(queries.getByRole("link", { name: "Export all as CSV" })).toBeDefined();
+    expect(queries.queryByRole("link", { name: "Export only companies as CSV" })).toBeNull();
+    expect(queries.queryByRole("link", { name: "Export exclude companies as CSV" })).toBeNull();
   }, 15_000);
 
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {

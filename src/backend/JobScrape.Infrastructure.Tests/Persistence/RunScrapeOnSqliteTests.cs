@@ -61,6 +61,8 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                             25,
                             60,
                             2,
+                            profile.Limits.MaxPages,
+                            profile.Limits.MaxJobs,
                             TimeSpan.FromMinutes(45),
                             profile.Limits
                         ),

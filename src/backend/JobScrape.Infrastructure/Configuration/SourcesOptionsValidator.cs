@@ -69,6 +69,26 @@ namespace JobScrape.Infrastructure.Configuration
                     continue;
                 }
 
+                if (
+                    source.MaxPagesCeiling is { } pageCeiling
+                    && pageCeiling < source.MaxPagesPerSearch
+                )
+                {
+                    failures.Add(
+                        $"Sources:{key}: MaxPagesCeiling={pageCeiling} is below MaxPagesPerSearch={source.MaxPagesPerSearch}."
+                    );
+                }
+
+                if (
+                    source.MaxJobsCeiling is { } jobCeiling
+                    && jobCeiling < source.MaxJobsPerRun
+                )
+                {
+                    failures.Add(
+                        $"Sources:{key}: MaxJobsCeiling={jobCeiling} is below MaxJobsPerRun={source.MaxJobsPerRun}."
+                    );
+                }
+
                 // RunLimits is the single source of truth for cap and delay ranges.
                 try
                 {

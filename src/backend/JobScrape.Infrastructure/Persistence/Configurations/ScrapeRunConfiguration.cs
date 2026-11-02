@@ -27,6 +27,10 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
                 .HasConversion(DomainConverters.SourceKey)
                 .HasColumnName("source_key");
             builder.Property(run => run.Limits).HasConversion(DomainConverters.RunLimits);
+            builder
+                .Property(run => run.Companies)
+                .HasConversion(DomainConverters.StringList)
+                .IsRequired();
             builder.Property(run => run.Stage).HasConversion<string>();
             builder.Property(run => run.Stats).HasConversion(DomainConverters.RunStats);
             builder.Property(run => run.CreatedAt);

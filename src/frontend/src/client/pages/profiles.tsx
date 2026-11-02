@@ -73,7 +73,8 @@ export function ProfilesPage({
           <Scramble text="OPS-DECK // SEARCH PROFILES" />
         </h1>
         <p>
-          Saved searches, persisted in SQLite. Caps start at the source policy and can only tighten.
+          Saved searches, persisted in SQLite. Caps start at the source policy; the source ceiling
+          is the most a profile may request.
         </p>
       </div>
 
@@ -125,6 +126,15 @@ export function ProfilesPage({
               name="requiredSkills"
               aria-label="Key skills"
               placeholder="C#, ASP.NET Core"
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="COMPANIES (COMMA-SEPARATED)" name="companies" errors={fieldErrors}>
+            <input
+              className="input"
+              name="companies"
+              aria-label="Companies"
+              placeholder="Infosys, TCS, Accenture"
               autoComplete="off"
             />
           </Field>
@@ -255,6 +265,10 @@ export function ProfilesPage({
                     }
                   />
                   <DetailRow
+                    label="Companies"
+                    value={selected.companies.length > 0 ? selected.companies.join(", ") : "—"}
+                  />
+                  <DetailRow
                     label="Caps"
                     value={`${plural(selected.maxPages, "page")} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
@@ -314,6 +328,19 @@ export function ProfilesPage({
                   name="requiredSkills"
                   aria-label="Edit key skills"
                   defaultValue={selected.requiredSkills.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="COMPANIES (COMMA-SEPARATED)"
+                name="companies"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="companies"
+                  aria-label="Edit companies"
+                  defaultValue={selected.companies.join(", ")}
                   autoComplete="off"
                 />
               </Field>
@@ -485,6 +512,7 @@ export function readUpdateForm(data: FormData): UpdateProfileInput {
     postedWithinDays: readNumber(data, "postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
     requiredSkills: readList(data, "requiredSkills"),
+    companies: readList(data, "companies"),
     maxPages: readNumber(data, "maxPages"),
     maxJobs: readNumber(data, "maxJobs"),
     maxDetails: readNumber(data, "maxDetails"),
@@ -505,6 +533,7 @@ export function readForm(data: FormData): CreateProfileInput {
     postedWithinDays: readNumber(data, "postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
     requiredSkills: readList(data, "requiredSkills"),
+    companies: readList(data, "companies"),
   };
 }
 

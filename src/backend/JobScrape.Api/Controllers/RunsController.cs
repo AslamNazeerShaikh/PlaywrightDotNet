@@ -128,15 +128,18 @@ namespace JobScrape.Api.Controllers
         /// </summary>
         /// <param name="id">The run identifier.</param>
         /// <param name="format"><c>csv</c> or <c>xlsx</c>; defaults to <c>csv</c>.</param>
+        /// <param name="group"><c>all</c>, <c>only</c>, or <c>exclude</c>; defaults to <c>all</c>.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>
-        /// 200 with the file; 400 <c>EXPORT_FORMAT_UNSUPPORTED</c> for any
-        /// other format; 404 <c>RUN_NOT_FOUND</c>.
+        /// 200 with the file; 400 <c>EXPORT_FORMAT_UNSUPPORTED</c>,
+        /// <c>EXPORT_GROUP_UNSUPPORTED</c>, or <c>EXPORT_COMPANIES_MISSING</c>;
+        /// 404 <c>RUN_NOT_FOUND</c>.
         /// </returns>
         [HttpGet("{id:guid}/postings/export")]
         public async Task<IResult> ExportAsync(
             Guid id,
             [FromQuery] string format = "csv",
+            [FromQuery] string group = "all",
             CancellationToken cancellationToken = default
         )
         {
@@ -155,7 +158,31 @@ namespace JobScrape.Api.Controllers
                 );
             }
 
-            var result = await _export.HandleAsync(id, parsed, cancellationToken);
+            var parsedGroup = (group ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "all" => CompanyExportGroup.All,
+                "only" => CompanyExportGroup.Only,
+                "exclude" => CompanyExportGroup.Exclude,
+                _ => (CompanyExportGroup?)null,
+            };
+            if (parsedGroup is null)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        code = "EXPORT_GROUP_UNSUPPORTED",
+                        title = "Export group is not supported.",
+                        detail = $"Export group '{group}' is not supported. Use 'all', 'only', or 'exclude'.",
+                    }
+                );
+            }
+
+            var result = await _export.HandleAsync(
+                id,
+                parsed,
+                parsedGroup.Value,
+                cancellationToken
+            );
             return result.IsSuccess
                 ? Results.File(result.Value.Content, result.Value.ContentType, result.Value.FileName)
                 : result.Error.ToProblem();

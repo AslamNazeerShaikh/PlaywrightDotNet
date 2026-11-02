@@ -271,9 +271,11 @@ stateDiagram-v2
 
 | Source | Min/max delay | Pages/run | Jobs/run | Details/run | Pages/day | Details/day | Runs/day | First contact |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
-| **Naukri** | 2.5–6.0s | 3 | 60 | 60 | 25 | 60 | 2 | Headed |
+| **Naukri** | 2.5–6.0s | 3 (ceiling 1000) | 60 (ceiling 20000) | 60 | 1000 | 60 | no cap | Headed |
 | **Indeed** | 12–25s | 2 | 40 | 30 | 12 | 30 | 1 | Headed |
 | **LinkedIn** | 10–20s | 1 | 25 | 8 | 4 | 8 | 1 | Headed + consent |
+
+The Naukri ceilings are the highest a profile may request, not the recommended run size. Keep the starting volume unless a larger export is worth the extra risk.
 
 **Global rules**
 

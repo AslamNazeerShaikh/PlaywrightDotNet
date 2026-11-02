@@ -222,6 +222,8 @@ namespace JobScrape.Infrastructure.Tests.Configuration
                 MaxDelayMs = capped.MaxDelayMs,
                 DailyPageCap = capped.DailyPageCap,
                 DailyDetailCap = capped.DailyDetailCap,
+                MaxPagesCeiling = 1000,
+                MaxJobsCeiling = 20_000,
                 UnlimitedRunCap = true,
                 ChallengeCooldownMinutes = capped.ChallengeCooldownMinutes,
             };
@@ -239,6 +241,9 @@ namespace JobScrape.Infrastructure.Tests.Configuration
 
             Assert.Equal(2, catalog.Find(SourceKey.Naukri)!.DailyRunCap);
             Assert.Null(catalog.Find(SourceKey.Indeed)!.DailyRunCap);
+            Assert.Equal(3, catalog.Find(SourceKey.Naukri)!.MaxPagesCeiling);
+            Assert.Equal(1000, catalog.Find(SourceKey.Indeed)!.MaxPagesCeiling);
+            Assert.Equal(20_000, catalog.Find(SourceKey.Indeed)!.MaxJobsCeiling);
             Assert.Equal(0, new SourceOptions().DailyRunCap);
         }
 

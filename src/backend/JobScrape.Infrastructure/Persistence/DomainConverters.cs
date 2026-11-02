@@ -192,7 +192,8 @@ namespace JobScrape.Infrastructure.Persistence
                         criteria.ExperienceYears,
                         criteria.PostedWithinDays,
                         criteria.RemoteOnly,
-                        [.. criteria.RequiredSkills]
+                        [.. criteria.RequiredSkills],
+                        [.. criteria.Companies]
                     ),
                     Options
                 );
@@ -207,7 +208,8 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.ExperienceYears,
                     dto.PostedWithinDays,
                     dto.RemoteOnly,
-                    dto.RequiredSkills ?? []
+                    dto.RequiredSkills ?? [],
+                    dto.Companies ?? []
                 );
             }
 
@@ -338,7 +340,8 @@ namespace JobScrape.Infrastructure.Persistence
                 int? ExperienceYears,
                 int? PostedWithinDays,
                 bool RemoteOnly,
-                string[]? RequiredSkills
+                string[]? RequiredSkills,
+                string[]? Companies
             );
 
             private sealed record LimitsJson(

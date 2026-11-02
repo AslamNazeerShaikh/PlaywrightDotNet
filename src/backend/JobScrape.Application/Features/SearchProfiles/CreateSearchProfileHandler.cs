@@ -77,7 +77,8 @@ namespace JobScrape.Application.Features.SearchProfiles
                     request.MaxDetails,
                     request.MinDelayMs,
                     request.MaxDelayMs,
-                    request.RequiredSkills
+                    request.RequiredSkills,
+                    request.Companies
                 ),
                 _sources,
                 errors

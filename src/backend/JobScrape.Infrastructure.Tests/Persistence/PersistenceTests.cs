@@ -3,6 +3,7 @@ using JobScrape.Domain;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
+using JobScrape.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -87,6 +88,19 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
             Assert.Empty(await scope.Db.Database.GetPendingMigrationsAsync(Ct));
             Assert.True((await scope.Db.Database.GetAppliedMigrationsAsync(Ct)).Count() >= 3);
+        }
+
+        [Fact]
+        public void CriteriaJsonWithoutCompaniesReadsAsEmpty()
+        {
+            const string json =
+                """{"keywords":"c#","locations":["Pune"],"experienceYears":null,"postedWithinDays":null,"remoteOnly":false,"requiredSkills":[]}""";
+
+            var criteria = Assert.IsType<SearchCriteria>(
+                DomainConverters.SearchCriteria.ConvertFromProvider(json)
+            );
+
+            Assert.Empty(criteria.Companies);
         }
 
         [Fact]

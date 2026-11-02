@@ -199,7 +199,7 @@ classDiagram
 - At least one keyword; total keyword length ≤ 500.
 - At least one location **or** `RemoteOnly = true`.
 - `experience` 0–50; `postedWithinDays` 1–30.
-- `maxPages` 1–30; `maxJobs` 1–1000; `maxDetails` 0–1000.
+- `maxPages` 1–1000; `maxJobs` 1–20 000; `maxDetails` 0–1000.
 - `minDelay` 1–60s; `maxDelay` ≥ `minDelay`; `maxDelay` ≤ 120s.
 - A profile cannot be enabled if its source is `HighRisk` and consent is not acknowledged (`Enable(highRiskConsentAcknowledged, now)`).
 
@@ -331,7 +331,7 @@ classDiagram
 | `JobTitle` | `Value` | Trimmed, 1–300, no control chars. |
 | `CompanyName` | `Value` | Trimmed, 1–200. |
 | `CanonicalUrl` | `Value` (string) | Absolute `https`; host allowlisted per source; tracking params stripped. |
-| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote | Non-empty keyword; locations ≤ 10; experience 0–50; days 1–30. |
+| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote, companies | Non-empty keyword; locations ≤ 10; experience 0–50; days 1–30; companies ≤ 200. |
 | `RunLimits` | Pages, jobs, details, min/max delay | Ranges as above; min ≤ max. |
 | `SalaryRange` | Min, max, currency, period | Min ≤ max; ISO-4217 currency; period enum. |
 | `JobLocation` | Raw, city, region, country, work mode | Raw non-empty; parsed parts optional; raw never discarded. |
@@ -378,8 +378,8 @@ public sealed record RunLimits
         TimeSpan minDelay,
         TimeSpan maxDelay)
     {
-        if (maxPages is < 1 or > 30) throw new DomainException("maxPages must be 1..30.");
-        if (maxJobs is < 1 or > 1000) throw new DomainException("maxJobs must be 1..1000.");
+        if (maxPages is < 1 or > 1000) throw new DomainException("maxPages must be 1..1000.");
+        if (maxJobs is < 1 or > 20000) throw new DomainException("maxJobs must be 1..20000.");
         if (maxDetails is < 0 or > 1000) throw new DomainException("maxDetails must be 0..1000.");
         if (minDelay < TimeSpan.FromSeconds(1)) throw new DomainException("minDelay >= 1s.");
         if (maxDelay < minDelay) throw new DomainException("maxDelay >= minDelay.");

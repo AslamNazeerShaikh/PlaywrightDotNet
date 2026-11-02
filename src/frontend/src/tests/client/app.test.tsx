@@ -47,6 +47,7 @@ const savedProfile = {
   postedWithinDays: 7,
   remoteOnly: false,
   requiredSkills: ["C#"],
+  companies: ["Infosys", "TCS"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,

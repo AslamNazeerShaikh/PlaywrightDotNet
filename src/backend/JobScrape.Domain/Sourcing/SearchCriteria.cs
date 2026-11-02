@@ -26,6 +26,12 @@ namespace JobScrape.Domain.Sourcing
         public const int MaxRequiredSkills = 20;
 
         /// <summary>
+        /// Maximum number of company names kept for the include and exclude
+        /// exports. High enough for a large target list pasted at once.
+        /// </summary>
+        public const int MaxCompanies = 200;
+
+        /// <summary>
         /// Initializes a new instance, normalizing and validating every field.
         /// </summary>
         /// <param name="keywords">
@@ -47,6 +53,12 @@ namespace JobScrape.Domain.Sourcing
         /// wins); at most <see cref="MaxRequiredSkills"/>. Empty means no
         /// skill filter.
         /// </param>
+        /// <param name="companies">
+        /// Company names used to split the run export into an include file and
+        /// an exclude file. Blank entries are dropped, duplicates removed
+        /// case-insensitively (first spelling wins); at most
+        /// <see cref="MaxCompanies"/>. Empty means no company split.
+        /// </param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="locations"/> or <paramref name="requiredSkills"/> is null.</exception>
         /// <exception cref="DomainException">Thrown when any value violates its invariant.</exception>
         public SearchCriteria(
@@ -55,7 +67,8 @@ namespace JobScrape.Domain.Sourcing
             int? experienceYears,
             int? postedWithinDays,
             bool remoteOnly,
-            IEnumerable<string?> requiredSkills
+            IEnumerable<string?> requiredSkills,
+            IEnumerable<string?>? companies = null
         )
         {
             ArgumentNullException.ThrowIfNull(locations);
@@ -110,12 +123,30 @@ namespace JobScrape.Domain.Sourcing
                 throw new DomainException($"At most {MaxRequiredSkills} required skills are allowed.");
             }
 
+            var normalizedCompanies = (companies ?? [])
+                .Select(Text.Collapse)
+                .Where(company => company.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (normalizedCompanies.Length > MaxCompanies)
+            {
+                throw new DomainException($"At most {MaxCompanies} companies are allowed.");
+            }
+
+            if (normalizedCompanies.Any(company => company.Length > CompanyName.MaxLength))
+            {
+                throw new DomainException(
+                    $"Each company name must be at most {CompanyName.MaxLength} characters."
+                );
+            }
+
             Keywords = normalizedKeywords;
             Locations = normalizedLocations;
             ExperienceYears = experienceYears;
             PostedWithinDays = postedWithinDays;
             RemoteOnly = remoteOnly;
             RequiredSkills = normalizedSkills;
+            Companies = normalizedCompanies;
         }
 
         /// <summary>
@@ -150,12 +181,18 @@ namespace JobScrape.Domain.Sourcing
         public IReadOnlyList<string> RequiredSkills { get; }
 
         /// <summary>
-        /// Compares by value, including the location and required-skill
-        /// sequences. The compiler's record equality would compare the lists
-        /// by reference.
+        /// Gets the distinct company names used to split the run export into
+        /// an include file and an exclude file. Empty means no company split.
+        /// </summary>
+        public IReadOnlyList<string> Companies { get; }
+
+        /// <summary>
+        /// Compares by value, including the location, required-skill, and
+        /// company sequences. The compiler's record equality would compare
+        /// the lists by reference.
         /// </summary>
         /// <param name="other">The criteria to compare with.</param>
-        /// <returns>True when every field, location, and skill is equal.</returns>
+        /// <returns>True when every field, location, skill, and company is equal.</returns>
         public bool Equals(SearchCriteria? other)
         {
             return other is not null
@@ -164,7 +201,8 @@ namespace JobScrape.Domain.Sourcing
                 && PostedWithinDays == other.PostedWithinDays
                 && RemoteOnly == other.RemoteOnly
                 && Locations.SequenceEqual(other.Locations, StringComparer.OrdinalIgnoreCase)
-                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.OrdinalIgnoreCase);
+                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.OrdinalIgnoreCase)
+                && Companies.SequenceEqual(other.Companies, StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -186,6 +224,11 @@ namespace JobScrape.Domain.Sourcing
             foreach (var skill in RequiredSkills)
             {
                 hash.Add(skill, StringComparer.OrdinalIgnoreCase);
+            }
+
+            foreach (var company in Companies)
+            {
+                hash.Add(company, StringComparer.OrdinalIgnoreCase);
             }
 
             return hash.ToHashCode();
