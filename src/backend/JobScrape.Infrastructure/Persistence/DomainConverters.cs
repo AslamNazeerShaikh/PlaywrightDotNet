@@ -146,6 +146,14 @@ namespace JobScrape.Infrastructure.Persistence
         );
 
         /// <summary>
+        /// A string list as a JSON array, for small resume-style state.
+        /// </summary>
+        public static readonly ValueConverter<IReadOnlyList<string>, string> StringList = new(
+            ids => Json.WriteStringList(ids),
+            json => Json.ReadStringList(json)
+        );
+
+        /// <summary>
         /// Detects skill changes by normalized name and order, not by list reference.
         /// </summary>
         public static readonly ValueComparer<IReadOnlyList<JobSkill>> SkillsComparer = new(
@@ -306,6 +314,16 @@ namespace JobScrape.Infrastructure.Persistence
             public static JobSkill[] ReadSkills(string json)
             {
                 return Read<string[]>(json).Select(JobSkill.Create).ToArray();
+            }
+
+            public static string WriteStringList(IReadOnlyList<string> ids)
+            {
+                return JsonSerializer.Serialize(ids.ToArray(), Options);
+            }
+
+            public static string[] ReadStringList(string json)
+            {
+                return Read<string[]>(json);
             }
 
             private static T Read<T>(string json)

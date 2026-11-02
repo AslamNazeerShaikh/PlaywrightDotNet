@@ -68,10 +68,13 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
         /// <summary>
         /// Builds the page-1 search URL in the slug form:
-        /// <c>https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k=…&amp;l=…&amp;experience=…&amp;jobAge=…</c>.
+        /// <c>https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k=…&amp;l=…&amp;experience=…&amp;jobAge=…&amp;sort=…</c>.
         /// The path carries the first city only; <c>l</c> carries every city,
         /// joined with <c>", "</c>. <c>experience</c> and <c>jobAge</c> are
-        /// omitted when the criteria leave them unset. Without locations (a
+        /// omitted when the criteria leave them unset. <c>sort=date</c> rides
+        /// along with <c>jobAge</c> so the freshest postings come first;
+        /// both are best-effort hints and the run handler re-checks every
+        /// posted date. Without locations (a
         /// remote-only profile) the path is <c>{slug(keywords)}-jobs</c> and
         /// <c>l</c> is omitted: remote is <b>not</b> filtered through the URL,
         /// because no verified Naukri query parameter exists for it; remote
@@ -114,6 +117,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             if (criteria.PostedWithinDays is { } days)
             {
                 query.Add(Pair("jobAge", days.ToString(CultureInfo.InvariantCulture)));
+                query.Add(Pair("sort", "date"));
             }
 
             return new Uri($"{Origin}{path}?{string.Join('&', query)}", UriKind.Absolute);

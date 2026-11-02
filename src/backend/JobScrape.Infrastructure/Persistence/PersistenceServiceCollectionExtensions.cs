@@ -51,6 +51,7 @@ namespace JobScrape.Infrastructure.Persistence
             services.AddScoped<IBrowserProfileRepository, BrowserProfileRepository>();
             services.AddScoped<ISourceQuotaRepository, SourceQuotaRepository>();
             services.AddScoped<ISourceCircuitBreakerRepository, SourceCircuitBreakerRepository>();
+            services.AddScoped<IScrapeRunProgressRepository, ScrapeRunProgressRepository>();
             services.AddScoped(provider => new ScrapeStores(
                 provider.GetRequiredService<ISearchProfileRepository>(),
                 provider.GetRequiredService<IScrapeRunRepository>(),
@@ -58,6 +59,7 @@ namespace JobScrape.Infrastructure.Persistence
                 provider.GetRequiredService<IBrowserProfileRepository>(),
                 provider.GetRequiredService<ISourceQuotaRepository>(),
                 provider.GetRequiredService<ISourceCircuitBreakerRepository>(),
+                provider.GetRequiredService<IScrapeRunProgressRepository>(),
                 provider.GetRequiredService<IUnitOfWork>()
             ));
             return services;

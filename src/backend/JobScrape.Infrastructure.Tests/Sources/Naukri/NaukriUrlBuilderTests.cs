@@ -41,7 +41,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/dot-net-developer-jobs-in-pune?k=dot%20net%20developer&l=Pune%2C%20Bengaluru&experience=5&jobAge=7",
+                "https://www.naukri.com/dot-net-developer-jobs-in-pune?k=dot%20net%20developer&l=Pune%2C%20Bengaluru&experience=5&jobAge=7&sort=date",
                 url.AbsoluteUri
             );
         }
@@ -75,12 +75,19 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void KeywordsWithoutSlugCharactersFallBackToCityPath()
         {
-            var criteria = new SearchCriteria("++", ["Delhi / NCR"], null, 1, remoteOnly: false, []);
+            var criteria = new SearchCriteria(
+                "++",
+                ["Delhi / NCR"],
+                null,
+                1,
+                remoteOnly: false,
+                []
+            );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/jobs-in-delhi-ncr?k=%2B%2B&l=Delhi%20%2F%20NCR&jobAge=1",
+                "https://www.naukri.com/jobs-in-delhi-ncr?k=%2B%2B&l=Delhi%20%2F%20NCR&jobAge=1&sort=date",
                 url.AbsoluteUri
             );
         }
@@ -89,7 +96,14 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         public void SearchUrlIsNeverAPagedSlugUrl()
         {
             // Playbook §3.5: pages 2+ come from clicking Next, never "-2" URLs.
-            var criteria = new SearchCriteria(".net", ["Pune", "Mumbai"], 2, 30, remoteOnly: false, []);
+            var criteria = new SearchCriteria(
+                ".net",
+                ["Pune", "Mumbai"],
+                2,
+                30,
+                remoteOnly: false,
+                []
+            );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
