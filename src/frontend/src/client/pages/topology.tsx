@@ -27,7 +27,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       >
         <svg
           className="diagram"
-          viewBox="0 0 640 300"
+          viewBox="0 0 640 210"
           role="img"
           aria-label="Request lifecycle sequence"
         >
@@ -35,14 +35,14 @@ export function TopologyPage({ upstream }: { upstream: string }) {
           {lifeline(230, "BFF :3000")}
           {lifeline(420, ".NET :5208")}
           {lifeline(580, "STORE")}
-          {arrow(40, 230, 46, "var(--sig)", "GET /api/v1/…")}
-          {arrow(230, 420, 70, "var(--sig)", "proxy → loopback")}
-          {arrow(420, 580, 94, "var(--sig)", "GetAsync(id)")}
-          {arrow(580, 420, 118, "var(--sig)", "hit? profile : null")}
-          {arrow(420, 230, 142, "var(--sig)", "200 · payload")}
-          {arrow(230, 40, 166, "var(--sig)", "stream back")}
-          {arrow(420, 230, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
-          {arrow(230, 230, 246, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
+          {arrow(40, 230, 44, "var(--sig)", "GET /api/v1/…")}
+          {arrow(230, 420, 60, "var(--sig)", "proxy → loopback")}
+          {arrow(420, 580, 76, "var(--sig)", "GetAsync(id)")}
+          {arrow(580, 420, 92, "var(--sig)", "hit? profile : null")}
+          {arrow(420, 230, 108, "var(--sig)", "200 · payload")}
+          {arrow(230, 40, 124, "var(--sig)", "stream back")}
+          {arrow(420, 230, 148, "var(--red)", "404 + PROFILE_NOT_FOUND")}
+          {arrow(230, 230, 178, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
         </svg>
         <Legend
           label="Sequence key"
@@ -246,7 +246,7 @@ function lifeline(x: number, label: string) {
         x1={x}
         y1={38}
         x2={x}
-        y2={292}
+        y2={202}
         style={{ stroke: "var(--line)" }}
         strokeDasharray="4 4"
       />
