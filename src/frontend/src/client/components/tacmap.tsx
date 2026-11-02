@@ -6,8 +6,10 @@ import type { Sample } from "../lib/telemetry.ts";
 /**
  * TAC-MAP: god's-eye view of the request battlespace. BFF is HQ at center; browser/API/store hold
  * cardinal positions. Range rings, a rotating sweep, packet tracers on live wires, and blips for
- * the last probes (X marks the misses). SMIL drives the sweep and tracers, so the map stays alive
- * with zero JS timers — and all of it unmounts under reduced motion.
+ * the last probes (X marks the misses). CSS keyframes (transform/opacity, see `.tac-*` in
+ * globals.css) drive the sweep, sonar, and tracers with zero JS timers; they replaced SMIL, which
+ * forced a style recalc every frame (~90/s measured on an idle overview). All of it unmounts under
+ * reduced motion.
  */
 export function TacMap({
   samples,
@@ -19,8 +21,8 @@ export function TacMap({
   useRenderLog("TacMap");
   // React useId contains colons, which break url(#…) references: strip them.
   const uid = useId().replace(/:/g, "");
-  // SMIL ignores the CSS reduced-motion kill-switch, so self-animated layers
-  // only mount when motion is welcome.
+  // The CSS kill-switch would freeze these layers mid-pose (a stuck sweep
+  // wedge), so they only mount when motion is welcome.
   const [motionOK] = useState(
     () => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
   );
@@ -86,54 +88,31 @@ export function TacMap({
       {motionOK && (
         <g>
           <path
+            className="tac-sweep"
             d={`M ${cx} ${cy} L ${cx} 20 A 160 160 0 0 1 ${cx + 103} ${cy - 123} Z`}
             fill={`url(#${uid}-sweep)`}
-          >
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from={`0 ${cx} ${cy}`}
-              to={`360 ${cx} ${cy}`}
-              dur="7s"
-              repeatCount="indefinite"
-            />
-          </path>
-          {/* HQ sonar: cyan range rings breathing outward. Additive — the emerald
-              sweep keeps doing its job underneath. */}
+            style={{ transformOrigin: `${cx}px ${cy}px` }}
+          />
+          {/* HQ sonar: cyan range rings breathing outward (r 17 → 70 and 17 → 95
+              as scale). Additive — the emerald sweep keeps doing its job underneath. */}
           <circle
+            className="tac-ping"
             cx={cx}
             cy={cy}
             r="17"
             fill="none"
-            style={{ stroke: "var(--brand-2)" }}
+            style={{ stroke: "var(--brand-2)", transformOrigin: `${cx}px ${cy}px` }}
             strokeWidth="1.5"
-          >
-            <animate attributeName="r" values="17;70" dur="3s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.5;0" dur="3s" repeatCount="indefinite" />
-          </circle>
+          />
           <circle
+            className="tac-ping tac-ping-wide"
             cx={cx}
             cy={cy}
             r="17"
             fill="none"
-            style={{ stroke: "var(--brand-3)" }}
+            style={{ stroke: "var(--brand-3)", transformOrigin: `${cx}px ${cy}px` }}
             strokeWidth="1"
-          >
-            <animate
-              attributeName="r"
-              values="17;95"
-              dur="4.5s"
-              begin="1.5s"
-              repeatCount="indefinite"
-            />
-            <animate
-              attributeName="opacity"
-              values="0.4;0"
-              dur="4.5s"
-              begin="1.5s"
-              repeatCount="indefinite"
-            />
-          </circle>
+          />
         </g>
       )}
 
@@ -153,18 +132,15 @@ export function TacMap({
 
       {motionOK && live && (
         <g>
-          <path id={`${uid}-r1`} d="M 320 46 L 320 180 L 534 180" fill="none" />
-          <path id={`${uid}-r2`} d="M 320 180 L 320 314" fill="none" />
-          <circle r="3.5" style={{ fill: "var(--sig)" }}>
-            <animateMotion dur="2.4s" repeatCount="indefinite">
-              <mpath href={`#${uid}-r1`} />
-            </animateMotion>
-          </circle>
-          <circle r="2.5" style={{ fill: "var(--sig)" }} opacity="0.8">
-            <animateMotion dur="3.4s" repeatCount="indefinite">
-              <mpath href={`#${uid}-r2`} />
-            </animateMotion>
-          </circle>
+          {/* Packets ride browser → BFF → .NET and BFF → store; the keyframes
+              hold the same waypoints as the wires above. */}
+          <circle className="tac-trace-api" r="3.5" style={{ fill: "var(--sig)" }} />
+          <circle
+            className="tac-trace-store"
+            r="2.5"
+            style={{ fill: "var(--sig)" }}
+            opacity="0.8"
+          />
         </g>
       )}
 

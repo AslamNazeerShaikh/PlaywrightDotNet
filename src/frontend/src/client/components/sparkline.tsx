@@ -6,8 +6,10 @@ import type { Sample } from "../lib/telemetry.ts";
 /**
  * Latency sparkline: last N samples as an inline SVG that scales with its module (`viewBox` + width
  * 100%). Dots color by outcome; the area under the line carries a signal gradient with a slow sheen
- * sweep (SMIL, self-contained). The deck never uses canvas here so the chart stays crisp and
- * test-queryable. Empty state draws the frame with a hint instead of an empty box.
+ * sweep: a gradient band clipped to the area, moved by a CSS transform (`.spark-sheen`). SMIL's
+ * gradientTransform animation it replaced restyled the chart every frame. The deck never uses
+ * canvas here so the chart stays crisp and test-queryable. Empty state draws the frame with a hint
+ * instead of an empty box.
  */
 export function Sparkline({ samples, label }: { samples: Sample[]; label: string }) {
   useRenderLog("Sparkline");
@@ -18,8 +20,8 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
   const step = samples.length > 1 ? (width - pad * 2) / (samples.length - 1) : 0;
   // React useId contains colons, which break url(#…) references: strip them.
   const uid = useId().replace(/:/g, "");
-  // SMIL keeps animating past the CSS reduced-motion kill-switch, so the
-  // sheen only mounts when motion is welcome.
+  // The CSS kill-switch would park the sheen band mid-chart, so it only
+  // mounts when motion is welcome.
   const [motionOK] = useState(
     () => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
   );
@@ -64,19 +66,18 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
               <stop offset="100%" style={{ stopColor: "var(--sig)", stopOpacity: 0 }} />
             </linearGradient>
             {motionOK && (
-              <linearGradient id={`${uid}-sheen`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.22" />
-                <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
-                <animateTransform
-                  attributeName="gradientTransform"
-                  type="translate"
-                  from="-1 0"
-                  to="1 0"
-                  dur="4s"
-                  repeatCount="indefinite"
-                />
-              </linearGradient>
+              <>
+                <linearGradient id={`${uid}-sheen`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
+                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.22" />
+                  <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
+                </linearGradient>
+                <clipPath id={`${uid}-clip`}>
+                  <polygon
+                    points={`${line} ${width - pad},${height - pad} ${pad},${height - pad}`}
+                  />
+                </clipPath>
+              </>
             )}
           </defs>
           {points.length > 1 && (
@@ -86,10 +87,16 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
                 fill={`url(#${uid}-area)`}
               />
               {motionOK && (
-                <polygon
-                  points={`${line} ${width - pad},${height - pad} ${pad},${height - pad}`}
-                  fill={`url(#${uid}-sheen)`}
-                />
+                <g clipPath={`url(#${uid}-clip)`}>
+                  <rect
+                    className="spark-sheen"
+                    x={pad}
+                    y={0}
+                    width={width - pad * 2}
+                    height={height}
+                    fill={`url(#${uid}-sheen)`}
+                  />
+                </g>
               )}
               <polyline
                 points={line}

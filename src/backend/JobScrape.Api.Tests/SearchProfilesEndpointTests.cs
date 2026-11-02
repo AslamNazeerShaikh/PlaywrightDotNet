@@ -1,99 +1,244 @@
 using System.Net;
 using System.Net.Http.Json;
-using JobScrape.Api;
+using System.Text.Json;
 using JobScrape.Api.Controllers;
 using JobScrape.Application.Features.SearchProfiles;
-using JobScrape.Infrastructure.SearchProfiles;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace JobScrape.Api.Tests
 {
-    public sealed class SearchProfilesEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+    public sealed class SearchProfilesEndpointTests
     {
-        private readonly WebApplicationFactory<Program> _factory;
+        private static readonly string[] Pune = ["Pune"];
 
-        public SearchProfilesEndpointTests(WebApplicationFactory<Program> factory)
+        private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+        private static object Valid(string name = "naukri-dotnet-pune")
         {
-            _factory = factory;
+            return new
+            {
+                name,
+                sourceKey = "naukri",
+                keywords = "asp.net core c#",
+                locations = new[] { "Pune", "Hyderabad" },
+                experienceYears = 6,
+                postedWithinDays = 7,
+                remoteOnly = false,
+            };
         }
 
         [Fact]
-        public void RejectsNullHandler()
+        public void RejectsNullHandlers()
         {
-            Assert.Throws<ArgumentNullException>(() => new SearchProfilesController(null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                new SearchProfilesController(null!, null!, null!)
+            );
         }
 
         [Fact]
-        public async Task GetReturnsProfileOnHit()
+        public async Task CreateThenGetAndListRoundTripThroughSqlite()
         {
-            // Each test gets a fresh server so the singleton in-memory store
-            // starts empty; seeding through the resolved singleton keeps the
-            // production Program free of test-only hooks.
-            using var factory = new WebApplicationFactory<Program>();
-            var profile = new SearchProfileResponse(Guid.NewGuid(), "Backend", "naukri");
-            Seed(factory, profile);
+            await using var factory = new ApiFactory();
             using var client = factory.CreateClient();
 
-            using var response = await client.GetAsync(
-                $"api/v1/search-profiles/{profile.Id}",
-                TestContext.Current.CancellationToken
-            );
+            using var empty = await client.GetAsync("api/v1/search-profiles", Ct);
+            var none = await empty.Content.ReadFromJsonAsync<SearchProfileListResponse>(Ct);
+            Assert.Equal(0, none!.Total);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var payload = await response.Content.ReadFromJsonAsync<SearchProfileResponse>(
-                TestContext.Current.CancellationToken
-            );
-            Assert.Equal(profile, payload);
-        }
-
-        [Fact]
-        public async Task GetMissingReturnsNotFoundProblem()
-        {
-            using var client = _factory.CreateClient();
-
-            using var response = await client.GetAsync(
-                $"api/v1/search-profiles/{Guid.NewGuid()}",
-                TestContext.Current.CancellationToken
-            );
-
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            using var created = await client.PostAsJsonAsync("api/v1/search-profiles", Valid(), Ct);
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+            var profile = await created.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+            Assert.NotNull(profile);
             Assert.Equal(
-                "application/problem+json",
-                response.Content.Headers.ContentType?.MediaType
+                $"/api/v1/search-profiles/{profile.Id}",
+                created.Headers.Location!.OriginalString
             );
-            var body = await response.Content.ReadAsStringAsync(
-                TestContext.Current.CancellationToken
+            Assert.Equal("naukri-dotnet-pune", profile.Name);
+            Assert.Equal(["Pune", "Hyderabad"], profile.Locations);
+            Assert.True(profile.Enabled);
+
+            // Omitted caps default to the shipped naukri policy limits.
+            Assert.Equal(3, profile.MaxPages);
+            Assert.Equal(60, profile.MaxJobs);
+            Assert.Equal(60, profile.MaxDetails);
+            Assert.Equal(2500, profile.MinDelayMs);
+            Assert.Equal(6000, profile.MaxDelayMs);
+
+            var fetched = await client.GetFromJsonAsync<SearchProfileResponse>(
+                $"api/v1/search-profiles/{profile.Id}",
+                Ct
             );
-            Assert.Contains("PROFILE_NOT_FOUND", body);
+            Assert.Equal(profile.Keywords, fetched!.Keywords);
+
+            var list = await client.GetFromJsonAsync<SearchProfileListResponse>(
+                "api/v1/search-profiles",
+                Ct
+            );
+            Assert.Equal(profile.Id, Assert.Single(list!.Items).Id);
+            Assert.True(File.Exists(factory.DatabasePath));
         }
 
         [Fact]
-        public async Task GetEmptyIdReturnsValidationProblem()
+        public async Task ListIsOrderedByName()
         {
-            using var client = _factory.CreateClient();
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            foreach (var name in new[] { "zeta", "alpha", "mid" })
+            {
+                using var response = await client.PostAsJsonAsync(
+                    "api/v1/search-profiles",
+                    Valid(name),
+                    Ct
+                );
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            }
 
-            using var response = await client.GetAsync(
-                $"api/v1/search-profiles/{Guid.Empty}",
-                TestContext.Current.CancellationToken
+            var list = await client.GetFromJsonAsync<SearchProfileListResponse>(
+                "api/v1/search-profiles",
+                Ct
+            );
+
+            Assert.Equal(["alpha", "mid", "zeta"], list!.Items.Select(p => p.Name));
+            Assert.Equal(3, list.Total);
+        }
+
+        [Fact]
+        public async Task InvalidFieldsReturnValidationProblemKeyedByJsonName()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "",
+                    sourceKey = "monster",
+                    keywords = " ",
+                    locations = Array.Empty<string>(),
+                    remoteOnly = false,
+                },
+                Ct
             );
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            var body = await response.Content.ReadAsStringAsync(
-                TestContext.Current.CancellationToken
-            );
-            Assert.Contains("VALIDATION_FAILED", body);
+            using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+            Assert.Equal("VALIDATION_FAILED", body.RootElement.GetProperty("code").GetString());
+            var errors = body.RootElement.GetProperty("errors");
+            foreach (var field in new[] { "name", "sourceKey", "keywords", "locations" })
+            {
+                Assert.True(errors.TryGetProperty(field, out _), field);
+            }
         }
 
-        private static void Seed(
-            WebApplicationFactory<Program> factory,
-            SearchProfileResponse profile
-        )
+        [Fact]
+        public async Task CapsAboveThePolicyAreRejected()
         {
-            var store = (InMemorySearchProfileStore)
-                factory.Services.GetRequiredService<ISearchProfileStore>();
-            store.Add(profile);
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "greedy",
+                    sourceKey = "naukri",
+                    keywords = "c#",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 30,
+                    minDelayMs = 1000,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var text = await response.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("maxPages", text, StringComparison.Ordinal);
+            Assert.Contains("minDelayMs", text, StringComparison.Ordinal);
+            Assert.Contains("naukri policy", text, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task DuplicateNameIsAConflict()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("dup"),
+                Ct
+            );
+
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("dup"),
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+            Assert.Contains(
+                "PROFILE_NAME_TAKEN",
+                await second.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
+        public async Task HighRiskSourceProfileStartsDisabled()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "li",
+                    sourceKey = "linkedin",
+                    keywords = "c#",
+                    locations = Pune,
+                    remoteOnly = false,
+                },
+                Ct
+            );
+
+            var profile = await response.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.False(profile!.Enabled);
+        }
+
+        [Fact]
+        public async Task UnknownIdIsNotFoundAndEmptyIdIsInvalid()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+
+            using var missing = await client.GetAsync(
+                $"api/v1/search-profiles/{Guid.NewGuid()}",
+                Ct
+            );
+            using var empty = await client.GetAsync($"api/v1/search-profiles/{Guid.Empty}", Ct);
+
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+            Assert.Contains(
+                "PROFILE_NOT_FOUND",
+                await missing.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+
+            // Regression: field errors must survive MVC's problem writer.
+            using var problem = JsonDocument.Parse(await empty.Content.ReadAsStringAsync(Ct));
+            Assert.Equal("VALIDATION_FAILED", problem.RootElement.GetProperty("code").GetString());
+            Assert.Equal(
+                "https://jobscrape.local/problems/validation-failed",
+                problem.RootElement.GetProperty("type").GetString()
+            );
+            Assert.Equal(
+                "A profile id is required.",
+                problem.RootElement.GetProperty("errors").GetProperty("id")[0].GetString()
+            );
         }
     }
 }

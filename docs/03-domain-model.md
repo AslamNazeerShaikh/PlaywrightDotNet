@@ -1,6 +1,6 @@
 # Domain Model
 
-> **Scope:** the DDD core of JobLens — **Sourcing** and **Access**. Reporting/export is a read model and intentionally not modelled as aggregates.
+> **Scope:** the DDD core of JobScrape — **Sourcing** and **Access**. Reporting/export is a read model and intentionally not modelled as aggregates.
 >
 > **Rule:** the domain is pure C#. No Playwright, EF Core, AngleSharp, HTTP, file system, or logging framework. Time and randomness are injected.
 
@@ -66,7 +66,7 @@ Contexts communicate through IDs and application-level orchestration, not shared
 | Term | Meaning |
 |---|---|
 | **Source** | A job board: `naukri`, `indeed`, `linkedin`. Stable lowercase key. |
-| **Search profile** | A saved, reusable search: source + keywords + locations + filters + limits + schedule. |
+| **Search profile** | A saved, reusable search: source + keywords + locations + filters + limits. |
 | **Search criteria** | The user-facing query: keywords, locations, experience, posted-within days, remote. |
 | **Run limits** | Hard caps: pages, jobs, details, min/max delay, daily quota. |
 | **Scrape run** | One execution of a search profile, with a lifecycle and stats. |
@@ -74,7 +74,7 @@ Contexts communicate through IDs and application-level orchestration, not shared
 | **Posting** | A normalized job posting from a source. Identity is `(source, externalJobId)`. |
 | **Snapshot** | Raw-but-typed fields extracted from a page before domain validation. |
 | **Enrichment** | Visiting a detail page to add description/skills/apply URL. |
-| **Session profile** | A persistent browser user-data directory plus engine/channel/locale/timezone. |
+| **Session profile** | A persistent browser identity bound to one source: engine, channel, user-data directory, session health. |
 | **Challenge** | A bot wall, CAPTCHA, JS challenge, login wall, rate limit, or access denial. |
 | **Quota** | Per-source daily limits on pages/details/runs. |
 | **Circuit breaker** | Per-source state that stops runs after repeated failures/challenges. |
@@ -89,65 +89,95 @@ Contexts communicate through IDs and application-level orchestration, not shared
 ```mermaid
 classDiagram
     class SearchProfile {
-        +Guid Id
+        +SearchProfileId Id
         +string Name
-        +string SourceKey
+        +SourceKey Source
         +SearchCriteria Criteria
         +RunLimits Limits
         +bool Enabled
-        +Validate()
+        +Create(...) $static
+        +UpdateCriteria(criteria, now)
+        +UpdateLimits(limits, now)
+        +Enable(highRiskConsent, now)
+        +Disable(now)
     }
 
     class ScrapeRun {
-        +Guid Id
-        +Guid ProfileId
-        +string SourceKey
+        +ScrapeRunId Id
+        +SearchProfileId ProfileId
+        +SourceKey Source
+        +RunLimits Limits
         +RunStage Stage
         +RunStats Stats
         +Start(DateTimeOffset)
-        +RecordPage(PageStats)
-        +PauseForChallenge(ChallengeKind)
+        +BeginSearching()
+        +RecordPage(PageStats, DateTimeOffset)
+        +RecordFailure()
+        +BeginEnriching()
+        +RecordDetail()
+        +BeginPersisting()
+        +PauseForChallenge(ChallengeKind, DateTimeOffset)
+        +RateLimit(DateTimeOffset, DateTimeOffset)
         +Resume(DateTimeOffset)
         +Complete(DateTimeOffset)
-        +Fail(string)
+        +Fail(string, DateTimeOffset)
         +Cancel(DateTimeOffset)
     }
 
     class JobPosting {
-        +Guid Id
-        +string SourceKey
-        +string ExternalJobId
-        +string Title
-        +string Company
-        +string CanonicalUrl
-        +string ContentHash
-        +DateTimeOffset FirstSeenAt
-        +DateTimeOffset LastSeenAt
-        +Refresh(JobSnapshot, DateTimeOffset)
+        +JobPostingId Id
+        +SourceKey Source
+        +ExternalJobId ExternalJobId
+        +Create(snapshot, now) $static
+        +Refresh(snapshot, now)
+        +MarkExpired()
     }
 
     class BrowserProfile {
-        +Guid Id
+        +BrowserProfileId Id
         +string Name
-        +string Engine
-        +string Channel
+        +SourceKey Source
+        +BrowserEngine Engine
+        +BrowserChannel Channel
         +SessionState State
-        +DateTimeOffset CooldownUntil
         +CanLaunch(DateTimeOffset)
-        +MarkChallenged(DateTimeOffset, TimeSpan)
-        +MarkHealthy()
+        +MarkUsed(DateTimeOffset)
+        +MarkVerified(DateTimeOffset)
+        +MarkChallenged(ChallengeKind, DateTimeOffset, TimeSpan)
+        +MarkExpired()
         +Reset()
+    }
+
+    class SourceQuota {
+        +SourceKey Source
+        +DateOnly QuotaDate
+        +StartDay(now) $static
+        +TryConsumePage(cap, now)
+        +TryConsumeDetail(cap, now)
+        +TryStartRun(cap, now)
+        +RecordChallenge(DateTimeOffset)
+    }
+
+    class SourceCircuitBreaker {
+        +SourceKey Source
+        +CircuitState State
+        +AllowsRun
+        +Create(source) $static
+        +CanProbe(DateTimeOffset)
+        +BeginProbe(DateTimeOffset)
+        +RecordSuccess(DateTimeOffset)
+        +RecordFailure(ChallengeKind, DateTimeOffset)
     }
 
     class JobSkill {
         +string Name
         +string NormalizedName
+        +Create(name) $static
     }
 
-    SearchProfile "1" --> "*" ScrapeRun : schedules
-    ScrapeRun ..> JobPosting : references
-    BrowserProfile "1" --> "*" ScrapeRun : used by
-    JobPosting "1" *-- "*" JobSkill : owns
+    SearchProfile "1" --> "*" ScrapeRun : ProfileId
+    ScrapeRun ..> JobPosting : upserts (no FK)
+    JobPosting "1" *-- "*" JobSkill : embedded list
 ```
 
 ### 4.1 `SearchProfile` (aggregate root)
@@ -156,12 +186,12 @@ classDiagram
 
 **State**
 
-- `Id`, `Name` (non-empty, unique per user — uniqueness enforced by repository).
-- `SourceKey` (known source; adapter must exist).
+- `Id`, `Name` (non-empty; unique via database index).
+- `Source` (`SourceKey` singleton: `naukri`, `indeed`, or `linkedin`).
 - `SearchCriteria` (keywords, locations, experience, posted-within, remote).
 - `RunLimits` (pages, jobs, details, delays).
 - `Enabled` (disabled profiles cannot start runs).
-- Audit timestamps.
+- Audit timestamps (`CreatedAt`, `UpdatedAt`).
 
 **Invariants**
 
@@ -170,13 +200,12 @@ classDiagram
 - `experience` 0–50; `postedWithinDays` 1–30.
 - `maxPages` 1–30; `maxJobs` 1–1000; `maxDetails` 0–1000.
 - `minDelay` 1–60s; `maxDelay` ≥ `minDelay`; `maxDelay` ≤ 120s.
-- A profile cannot be enabled if its source is `HighRisk` and consent is not acknowledged.
+- A profile cannot be enabled if its source is `HighRisk` and consent is not acknowledged (`Enable(highRiskConsentAcknowledged, now)`).
 
 **Behavior**
 
-- `UpdateCriteria(...)` validates and replaces criteria.
-- `Disable()` / `Enable(compliance)`.
-- `ToRunLimits()` returns a validated snapshot for the run.
+- `UpdateCriteria(...)` / `UpdateLimits(...)` validate and replace, emitting `SearchProfileUpdated` only on real change.
+- `Enable(bool, now)` / `Disable(now)`.
 
 ### 4.2 `ScrapeRun` (aggregate root)
 
@@ -184,11 +213,9 @@ classDiagram
 
 **State**
 
-- `Id`, `ProfileId`, `SourceKey`.
-- `Stage` (`RunStage`).
-- `Stats` (pages, postings found/new/updated, details, challenges, failures).
-- `StartedAt`, `FinishedAt`, `PauseReason`, `FailureReason`.
-- `ArtifactDirectory` (relative path, not a file handle).
+- `Id`, `ProfileId`, `Source`.
+- `Stage` (`RunStage`), `Limits`, `Stats` (pages, postings found/new/updated, details, challenges, failures).
+- `StartedAt`, `FinishedAt`, `PauseReason` (`ChallengeKind?`), `RetryAt`, `FailureReason`.
 
 **Invariants**
 
@@ -202,7 +229,7 @@ classDiagram
 
 **Behavior**
 
-- `Start(now)`, `BeginSearching(now)`, `RecordPage(PageStats)`, `BeginEnriching()`, `RecordDetail()`, `PauseForChallenge(kind, now)`, `RateLimit(retryAfter, now)`, `Resume(now)`, `Complete(now)`, `Fail(reason, now)`, `Cancel(now)`.
+- `Start(now)`, `BeginSearching()`, `RecordPage(PageStats, now)`, `BeginEnriching()`, `RecordDetail()`, `PauseForChallenge(kind, now)`, `RateLimit(retryAt, now)`, `Resume(now)`, `Complete(now)`, `Fail(reason, now)`, `Cancel(now)`.
 - Emits domain events for each meaningful transition.
 
 ### 4.3 `JobPosting` (aggregate root)
@@ -213,11 +240,10 @@ classDiagram
 
 **State**
 
-- Title, company, company URL, locations, work mode, employment type.
-- Experience raw/parsed, salary raw/parsed, posted raw/date.
-- Description, snippet, skills (owned `JobSkill` collection), apply URL.
+- Title, company, company URL, location (raw text + parsed parts incl. best-effort `WorkMode`), experience raw/parsed, salary raw/parsed (`SalaryRange` with 3-letter ISO currency), posted raw/date.
+- Description, snippet, skills (owned `JobSkill` list), apply URL (falls back to canonical URL).
 - `FirstSeenAt`, `LastSeenAt`, `ContentHash`, `Status` (`Active`, `Expired`, `Unknown`).
-- `ParseConfidence` / data-quality flags (e.g., missing company, salary unknown).
+- `DataQualityIssues` flags (e.g., missing company, salary unknown).
 
 **Invariants**
 
@@ -232,11 +258,11 @@ classDiagram
 **Behavior**
 
 - `Create(JobSnapshot, now)` validates and normalizes.
-- `Refresh(JobSnapshot, now)` updates mutable fields, sets `LastSeenAt`, recomputes `ContentHash`, emits `JobPostingUpdated` only if the hash changed.
-- `MarkExpired(now)` when a source explicitly says so; absence from a search does **not** expire a posting in v1.
-- `AddSkill` / `ReplaceSkills` enforce dedupe and caps.
+- `Refresh(JobSnapshot, now)` updates mutable fields, sets `LastSeenAt`, recomputes `ContentHash`, emits `JobPostingUpdated` only if the hash changed (unchanged re-sightings raise nothing).
+- `MarkExpired()` when a source explicitly says so; absence from a search does **not** expire a posting.
+- Skills dedupe case-insensitively via `NormalizedName` (max 50); invalid cards throw `DomainException` and are dropped by the handler.
 
-> **Important:** a posting is not “owned” by a run. The same posting can appear in many runs; `RunPosting` is a join record in the run/reporting model.
+> **Important:** a posting is not “owned” by a run. The same posting can appear in many runs; runs and postings are linked only in memory during upsert — no join table exists.
 
 ### 4.4 `BrowserProfile` (aggregate root)
 
@@ -244,29 +270,27 @@ classDiagram
 
 **State**
 
-- `Id`, `Name`, `SourceKey`.
-- `Engine` (`Chromium`, `Firefox`, `WebKit`), `Channel` (`Bundled`, `Chrome`, `Edge`, ...).
-- `Locale`, `Timezone`, `Viewport`, `UserDataDirectory` (relative path).
-- `State` (`New`, `Healthy`, `Challenged`, `CoolingDown`, `Expired`, `ResetRequired`).
+- `Id`, `Name`, `Source`.
+- `Engine` (`Chromium`, `Firefox`, `WebKit`), `Channel` (`Bundled`, `Chrome`, `Edge`).
+- `UserDataDirectory` (derived `$"{Source}/{Name}"`, never stored).
+- `State` (`New`, `Healthy`, `CoolingDown`, `Expired`, `ResetRequired`; the enum also declares `Challenged` but no code path ever assigns it).
 - `CooldownUntil`, `ConsecutiveChallenges`, `LastUsedAt`, `LastVerifiedAt`.
-- `ProxyUrl` (optional, static; never a rotation pool).
 
 **Invariants**
 
-- Name non-empty; unique per user (repository).
-- `UserDataDirectory` must be inside the configured profiles root.
+- Name non-empty, unique (database unique index).
+- `UserDataDirectory` is derived (`$"{Source}/{Name}"`), not stored.
 - Cannot launch when `State` is `CoolingDown` and `now < CooldownUntil`.
 - Cannot launch when `ResetRequired`.
-- Challenge cooldown must be positive; consecutive challenges ≥ 0.
-- `MarkHealthy` resets consecutive challenges only after a successful verification.
+- Challenge cooldown must be positive.
+- `MarkVerified` resets consecutive challenges, and only runs after a successful verification.
 
 **Behavior**
 
 - `CanLaunch(now)`.
 - `MarkUsed(now)`, `MarkVerified(now)`.
-- `MarkChallenged(kind, now, cooldown)` → `CoolingDown`, increments consecutive challenges.
-- `MarkHealthy()` → `Healthy`, resets challenge counter.
-- `MarkExpired()`, `Reset()` → `New`.
+- `MarkChallenged(kind, now, cooldown)` → `CoolingDown`, increments consecutive challenges (or `ResetRequired` on the 3rd consecutive wall).
+- `MarkExpired()` (healthy only), `Reset()` → `New`.
 
 ### 4.5 `SourceQuota` (aggregate root)
 
@@ -304,14 +328,14 @@ classDiagram
 | `ExternalJobId` | `Value` | Non-empty, ≤ 128, source-specific format validated by adapter. |
 | `JobTitle` | `Value` | Trimmed, 1–300, no control chars. |
 | `CompanyName` | `Value` | Trimmed, 1–200. |
-| `CanonicalUrl` | `Uri` | Absolute `https`; host allowlisted per source; no credentials/query tracking. |
-| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote | Non-empty keyword; locations 1–10; experience 0–50; days 1–30. |
+| `CanonicalUrl` | `Value` (string) | Absolute `https`; host allowlisted per source; tracking params stripped. |
+| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote | Non-empty keyword; locations ≤ 10; experience 0–50; days 1–30. |
 | `RunLimits` | Pages, jobs, details, min/max delay | Ranges as above; min ≤ max. |
 | `SalaryRange` | Min, max, currency, period | Min ≤ max; ISO-4217 currency; period enum. |
-| `JobLocation` | Raw, city, region, country, work mode | Raw non-empty; parsed fields optional; remote flag consistent. |
+| `JobLocation` | Raw, city, region, country, work mode | Raw non-empty; parsed parts optional; raw never discarded. |
 | `ContentHash` | SHA-256 hex | Lowercase hex; computed from stable fields only. |
 | `PageFingerprint` | First external ID, result-range text | Used to detect a repeated page; at least one component non-empty. |
-| `RunStats` | Counters | Non-negative; monotonic within a run. |
+| `RunStats` | Counters | Non-negative; monotonic within a run (no reset). |
 | `ComplianceTier` | Standard/Restricted/HighRisk | Drives consent/run gates. |
 | `ChallengeKind` | None/RateLimited/SoftChallenge/Captcha/LoginRequired/AccessDenied/SourceChanged/TransientError | Drives response policy. |
 
@@ -324,21 +348,17 @@ Use `readonly record struct` wrappers for `SearchProfileId`, `ScrapeRunId`, `Job
 ```csharp
 public sealed record SourceKey
 {
-    public static readonly SourceKey Naukri = new("naukri");
-    public static readonly SourceKey Indeed = new("indeed");
-    public static readonly SourceKey LinkedIn = new("linkedin");
+    public static readonly SourceKey Naukri = new("naukri", ComplianceTier.Standard);
+    public static readonly SourceKey Indeed = new("indeed", ComplianceTier.Restricted);
+    public static readonly SourceKey LinkedIn = new("linkedin", ComplianceTier.HighRisk);
 
-    private SourceKey(string value) => Value = value;
+    private SourceKey(string value, ComplianceTier tier) { ... }
 
     public string Value { get; }
+    public ComplianceTier Tier { get; }
 
-    public static SourceKey Parse(string? value) => value?.Trim().ToLowerInvariant() switch
-    {
-        "naukri" => Naukri,
-        "indeed" => Indeed,
-        "linkedin" => LinkedIn,
-        _ => throw new DomainException($"Unknown source '{value}'.")
-    };
+    public static SourceKey Parse(string? value) => ...; // singletons above; throws DomainException
+    public static bool TryParse(string? value, out SourceKey? key) => ...;
 
     public override string ToString() => Value;
 }
@@ -384,34 +404,40 @@ public sealed record RunLimits
 
 ### 6.1 `ScrapeRun`
 
+> Verified against `ScrapeRun.cs` guards (`EnsureStage`, `EnsureFetching`, `EnsureNotTerminal`). `Fail` and `Cancel` are allowed from **any non-terminal stage** (including `Pending` and `StartingSession`), not only the paths drawn for the common flow.
+
 ```mermaid
 stateDiagram-v2
     [*] --> Pending
     Pending --> StartingSession : Start
-    StartingSession --> Searching : session healthy
-    StartingSession --> Failed : session/bootstrap failure
+    StartingSession --> Searching : BeginSearching
+    StartingSession --> Failed : Fail (bootstrap failure)
 
-    Searching --> Enriching : pages done + enrichment enabled
-    Searching --> Persisting : pages done + no enrichment
-    Enriching --> Persisting : details done
+    Searching --> Enriching : BeginEnriching (MaxDetails > 0)
+    Searching --> Persisting : BeginPersisting
+    Enriching --> Persisting : BeginPersisting
 
-    Searching --> PausedForChallenge : challenge detected
-    Enriching --> PausedForChallenge : challenge detected
-    Searching --> RateLimited : 429/999 + Retry-After
+    Searching --> PausedForChallenge : PauseForChallenge (wall)
+    Enriching --> PausedForChallenge : PauseForChallenge (wall)
+    Searching --> RateLimited : RateLimit(retryAt)
 
-    PausedForChallenge --> Searching : manual solve + resume
-    PausedForChallenge --> Enriching : manual solve + resume
-    PausedForChallenge --> Cancelled : operator abort
-    PausedForChallenge --> Failed : repeated challenge
+    PausedForChallenge --> Searching : Resume (was searching)
+    PausedForChallenge --> Enriching : Resume (was enriching)
+    RateLimited --> Searching : Resume (now >= RetryAt)
 
-    RateLimited --> Searching : cooldown elapsed
-    RateLimited --> Cancelled : operator abort
+    PausedForChallenge --> Failed : Fail
+    PausedForChallenge --> Cancelled : Cancel
+    RateLimited --> Failed : Fail
+    RateLimited --> Cancelled : Cancel
+    Pending --> Failed : Fail
+    Pending --> Cancelled : Cancel
+    StartingSession --> Cancelled : Cancel
 
-    Persisting --> Completed : saved
-    Persisting --> Failed : persistence failure
+    Persisting --> Completed : Complete (pages > 0)
+    Persisting --> Failed : Fail
 
-    Searching --> Cancelled : Ctrl+C / cancel
-    Enriching --> Cancelled : Ctrl+C / cancel
+    Searching --> Cancelled : Cancel
+    Enriching --> Cancelled : Cancel
 
     Completed --> [*]
     Failed --> [*]
@@ -422,40 +448,46 @@ stateDiagram-v2
 
 | From | Event | To | Guard |
 |---|---|---|---|
-| `Pending` | `Start` | `StartingSession` | Profile enabled, consent OK, quota OK, circuit closed. |
-| `StartingSession` | session healthy | `Searching` | Profile state healthy/verified. |
-| `StartingSession` | bootstrap failure | `Failed` | No retry. |
-| `Searching` | page recorded, more pages | `Searching` | Page cap not reached. |
-| `Searching` | pages done, enrich | `Enriching` | Enrichment enabled and details remain. |
-| `Searching` | pages done, no enrich | `Persisting` | — |
-| `Searching`/`Enriching` | challenge | `PausedForChallenge` | Manual intervention required. |
-| `Searching` | rate limit | `RateLimited` | `Retry-After`/cooldown known. |
-| `PausedForChallenge` | resume | previous active stage | Operator confirms solve; cooldown elapsed. |
-| `RateLimited` | cooldown elapsed | `Searching` | Retry policy allows. |
-| `Persisting` | save complete | `Completed` | At least one page attempted. |
-| any active | cancel | `Cancelled` | Cooperative cancellation. |
-| any active | unrecoverable | `Failed` | Reason recorded. |
+| `Pending` | `Start` | `StartingSession` | Stage is `Pending` (handler runs profile/quota/consent gates first). |
+| `StartingSession` | `BeginSearching` | `Searching` | Stage is `StartingSession`. |
+| `StartingSession` | `Fail` | `Failed` | Non-terminal; session/bootstrap failure. |
+| `Searching` | `BeginEnriching` | `Enriching` | Stage is `Searching`, detail cap > 0. |
+| `Searching`/`Enriching` | `BeginPersisting` | `Persisting` | Stage is searching or enriching. |
+| `Searching`/`Enriching` | `PauseForChallenge` | `PausedForChallenge` | Kind is a wall (SoftChallenge, Captcha, LoginRequired, AccessDenied). |
+| `Searching` | `RateLimit` | `RateLimited` | `retryAt` not in the past. |
+| `PausedForChallenge` | `Resume` | saved `_resumeStage` | Was paused. |
+| `RateLimited` | `Resume` | `Searching` | `now >= RetryAt`. |
+| `Persisting` | `Complete` | `Completed` | `PagesFetched > 0`. |
+| any non-terminal | `Fail` | `Failed` | Non-blank reason. |
+| any non-terminal | `Cancel` | `Cancelled` | Cooperative cancellation; partial results kept. |
 
 ### 6.2 `BrowserProfile`
+
+> Verified against `BrowserProfile.cs`. There is **no `Challenged` state** —
+> it exists in the enum but no method ever assigns it; walls move the
+> profile straight to `CoolingDown` (or `ResetRequired`).
 
 ```mermaid
 stateDiagram-v2
     [*] --> New
-    New --> Healthy : session verified
-    Healthy --> Challenged : wall detected
-    Challenged --> CoolingDown : stop + cooldown
-    CoolingDown --> Healthy : manual solve + cooldown elapsed
-    CoolingDown --> ResetRequired : repeated challenges
-    ResetRequired --> New : profile reset
-    Healthy --> Expired : cookies/session expired
-    Expired --> New : re-login
+    New --> Healthy : MarkVerified
+    Healthy --> CoolingDown : MarkChallenged (wall)
+    Healthy --> Expired : MarkExpired
+    CoolingDown --> Healthy : MarkVerified (cooldown elapsed)
+    CoolingDown --> CoolingDown : MarkChallenged (further wall)
+    CoolingDown --> ResetRequired : MarkChallenged (3rd consecutive)
+    Expired --> Healthy : MarkVerified
+    Expired --> CoolingDown : MarkChallenged (wall)
+    Expired --> New : Reset
+    ResetRequired --> New : Reset
+    New --> CoolingDown : MarkChallenged (wall)
 ```
 
 **Rules**
 
-- `CoolingDown` blocks launches until `CooldownUntil`.
-- After **3 consecutive challenges**, move to `ResetRequired` and require a manual reset/new profile.
-- A successful `ProbeAsync` is the only way to return to `Healthy` after a challenge.
+- `CoolingDown` blocks launches until `CooldownUntil`; `ResetRequired` blocks everything until `Reset`.
+- After **3 consecutive challenges** (`MaxConsecutiveChallenges`), `MarkChallenged` moves to `ResetRequired` instead of cooling down.
+- `MarkVerified` is the only way back to `Healthy`: it requires `CanLaunch` and resets the challenge counter. It works from `New`, `CoolingDown` (once elapsed), and `Expired`.
 
 ### 6.3 Circuit breaker (per source)
 
@@ -481,23 +513,21 @@ stateDiagram-v2
 
 | Event | When | Payload (minimal) |
 |---|---|---|
-| `SearchProfileCreated` | Profile validated and saved | `ProfileId`, `SourceKey` |
-| `SearchProfileUpdated` | Criteria/limits changed | `ProfileId`, changed fields |
-| `ScrapeRunStarted` | Run leaves `Pending` | `RunId`, `ProfileId`, `SourceKey` |
-| `SearchPageFetched` | Page parsed successfully | `RunId`, page number, job count, elapsed |
-| `JobPostingDiscovered` | New posting inserted | `RunId`, `JobPostingId`, `SourceKey` |
-| `JobPostingUpdated` | Existing posting content hash changed | `JobPostingId`, old/new hash |
-| `ChallengeDetected` | Classifier returns non-`None` | `RunId`, `SourceKey`, `ChallengeKind`, evidence |
-| `RunPausedForChallenge` | Run enters pause | `RunId`, `ChallengeKind`, `CooldownUntil` |
-| `RunRateLimited` | 429/999 with retry window | `RunId`, `RetryAfter` |
+| `SearchProfileCreated` | Profile validated and created | `ProfileId`, `Source` |
+| `SearchProfileUpdated` | Criteria/limits changed (no-op updates raise nothing) | `ProfileId`, changed field |
+| `ScrapeRunStarted` | Run leaves `Pending` | `RunId`, `ProfileId`, `Source` |
+| `SearchPageFetched` | Page parsed and recorded | `RunId`, page number, job count |
+| `JobPostingUpdated` | Refresh changed the content hash (unchanged re-sightings raise nothing) | `PostingId`, `Source`, old/new hash |
+| `RunPausedForChallenge` | Run enters pause | `RunId`, `ChallengeKind` |
+| `RunRateLimited` | 429/999 with retry window | `RunId`, `RetryAt` |
 | `QuotaExceeded` | Daily/run cap reached | `SourceKey`, quota kind, limit |
 | `SessionBootstrapped` | Manual login/verification complete | `ProfileId`, `SourceKey`, `State` |
-| `CircuitOpened` | Source breaker opens | `SourceKey`, reason, `OpenUntil` |
-| `RunCompleted` | Successful terminal state | `RunId`, stats, duration |
+| `CircuitOpened` | Source breaker opens | `SourceKey`, trigger kind, `OpenUntil` |
+| `RunCompleted` | Successful terminal state | `RunId`, stats |
 | `RunFailed` | Failure terminal state | `RunId`, reason, stats |
 | `RunCancelled` | Cancellation terminal state | `RunId`, stats |
 
-**Dispatch:** in-process, after `SaveChangesAsync`, so handlers never see uncommitted state. v1 handlers are logging/metrics/progress. No outbox/message bus (YAGNI).
+**Dispatch:** in-process, after `SaveChangesAsync`, so handlers never see uncommitted state. No outbox/message bus (YAGNI). No `JobPostingDiscovered` or `ChallengeDetected` events exist — creation and classification surface through `SearchPageFetched` (with `JobCount`) and the `Challenge` on each result.
 
 ---
 
@@ -505,90 +535,94 @@ stateDiagram-v2
 
 ### 8.1 `PolitenessPolicy`
 
-- Computes the next delay between pages/details.
-- Uses `IRandomSource` for uniform jitter in `[minDelay, maxDelay]`.
-- Enforces a **minimum interval** per source and a **global one-request-at-a-time** rule at the application level.
-- Never returns a delay shorter than the configured minimum, even if a caller asks.
-- `TimeProvider` is used for elapsed-time checks, not for sleeping; sleeping belongs to Infrastructure.
+- Computes the next delay between pages/details: uniform jitter in `[RunLimits.MinDelay, RunLimits.MaxDelay]`, clamped into the window even if the random source misbehaves.
+- Decides only; `IDelay.WaitAsync` (infrastructure `TimeProviderDelay`) sleeps, and the handler skips the delay before page 1.
+- Pure and fully unit-tested (deterministic `IRandomSource` fakes).
 
 ### 8.2 `RetryPolicy`
 
-- `ShouldRetry(FailureKind kind, int attempt)`.
-- Retries only `TransientError`; max 2 attempts.
-- Backoff = exponential + jitter; honors `Retry-After`.
+- `ShouldRetry(ChallengeKind kind, int attempt)`.
+- Retries only `TransientError` with attempts left (hard ceiling `MaxAllowedAttempts = 3`; configured `RunOptions.RetryMaxAttempts = 2` by default).
+- Backoff: 2s base, 4× growth, up to 1s jitter; honors source-stated `Retry-After`.
 - Never retries `RateLimited`, `SoftChallenge`, `Captcha`, `LoginRequired`, `AccessDenied`, `SourceChanged`.
 - Pure and fully unit-tested.
 
 ### 8.3 `ChallengePolicy`
 
-- Maps `ChallengeKind` to `ChallengeDecision`:
-  - `None` → continue.
-  - `RateLimited` → pause until `RetryAfter`, reduce caps.
-  - `SoftChallenge`/`Captcha` → pause for manual solve; never auto-solve.
-  - `LoginRequired` → stop; require session bootstrap.
-  - `AccessDenied` → open circuit; stop.
-  - `SourceChanged` → capture artifact; mark degraded; stop or continue based on threshold.
-  - `TransientError` → retry policy.
-- Decides cooldown duration and whether the run may resume automatically.
+Maps `ChallengeKind` to `ChallengeDecision` (verbatim from `ChallengePolicy.Decide`):
 
-### 8.4 `QuotaPolicy`
+- `None` → `Continue`.
+- `TransientError` → `Retry` (the only retried kind).
+- `RateLimited` → `Pause` until `RetryAfter ?? 30m` (`DefaultRateLimitCooldown`).
+- `SoftChallenge`/`Captcha` → `ManualPause` (1-day `RepeatedChallengeCooldown` once walls hit `MaxConsecutiveChallenges`, else the source's configured cooldown). Never auto-solved.
+- `LoginRequired` → `Stop` ("Session login required.").
+- `AccessDenied` → `OpenCircuit` ("Access denied.").
+- `SourceChanged` → `StopAndInspect` ("Page structure changed.").
+- Decides cooldown duration; the handler applies it (`StopOnWallAsync`). Pure: no I/O, no clock.
 
-- Checks `SourceQuota` against configured per-source caps:
-  - pages/day, details/day, runs/day.
-- Returns `Allowed` or `Exceeded(kind, limit, used)`.
-- The run handler checks quota **before** starting and **before each page/detail**.
-- Quota is persisted so restarts do not reset the day.
+### 8.4 Quotas (`SourceQuota`)
 
-### 8.5 `DeduplicationPolicy`
+- Checks per-source daily caps: pages, details, runs (`TryConsumePage/TryConsumeDetail/TryStartRun` with the configured cap); quota rows are per `(source, UTC day)`, so restarts never reset the day.
+- Returns `QuotaDecision` (`IsAllowed`, kind, limit, used); when exceeded, nothing was consumed.
+- The run handler checks quota **before** starting the run and **before each page/detail**.
+- Quota is persisted; `RecordChallenge` counts walls against the day.
 
-- Identity: `(SourceKey, ExternalJobId)`.
-- Content hash over stable fields; volatile fields (view counts, “applicants”) are excluded.
-- `FirstSeenAt` preserved; `LastSeenAt` refreshed.
-- A posting seen in multiple searches keeps one row; run associations are recorded separately.
+### 8.5 Deduplication (no `DeduplicationPolicy` type — the rules live in the handler + aggregate)
+
+- Identity: `(SourceKey, ExternalJobId)` (unique index on `job_postings`).
+- Content hash over stable fields (`ComputeHash`: title, company, location raw, salary raw, description, normalized skills); volatile fields are never hashed.
+- `FirstSeenAt` preserved; `LastSeenAt` refreshed on every sighting; unchanged re-sightings raise no `JobPostingUpdated`.
+- A posting seen in multiple runs keeps one row; skipped cards are dropped with a named warning, never stored.
 
 ### 8.6 `CompliancePolicy`
 
-- `CanRun(source, acknowledgment)`:
+- `CanRun(SourceKey, ComplianceConsent)` (verbatim signature):
   - `Standard` → allowed.
   - `Restricted` → requires `AcknowledgeSourceRisk = true`.
-  - `HighRisk` → requires explicit acknowledgment + config flag + manual confirmation; otherwise refuse with guidance.
-- `RequiresManualSession(source)`.
-- `AllowedCapabilities(source)` (guest search, detail, login).
+  - `HighRisk` → requires `AcknowledgeSourceRisk` + `AllowHighRiskSources` + `InteractiveConfirmation`; otherwise blocked with guidance naming what is missing.
+- No `RequiresManualSession` / `AllowedCapabilities` members exist; no separate consent types beyond the `ComplianceConsent` record.
 - Pure; tested with a truth table.
 
 ---
 
 ## 9. Repository and unit-of-work contracts
 
+> Verbatim from `JobScrape.Application/Abstractions` — no `UpdateAsync`, no `ListEnabledAsync`, no `FindByNameAsync`, no read-model ports exist.
+
 ```csharp
 public interface ISearchProfileRepository
 {
     Task<SearchProfile?> GetAsync(SearchProfileId id, CancellationToken ct);
-    Task<IReadOnlyList<SearchProfile>> ListEnabledAsync(CancellationToken ct);
     Task AddAsync(SearchProfile profile, CancellationToken ct);
-    Task UpdateAsync(SearchProfile profile, CancellationToken ct);
 }
 
 public interface IScrapeRunRepository
 {
     Task<ScrapeRun?> GetAsync(ScrapeRunId id, CancellationToken ct);
     Task AddAsync(ScrapeRun run, CancellationToken ct);
-    Task UpdateAsync(ScrapeRun run, CancellationToken ct);
 }
 
 public interface IJobPostingRepository
 {
     Task<JobPosting?> FindAsync(SourceKey source, ExternalJobId id, CancellationToken ct);
     Task AddAsync(JobPosting posting, CancellationToken ct);
-    Task UpdateAsync(JobPosting posting, CancellationToken ct);
 }
 
 public interface IBrowserProfileRepository
 {
     Task<BrowserProfile?> GetAsync(BrowserProfileId id, CancellationToken ct);
-    Task<BrowserProfile?> FindByNameAsync(string name, CancellationToken ct);
-    Task AddAsync(BrowserProfile profile, CancellationToken ct);
-    Task UpdateAsync(BrowserProfile profile, CancellationToken ct);
+}
+
+public interface ISourceQuotaRepository
+{
+    Task<SourceQuota?> FindAsync(SourceKey source, DateOnly quotaDate, CancellationToken ct);
+    Task AddAsync(SourceQuota quota, CancellationToken ct);
+}
+
+public interface ISourceCircuitBreakerRepository
+{
+    Task<SourceCircuitBreaker?> FindAsync(SourceKey source, CancellationToken ct);
+    Task AddAsync(SourceCircuitBreaker breaker, CancellationToken ct);
 }
 
 public interface IUnitOfWork
@@ -597,12 +631,13 @@ public interface IUnitOfWork
 }
 ```
 
+Plus `ISessionManager.EnsureSessionAsync`, `IArtifactStore.CaptureAsync`, `IDelay.WaitAsync`, and the read port `ISearchProfileStore.GetAsync` — all declared, the first two without implementations.
+
 **Rules**
 
 - No generic repository.
-- No `IQueryable` leakage.
-- Read models use separate ports (`IJobReadModel`, `ISkillDemandReadModel`) returning DTOs.
-- Reusable query predicates use specifications; simple one-off filters stay inline. Identity lookups use repository methods. See [Application Patterns §5](14-application-patterns.md#5-specification-pattern).
+- No `IQueryable` leakage (no read models exist yet, so no projections either).
+- Identity lookups use repository methods.
 - Invariant violations throw domain exceptions; expected operational failures return `Result<T>`. See [Application Patterns §3](14-application-patterns.md#3-result-pattern).
 - Repository implementations live in Infrastructure; domain/application tests use in-memory fakes.
 - Uniqueness (`profile name`, `source + external id`) is enforced by the database and handled as a conflict, not by a domain-wide lock.
@@ -611,128 +646,112 @@ public interface IUnitOfWork
 
 ## 10. Persistence model
 
+> Verified against `JobScrapeDbContext`, the six `IEntityTypeConfiguration`
+> classes, and migration `202611010743_InitialCreate`. Tables and columns are
+> snake_case; every `DateTimeOffset` is stored as UTC ticks (`UtcTicksConverter`).
+
 ```mermaid
 erDiagram
     SEARCH_PROFILE ||--o{ SCRAPE_RUN : schedules
-    SCRAPE_RUN ||--o{ RUN_EVENT : emits
-    SCRAPE_RUN ||--o{ RUN_POSTING : discovers
-    JOB_POSTING ||--o{ RUN_POSTING : appears_in
-    JOB_POSTING ||--o{ JOB_SKILL : has
-    BROWSER_PROFILE ||--o{ SCRAPE_RUN : used_by
-    SOURCE_QUOTA ||--o{ SCRAPE_RUN : governs
 
     SEARCH_PROFILE {
         guid id PK
-        string name
+        string name UK
         string source_key
-        string keywords
-        string locations_json
-        int experience_years
-        int posted_within_days
-        bool remote_only
-        int max_pages
-        int max_jobs
-        int max_details
+        string criteria
+        string limits
         bool enabled
-        datetime created_at
-        datetime updated_at
+        ticks created_at
+        ticks updated_at
     }
-
     SCRAPE_RUN {
         guid id PK
         guid profile_id FK
         string source_key
+        string limits
         string stage
-        datetime started_at
-        datetime finished_at
-        int pages_fetched
-        int postings_found
-        int postings_new
-        int postings_updated
-        int details_fetched
-        int challenges
-        string outcome
+        string stats
+        ticks created_at
+        ticks started_at
+        ticks finished_at
         string pause_reason
+        ticks retry_at
+        string failure_reason
+        string resume_stage
     }
-
     JOB_POSTING {
         guid id PK
         string source_key
         string external_job_id
+        string canonical_url
         string title
         string company
-        string canonical_url
-        string apply_url
-        string location_raw
+        string company_url
+        string location
+        string experience_raw
+        int experience_min_years
+        int experience_max_years
         string salary_raw
+        string salary
+        string posted_raw
+        ticks posted_at
         string description
-        datetime posted_at
+        string snippet
+        string skills
+        ticks first_seen_at
+        ticks last_seen_at
         string content_hash
-        datetime first_seen_at
-        datetime last_seen_at
         string status
+        int quality_issues
+        string apply_url
     }
-
-    JOB_SKILL {
-        guid id PK
-        guid job_posting_id FK
-        string name
-        string normalized_name
-    }
-
-    RUN_POSTING {
-        guid run_id FK
-        guid job_posting_id FK
-        int position
-        datetime discovered_at
-    }
-
     BROWSER_PROFILE {
         guid id PK
-        string name
+        string name UK
         string source_key
         string engine
         string channel
         string state
-        datetime cooldown_until
+        ticks cooldown_until
         int consecutive_challenges
-        datetime last_used_at
+        ticks last_used_at
+        ticks last_verified_at
     }
-
     SOURCE_QUOTA {
-        guid id PK
-        string source_key
-        date quota_date
+        string source_key PK
+        date quota_date PK
         int pages_fetched
         int details_fetched
         int runs_started
         int challenges
+        ticks updated_at
     }
-
-    RUN_EVENT {
-        guid id PK
-        guid run_id FK
-        int sequence
-        string type
-        string message
-        datetime occurred_at
+    SOURCE_CIRCUIT_BREAKER {
+        string source_key PK
+        string state
+        ticks open_until
+        int consecutive_failures
     }
 ```
+
+The only enforced foreign key is `scrape_runs.profile_id → search_profiles.id` (restrict on delete). `JobSkill` is an owned value list inside `JOB_POSTING.skills`, not a table. `RUN_EVENT`, `RUN_POSTING`, and any read-model tables do not exist; neither do `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, or posting↔run foreign keys.
 
 **Indexes**
 
 - `JOB_POSTING` unique `(source_key, external_job_id)`.
 - `JOB_POSTING` index `(last_seen_at)`, `(company)`, `(posted_at)`.
-- `RUN_POSTING` unique `(run_id, job_posting_id)`.
-- `RUN_EVENT` unique `(run_id, sequence)`.
-- `SOURCE_QUOTA` unique `(source_key, quota_date)`.
+- `SOURCE_QUOTA` primary key `(source_key, quota_date)`.
 - `BROWSER_PROFILE` unique `(name)`.
+- `SEARCH_PROFILE` unique `(name)`.
+- `SCRAPE_RUN` index `(created_at)`.
 
 ---
 
 ## 11. Code sketches
 
 ### 11.1 `ScrapeRun` transition
+
+> Abbreviated from `ScrapeRun.cs` — real guards, real signatures.
 
 ```csharp
 public sealed class ScrapeRun
@@ -743,7 +762,7 @@ public sealed class ScrapeRun
         ProfileId = profileId;
         Source = source;
         Stage = RunStage.Pending;
-        StartedAt = now;
+        CreatedAt = now;
         Stats = RunStats.Empty;
     }
 
@@ -752,32 +771,35 @@ public sealed class ScrapeRun
     public SourceKey Source { get; }
     public RunStage Stage { get; private set; }
     public RunStats Stats { get; private set; }
-    public DateTimeOffset StartedAt { get; }
+    public DateTimeOffset CreatedAt { get; }
     public DateTimeOffset? FinishedAt { get; private set; }
     public ChallengeKind? PauseReason { get; private set; }
     private RunStage? _resumeStage;
 
-    public static ScrapeRun Start(SearchProfileId profileId, SourceKey source, DateTimeOffset now)
-        => new(ScrapeRunId.New(), profileId, source, now);
+    public static ScrapeRun Create(SearchProfile profile, DateTimeOffset now) // disabled profiles throw
+        => new(ScrapeRunId.New(), profile.Id, profile.Source, now);
 
-    public void BeginSearching(DateTimeOffset now)
+    public void BeginSearching()
     {
         EnsureStage(RunStage.StartingSession);
         Stage = RunStage.Searching;
     }
 
-    public void RecordPage(PageStats page)
+    public void RecordPage(PageStats page, DateTimeOffset now)
     {
-        EnsureActive();
+        EnsureStage(RunStage.Searching);
+        if (Stats.PagesFetched >= Limits.MaxPages)
+            throw new DomainException($"Page cap of {Limits.MaxPages} reached.");
         Stats = Stats.AddPage(page);
     }
 
     public void PauseForChallenge(ChallengeKind kind, DateTimeOffset now)
     {
         if (Stage is not (RunStage.Searching or RunStage.Enriching))
-            throw new DomainException($"Cannot pause from {Stage}.");
-        if (kind == ChallengeKind.None)
-            throw new DomainException("Cannot pause for ChallengeKind.None.");
+            throw new DomainException($"Expected Searching or Enriching, got {Stage}.");
+        if (kind is not (ChallengeKind.SoftChallenge or ChallengeKind.Captcha
+                or ChallengeKind.LoginRequired or ChallengeKind.AccessDenied))
+            throw new DomainException($"Cannot pause for challenge kind {kind}.");
         _resumeStage = Stage;
         PauseReason = kind;
         Stage = RunStage.PausedForChallenge;
@@ -785,24 +807,31 @@ public sealed class ScrapeRun
 
     public void Resume(DateTimeOffset now)
     {
-        if (Stage != RunStage.PausedForChallenge)
-            throw new DomainException("Only a paused run can resume.");
-        Stage = _resumeStage ?? throw new DomainException("No resume stage recorded.");
-        _resumeStage = null;
-        PauseReason = null;
+        if (Stage == RunStage.PausedForChallenge)
+        {
+            Stage = _resumeStage!.Value; // searching or enriching, whichever paused
+            _resumeStage = null;
+            PauseReason = null;
+        }
+        else if (Stage == RunStage.RateLimited)
+        {
+            if (now < RetryAt) throw new DomainException(...); // wait out the window
+            Stage = RunStage.Searching;
+        }
+        else throw new DomainException($"Only a paused run can resume (stage {Stage}).");
     }
 
     public void Complete(DateTimeOffset now)
     {
         EnsureStage(RunStage.Persisting);
-        Stage = RunStage.Completed;
-        FinishedAt = now;
+        if (Stats.PagesFetched == 0)
+            throw new DomainException("A run cannot complete without fetching a page.");
+        Finish(RunStage.Completed, now);
     }
 
-    private void EnsureActive()
+    private void EnsureNotTerminal() // Fail/Cancel allowed from any non-terminal stage
     {
-        if (Stage is RunStage.Completed or RunStage.Failed or RunStage.Cancelled)
-            throw new DomainException($"Run is terminal ({Stage}).");
+        if (IsTerminal) throw new DomainException($"Run is terminal ({Stage}).");
     }
 
     private void EnsureStage(RunStage expected)
@@ -815,32 +844,28 @@ public sealed class ScrapeRun
 
 ### 11.2 `JobPosting.Refresh`
 
+> Abbreviated from `JobPosting.cs` — the identity check, no-change early-out, and hash-gated event are the real shape.
+
 ```csharp
 public void Refresh(JobSnapshot snapshot, DateTimeOffset now)
 {
     if (snapshot.Source != Source || snapshot.ExternalJobId != ExternalJobId.Value)
         throw new DomainException("Snapshot identity does not match posting identity.");
 
-    var newHash = ContentHash.Compute(snapshot);
-    if (newHash == ContentHash)
-    {
-        LastSeenAt = now; // seen again, unchanged
-        return;
-    }
-
-    Title = JobTitle.Create(snapshot.Title);
-    Company = CompanyName.Create(snapshot.Company);
-    CanonicalUrl = CanonicalUrl.Create(snapshot.Url, Source);
-    ReplaceSkills(snapshot.Skills);
-    // ... update the remaining mutable fields ...
+    var before = ContentHash;
+    // ... update mutable fields from the snapshot, set LastSeenAt = now ...
+    var newHash = ComputeHash(); // title, company, location raw, salary raw, description, skills
+    if (newHash == before)
+        return; // seen again, unchanged: no event
 
     ContentHash = newHash;
-    LastSeenAt = now;
-    AddDomainEvent(new JobPostingUpdated(Id, Source, newHash));
+    AddDomainEvent(new JobPostingUpdated(Id, Source, before, newHash, now));
 }
 ```
 
 ### 11.3 `PolitenessPolicy`
+
+> Abbreviated from `PolitenessPolicy.cs`.
 
 ```csharp
 public sealed class PolitenessPolicy
@@ -858,31 +883,32 @@ public sealed class PolitenessPolicy
     {
         var min = (int)_limits.MinDelay.TotalMilliseconds;
         var max = (int)_limits.MaxDelay.TotalMilliseconds;
-        return TimeSpan.FromMilliseconds(_random.Next(min, max + 1));
+        var jittered = Math.Clamp(_random.NextInt32(min, max + 1), min, max);
+        return TimeSpan.FromMilliseconds(jittered);
     }
 }
 ```
 
 ### 11.4 `ChallengePolicy`
 
+> Abbreviated from `ChallengePolicy.Decide` (verbatim mapping; validation omitted).
+
 ```csharp
 public static class ChallengePolicy
 {
-    public static ChallengeDecision Decide(ChallengeAssessment assessment, int consecutiveChallenges)
+    public static ChallengeDecision Decide(ChallengeAssessment assessment, int consecutiveChallenges, TimeSpan challengeCooldown)
     {
         return assessment.Kind switch
         {
-            ChallengeKind.None => ChallengeDecision.Continue,
-            ChallengeKind.TransientError => ChallengeDecision.Retry(attempt: 1),
-            ChallengeKind.RateLimited => ChallengeDecision.Pause(
+            ChallengeKind.None => new ChallengeDecision(ChallengeAction.Continue),
+            ChallengeKind.TransientError => new ChallengeDecision(ChallengeAction.Retry),
+            ChallengeKind.RateLimited => new ChallengeDecision(ChallengeAction.Pause,
                 assessment.RetryAfter ?? TimeSpan.FromMinutes(30)),
-            ChallengeKind.SoftChallenge or ChallengeKind.Captcha => ChallengeDecision.ManualPause(
-                assessment.Kind,
-                consecutiveChallenges >= 3 ? TimeSpan.FromDays(1) : TimeSpan.FromHours(1)),
-            ChallengeKind.LoginRequired => ChallengeDecision.Stop("Session login required."),
-            ChallengeKind.AccessDenied => ChallengeDecision.OpenCircuit("Access denied."),
-            ChallengeKind.SourceChanged => ChallengeDecision.StopAndInspect("Page structure changed."),
-            _ => ChallengeDecision.Stop("Unclassified challenge.")
+            ChallengeKind.SoftChallenge or ChallengeKind.Captcha => new ChallengeDecision(ChallengeAction.ManualPause,
+                consecutiveChallenges >= BrowserProfile.MaxConsecutiveChallenges ? TimeSpan.FromDays(1) : challengeCooldown),
+            ChallengeKind.LoginRequired => new ChallengeDecision(ChallengeAction.Stop, Reason: "Session login required."),
+            ChallengeKind.AccessDenied => new ChallengeDecision(ChallengeAction.OpenCircuit, Reason: "Access denied."),
+            _ => new ChallengeDecision(ChallengeAction.StopAndInspect, Reason: "Page structure changed."),
         };
     }
 }
@@ -897,10 +923,23 @@ public sealed class ScrapeRunTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 2, 8, 0, 0, TimeSpan.Zero);
 
+    private static ScrapeRun StartedRun()
+    {
+        var profile = SearchProfile.Create(
+            "backend",
+            SourceKey.Naukri,
+            new SearchCriteria("backend", ["Bengaluru"], null, null, false),
+            new RunLimits(3, 10, 0, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)),
+            Now);
+        var run = ScrapeRun.Create(profile, Now);
+        run.Start(Now);
+        return run;
+    }
+
     [Fact]
     public void Cannot_complete_before_persisting()
     {
-        var run = ScrapeRun.Start(SearchProfileId.New(), SourceKey.Naukri, Now);
+        var run = StartedRun();
 
         Assert.Throws<DomainException>(() => run.Complete(Now));
     }
@@ -908,8 +947,8 @@ public sealed class ScrapeRunTests
     [Fact]
     public void Challenge_pause_requires_a_real_challenge()
     {
-        var run = ScrapeRun.Start(SearchProfileId.New(), SourceKey.Naukri, Now);
-        run.BeginSearching(Now);
+        var run = StartedRun();
+        run.BeginSearching();
 
         Assert.Throws<DomainException>(() => run.PauseForChallenge(ChallengeKind.None, Now));
     }
@@ -917,8 +956,8 @@ public sealed class ScrapeRunTests
     [Fact]
     public void Resume_returns_to_searching_and_clears_reason()
     {
-        var run = ScrapeRun.Start(SearchProfileId.New(), SourceKey.Naukri, Now);
-        run.BeginSearching(Now);
+        var run = StartedRun();
+        run.BeginSearching();
         run.PauseForChallenge(ChallengeKind.Captcha, Now);
 
         run.Resume(Now.AddMinutes(5));

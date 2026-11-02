@@ -6,6 +6,46 @@
 
 ---
 
+## 0. As implemented: API + cockpit
+
+> Sections 3–7 describe the `JobLens.Cli` design target; no CLI, `doctor`, scheduler, or export exists. The implemented operator path is the loopback API plus the cockpit, and only Naukri has an adapter.
+
+```bash
+# 1. Build (copies the Playwright 1.64.1 driver into the API output).
+dotnet build src/backend/JobScrape.slnx
+
+# 2. Install a browser once per Playwright version. Linux, no PowerShell needed;
+#    on other OSes the node/<platform> folder name differs.
+src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/linux-x64/node \
+  src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
+
+# 3. API on :5207 (Development: applies migrations on start).
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj
+
+# 4. Cockpit on :3000, in another terminal.
+cd src/frontend && bun run dev
+```
+
+Skip step 2 by creating the session with channel `Chrome` or `Edge` to use a browser already installed on the machine.
+
+Then, in the cockpit:
+
+1. `#/sessions` — create a session for `naukri` (engine `Chromium`, channel `Bundled`, or `Chrome`/`Edge`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret.
+2. `#/profiles` — create a search profile (keywords, cities, caps).
+3. `#/runs` — pick an enabled profile and a launchable session of the same source, then **Start**. A **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends.
+4. The run detail polls every 2 s (stage track, page/posting/detail meters, postings table). **Cancel** stops the run cooperatively and keeps partial results.
+
+Rules the API enforces:
+
+- One run at a time: a second start returns `409 RUN_IN_PROGRESS` until the first ends or is cancelled.
+- If the API stops mid-run, the run is cancelled; a run still in an executing stage at the next start (e.g. after a crash) is marked `Failed` with `Interrupted: the API stopped while the run was executing.`
+- Walls are never retried. A challenge pauses the run, a rate limit waits out its window, a changed page or a wall at session start fails it. Challenge and changed-page evidence is written to `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` (`assessment.json`, `screenshot.png`, `page.html`); a challenged session cools down (a login wall marks it expired). There is no resume, login, or probe endpoint yet: cancel the paused run, wait out the cooldown, and start a new one.
+- Relative `JobScrape:Storage` paths (`artifacts/...`) resolve against the API's content root (the project directory under `dotnet run --project`).
+
+Verified live on 2026-11-01: headed Chromium (`Bundled`), profile "dot net developer" in Pune, caps 2 pages / 40 jobs / 3 details → `Completed` in ~30 s with 40 new postings, 3 details enriched, 0 walls, session `Healthy`.
+
+---
+
 ## 1. Supported matrix
 
 | OS | Minimum | Notes |
@@ -379,6 +419,8 @@ sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25
 
 ## 9. Logs and artifacts
 
+> **As implemented:** wall evidence lives in `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` as `assessment.json` (kind, confidence, evidence, URL), `screenshot.png` (full page), and `page.html` (capped at 2,000,000 chars); capture is best effort. No `run.json` or `trace.zip` is written — run state is in SQLite and readable through `GET /api/v1/runs/{id}`. API logs go to `artifacts/logs/jobscrape-api-*.jsonl`. The table below is the design target.
+
 | Log/artifact | What it tells you |
 |---|---|
 | `runs/{id}/run.json` | Stage, stats, outcome, challenge kind, timings. |
@@ -411,12 +453,12 @@ jq -c 'select(.TraceId == "00-...-01")' artifacts/logs/joblens-api-*.jsonl
 |---|---|---|
 | `dotnet: command not found` | SDK not installed/PATH | Install .NET 10 SDK; reopen shell. |
 | `The current .NET SDK does not support targeting .NET 10` | Older SDK | Install 10.0.403+; check `global.json`. |
-| `Executable doesn't exist ... chromium` | Browsers not installed | `doctor --install-browsers` or `playwright.ps1 install`. |
+| `Executable doesn't exist ... chromium` | Browsers not installed | Run the driver's `cli.js install chromium` from the API build output (§0), or use channel `Chrome`/`Edge`. |
 | Linux: `Host system is missing dependencies` | Missing libs | `playwright.ps1 install --with-deps chromium` (sudo may be required). |
 | Browser closes immediately | Headless/display issue | Use headed on desktop; `xvfb-run` on server. |
 | `Target page, context or browser has been closed` | Crash/profile lock | Check logs; ensure no other process uses the profile. |
-| `ProcessSingleton`/profile lock | Two runs share a user-data dir | One run at a time; wait; remove stale lock only after the process exits. |
-| Naukri blocked/empty | Akamai challenge or headless | Headed first contact; solve manually; cooldown. |
+| `ProcessSingleton`/profile lock | Two processes share a user-data dir (the API itself runs one at a time) | Close any browser you opened on the profile directory; remove a stale lock only after the process exits. |
+| Naukri blocked/empty | Akamai challenge or headless | Keep `JobScrape:Browser:Headless=false`; check the run's `assessment.json`/`screenshot.png`; wait out the cooldown. |
 | Indeed Cloudflare “Just a moment” | Managed challenge | Stop; wait; normal network; no bypass. |
 | LinkedIn auth wall/999 | Rate limit/auth wall | Stop; wait; manual session; consider disabling. |
 | `database is locked` | Concurrent writer/long transaction | One writer; WAL; `busy_timeout`; retry the operation. |

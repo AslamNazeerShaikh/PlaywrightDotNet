@@ -1,9 +1,13 @@
 # JobScrape Cockpit (control plane) — React 19 + Bun
 
 > **Status:** ops-deck walking skeleton. The BFF proxies `/api/*` loopback-only
-> to the .NET data plane, and four routed pages exercise the tested backend
+> to the .NET data plane, and seven routed pages exercise the tested backend
 > features: a central overview dashboard, engine-health detail,
-> search-profile lookup, and a topology map.
+> search-profile management (create with inline server field errors,
+> list, detail; persisted in SQLite), source status (compliance gate,
+> daily quota meters, circuit state), browser-profile sessions (create,
+> state and launch readiness), runs (start a scrape, follow it live by
+> polling, cancel it, read its postings), and a topology map.
 >
 > **Look:** hacker instrument-panel — matte-black surfaces, one emerald signal
 > color, framed modules with corner brackets, IBM Plex Mono everywhere
@@ -31,7 +35,7 @@
 | `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.  |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
-| `bun test`                                | 32 tests: config, proxy, routes, router, telemetry, API client, deck pages. |
+| `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
 | `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
 | `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |
@@ -56,19 +60,19 @@ src/frontend/
 │   ├── client/
 │   │   ├── index.html / main.tsx / app.tsx   # ops-deck shell: cmd bar, tabs, routed pages
 │   │   ├── lib/
-│   │   │   ├── api.ts        # timed fetch helpers; UI maps stable codes, never prose
-│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/topology
+│   │   │   ├── api.ts        # timed fetch helpers (incl. listRuns/getRun/listRunPostings/startRun/cancelRun); UI maps stable codes, never prose
+│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/sources #/sessions #/runs #/topology (codes 01–07)
 │   │   │   └── telemetry.ts  # samples, stats, event log (pure, unit-tested)
 │   │   ├── components/   # module frame, sparkline, tac-map, scramble, legend,
 │   │   │                 # compass, ruler-tabs (ArtCraft rail × radar blip)
 │   │                 # (tac-map: god's-eye battlespace per iart-ai/svg-animation:
 │   │                 #  sweep, tracers, blips — SMIL, motion-gated)
-│   │   ├── pages/        # overview, health, profiles, topology (one page per feature)
+│   │   ├── pages/        # overview, health, profiles, sources (+ Meter), sessions, runs, topology
 │   │   ├── fonts/        # IBM Plex Mono woff2, self-hosted (bundled as data URIs)
 │   │   └── styles/       # design system: tokens, grid, modules, no-overflow rules
 │   └── tests/
 │       ├── server/       # config, proxy (incl. live stub upstream), routes
-│       └── client/       # router, telemetry, api client units, deck interaction
+│       └── client/       # router, telemetry, api client units, runs page, deck interaction
 └── dist/                 # build output (gitignored)
 ```
 
@@ -78,8 +82,14 @@ src/frontend/
   `127.0.0.1`. CORS is never opened.
 - Failures render the stable `code` (`PROFILE_NOT_FOUND`,
   `VALIDATION_FAILED`, `DOTNET_UNREACHABLE`, …), never prose parsing.
-- One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`,
-  `#/topology`): deep links survive refresh with zero server config.
+- One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`, `#/sources`, `#/sessions`,
+  `#/runs`, `#/topology`): deep links survive refresh with zero server config.
+- Runs page (`#/runs`, code 06): the start form offers enabled profiles and
+  only the sessions of the chosen profile's source (sessions that cannot
+  launch are disabled); a history table; the run detail (stage track,
+  page/posting/detail meters via `Meter`'s `progress` prop — reaching a cap
+  reads as done, not as a warning — and Cancel); and the run's postings
+  table. `RUN_STARTED` and the run's finish go to the event log.
 - Dense but never overflowing: every grid child can shrink to zero, tokens
   wrap anywhere, wide tables scroll inside their module. Full viewport width
   is used; columns reflow at runtime via auto-fit grids plus a
@@ -91,15 +101,29 @@ src/frontend/
   probe outcome (unknown/live/down), and scale fluidly via `viewBox`.
 - `bun fmt` owns formatting (including JSDoc reflow via `jsdoc = true`);
   `bun check` owns types.
-- Render radar: every component logs `[render] Name #N` + `[mount]`/`[unmount]`
-  via `useRenderLog`, and every API call logs `[fetch] GET path` — dev only
-  (off in production builds and under `bun test`). Force on/off anywhere
-  with `?renders=1` / `?renders=0`. Open devtools, filter the console, and
-  runaway renders or remount loops show themselves immediately.
+- Render radar: with `?renders=1`, every component logs `[render] Name #N` +
+  `[mount]`/`[unmount]` via `useRenderLog`, and every API call logs
+  `[fetch] GET path`. Off by default: logging every render cost ~35 console
+  calls a second on an idle deck, which an open devtools console turns into
+  real CPU and memory. Render counts are always kept; read them with
+  `__deckRenders()` in the console (tests use `renderCount`).
+- Runtime budget, pinned by `tests/client/perf.test.tsx`: the UTC clock owns
+  its tick, so an idle deck commits one `<span>` a second, not the page; the
+  health auto-probe runs every 10 s only while the tab is visible and catches
+  up once on return; a list response that arrives after a newer request for
+  the same list is dropped (latest wins); a non-JSON 2xx body becomes a
+  `BAD_RESPONSE` problem instead of a throw that would stall the probe.
+  The selected run is polled every 2 s (`RUN_POLL_MS`) through a
+  `setTimeout` chain, so the next request starts only after the last answer;
+  polls are skipped while the tab is hidden and stop once the run is
+  terminal.
 - Motion is a system, not decoration: one spring token, staggered deck
   entrances, draw-in charts, breathing live-dots, press physics on controls
   (per `emilkowalski/animate` + `mengto/animation-systems`). Transform and
-  opacity only; `prefers-reduced-motion` disables it all.
+  opacity only; `prefers-reduced-motion` disables it all. Continuous motion
+  uses CSS keyframes, never SMIL (SMIL restyles the SVG every frame on the
+  main thread), and an infinitely animated shape gets its own element so its
+  transform runs on the compositor (the compass needle overlays the tape).
 - Elevation follows `mengto/beautiful-shadows`: layered neutral shadows,
   one strength per state (sm controls, md resting modules, lg lifted hover),
   recessed wells for data, borders never replaced. Top highlight included
@@ -144,7 +168,7 @@ reference render, not an accident of it.
 | 1536 (1080p @125% — common OS scaling) | 12-col desktop holds | same caps as baseline |
 | 1366 (laptop) | 12-col desktop holds | same caps as baseline |
 | ≤1100 | spans collapse 3/4/5→6, 7/8→12 | fluid range active |
-| ≤720 | 6-col grid, full-width rows, tighter padding | fluid minimums |
+| ≤720 | 6-col grid, full-width rows, tighter padding; the ruler rail shows stop codes only (labels visually hidden, kept for link names) | fluid minimums |
 | 390 (phone) | single column; tables scroll in-module | minimums, no overflow |
 
 Rules that follow from the baseline:
@@ -165,9 +189,12 @@ Rules that follow from the baseline:
 - **Port default is `5207`, not `5080`.** The doc's service table says
   `5080`; the repo's `launchSettings.json` serves `5207`. The BFF default
   follows repo reality; the table needs a fix-up.
-- **No TanStack, no shadcn, no SSE yet.** Two fetches do not earn a query
-  client (YAGNI); they land with the runs/jobs verticals, as do the
-  `shadcn/ui` copy-in, auth (cookie/CSRF/bearer), and the SSE event proxy.
+- **No TanStack, no shadcn, no SSE yet.** A handful of fetches do not earn a
+  query client (YAGNI). The runs vertical shipped without SSE: it uses the
+  spec's documented fallback, polling `GET /api/v1/runs/{id}` every 2 s
+  (the API has no events endpoint). TanStack, the `shadcn/ui` copy-in, auth
+  (cookie/CSRF/bearer), and the SSE event proxy wait for the jobs vertical
+  or a real need.
 - **No `jest-dom`.** Its matchers have no `bun:test` type augmentation;
   the suite asserts on `textContent`. Re-add with proper setup if matchers
   earn their keep.
@@ -178,9 +205,10 @@ Rules that follow from the baseline:
   resolve assets relative to the importing HTML; there is no `public/`
   convention. The `public/` folder was removed.
 
-## Follow-ups (runs vertical)
+## Follow-ups
 
-Auth + CSRF + BFF bearer token, SSE run-event proxy, TanStack
+Auth + CSRF + BFF bearer token, SSE run-event proxy (once the API has
+`/runs/{id}/events`), run resume/artifacts views, TanStack
 Query/Router/Table, shadcn copy-in, `api:types` codegen into
 `src/shared/contracts.ts`, `openapi-typescript` wiring, production
 single-binary (`bun build --compile`) smoke.
