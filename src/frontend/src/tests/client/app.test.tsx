@@ -114,7 +114,7 @@ const sourceList = {
         detailsUsed: 60,
         detailCap: 60,
         runsUsed: 1,
-        runCap: 2,
+        runCap: null,
         challenges: 1,
       },
       circuit: {
@@ -476,6 +476,7 @@ describe("ops deck", () => {
     const naukri = queries.getByRole("region", { name: "NAUKRI" });
     expect(naukri.textContent).toContain("GATE OPEN");
     expect(naukri.textContent).toContain("CIRCUIT OPEN");
+    expect(naukri.textContent).toContain("Runs: 1 · no daily cap");
     expect(naukri.textContent).toContain("open until 2026-11-03T08:00:00Z");
     expect(naukri.textContent).toContain("3 pages · 60 jobs · 60 details");
     const meters = queries.getAllByRole("meter", { name: "Pages used" });

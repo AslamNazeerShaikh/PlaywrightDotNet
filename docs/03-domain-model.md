@@ -155,6 +155,7 @@ classDiagram
         +TryConsumePage(cap, now)
         +TryConsumeDetail(cap, now)
         +TryStartRun(cap, now)
+        +RecordRunStart(now)
         +RecordChallenge(DateTimeOffset)
     }
 
@@ -308,8 +309,9 @@ classDiagram
 
 **Behavior**
 
-- `TryConsumePage(cap)`, `TryConsumeDetail(cap)`, `TryStartRun(cap)`, `RecordChallenge()`.
-- Returns a typed `QuotaDecision` (`Allowed`, `Exceeded`).
+- `TryConsumePage(cap)`, `TryConsumeDetail(cap)`, `TryStartRun(cap)`, `RecordRunStart(now)`, `RecordChallenge()`.
+- `RecordRunStart` counts a run without a cap. The handler calls it when the source has no daily run cap.
+- `TryConsumePage`, `TryConsumeDetail`, and `TryStartRun` return a typed `QuotaDecision` (`Allowed`, `Exceeded`).
 
 ### 4.6 `RunEvent` (entity, not aggregate root)
 
@@ -562,7 +564,7 @@ Maps `ChallengeKind` to `ChallengeDecision` (verbatim from `ChallengePolicy.Deci
 
 ### 8.4 Quotas (`SourceQuota`)
 
-- Checks per-source daily caps: pages, details, runs (`TryConsumePage/TryConsumeDetail/TryStartRun` with the configured cap); quota rows are per `(source, UTC day)`, so restarts never reset the day.
+- Checks per-source daily caps: pages, details, and optionally runs (`TryConsumePage/TryConsumeDetail/TryStartRun` with the configured cap). A null run cap records the run with `RecordRunStart` and does not limit it. Quota rows are per `(source, UTC day)`, so restarts never reset the day.
 - Returns `QuotaDecision` (`IsAllowed`, kind, limit, used); when exceeded, nothing was consumed.
 - The run handler checks quota **before** starting the run and **before each page/detail**.
 - Quota is persisted; `RecordChallenge` counts walls against the day.

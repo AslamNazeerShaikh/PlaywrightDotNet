@@ -61,6 +61,14 @@ namespace JobScrape.Infrastructure.Configuration
                     continue;
                 }
 
+                if (source.UnlimitedRunCap && source.DailyRunCap > 0)
+                {
+                    failures.Add(
+                        $"Sources:{key}: UnlimitedRunCap=true conflicts with DailyRunCap={source.DailyRunCap}; remove one."
+                    );
+                    continue;
+                }
+
                 // RunLimits is the single source of truth for cap and delay ranges.
                 try
                 {

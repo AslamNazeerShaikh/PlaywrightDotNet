@@ -34,12 +34,15 @@ namespace JobScrape.Api.Tests
             Assert.Equal(new SourcePolicy(3, 60, 60, 2500, 6000, 45), naukri.Policy);
             Assert.Equal(25, naukri.Quota.PageCap);
             Assert.Equal(0, naukri.Quota.PagesUsed);
+            Assert.Null(naukri.Quota.RunCap);
             Assert.Equal("Closed", naukri.Circuit.State);
             var linkedin = body.Items[1];
             Assert.Equal("HighRisk", linkedin.Tier);
             Assert.False(linkedin.Enabled);
             Assert.False(linkedin.Gate.Allowed);
             Assert.NotNull(linkedin.Gate.Reason);
+            Assert.Equal(1, linkedin.Quota.RunCap);
+            Assert.Equal(1, body.Items[0].Quota.RunCap);
         }
 
         [Fact]

@@ -391,9 +391,8 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "MaxDelayMs": 6000,
         "DailyPageCap": 25,
         "DailyDetailCap": 60,
-        "ChallengeCooldownMinutes": 45,
-        "RequiresConsent": false,
-        "UseApiFastPath": false
+        "UnlimitedRunCap": true,
+        "ChallengeCooldownMinutes": 45
       },
       "indeed": {
         "Enabled": false,
@@ -406,8 +405,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "DailyPageCap": 12,
         "DailyDetailCap": 30,
         "DailyRunCap": 1,
-        "ChallengeCooldownMinutes": 60,
-        "RequiresConsent": true
+        "ChallengeCooldownMinutes": 60
       },
       "linkedin": {
         "Enabled": false,
@@ -420,8 +418,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "DailyPageCap": 4,
         "DailyDetailCap": 8,
         "DailyRunCap": 1,
-        "ChallengeCooldownMinutes": 60,
-        "RequiresConsent": true
+        "ChallengeCooldownMinutes": 60
       }
     },
     "Run": {
@@ -439,7 +436,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 }
 ```
 
-> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` is optional. Omit it for no daily run cap; the run count is still recorded for the Sources page.
+> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page.
 
 ### 5.2 Precedence and secrets
 

@@ -552,7 +552,7 @@ If a requirement needs any of these, the answer is **no** or **re-scope with an 
 1. Stop the run; honor `Retry-After`.
 2. Record the source/page/endpoint.
 3. Wait at least the delay; default 30–60 min.
-4. Reduce pages/details/runs per day.
+4. Reduce pages and details per day. If the source has no run cap, set `DailyRunCap` and remove `UnlimitedRunCap` before resuming.
 5. Resume with one page; if 429 again, open the circuit for 24 h.
 
 ### 15.3 Account restriction / login wall

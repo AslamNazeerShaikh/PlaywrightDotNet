@@ -314,11 +314,14 @@ namespace JobScrape.Application.Tests.Scraping
             harness.Source.Then(Page(null, Job("1")));
             await RunOkAsync(harness);
             harness.Source.Then(Page(null, Job("2")));
+            await RunOkAsync(harness);
+            harness.Source.Then(Page(null, Job("3")));
 
             var result = await harness.Build().HandleAsync(harness.Request, Ct);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(2, harness.Store.Runs.Count);
+            Assert.Equal(3, harness.Store.Runs.Count);
+            Assert.Equal(3, Assert.Single(harness.Store.Quotas).RunsStarted);
         }
 
         // ---- session ----

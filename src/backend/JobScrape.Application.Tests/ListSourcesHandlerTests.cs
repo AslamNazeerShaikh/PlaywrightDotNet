@@ -65,6 +65,22 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task NullRunCapIsReportedAsNoCap()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var handler = Create(
+                store,
+                ComplianceConsent.None,
+                Settings(SourceKey.Naukri) with { DailyRunCap = null }
+            );
+
+            var naukri = Assert.Single((await handler.HandleAsync(Ct)).Items);
+
+            Assert.Null(naukri.Quota.RunCap);
+            Assert.Equal(0, naukri.Quota.RunsUsed);
+        }
+
+        [Fact]
         public async Task ReportsTodaysQuotaAndCircuitState()
         {
             var store = new ScrapeHarness.InMemoryStore();

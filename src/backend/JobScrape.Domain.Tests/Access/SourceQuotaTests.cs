@@ -126,6 +126,7 @@ namespace JobScrape.Domain.Tests.Access
             Assert.Throws<DomainException>(() => quota.TryConsumePage(5, tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.TryConsumeDetail(5, tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.TryStartRun(5, tomorrowUtc));
+            Assert.Throws<DomainException>(() => quota.RecordRunStart(tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.RecordChallenge(tomorrowUtc));
             Assert.Equal(0, quota.PagesFetched);
         }
