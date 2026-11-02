@@ -27,6 +27,8 @@ namespace JobScrape.Api.Tests
     {
         private static readonly string[] Pune = ["Pune"];
 
+        private static readonly string[] DotNetSkills = ["C#", "ASP.NET Core"];
+
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
         private static ApiFactory Factory(FakeSource source)
@@ -172,6 +174,69 @@ namespace JobScrape.Api.Tests
 
             var list = await client.GetFromJsonAsync<RunListResponse>("api/v1/runs", Ct);
             Assert.Equal(run.Id, Assert.Single(list!.Items).Id);
+        }
+
+        [Fact]
+        public async Task SkillMatchAndRecencyFlowKeepsOnlyMatchingFreshPostings()
+        {
+            var source = new FakeSource { Skilled = true };
+            await using var factory = Factory(source);
+            using var client = factory.CreateClient();
+
+            using var profile = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "dotnet-fresh",
+                    sourceKey = "naukri",
+                    keywords = "asp.net core c#",
+                    locations = Pune,
+                    postedWithinDays = 1,
+                    remoteOnly = false,
+                    requiredSkills = DotNetSkills,
+                },
+                Ct
+            );
+            var profileId = (
+                await profile.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct)
+            )!.Id;
+            using var session = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "naukri-main", sourceKey = "naukri" },
+                Ct
+            );
+            var sessionId = (await session.Content.ReadFromJsonAsync<SessionResponse>(Ct))!.Id;
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+
+            var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done.Stage);
+            Assert.Equal(1, done.PagesFetched);
+            Assert.Equal(1, done.PostingsFound);
+            Assert.Equal(1, done.PostingsNew);
+
+            var postings = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings",
+                Ct
+            );
+            Assert.Equal(["101"], postings!.Items.Select(p => p.ExternalJobId));
+
+            using var csv = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv",
+                Ct
+            );
+            var csvText = await csv.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("job-listings-dev-101", csvText);
+            Assert.DoesNotContain("job-listings-dev-102", csvText);
+            Assert.DoesNotContain("job-listings-dev-103", csvText);
+            var fileName = csv.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-dotnet-fresh-", fileName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.csv", fileName, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -333,6 +398,8 @@ namespace JobScrape.Api.Tests
 
             public volatile bool Throws;
 
+            public volatile bool Skilled;
+
             public TaskCompletionSource Entered { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -357,8 +424,17 @@ namespace JobScrape.Api.Tests
                     await Task.Delay(Timeout.Infinite, cancellationToken);
                 }
 
+                var now = DateTimeOffset.UtcNow;
+                JobSnapshot[] jobs = Skilled
+                    ?
+                    [
+                        Snapshot("101", ["C#", "ASP.NET Core"], now.AddHours(-2)),
+                        Snapshot("102", ["Java"], now.AddHours(-3)),
+                        Snapshot("103", ["C#"], now.AddDays(-5)),
+                    ]
+                    : [Snapshot("101"), Snapshot("102")];
                 return new SearchPageResult(
-                    [Snapshot("101"), Snapshot("102")],
+                    jobs,
                     null,
                     new PageFingerprint("101", "1 - 2 of 2"),
                     ChallengeAssessment.Clear
@@ -374,7 +450,11 @@ namespace JobScrape.Api.Tests
                 throw new NotSupportedException("Details are off for this fake.");
             }
 
-            private static JobSnapshot Snapshot(string id)
+            private static JobSnapshot Snapshot(
+                string id,
+                string[]? skills = null,
+                DateTimeOffset? postedAt = null
+            )
             {
                 return new JobSnapshot
                 {
@@ -382,6 +462,8 @@ namespace JobScrape.Api.Tests
                     ExternalJobId = id,
                     Url = $"https://www.naukri.com/job-listings-dev-{id}",
                     Title = $"Developer {id}",
+                    Skills = skills ?? [],
+                    PostedAt = postedAt,
                 };
             }
         }
