@@ -329,6 +329,37 @@ namespace JobScrape.Application.Tests
                         : null
                 );
             }
+
+            public Task<IReadOnlyList<ExportPosting>?> ListExportPostingsAsync(
+                Guid runId,
+                int limit,
+                CancellationToken cancellationToken
+            )
+            {
+                LastLimit = limit;
+                ExportPosting posting = new(
+                    Guid.NewGuid(),
+                    "101",
+                    "naukri",
+                    "https://www.naukri.com/job-listings-dev-101",
+                    null,
+                    "Developer",
+                    null,
+                    null,
+                    "Unknown",
+                    null,
+                    null,
+                    null,
+                    [],
+                    null,
+                    Now,
+                    Now
+                );
+                IReadOnlyList<ExportPosting>? items = runs.Any(r => r.Id == runId)
+                    ? [posting]
+                    : null;
+                return Task.FromResult(items);
+            }
         }
     }
 }

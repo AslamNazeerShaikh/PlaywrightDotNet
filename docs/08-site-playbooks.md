@@ -353,6 +353,7 @@ Response: stop immediately; no retry; cooldown 60 min; circuit open 24h; require
 - [ ] Guest fixture parses expected cards and canonical URLs.
 - [ ] Auth-wall fixture yields `LoginRequired` and zero jobs.
 - [ ] 429/999 fixture yields `RateLimited`; no retry is attempted.
+- [ ] `GetDetailAsync` is blocked without fetching (`SupportsDetails: false`).
 - [ ] With consent, a live canary is one page, headed, and stops on a wall.
 - [ ] Removing the adapter does not affect Naukri/Indeed or the core.
 
@@ -439,7 +440,7 @@ Response: stop; screenshot/HTML/trace; cooldown 60 min; circuit open 24h; do not
 - [ ] Opt-in gate works; no run without acknowledgment.
 - [ ] Search fixture parses expected cards and `jk` IDs.
 - [ ] Detail fixture extracts description and canonical `viewjob` URL.
-- [ ] Cloudflare fixture yields `SoftChallenge` and zero jobs.
+- [ ] Cloudflare fixture yields `AccessDenied` and zero jobs.
 - [ ] No call to `/graphql`, `/job/`, or private `/api/`.
 - [ ] Live canary is one page, headed, and either yields cards or stops with evidence.
 
@@ -578,7 +579,7 @@ After:
 | Fixture parse | Required | Required | Required |
 | JSON-LD support | Preferred | Preferred | Preferred |
 | Native pagination test | Required (Next click) | Required (`start`) | Required (`start`) |
-| Detail enrichment | Required | Required | Optional (cap 8) |
+| Detail enrichment | Required | Required | Unsupported (guest detail sits behind the sign-in wall; the adapter reports `SupportsDetails: false` and fails closed) |
 | Challenge fixture | Akamai | Cloudflare | Auth wall/429/999 |
 | Consent gate | No | Yes | Yes + interactive |
 | Live canary | 1 page headed | 1 page headed | 1 page headed, only if approved |

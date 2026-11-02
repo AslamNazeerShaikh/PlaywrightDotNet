@@ -36,5 +36,20 @@ namespace JobScrape.Application.Features.Runs
             int limit,
             CancellationToken cancellationToken
         );
+
+        /// <summary>
+        /// Lists the postings a run saw, with the full stored fields for
+        /// export: the same window as <see cref="ListPostingsAsync"/>, most
+        /// recently seen first.
+        /// </summary>
+        /// <param name="runId">The run identifier.</param>
+        /// <param name="limit">How many postings to return; at least 1.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The postings, or null when the run does not exist.</returns>
+        Task<IReadOnlyList<ExportPosting>?> ListExportPostingsAsync(
+            Guid runId,
+            int limit,
+            CancellationToken cancellationToken
+        );
     }
 }

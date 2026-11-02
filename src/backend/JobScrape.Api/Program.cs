@@ -7,6 +7,7 @@ using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
+using JobScrape.Infrastructure.Export;
 using Serilog;
 
 namespace JobScrape.Api
@@ -81,6 +82,9 @@ namespace JobScrape.Api
             builder.Services.AddTransient<GetRunHandler>();
             builder.Services.AddTransient<CancelRunHandler>();
             builder.Services.AddTransient<ListRunPostingsHandler>();
+            builder.Services.AddTransient<ExportRunPostingsHandler>();
+            builder.Services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
+            builder.Services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             builder.Services.AddScoped<RunScrapeHandler>();

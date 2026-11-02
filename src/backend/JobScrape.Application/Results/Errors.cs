@@ -280,6 +280,23 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a validation failure for an export format no writer renders.
+        /// </summary>
+        /// <param name="format">The requested format, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo ExportFormatUnsupported(string format)
+        {
+            ArgumentNullException.ThrowIfNull(format);
+            return new ErrorInfo(
+                "EXPORT_FORMAT_UNSUPPORTED",
+                "Export format is not supported.",
+                $"Export format '{format}' is not supported. Use 'csv' or 'xlsx'.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?> { ["format"] = format }
+            );
+        }
+
+        /// <summary>
         /// Creates a conflict failure when a run is already executing. Runs
         /// execute one at a time: a browser profile holds a single
         /// persistent context, and sources are paced per process.

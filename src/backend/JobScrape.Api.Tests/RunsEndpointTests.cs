@@ -95,7 +95,7 @@ namespace JobScrape.Api.Tests
         public void RejectsNullHandlers()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new RunsController(null!, null!, null!, null!, null!)
+                new RunsController(null!, null!, null!, null!, null!, null!)
             );
         }
 
@@ -130,6 +130,36 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal(["101", "102"], postings!.Items.Select(p => p.ExternalJobId).Order());
             Assert.All(postings.Items, p => Assert.True(p.IsNew));
+
+            using var csv = await client.GetAsync($"api/v1/runs/{run.Id}/postings/export?format=csv", Ct);
+            Assert.Equal(HttpStatusCode.OK, csv.StatusCode);
+            Assert.Equal("text/csv", csv.Content.Headers.ContentType!.MediaType);
+            var csvText = await csv.Content.ReadAsStringAsync(Ct);
+            Assert.StartsWith("Title,Company,Location,", csvText);
+            Assert.Contains("https://www.naukri.com/job-listings-dev-101", csvText);
+
+            using var xlsx = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=xlsx",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, xlsx.StatusCode);
+            Assert.Equal(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsx.Content.Headers.ContentType!.MediaType
+            );
+            Assert.True((await xlsx.Content.ReadAsByteArrayAsync(Ct)).Length > 0);
+
+            using var badFormat = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=pdf",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, badFormat.StatusCode);
+
+            using var missing = await client.GetAsync(
+                $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=csv",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
 
             var list = await client.GetFromJsonAsync<RunListResponse>("api/v1/runs", Ct);
             Assert.Equal(run.Id, Assert.Single(list!.Items).Id);

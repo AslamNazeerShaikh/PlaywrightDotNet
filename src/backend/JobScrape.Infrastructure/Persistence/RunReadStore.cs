@@ -74,6 +74,41 @@ namespace JobScrape.Infrastructure.Persistence
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
 
+            var postings = await PostingsAsync(runId, limit, cancellationToken);
+            return postings is null
+                ? null
+                : new RunPostingListResponse(
+                    runId,
+                    postings.Items.Select(posting => ToResponse(posting, postings.RunStart)).ToArray()
+                );
+        }
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<ExportPosting>?> ListExportPostingsAsync(
+            Guid runId,
+            int limit,
+            CancellationToken cancellationToken
+        )
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+
+            var postings = await PostingsAsync(runId, limit, cancellationToken);
+            return postings?.Items.Select(ToExport).ToArray();
+        }
+
+        /// <summary>
+        /// Loads one run's postings in its start/finish window.
+        /// </summary>
+        /// <param name="runId">The run identifier.</param>
+        /// <param name="limit">How many postings to return.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The run start and postings, or null when the run does not exist.</returns>
+        private async Task<RunPostings?> PostingsAsync(
+            Guid runId,
+            int limit,
+            CancellationToken cancellationToken
+        )
+        {
             var run = await FindAsync(runId, cancellationToken);
             if (run is null)
             {
@@ -82,7 +117,7 @@ namespace JobScrape.Infrastructure.Persistence
 
             if (run.StartedAt is not { } from)
             {
-                return new RunPostingListResponse(runId, []);
+                return new RunPostings(_clock.GetUtcNow(), []);
             }
 
             var until = run.FinishedAt ?? _clock.GetUtcNow();
@@ -97,10 +132,7 @@ namespace JobScrape.Infrastructure.Persistence
                 .OrderByDescending(posting => posting.LastSeenAt)
                 .Take(limit)
                 .ToListAsync(cancellationToken);
-            return new RunPostingListResponse(
-                runId,
-                postings.Select(posting => ToResponse(posting, from)).ToArray()
-            );
+            return new RunPostings(from, postings);
         }
 
         /// <summary>
@@ -172,5 +204,39 @@ namespace JobScrape.Infrastructure.Persistence
                 posting.LastSeenAt
             );
         }
+
+        /// <summary>
+        /// Maps a posting to its export model: every stored field.
+        /// </summary>
+        /// <param name="posting">The posting.</param>
+        /// <returns>The export model.</returns>
+        private static ExportPosting ToExport(JobPosting posting)
+        {
+            return new ExportPosting(
+                posting.Id.Value,
+                posting.ExternalJobId.Value,
+                posting.Source.Value,
+                posting.Url.Value,
+                posting.ApplyUrl == posting.Url.Value ? null : posting.ApplyUrl,
+                posting.Title.Value,
+                posting.Company?.Value,
+                posting.Location?.Raw,
+                (posting.Location?.WorkMode ?? WorkMode.Unknown).ToString(),
+                posting.ExperienceRaw,
+                posting.SalaryRaw,
+                posting.PostedAt,
+                posting.Skills.Select(skill => skill.Name).ToArray(),
+                posting.Description,
+                posting.FirstSeenAt,
+                posting.LastSeenAt
+            );
+        }
+
+        /// <summary>
+        /// One run's window and the postings last seen inside it.
+        /// </summary>
+        /// <param name="RunStart">When the run started.</param>
+        /// <param name="Items">The postings, most recently seen first.</param>
+        private sealed record RunPostings(DateTimeOffset RunStart, IReadOnlyList<JobPosting> Items);
     }
 }

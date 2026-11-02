@@ -206,10 +206,14 @@ describe("runs page", () => {
       timeout: 6000,
     });
     await waitFor(() =>
-      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
-        "Senior .NET Developer",
-      ),
+      expect(
+        queries.getByRole("table", { name: "Postings" }).textContent,
+      ).toContain("Senior .NET Developer"),
     );
+    const csv = queries.getByRole("link", { name: "CSV" });
+    expect(csv.getAttribute("href")).toBe("/api/v1/runs/r1/postings/export?format=csv");
+    const xlsx = queries.getByRole("link", { name: "XLSX" });
+    expect(xlsx.getAttribute("href")).toBe("/api/v1/runs/r1/postings/export?format=xlsx");
     expect(queries.getByRole("status").textContent).toContain("COMPLETED");
     expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
     // Run meters measure progress: a cap reached is done, never the quota red.

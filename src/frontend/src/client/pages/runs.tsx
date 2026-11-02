@@ -363,6 +363,18 @@ export function RunsPage({
         span="span-12"
         note="What the selected run saw, most recent first. Titles open the posting on the source."
       >
+        {selected !== null && postings !== null && postings.length > 0 && (
+          <p className="status-line">
+            Export:{" "}
+            <a href={`/api/v1/runs/${selected.id}/postings/export?format=csv`} download>
+              CSV
+            </a>{" "}
+            ·{" "}
+            <a href={`/api/v1/runs/${selected.id}/postings/export?format=xlsx`} download>
+              XLSX
+            </a>
+          </p>
+        )}
         {selected === null || postings === null ? (
           <p className="status-line">
             {selected === null ? "No run selected." : "Loading postings…"}
