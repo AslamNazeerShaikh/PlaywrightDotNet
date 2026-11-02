@@ -110,7 +110,7 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 ### 3.2 Search flow
 
 1. Optional warm-up: home page, pause, scroll once.
-2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `experience`, `jobAge`, `sort=date` when a recency window is set).
+2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `nignbevent_src`, `experience`, and `jobAge` when a recency window is set).
 3. Wait for `a[href*="/job-listings-"]`; scroll to trigger lazy cards.
 4. Classify challenge; extract visible cards.
 5. Click native **Next**; wait for the result range/first-card fingerprint to change.
@@ -140,9 +140,9 @@ Search (query form — not used by the implementation):
 https://www.naukri.com/jobs?k={keywords}&l={location}&experience={years}&jobPostDate={days}&page=1
 
 Search (slug form, page 1 — NaukriUrlBuilder.SearchUrl; jobs-in-{city} / {kw}-jobs / jobs when a part is empty):
-https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&experience={years}&jobAge={days}&sort=date
+https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&nignbevent_src=jobsearchDeskGNB&experience={years}&jobAge={days}
 
-`jobAge` and `sort=date` appear only when the profile sets a posted-within window. Both are best-effort hints; the run handler re-checks every posted date and drops stale cards.
+`jobAge` appears only when the profile sets a posted-within window. It is a best-effort hint; the run handler re-checks every posted date and drops stale cards. `nignbevent_src=jobsearchDeskGNB` is Naukri's own search-page marker; the live site answers some filter combinations without it with its error page. Do not add `sort=date`: the live site answers that combination with the same error page.
 
 Detail:
 https://www.naukri.com/job-listings-{slug}-{id}
@@ -151,8 +151,9 @@ https://www.naukri.com/job-listings-{slug}-{id}
 **Slug rules (from the old project, verified):**
 
 - lowercase.
-- `#` → `sharp`; `.` → `dot`; commas removed.
-- non-alphanumerics removed; whitespace → `-`; collapse dashes.
+- `#` becomes the word `sharp`; `.` becomes the word `dot`; commas removed. Words are joined by `-`. Live canonical examples: `asp.net` → `asp-dot-net`, `C#` → `c-sharp`, `.NET Core` → `dot-net-core`.
+- non-alphanumerics removed; whitespace → `-`; collapse dashes and trim edge dashes.
+- The path slug must match Naukri's canonical form. A mismatch makes Naukri redirect to its own path and drop the entire query string, silently losing every filter.
 - Multi-city: path uses **first city**; full comma list stays in `l`.
 - Do **not** navigate to `-2` slug URLs for pagination; the SPA loses filters. Click Next.
 
