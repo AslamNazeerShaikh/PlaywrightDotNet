@@ -135,9 +135,32 @@ Had the script run, it would have made the browser **more** detectable:
 | One pass at a time | **Yes** | Global semaphore + per-profile lock. |
 | No proxy rotation | **Yes** | Optional static egress only; no pools. |
 | No CAPTCHA solving | **Yes** | Hard rule, no code path. |
-| uBlock Origin Lite + fallback blocker | **Optional** | Tracker blocking can reduce fingerprint surface but also adds an extension signal. Default off; opt-in and measure. |
+| uBlock Origin Lite | **Optional** | Cuts tracker weight but adds an installed-extension signal. Default off; headed Chromium only, opt-in and measure (§5.1). |
 | Chrome-only stack | **No** | Chromium default; Firefox/WebKit compatibility. |
 | UA pinning / language stubs | **No** | Never. |
+
+### 5.1 uBlock Origin Lite (opt-in, headed only)
+
+The blocker trims ad and tracker weight from scrapes. It also adds an
+installed-extension signal, so it stays off unless measurement says it
+earns its place.
+
+Measure before keeping it. Run the same pages with and without the
+blocker and compare `time_to_first_posting`, `parse_failure_rate`, and
+`challenge_rate`. Keep it only when scrapes get faster with no worse
+challenge rate.
+
+Install steps:
+
+1. Run `./vendor/download-ubol.sh`. It fetches the pinned uBOLite
+   release and builds `vendor/ubol-chrome-max` with maximum filtering.
+2. Set `"Browser": {"AdblockMode": "ubol-max",
+   "ExtensionDir": "vendor/ubol-chrome-max"}`. The path resolves
+   against the content root.
+3. Launch headed. Headless, Firefox, and WebKit launches ignore the
+   setting. A set mode with a missing directory fails startup and
+   names the script; a directory lost mid-run logs once and launches
+   without the blocker.
 | Inert stealth init script | **No** | Removed permanently. |
 
 ---
