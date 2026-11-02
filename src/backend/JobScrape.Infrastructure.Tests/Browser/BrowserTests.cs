@@ -144,7 +144,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
                 ScrapeRunId.New(),
                 SourceKey.Naukri,
                 _profile.Id,
-                new SearchCriteria("dot net developer", ["Pune"], 5, 7, false)
+                new SearchCriteria("dot net developer", ["Pune"], 5, 7, false, [])
             );
         }
 

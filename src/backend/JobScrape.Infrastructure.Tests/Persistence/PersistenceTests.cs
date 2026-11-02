@@ -22,7 +22,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             return SearchProfile.Create(
                 name,
                 source ?? SourceKey.Naukri,
-                new SearchCriteria("asp.net core", ["Pune", "Hyderabad"], 6, 7, remoteOnly: false),
+                new SearchCriteria("asp.net core", ["Pune", "Hyderabad"], 6, 7, remoteOnly: false, []),
                 new RunLimits(3, 60, 10, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
                 Now
             );

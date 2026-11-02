@@ -31,7 +31,7 @@ namespace JobScrape.Domain.Tests.Sourcing
         [Fact]
         public void RunStatsRestoreRoundTripsCounts()
         {
-            var stats = RunStats.Restore(3, 50, 40, 5, 10, 1, 2);
+            var stats = RunStats.Restore(3, 50, 40, 5, 10, 1, 2, 4);
 
             Assert.Equal(3, stats.PagesFetched);
             Assert.Equal(50, stats.PostingsFound);
@@ -40,15 +40,17 @@ namespace JobScrape.Domain.Tests.Sourcing
             Assert.Equal(10, stats.DetailsFetched);
             Assert.Equal(1, stats.Challenges);
             Assert.Equal(2, stats.Failures);
+            Assert.Equal(4, stats.PostedDateMismatches);
         }
 
         [Theory]
-        [InlineData(-1, 0, 0, 0, 0, 0, 0)]
-        [InlineData(0, 0, 0, 0, -1, 0, 0)]
-        [InlineData(0, 0, 0, 0, 0, -1, 0)]
-        [InlineData(0, 0, 0, 0, 0, 0, -1)]
-        [InlineData(0, -1, 0, 0, 0, 0, 0)]
-        [InlineData(0, 5, 4, 2, 0, 0, 0)]
+        [InlineData(-1, 0, 0, 0, 0, 0, 0, 0)]
+        [InlineData(0, 0, 0, 0, -1, 0, 0, 0)]
+        [InlineData(0, 0, 0, 0, 0, -1, 0, 0)]
+        [InlineData(0, 0, 0, 0, 0, 0, -1, 0)]
+        [InlineData(0, 0, 0, 0, 0, 0, 0, -1)]
+        [InlineData(0, -1, 0, 0, 0, 0, 0, 0)]
+        [InlineData(0, 5, 4, 2, 0, 0, 0, 0)]
         public void RunStatsRestoreRejectsInvalidCounts(
             int pages,
             int found,
@@ -56,11 +58,12 @@ namespace JobScrape.Domain.Tests.Sourcing
             int updated,
             int details,
             int challenges,
-            int failures
+            int failures,
+            int mismatches
         )
         {
             Assert.Throws<DomainException>(() =>
-                RunStats.Restore(pages, found, added, updated, details, challenges, failures)
+                RunStats.Restore(pages, found, added, updated, details, challenges, failures, mismatches)
             );
         }
     }

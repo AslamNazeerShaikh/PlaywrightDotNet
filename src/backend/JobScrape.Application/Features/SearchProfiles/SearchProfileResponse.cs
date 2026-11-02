@@ -14,6 +14,7 @@ namespace JobScrape.Application.Features.SearchProfiles
     /// <param name="ExperienceYears">Optional years-of-experience filter.</param>
     /// <param name="PostedWithinDays">Optional recency filter in days.</param>
     /// <param name="RemoteOnly">True when only remote roles are searched.</param>
+    /// <param name="RequiredSkills">Key skills; a posting is kept when any one matches. Empty means no filter.</param>
     /// <param name="MaxPages">Result pages per run.</param>
     /// <param name="MaxJobs">Postings per run.</param>
     /// <param name="MaxDetails">Detail visits per run; 0 disables enrichment.</param>
@@ -31,6 +32,7 @@ namespace JobScrape.Application.Features.SearchProfiles
         int? ExperienceYears,
         int? PostedWithinDays,
         bool RemoteOnly,
+        IReadOnlyList<string> RequiredSkills,
         int MaxPages,
         int MaxJobs,
         int MaxDetails,
@@ -59,6 +61,7 @@ namespace JobScrape.Application.Features.SearchProfiles
                 profile.Criteria.ExperienceYears,
                 profile.Criteria.PostedWithinDays,
                 profile.Criteria.RemoteOnly,
+                profile.Criteria.RequiredSkills,
                 profile.Limits.MaxPages,
                 profile.Limits.MaxJobs,
                 profile.Limits.MaxDetails,

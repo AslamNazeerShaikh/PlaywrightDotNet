@@ -10,7 +10,7 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         private static SearchCriteria Criteria(string keywords = "c#")
         {
-            return new SearchCriteria(keywords, ["Pune"], 6, 7, remoteOnly: false);
+            return new SearchCriteria(keywords, ["Pune"], 6, 7, remoteOnly: false, []);
         }
 
         private static RunLimits Limits(int maxPages = 3)

@@ -113,7 +113,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
                     Domain.Common.ScrapeRunId.New(),
                     SourceKey.LinkedIn,
                     Domain.Common.BrowserProfileId.New(),
-                    new Domain.Sourcing.SearchCriteria("dotnet", ["Pune"], null, 7, false)
+                    new Domain.Sourcing.SearchCriteria("dotnet", ["Pune"], null, 7, false, [])
                 ),
                 new Application.Features.Scraping.JobReference(
                     Domain.Sourcing.ExternalJobId.Create("4012345670"),

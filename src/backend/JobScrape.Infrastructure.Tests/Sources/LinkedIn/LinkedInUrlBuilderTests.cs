@@ -17,7 +17,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
                 locations ?? ["Pune"],
                 null,
                 postedWithinDays,
-                false
+                false,
+                []
             );
         }
 

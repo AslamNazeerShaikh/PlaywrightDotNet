@@ -20,6 +20,12 @@ namespace JobScrape.Domain.Sourcing
         public const int MaxLocations = 10;
 
         /// <summary>
+        /// Maximum number of distinct required skills. Higher than the
+        /// location cap because key-skill pastes routinely list a full stack.
+        /// </summary>
+        public const int MaxRequiredSkills = 20;
+
+        /// <summary>
         /// Initializes a new instance, normalizing and validating every field.
         /// </summary>
         /// <param name="keywords">
@@ -34,17 +40,26 @@ namespace JobScrape.Domain.Sourcing
         /// <param name="experienceYears">Optional years of experience, 0–50.</param>
         /// <param name="postedWithinDays">Optional recency window in days, 1–30.</param>
         /// <param name="remoteOnly">True to search remote roles only; then locations may be empty.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="locations"/> is null.</exception>
+        /// <param name="requiredSkills">
+        /// Key skills; a posting is kept when any one of them matches one of
+        /// its skills (see <see cref="SkillMatcher"/>). Blank entries are
+        /// dropped, duplicates removed case-insensitively (first spelling
+        /// wins); at most <see cref="MaxRequiredSkills"/>. Empty means no
+        /// skill filter.
+        /// </param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="locations"/> or <paramref name="requiredSkills"/> is null.</exception>
         /// <exception cref="DomainException">Thrown when any value violates its invariant.</exception>
         public SearchCriteria(
             string? keywords,
             IEnumerable<string?> locations,
             int? experienceYears,
             int? postedWithinDays,
-            bool remoteOnly
+            bool remoteOnly,
+            IEnumerable<string?> requiredSkills
         )
         {
             ArgumentNullException.ThrowIfNull(locations);
+            ArgumentNullException.ThrowIfNull(requiredSkills);
 
             var normalizedKeywords = Text.Collapse(keywords);
             if (normalizedKeywords.Length == 0)
@@ -68,7 +83,6 @@ namespace JobScrape.Domain.Sourcing
             {
                 throw new DomainException($"At most {MaxLocations} locations are allowed.");
             }
-
             // A search with neither a place nor the remote flag is unbounded
             // and would read the whole board.
             if (normalizedLocations.Length == 0 && !remoteOnly)
@@ -86,11 +100,22 @@ namespace JobScrape.Domain.Sourcing
                 throw new DomainException("postedWithinDays must be 1..30.");
             }
 
+            var normalizedSkills = requiredSkills
+                .Select(Text.Collapse)
+                .Where(skill => skill.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (normalizedSkills.Length > MaxRequiredSkills)
+            {
+                throw new DomainException($"At most {MaxRequiredSkills} required skills are allowed.");
+            }
+
             Keywords = normalizedKeywords;
             Locations = normalizedLocations;
             ExperienceYears = experienceYears;
             PostedWithinDays = postedWithinDays;
             RemoteOnly = remoteOnly;
+            RequiredSkills = normalizedSkills;
         }
 
         /// <summary>
@@ -119,11 +144,18 @@ namespace JobScrape.Domain.Sourcing
         public bool RemoteOnly { get; }
 
         /// <summary>
-        /// Compares by value, including the location sequence. The compiler's
-        /// record equality would compare the list by reference.
+        /// Gets the distinct, normalized required skills in their original
+        /// order. Empty means no skill filter.
+        /// </summary>
+        public IReadOnlyList<string> RequiredSkills { get; }
+
+        /// <summary>
+        /// Compares by value, including the location and required-skill
+        /// sequences. The compiler's record equality would compare the lists
+        /// by reference.
         /// </summary>
         /// <param name="other">The criteria to compare with.</param>
-        /// <returns>True when every field and every location is equal.</returns>
+        /// <returns>True when every field, location, and skill is equal.</returns>
         public bool Equals(SearchCriteria? other)
         {
             return other is not null
@@ -131,7 +163,8 @@ namespace JobScrape.Domain.Sourcing
                 && ExperienceYears == other.ExperienceYears
                 && PostedWithinDays == other.PostedWithinDays
                 && RemoteOnly == other.RemoteOnly
-                && Locations.SequenceEqual(other.Locations, StringComparer.Ordinal);
+                && Locations.SequenceEqual(other.Locations, StringComparer.Ordinal)
+                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.Ordinal);
         }
 
         /// <summary>
@@ -148,6 +181,11 @@ namespace JobScrape.Domain.Sourcing
             foreach (var location in Locations)
             {
                 hash.Add(location, StringComparer.Ordinal);
+            }
+
+            foreach (var skill in RequiredSkills)
+            {
+                hash.Add(skill, StringComparer.Ordinal);
             }
 
             return hash.ToHashCode();

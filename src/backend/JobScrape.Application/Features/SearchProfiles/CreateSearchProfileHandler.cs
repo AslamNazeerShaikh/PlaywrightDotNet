@@ -122,7 +122,8 @@ namespace JobScrape.Application.Features.SearchProfiles
                     request.Locations ?? [],
                     request.ExperienceYears,
                     request.PostedWithinDays,
-                    request.RemoteOnly
+                    request.RemoteOnly,
+                    request.RequiredSkills ?? []
                 ),
                 new RunLimits(
                     request.MaxPages ?? defaults.MaxPages,
@@ -187,6 +188,19 @@ namespace JobScrape.Application.Features.SearchProfiles
             if (request.PostedWithinDays is < 1 or > 30)
             {
                 errors["postedWithinDays"] = ["Must be between 1 and 30."];
+            }
+
+            var requiredSkills = (request.RequiredSkills ?? [])
+                .Select(Text.Collapse)
+                .Where(skill => skill.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+            if (requiredSkills > SearchCriteria.MaxRequiredSkills)
+            {
+                errors["requiredSkills"] =
+                [
+                    $"At most {SearchCriteria.MaxRequiredSkills} required skills are allowed.",
+                ];
             }
         }
 

@@ -35,7 +35,18 @@ namespace JobScrape.Domain.Tests.Sourcing
             Assert.Equal(1, stats.DetailsFetched);
             Assert.Equal(1, stats.Challenges);
             Assert.Equal(1, stats.Failures);
+            Assert.Equal(0, stats.PostedDateMismatches);
             Assert.Equal(0, RunStats.Empty.PagesFetched);
+        }
+
+        [Fact]
+        public void PostedDateMismatchGrowsOnlyItsCounter()
+        {
+            var stats = RunStats.Empty.AddPostedDateMismatch().AddPostedDateMismatch();
+
+            Assert.Equal(2, stats.PostedDateMismatches);
+            Assert.Equal(0, stats.Failures);
+            Assert.Equal(0, RunStats.Empty.PostedDateMismatches);
         }
 
         [Fact]

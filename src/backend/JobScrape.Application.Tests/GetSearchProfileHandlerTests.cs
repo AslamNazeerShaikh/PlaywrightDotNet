@@ -19,6 +19,7 @@ namespace JobScrape.Application.Tests
                 null,
                 null,
                 false,
+                [],
                 3,
                 60,
                 60,

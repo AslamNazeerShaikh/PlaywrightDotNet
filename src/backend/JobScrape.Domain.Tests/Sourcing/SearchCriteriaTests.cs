@@ -10,7 +10,8 @@ namespace JobScrape.Domain.Tests.Sourcing
             string?[]? locations = null,
             int? experienceYears = 6,
             int? postedWithinDays = 7,
-            bool remoteOnly = false
+            bool remoteOnly = false,
+            string?[]? requiredSkills = null
         )
         {
             return new SearchCriteria(
@@ -18,20 +19,22 @@ namespace JobScrape.Domain.Tests.Sourcing
                 locations ?? ["Pune"],
                 experienceYears,
                 postedWithinDays,
-                remoteOnly
+                remoteOnly,
+                requiredSkills ?? []
             );
         }
 
         [Fact]
         public void AcceptsTypicalCriteria()
         {
-            var criteria = Create();
+            var criteria = Create(requiredSkills: ["C#", "ASP.NET Core"]);
 
             Assert.Equal("asp.net core c#", criteria.Keywords);
             Assert.Equal(["Pune"], criteria.Locations);
             Assert.Equal(6, criteria.ExperienceYears);
             Assert.Equal(7, criteria.PostedWithinDays);
             Assert.False(criteria.RemoteOnly);
+            Assert.Equal(["C#", "ASP.NET Core"], criteria.RequiredSkills);
         }
 
         [Fact]
@@ -110,8 +113,46 @@ namespace JobScrape.Domain.Tests.Sourcing
         public void RejectsNullLocations()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new SearchCriteria("c#", null!, null, null, true)
+                new SearchCriteria("c#", null!, null, null, true, [])
             );
+        }
+
+        [Fact]
+        public void RejectsNullRequiredSkills()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new SearchCriteria("c#", ["Pune"], null, null, true, null!)
+            );
+        }
+
+        [Fact]
+        public void NormalizesAndDeduplicatesRequiredSkills()
+        {
+            var criteria = Create(requiredSkills: [" C# ", "", null, "c#", ".NET  Core", "  "]);
+
+            Assert.Equal(["C#", ".NET Core"], criteria.RequiredSkills);
+        }
+
+        [Fact]
+        public void AcceptsTwentyRequiredSkills()
+        {
+            var skills = Enumerable.Range(1, 20).Select(i => $"Skill{i}").ToArray();
+
+            Assert.Equal(20, Create(requiredSkills: skills).RequiredSkills.Count);
+        }
+
+        [Fact]
+        public void RejectsTwentyOneRequiredSkills()
+        {
+            var skills = Enumerable.Range(1, 21).Select(i => $"Skill{i}").ToArray();
+
+            Assert.Throws<DomainException>(() => Create(requiredSkills: skills));
+        }
+
+        [Fact]
+        public void EmptyRequiredSkillsMeansNoFilter()
+        {
+            Assert.Empty(Create().RequiredSkills);
         }
 
         [Theory]
@@ -169,6 +210,7 @@ namespace JobScrape.Domain.Tests.Sourcing
             Assert.NotEqual(baseline, Create(experienceYears: 5));
             Assert.NotEqual(baseline, Create(postedWithinDays: 3));
             Assert.NotEqual(baseline, Create(remoteOnly: true));
+            Assert.NotEqual(baseline, Create(requiredSkills: ["C#"]));
             Assert.False(baseline.Equals(null));
         }
     }

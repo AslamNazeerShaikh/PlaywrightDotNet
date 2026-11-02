@@ -205,6 +205,17 @@ namespace JobScrape.Domain.Sourcing
         }
 
         /// <summary>
+        /// Records a card/detail posted-date disagreement found while
+        /// enriching. Counting is monotonic like every other stat.
+        /// </summary>
+        /// <exception cref="DomainException">Thrown when not searching or enriching.</exception>
+        public void RecordPostedDateMismatch()
+        {
+            EnsureFetching();
+            Stats = Stats.AddPostedDateMismatch();
+        }
+
+        /// <summary>
         /// Moves from <see cref="RunStage.Searching"/> to
         /// <see cref="RunStage.Enriching"/>.
         /// </summary>

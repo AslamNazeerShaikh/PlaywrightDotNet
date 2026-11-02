@@ -183,7 +183,8 @@ namespace JobScrape.Infrastructure.Persistence
                         [.. criteria.Locations],
                         criteria.ExperienceYears,
                         criteria.PostedWithinDays,
-                        criteria.RemoteOnly
+                        criteria.RemoteOnly,
+                        [.. criteria.RequiredSkills]
                     ),
                     Options
                 );
@@ -197,7 +198,8 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.Locations ?? [],
                     dto.ExperienceYears,
                     dto.PostedWithinDays,
-                    dto.RemoteOnly
+                    dto.RemoteOnly,
+                    dto.RequiredSkills ?? []
                 );
             }
 
@@ -237,7 +239,8 @@ namespace JobScrape.Infrastructure.Persistence
                         stats.PostingsUpdated,
                         stats.DetailsFetched,
                         stats.Challenges,
-                        stats.Failures
+                        stats.Failures,
+                        stats.PostedDateMismatches
                     ),
                     Options
                 );
@@ -253,7 +256,8 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.PostingsUpdated,
                     dto.DetailsFetched,
                     dto.Challenges,
-                    dto.Failures
+                    dto.Failures,
+                    dto.PostedDateMismatches
                 );
             }
 
@@ -315,7 +319,8 @@ namespace JobScrape.Infrastructure.Persistence
                 string[]? Locations,
                 int? ExperienceYears,
                 int? PostedWithinDays,
-                bool RemoteOnly
+                bool RemoteOnly,
+                string[]? RequiredSkills
             );
 
             private sealed record LimitsJson(
@@ -333,7 +338,8 @@ namespace JobScrape.Infrastructure.Persistence
                 int PostingsUpdated,
                 int DetailsFetched,
                 int Challenges,
-                int Failures
+                int Failures,
+                int PostedDateMismatches
             );
 
             private sealed record LocationJson(

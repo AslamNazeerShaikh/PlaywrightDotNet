@@ -9,7 +9,7 @@ namespace JobScrape.Domain.Sourcing
         /// <summary>
         /// Stats of a run that has done nothing yet.
         /// </summary>
-        public static readonly RunStats Empty = new(0, 0, 0, 0, 0, 0, 0);
+        public static readonly RunStats Empty = new(0, 0, 0, 0, 0, 0, 0, 0);
 
         /// <summary>
         /// Rehydrates stored counters. Run code grows counts through the
@@ -22,6 +22,7 @@ namespace JobScrape.Domain.Sourcing
         /// <param name="detailsFetched">Detail pages visited.</param>
         /// <param name="challenges">Walls that paused the run.</param>
         /// <param name="failures">Pages or details that failed and were skipped.</param>
+        /// <param name="postedDateMismatches">Card/detail posted-date disagreements.</param>
         /// <returns>The stats.</returns>
         /// <exception cref="DomainException">Thrown when a count is negative or new plus updated exceeds found.</exception>
         public static RunStats Restore(
@@ -31,12 +32,18 @@ namespace JobScrape.Domain.Sourcing
             int postingsUpdated,
             int detailsFetched,
             int challenges,
-            int failures
+            int failures,
+            int postedDateMismatches
         )
         {
             if (pagesFetched < 0 || detailsFetched < 0 || challenges < 0 || failures < 0)
             {
                 throw new DomainException("Run counts must be non-negative.");
+            }
+
+            if (postedDateMismatches < 0)
+            {
+                throw new DomainException("Posted-date mismatches must be non-negative.");
             }
 
             // PageStats enforces the posting-count invariants.
@@ -48,7 +55,8 @@ namespace JobScrape.Domain.Sourcing
                 postings.PostingsUpdated,
                 detailsFetched,
                 challenges,
-                failures
+                failures,
+                postedDateMismatches
             );
         }
 
@@ -63,6 +71,7 @@ namespace JobScrape.Domain.Sourcing
         /// <param name="detailsFetched">Detail pages visited.</param>
         /// <param name="challenges">Walls that paused the run.</param>
         /// <param name="failures">Pages or details that failed and were skipped.</param>
+        /// <param name="postedDateMismatches">Card/detail posted-date disagreements.</param>
         private RunStats(
             int pagesFetched,
             int postingsFound,
@@ -70,7 +79,8 @@ namespace JobScrape.Domain.Sourcing
             int postingsUpdated,
             int detailsFetched,
             int challenges,
-            int failures
+            int failures,
+            int postedDateMismatches
         )
         {
             PagesFetched = pagesFetched;
@@ -80,6 +90,7 @@ namespace JobScrape.Domain.Sourcing
             DetailsFetched = detailsFetched;
             Challenges = challenges;
             Failures = failures;
+            PostedDateMismatches = postedDateMismatches;
         }
 
         /// <summary>
@@ -118,6 +129,12 @@ namespace JobScrape.Domain.Sourcing
         public int Failures { get; }
 
         /// <summary>
+        /// Gets the number of card/detail posted-date disagreements seen
+        /// while enriching. The detail date wins each merge.
+        /// </summary>
+        public int PostedDateMismatches { get; }
+
+        /// <summary>
         /// Adds one fetched page and its posting counts.
         /// </summary>
         /// <param name="page">The page outcome. Must not be null.</param>
@@ -133,7 +150,8 @@ namespace JobScrape.Domain.Sourcing
                 PostingsUpdated + page.PostingsUpdated,
                 DetailsFetched,
                 Challenges,
-                Failures
+                Failures,
+                PostedDateMismatches
             );
         }
 
@@ -150,7 +168,8 @@ namespace JobScrape.Domain.Sourcing
                 PostingsUpdated,
                 DetailsFetched + 1,
                 Challenges,
-                Failures
+                Failures,
+                PostedDateMismatches
             );
         }
 
@@ -167,7 +186,8 @@ namespace JobScrape.Domain.Sourcing
                 PostingsUpdated,
                 DetailsFetched,
                 Challenges + 1,
-                Failures
+                Failures,
+                PostedDateMismatches
             );
         }
 
@@ -184,7 +204,26 @@ namespace JobScrape.Domain.Sourcing
                 PostingsUpdated,
                 DetailsFetched,
                 Challenges,
-                Failures + 1
+                Failures + 1,
+                PostedDateMismatches
+            );
+        }
+
+        /// <summary>
+        /// Adds one card/detail posted-date disagreement seen while enriching.
+        /// </summary>
+        /// <returns>The updated stats.</returns>
+        public RunStats AddPostedDateMismatch()
+        {
+            return new RunStats(
+                PagesFetched,
+                PostingsFound,
+                PostingsNew,
+                PostingsUpdated,
+                DetailsFetched,
+                Challenges,
+                Failures,
+                PostedDateMismatches + 1
             );
         }
     }

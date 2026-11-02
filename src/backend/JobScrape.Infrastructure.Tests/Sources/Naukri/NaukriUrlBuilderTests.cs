@@ -34,7 +34,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 ["Pune", "Bengaluru"],
                 5,
                 7,
-                remoteOnly: false
+                remoteOnly: false,
+                []
             );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
@@ -48,7 +49,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void SearchUrlOmitsAbsentFiltersAndEncodesKeywords()
         {
-            var criteria = new SearchCriteria("C#", ["Pune"], null, null, remoteOnly: false);
+            var criteria = new SearchCriteria("C#", ["Pune"], null, null, remoteOnly: false, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
@@ -61,7 +62,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void RemoteOnlySearchHasNoCityAndNoInventedRemoteFilter()
         {
-            var criteria = new SearchCriteria("asp.net core", [], 3, null, remoteOnly: true);
+            var criteria = new SearchCriteria("asp.net core", [], 3, null, remoteOnly: true, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
@@ -74,7 +75,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void KeywordsWithoutSlugCharactersFallBackToCityPath()
         {
-            var criteria = new SearchCriteria("++", ["Delhi / NCR"], null, 1, remoteOnly: false);
+            var criteria = new SearchCriteria("++", ["Delhi / NCR"], null, 1, remoteOnly: false, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
@@ -88,7 +89,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         public void SearchUrlIsNeverAPagedSlugUrl()
         {
             // Playbook §3.5: pages 2+ come from clicking Next, never "-2" URLs.
-            var criteria = new SearchCriteria(".net", ["Pune", "Mumbai"], 2, 30, remoteOnly: false);
+            var criteria = new SearchCriteria(".net", ["Pune", "Mumbai"], 2, 30, remoteOnly: false, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 

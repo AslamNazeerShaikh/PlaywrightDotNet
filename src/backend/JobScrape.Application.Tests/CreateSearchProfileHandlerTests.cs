@@ -301,6 +301,51 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task RequiredSkillsAreNormalizedAndSaved()
+        {
+            var (handler, _) = Create();
+
+            var result = await handler.HandleAsync(
+                Valid() with
+                {
+                    RequiredSkills = [" C# ", "", "c#", ".NET  Core"],
+                },
+                Ct
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(["C#", ".NET Core"], result.Value.RequiredSkills);
+        }
+
+        [Fact]
+        public async Task OmittedRequiredSkillsMeansNoFilter()
+        {
+            var (handler, _) = Create();
+
+            var result = await handler.HandleAsync(Valid() with { RequiredSkills = null }, Ct);
+
+            Assert.True(result.IsSuccess);
+            Assert.Empty(result.Value.RequiredSkills);
+        }
+
+        [Fact]
+        public async Task TooManyRequiredSkillsAreRejected()
+        {
+            var (handler, store) = Create();
+            var skills = Enumerable
+                .Range(1, SearchCriteria.MaxRequiredSkills + 1)
+                .Select(i => $"Skill{i}")
+                .ToArray();
+
+            var errors = FieldErrors(
+                await handler.HandleAsync(Valid() with { RequiredSkills = skills }, Ct)
+            );
+
+            Assert.Equal(["requiredSkills"], errors.Keys);
+            Assert.Empty(store.SearchProfiles);
+        }
+
+        [Fact]
         public async Task GuardsRejectNulls()
         {
             var store = new ScrapeHarness.InMemoryStore();

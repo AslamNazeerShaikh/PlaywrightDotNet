@@ -17,7 +17,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
                 locations ?? ["Pune"],
                 null,
                 postedWithinDays,
-                false
+                false,
+                []
             );
         }
 

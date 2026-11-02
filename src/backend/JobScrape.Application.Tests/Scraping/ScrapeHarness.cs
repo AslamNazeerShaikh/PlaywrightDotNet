@@ -35,7 +35,7 @@ namespace JobScrape.Application.Tests.Scraping
             Profile = SearchProfile.Create(
                 "backend",
                 key,
-                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false),
+                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false, []),
                 new RunLimits(
                     maxPages,
                     maxJobs,
