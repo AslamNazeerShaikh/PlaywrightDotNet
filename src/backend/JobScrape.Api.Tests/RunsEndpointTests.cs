@@ -240,6 +240,81 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task ResightedPostingWithMismatchedSkillsStaysOutOfPostingsAndExport()
+        {
+            var source = new FakeSource { Skilled = true };
+            await using var factory = Factory(source);
+            using var client = factory.CreateClient();
+
+            using var profile = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "dotnet-fresh",
+                    sourceKey = "naukri",
+                    keywords = "asp.net core c#",
+                    locations = Pune,
+                    postedWithinDays = 1,
+                    remoteOnly = false,
+                    requiredSkills = DotNetSkills,
+                },
+                Ct
+            );
+            var profileId = (
+                await profile.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct)
+            )!.Id;
+            using var session = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "naukri-main", sourceKey = "naukri" },
+                Ct
+            );
+            var sessionId = (await session.Content.ReadFromJsonAsync<SessionResponse>(Ct))!.Id;
+
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run1 = await first.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done1 = await WaitAsync(client, run1!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done1.Stage);
+            Assert.Equal(1, done1.PostingsFound);
+
+            source.ResightMismatch = true;
+
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run2 = await second.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done2 = await WaitAsync(client, run2!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done2.Stage);
+            Assert.Equal(0, done2.PostingsFound);
+
+            var postings2 = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run2.Id}/postings",
+                Ct
+            );
+            Assert.Empty(postings2!.Items);
+
+            using var csv2 = await client.GetAsync(
+                $"api/v1/runs/{run2.Id}/postings/export?format=csv",
+                Ct
+            );
+            var csvText2 = await csv2.Content.ReadAsStringAsync(Ct);
+            Assert.DoesNotContain("job-listings-dev-101", csvText2);
+
+            var postings1 = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run1.Id}/postings",
+                Ct
+            );
+            var stored = Assert.Single(postings1!.Items);
+            Assert.Equal("101", stored.ExternalJobId);
+            Assert.Contains("C#", stored.Skills);
+        }
+
+        [Fact]
         public async Task OneRunAtATimeAndCancelKeepsPartialResults()
         {
             var source = new FakeSource { Blocked = true };
@@ -400,6 +475,8 @@ namespace JobScrape.Api.Tests
 
             public volatile bool Skilled;
 
+            public volatile bool ResightMismatch;
+
             public TaskCompletionSource Entered { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -426,12 +503,13 @@ namespace JobScrape.Api.Tests
 
                 var now = DateTimeOffset.UtcNow;
                 JobSnapshot[] jobs = Skilled
-                    ?
-                    [
-                        Snapshot("101", ["C#", "ASP.NET Core"], now.AddHours(-2)),
-                        Snapshot("102", ["Java"], now.AddHours(-3)),
-                        Snapshot("103", ["C#"], now.AddDays(-5)),
-                    ]
+                    ? ResightMismatch
+                        ? [Snapshot("101", ["Java"], now.AddHours(-3))]
+                        : [
+                            Snapshot("101", ["C#", "ASP.NET Core"], now.AddHours(-2)),
+                            Snapshot("102", ["Java"], now.AddHours(-3)),
+                            Snapshot("103", ["C#"], now.AddDays(-5)),
+                        ]
                     : [Snapshot("101"), Snapshot("102")];
                 return new SearchPageResult(
                     jobs,
