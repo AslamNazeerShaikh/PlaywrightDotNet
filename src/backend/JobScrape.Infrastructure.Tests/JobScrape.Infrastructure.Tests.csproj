@@ -28,5 +28,6 @@
   <ItemGroup>
     <!-- Synthetic source-page fixtures read by the parser tests at run time. -->
     <None Update="Sources\Naukri\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Sources\Indeed\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
