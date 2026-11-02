@@ -131,12 +131,18 @@ namespace JobScrape.Api.Tests
             Assert.Equal(["101", "102"], postings!.Items.Select(p => p.ExternalJobId).Order());
             Assert.All(postings.Items, p => Assert.True(p.IsNew));
 
-            using var csv = await client.GetAsync($"api/v1/runs/{run.Id}/postings/export?format=csv", Ct);
+            using var csv = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv",
+                Ct
+            );
             Assert.Equal(HttpStatusCode.OK, csv.StatusCode);
             Assert.Equal("text/csv", csv.Content.Headers.ContentType!.MediaType);
             var csvText = await csv.Content.ReadAsStringAsync(Ct);
             Assert.StartsWith("Title,Company,Location,", csvText);
             Assert.Contains("https://www.naukri.com/job-listings-dev-101", csvText);
+            var csvName = csv.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-backend-", csvName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.csv", csvName, StringComparison.Ordinal);
 
             using var xlsx = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=xlsx",
@@ -148,6 +154,9 @@ namespace JobScrape.Api.Tests
                 xlsx.Content.Headers.ContentType!.MediaType
             );
             Assert.True((await xlsx.Content.ReadAsByteArrayAsync(Ct)).Length > 0);
+            var xlsxName = xlsx.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-backend-", xlsxName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.xlsx", xlsxName, StringComparison.Ordinal);
 
             using var badFormat = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=pdf",

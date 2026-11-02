@@ -16,11 +16,12 @@ namespace JobScrape.Infrastructure.Export
 
         /// <inheritdoc />
         public Task<ExportFile> WriteAsync(
-            Guid runId,
+            string fileName,
             IReadOnlyList<ExportPosting> postings,
             CancellationToken cancellationToken
         )
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
             ArgumentNullException.ThrowIfNull(postings);
 
             using var workbook = new XLWorkbook();
@@ -51,7 +52,7 @@ namespace JobScrape.Infrastructure.Export
             workbook.SaveAs(stream);
             return Task.FromResult(
                 new ExportFile(
-                    $"run-{runId}-postings.xlsx",
+                    fileName,
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     stream.ToArray()
                 )

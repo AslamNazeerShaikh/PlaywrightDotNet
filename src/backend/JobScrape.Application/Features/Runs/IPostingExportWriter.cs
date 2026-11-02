@@ -16,12 +16,12 @@ namespace JobScrape.Application.Features.Runs
         /// <summary>
         /// Renders the postings to a file.
         /// </summary>
-        /// <param name="runId">The run the postings came from; names the file.</param>
+        /// <param name="fileName">The download name, built by the handler.</param>
         /// <param name="postings">The postings, most recently seen first. Must not be null.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The rendered file.</returns>
         Task<ExportFile> WriteAsync(
-            Guid runId,
+            string fileName,
             IReadOnlyList<ExportPosting> postings,
             CancellationToken cancellationToken
         );

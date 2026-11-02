@@ -42,10 +42,10 @@ namespace JobScrape.Infrastructure.Tests.Export
         {
             var writer = new CsvPostingWriter();
 
-            var file = await writer.WriteAsync(Guid.NewGuid(), [Posting()], Ct);
+            var file = await writer.WriteAsync("naukri-backend-dev-postings.csv", [Posting()], Ct);
             var text = System.Text.Encoding.UTF8.GetString(file.Content);
 
-            Assert.Equal("run-", file.FileName[..4]);
+            Assert.Equal("naukri-backend-dev-postings.csv", file.FileName);
             Assert.Equal("text/csv", file.ContentType);
             // The BOM survives: spreadsheet apps detect UTF-8.
             Assert.Equal(0xEF, file.Content[0]);
@@ -60,8 +60,9 @@ namespace JobScrape.Infrastructure.Tests.Export
         {
             var writer = new CsvPostingWriter();
 
-            var file = await writer.WriteAsync(Guid.NewGuid(), [], Ct);
+            var file = await writer.WriteAsync("naukri-backend-dev-postings.csv", [], Ct);
 
+            Assert.Equal("naukri-backend-dev-postings.csv", file.FileName);
             Assert.StartsWith(
                 "Title,Company,Location,",
                 System.Text.Encoding.UTF8.GetString(file.Content)
@@ -72,11 +73,10 @@ namespace JobScrape.Infrastructure.Tests.Export
         public async Task XlsxHyperlinkOpensThePosting()
         {
             var writer = new ExcelPostingWriter();
-            var runId = Guid.NewGuid();
 
-            var file = await writer.WriteAsync(runId, [Posting()], Ct);
+            var file = await writer.WriteAsync("naukri-backend-dev-postings.xlsx", [Posting()], Ct);
 
-            Assert.Equal($"run-{runId}-postings.xlsx", file.FileName);
+            Assert.Equal("naukri-backend-dev-postings.xlsx", file.FileName);
             Assert.Equal(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 file.ContentType
@@ -88,17 +88,26 @@ namespace JobScrape.Infrastructure.Tests.Export
             Assert.Equal("Senior .NET Developer, Backend", sheet.Cell(2, 1).GetString());
             var link = sheet.Cell(2, 9).GetHyperlink();
             Assert.True(link.IsExternal);
-            Assert.Equal("https://www.naukri.com/job-listings-dev-101", link.ExternalAddress.ToString());
+            Assert.Equal(
+                "https://www.naukri.com/job-listings-dev-101",
+                link.ExternalAddress.ToString()
+            );
         }
 
         [Fact]
-        public async Task WritersRejectNullPostings()
+        public async Task WritersRejectNulls()
         {
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                () => new CsvPostingWriter().WriteAsync(Guid.NewGuid(), null!, Ct)
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                new CsvPostingWriter().WriteAsync("", [Posting()], Ct)
             );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                () => new ExcelPostingWriter().WriteAsync(Guid.NewGuid(), null!, Ct)
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                new CsvPostingWriter().WriteAsync("postings.csv", null!, Ct)
+            );
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                new ExcelPostingWriter().WriteAsync("  ", [Posting()], Ct)
+            );
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                new ExcelPostingWriter().WriteAsync("postings.xlsx", null!, Ct)
             );
         }
     }

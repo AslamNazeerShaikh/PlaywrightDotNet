@@ -20,24 +20,21 @@ namespace JobScrape.Infrastructure.Export
 
         /// <inheritdoc />
         public Task<ExportFile> WriteAsync(
-            Guid runId,
+            string fileName,
             IReadOnlyList<ExportPosting> postings,
             CancellationToken cancellationToken
         )
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
             ArgumentNullException.ThrowIfNull(postings);
 
-            var text = ExportColumns.CsvText(
-                postings.Select(ExportColumns.Row)
-            );
+            var text = ExportColumns.CsvText(postings.Select(ExportColumns.Row));
             var body = Encoding.UTF8.GetBytes(text);
             var content = new byte[Utf8Preamble.Length + body.Length];
             Buffer.BlockCopy(Utf8Preamble, 0, content, 0, Utf8Preamble.Length);
             Buffer.BlockCopy(body, 0, content, Utf8Preamble.Length, body.Length);
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(
-                new ExportFile($"run-{runId}-postings.csv", "text/csv", content)
-            );
+            return Task.FromResult(new ExportFile(fileName, "text/csv", content));
         }
     }
 }

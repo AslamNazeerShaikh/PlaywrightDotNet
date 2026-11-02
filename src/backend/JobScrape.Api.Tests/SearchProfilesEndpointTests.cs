@@ -24,6 +24,7 @@ namespace JobScrape.Api.Tests
                 experienceYears = 6,
                 postedWithinDays = 7,
                 remoteOnly = false,
+                requiredSkills = new[] { "C#", "ASP.NET Core" },
             };
         }
 
@@ -55,6 +56,7 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal("naukri-dotnet-pune", profile.Name);
             Assert.Equal(["Pune", "Hyderabad"], profile.Locations);
+            Assert.Equal(["C#", "ASP.NET Core"], profile.RequiredSkills);
             Assert.True(profile.Enabled);
 
             // Omitted caps default to the shipped naukri policy limits.
@@ -69,6 +71,7 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(profile.Keywords, fetched!.Keywords);
+            Assert.Equal(profile.RequiredSkills, fetched.RequiredSkills);
 
             var list = await client.GetFromJsonAsync<SearchProfileListResponse>(
                 "api/v1/search-profiles",

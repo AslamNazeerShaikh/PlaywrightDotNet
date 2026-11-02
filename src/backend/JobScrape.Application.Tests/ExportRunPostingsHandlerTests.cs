@@ -1,5 +1,7 @@
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Results;
+using JobScrape.Domain.Common;
+using JobScrape.Domain.Sourcing;
 using Xunit;
 
 namespace JobScrape.Application.Tests
@@ -9,6 +11,20 @@ namespace JobScrape.Application.Tests
         private static readonly DateTimeOffset Now = new(2026, 11, 2, 8, 0, 0, TimeSpan.Zero);
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+        private static RunResponse Run()
+        {
+            var profile = SearchProfile.Create(
+                "backend-dev",
+                SourceKey.Naukri,
+                new SearchCriteria("c#", ["Pune"], null, null, false, []),
+                new RunLimits(3, 60, 60, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
+                Now
+            );
+            var run = ScrapeRun.Create(profile, Now);
+            run.Start(Now);
+            return RunResponse.From(run, profile.Name);
+        }
 
         private static ExportPosting Posting(string externalId = "101")
         {
@@ -33,41 +49,82 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public void ConstructorsRejectNulls()
-        {
-            var store = new FakeExportStore([]);
-            var writers = new IPostingExportWriter[] { new FakeWriter(ExportFormat.Csv) };
-            Assert.Throws<ArgumentNullException>(() => new ExportRunPostingsHandler(null!, writers));
-            Assert.Throws<ArgumentNullException>(
-                () => new ExportRunPostingsHandler(store, (IEnumerable<IPostingExportWriter>)null!)
-            );
-        }
-
-        [Fact]
         public async Task ExportsThroughTheMatchingWriter()
         {
-            var runId = Guid.NewGuid();
+            var run = Run();
             var handler = new ExportRunPostingsHandler(
-                new FakeExportStore([Posting("101"), Posting("102")]),
+                new FakeExportStore(run, [Posting("101"), Posting("102")]),
                 [new FakeWriter(ExportFormat.Csv), new FakeWriter(ExportFormat.Xlsx)]
             );
 
-            var result = await handler.HandleAsync(runId, ExportFormat.Csv, Ct);
+            var result = await handler.HandleAsync(run.Id, ExportFormat.Csv, Ct);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal($"run-{runId}-postings.csv", result.Value.FileName);
+            var shortId = run.Id.ToString("N")[..8];
+            Assert.Equal(
+                $"naukri-backend-dev-20261102T080000Z-{shortId}-postings.csv",
+                result.Value.FileName
+            );
             Assert.Equal("text/csv", result.Value.ContentType);
             Assert.Contains("101", System.Text.Encoding.UTF8.GetString(result.Value.Content));
         }
 
         [Fact]
-        public async Task EmptyIdFailsValidationBeforeAnyRead()
+        public async Task XlsxNameCarriesTheXlsxExtension()
         {
-            var store = new FakeExportStore([]);
+            var run = Run();
             var handler = new ExportRunPostingsHandler(
-                store,
+                new FakeExportStore(run, [Posting("101")]),
+                [new FakeWriter(ExportFormat.Xlsx)]
+            );
+
+            var result = await handler.HandleAsync(run.Id, ExportFormat.Xlsx, Ct);
+
+            Assert.True(result.IsSuccess);
+            var shortId = run.Id.ToString("N")[..8];
+            Assert.Equal(
+                $"naukri-backend-dev-20261102T080000Z-{shortId}-postings.xlsx",
+                result.Value.FileName
+            );
+        }
+
+        [Fact]
+        public async Task MissingProfileFallsBackToProfileSlug()
+        {
+            var seeded = Run() with { ProfileName = null };
+            var handler = new ExportRunPostingsHandler(
+                new FakeExportStore(seeded, [Posting("101")]),
                 [new FakeWriter(ExportFormat.Csv)]
             );
+
+            var result = await handler.HandleAsync(seeded.Id, ExportFormat.Csv, Ct);
+
+            Assert.True(result.IsSuccess);
+            var shortId = seeded.Id.ToString("N")[..8];
+            Assert.Equal(
+                $"naukri-profile-20261102T080000Z-{shortId}-postings.csv",
+                result.Value.FileName
+            );
+        }
+
+        [Fact]
+        public void ConstructorsRejectNulls()
+        {
+            var store = new FakeExportStore(null, []);
+            var writers = new IPostingExportWriter[] { new FakeWriter(ExportFormat.Csv) };
+            Assert.Throws<ArgumentNullException>(() =>
+                new ExportRunPostingsHandler(null!, writers)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new ExportRunPostingsHandler(store, (IEnumerable<IPostingExportWriter>)null!)
+            );
+        }
+
+        [Fact]
+        public async Task EmptyIdFailsValidationBeforeAnyRead()
+        {
+            var store = new FakeExportStore(null, []);
+            var handler = new ExportRunPostingsHandler(store, [new FakeWriter(ExportFormat.Csv)]);
 
             var result = await handler.HandleAsync(Guid.Empty, ExportFormat.Csv, Ct);
 
@@ -80,7 +137,7 @@ namespace JobScrape.Application.Tests
         public async Task MissingRunIsNotFound()
         {
             var handler = new ExportRunPostingsHandler(
-                new FakeExportStore([], exists: false),
+                new FakeExportStore(null, []),
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
@@ -91,28 +148,45 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task MissingWriterIsUnsupportedFormat()
+        public async Task MissingPostingsAreNotFound()
         {
-            var runId = Guid.NewGuid();
+            var run = Run();
             var handler = new ExportRunPostingsHandler(
-                new FakeExportStore([Posting()]),
+                new FakeExportStore(run, null),
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
-            var result = await handler.HandleAsync(runId, ExportFormat.Xlsx, Ct);
+            var result = await handler.HandleAsync(run.Id, ExportFormat.Csv, Ct);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal("RUN_NOT_FOUND", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task MissingWriterIsUnsupportedFormat()
+        {
+            var run = Run();
+            var handler = new ExportRunPostingsHandler(
+                new FakeExportStore(run, [Posting()]),
+                [new FakeWriter(ExportFormat.Csv)]
+            );
+
+            var result = await handler.HandleAsync(run.Id, ExportFormat.Xlsx, Ct);
 
             Assert.False(result.IsSuccess);
             Assert.Equal("EXPORT_FORMAT_UNSUPPORTED", result.Error.Code);
         }
 
-        private sealed class FakeExportStore(IReadOnlyList<ExportPosting> postings, bool exists = true)
-            : IRunStore
+        private sealed class FakeExportStore(
+            RunResponse? run,
+            IReadOnlyList<ExportPosting>? postings
+        ) : IRunStore
         {
             public int Reads { get; private set; }
 
             public Task<RunResponse?> GetAsync(Guid id, CancellationToken cancellationToken)
             {
-                throw new NotImplementedException();
+                return Task.FromResult(run?.Id == id ? run : null);
             }
 
             public Task<RunListResponse> ListAsync(int limit, CancellationToken cancellationToken)
@@ -136,8 +210,7 @@ namespace JobScrape.Application.Tests
             )
             {
                 Reads++;
-                IReadOnlyList<ExportPosting>? items = exists ? postings : null;
-                return Task.FromResult(items);
+                return Task.FromResult(postings);
             }
         }
 
@@ -146,18 +219,14 @@ namespace JobScrape.Application.Tests
             public ExportFormat Format { get; } = format;
 
             public Task<ExportFile> WriteAsync(
-                Guid runId,
+                string fileName,
                 IReadOnlyList<ExportPosting> postings,
                 CancellationToken cancellationToken
             )
             {
                 var text = string.Join('\n', postings.Select(p => p.ExternalJobId));
                 return Task.FromResult(
-                    new ExportFile(
-                        $"run-{runId}-postings.csv",
-                        "text/csv",
-                        System.Text.Encoding.UTF8.GetBytes(text)
-                    )
+                    new ExportFile(fileName, "text/csv", System.Text.Encoding.UTF8.GetBytes(text))
                 );
             }
         }

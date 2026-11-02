@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using JobScrape.Application.Results;
 
 namespace JobScrape.Application.Features.Runs
@@ -6,6 +8,8 @@ namespace JobScrape.Application.Features.Runs
     /// Exports one run's postings to CSV or XLSX. No format string reaches
     /// the writers: the edge parses the query into <see cref="ExportFormat"/>,
     /// so an unsupported format is rejected here before any store read.
+    /// The file is named for the run's source, profile, creation stamp, and
+    /// short run id, so downloads sort and identify without opening.
     /// </summary>
     public sealed class ExportRunPostingsHandler
     {
@@ -14,6 +18,12 @@ namespace JobScrape.Application.Features.Runs
         /// run cannot exhaust memory; the cockpit pages the same data.
         /// </summary>
         public const int Limit = 5000;
+
+        /// <summary>
+        /// Longest profile slug kept in a file name. Download names stay
+        /// well under filesystem limits however long the profile name is.
+        /// </summary>
+        public const int MaxProfileSlugLength = 40;
 
         // All injected and never mutated.
         private readonly IRunStore _store;
@@ -58,17 +68,19 @@ namespace JobScrape.Application.Features.Runs
 
             if (!Enum.IsDefined(format))
             {
-                return Result.Fail<ExportFile>(
-                    Errors.ExportFormatUnsupported(format.ToString())
-                );
+                return Result.Fail<ExportFile>(Errors.ExportFormatUnsupported(format.ToString()));
             }
 
             var writer = _writers.FirstOrDefault(candidate => candidate.Format == format);
             if (writer is null)
             {
-                return Result.Fail<ExportFile>(
-                    Errors.ExportFormatUnsupported(format.ToString())
-                );
+                return Result.Fail<ExportFile>(Errors.ExportFormatUnsupported(format.ToString()));
+            }
+
+            var run = await _store.GetAsync(runId, cancellationToken);
+            if (run is null)
+            {
+                return Result.Fail<ExportFile>(Errors.RunNotFound(runId));
             }
 
             var postings = await _store.ListExportPostingsAsync(runId, Limit, cancellationToken);
@@ -78,8 +90,68 @@ namespace JobScrape.Application.Features.Runs
             }
 
             return Result.Ok(
-                await writer.WriteAsync(runId, postings, cancellationToken)
+                await writer.WriteAsync(FileName(format, run), postings, cancellationToken)
             );
+        }
+
+        /// <summary>
+        /// Names the download: source, profile slug, UTC creation stamp, and
+        /// an 8-character run prefix. The run stamp (not the export time)
+        /// keeps repeated exports of one run byte-identical in name.
+        /// </summary>
+        /// <param name="format">The file format; selects the extension.</param>
+        /// <param name="run">The run being exported. Must not be null.</param>
+        /// <returns>The download name.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="run"/> is null.</exception>
+        private static string FileName(ExportFormat format, RunResponse run)
+        {
+            ArgumentNullException.ThrowIfNull(run);
+            var extension = format == ExportFormat.Csv ? "csv" : "xlsx";
+            var stamp = run
+                .CreatedAt.ToUniversalTime()
+                .ToString("yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture);
+            return string.Join(
+                    '-',
+                    run.SourceKey,
+                    Slug(run.ProfileName),
+                    stamp,
+                    run.Id.ToString("N")[..8]
+                ) + $"-postings.{extension}";
+        }
+
+        /// <summary>
+        /// Turns a profile name into a file-safe slug: lower-case ASCII
+        /// letters and digits, other runs collapsed to one dash. Falls back
+        /// to <c>profile</c> when the run outlived its profile or the name
+        /// has no slug characters.
+        /// </summary>
+        /// <param name="name">The profile name, if the profile still exists.</param>
+        /// <returns>The slug, at most <see cref="MaxProfileSlugLength"/> characters.</returns>
+        private static string Slug(string? name)
+        {
+            var builder = new StringBuilder();
+            var dash = false;
+            foreach (var character in name ?? string.Empty)
+            {
+                if (char.IsAsciiLetterOrDigit(character))
+                {
+                    builder.Append(char.ToLowerInvariant(character));
+                    dash = false;
+                }
+                else if (!dash && builder.Length > 0)
+                {
+                    builder.Append('-');
+                    dash = true;
+                }
+            }
+
+            var slug = builder.ToString().TrimEnd('-');
+            if (slug.Length > MaxProfileSlugLength)
+            {
+                slug = slug[..MaxProfileSlugLength].TrimEnd('-');
+            }
+
+            return slug.Length == 0 ? "profile" : slug;
         }
     }
 }
