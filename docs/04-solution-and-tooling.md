@@ -601,6 +601,52 @@ pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install --with-deps chromi
 
 On Linux CI, prefer the official Playwright Docker image or `install --with-deps`.
 
+### 7.4 HTTPS development loop (API + BFF over TLS)
+
+> **As implemented:** `src/backend/JobScrape.Api/Properties/launchSettings.json`
+> serves `http://localhost:5207;https://localhost:5208` on the `http` profile,
+> and the cockpit BFF defaults to the HTTPS upstream
+> (`DOTNET_API_URL=https://localhost:5208` in `src/frontend/.env.example`).
+
+One-time setup per developer machine:
+
+```bash
+# 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
+dotnet dev-certs https --trust
+
+# 2. Export its public cert where the BFF expects it (gitignored, per machine).
+mkdir -p src/frontend/.certs
+dotnet dev-certs https --export-path src/frontend/.certs/devcert.pem \
+  --format Pem --no-password
+
+# 3. Copy env and start the BFF with the cert exported in the shell.
+cp src/frontend/.env.example src/frontend/.env
+cd src/frontend && NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun run dev
+```
+
+Files involved:
+
+| File | Change | Committed? |
+|---|---|---|
+| `src/backend/JobScrape.Api/Properties/launchSettings.json` | `applicationUrl` gains `https://localhost:5208` | Yes |
+| `src/frontend/.env.example` | HTTPS default + `NODE_EXTRA_CA_CERTS` documentation | Yes |
+| `src/frontend/.gitignore` | Ignores `.certs/` | Yes |
+| `src/frontend/.env` | Local overrides | No (gitignored) |
+| `src/frontend/.certs/devcert.pem` | Exported public dev cert | No (gitignored) |
+| `src/frontend/README.md` (`HTTPS dev loop`) | Full per-machine steps | Yes |
+
+Rules:
+
+- `NODE_EXTRA_CA_CERTS` must be exported in the shell: Bun builds its CA
+  store before `.env` loads, so a `.env`-only value leaves the BFF proxy at
+  `502 DOTNET_UNREACHABLE`. Verified failure signature without the export:
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE` in `fetch`.
+- Regenerate per machine with steps 1–2 above (never copy the cert between
+  machines); if the cert expires, re-run the same steps.
+- No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`.
+- Verify with `curl https://localhost:5208/api/v1/health` (direct) and
+  `curl http://localhost:3000/api/v1/health` (through the BFF proxy).
+
 ---
 
 ## 8. EF Core migrations

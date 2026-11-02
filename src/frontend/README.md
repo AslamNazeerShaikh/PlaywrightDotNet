@@ -25,14 +25,16 @@
 - Bun `1.4.4` (`bun --version`).
 - The .NET API running loopback-only (defaults below assume it):
   `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj`
-  (serves `http://localhost:5207` in Development).
+  (serves `http://localhost:5207` + `https://localhost:5208` in Development).
+- One-time dev-cert trust so the BFF can call the API over HTTPS (see
+  [HTTPS dev loop](#https-dev-loop)).
 
 ## Commands (run from `src/frontend/`)
 
 | Command                                   | What it does                                             |
 | ----------------------------------------- | -------------------------------------------------------- |
 | `bun install`                             | Resolve + install; writes `bun.lock` (committed).        |
-| `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel.  |
+| `bun run dev`                             | BFF with HMR (`:3000`) + Tailwind watcher, in parallel. Start with `NODE_EXTRA_CA_CERTS` exported (see [HTTPS dev loop](#https-dev-loop)). |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
 | `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
@@ -42,7 +44,47 @@
 | `bun audit`                               | Dependency audit.                                        |
 
 Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
-`DOTNET_API_URL` (default `http://127.0.0.1:5207`).
+`DOTNET_API_URL` (default `https://localhost:5208`).
+
+## HTTPS dev loop
+
+The BFF talks to the API over HTTPS (`https://localhost:5208`, the API's
+`https` applicationUrl in
+`src/backend/JobScrape.Api/Properties/launchSettings.json`). Bun does not
+read the macOS keychain, so the dev cert must be trusted **and** exported.
+One-time setup per machine:
+
+```bash
+# 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
+dotnet dev-certs https --trust
+
+# 2. Export its public cert where the BFF expects it (gitignored).
+mkdir -p src/frontend/.certs
+dotnet dev-certs https --export-path src/frontend/.certs/devcert.pem \
+  --format Pem --no-password
+
+# 3. Copy env and start the BFF with the cert exported in the shell.
+cp src/frontend/.env.example src/frontend/.env
+NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun run dev
+```
+
+Verify: `curl https://localhost:5208/api/v1/health` (API) and
+`curl http://localhost:3000/api/v1/health` (BFF proxy, must return
+`healthy`, not `DOTNET_UNREACHABLE`).
+
+Notes:
+
+- `NODE_EXTRA_CA_CERTS` must be exported in the shell, not just present in
+  `.env`: Bun builds its CA store before `.env` loads, so a `.env`-only
+  value leaves the proxy at `502 DOTNET_UNREACHABLE`. The committed
+  `.env.example` documents the same path.
+- Regenerate per machine, never commit: `.env` and `.certs/` are gitignored.
+  If the cert expires or `fetch` fails with
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run steps 1–2.
+- No-cert fallback: `DOTNET_API_URL=http://127.0.0.1:5207` needs no trust
+  or export.
+- `launchSettings.json` keeps both URLs (`5207` http, `5208` https) so plain
+  `dotnet run --launch-profile http` serves both with no extra flags.
 
 ## Layout
 
@@ -186,9 +228,9 @@ Rules that follow from the baseline:
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
-- **Port default is `5207`, not `5080`.** The doc's service table says
-  `5080`; the repo's `launchSettings.json` serves `5207`. The BFF default
-  follows repo reality; the table needs a fix-up.
+- **Port defaults are `5207` (http) + `5208` (https), not `5080`.** The doc's service table says
+  `5080`; the repo's `launchSettings.json` serves both loopback URLs. The BFF default
+  follows repo reality (`https://localhost:5208`); the table needs a fix-up.
 - **No TanStack, no shadcn, no SSE yet.** A handful of fetches do not earn a
   query client (YAGNI). The runs vertical shipped without SSE: it uses the
   spec's documented fallback, polling `GET /api/v1/runs/{id}` every 2 s
