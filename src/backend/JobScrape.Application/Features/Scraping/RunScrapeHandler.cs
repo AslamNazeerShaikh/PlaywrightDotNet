@@ -287,10 +287,17 @@ namespace JobScrape.Application.Features.Scraping
             }
 
             var quota = await FindOrStartQuotaAsync(source, now, cancellationToken);
-            var runQuota = quota.TryStartRun(settings.DailyRunCap, now);
-            if (!runQuota.IsAllowed)
+            if (settings.DailyRunCap is { } runCap)
             {
-                return Result.Fail<RunScope>(Errors.QuotaExceeded(source, runQuota));
+                var runQuota = quota.TryStartRun(runCap, now);
+                if (!runQuota.IsAllowed)
+                {
+                    return Result.Fail<RunScope>(Errors.QuotaExceeded(source, runQuota));
+                }
+            }
+            else
+            {
+                quota.RecordRunStart(now);
             }
 
             var run = ScrapeRun.Create(profile, now);

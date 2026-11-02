@@ -64,10 +64,10 @@ namespace JobScrape.Infrastructure.Configuration
         public int DailyDetailCap { get; init; }
 
         /// <summary>
-        /// Gets the runs allowed per UTC day.
+        /// Gets the runs allowed per UTC day, or null for no daily run cap.
         /// </summary>
         [Range(0, 100)]
-        public int DailyRunCap { get; init; }
+        public int? DailyRunCap { get; init; }
 
         /// <summary>
         /// Gets how long a browser profile cools down after a wall, in minutes.

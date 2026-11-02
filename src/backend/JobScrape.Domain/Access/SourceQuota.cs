@@ -130,6 +130,19 @@ namespace JobScrape.Domain.Access
         }
 
         /// <summary>
+        /// Counts one run start today without enforcing a daily cap. Sources
+        /// that configure no run cap still show their usage.
+        /// </summary>
+        /// <param name="now">The current time; must fall on <see cref="QuotaDate"/> (UTC).</param>
+        /// <exception cref="DomainException">Thrown when <paramref name="now"/> is another day.</exception>
+        public void RecordRunStart(DateTimeOffset now)
+        {
+            EnsureSameDay(now);
+            RunsStarted++;
+            UpdatedAt = now;
+        }
+
+        /// <summary>
         /// Counts one wall hit today. Walls are recorded, never capped.
         /// </summary>
         /// <param name="now">The current time; must fall on <see cref="QuotaDate"/> (UTC).</param>

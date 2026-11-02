@@ -83,7 +83,11 @@ function SourceCard({ source, code }: { source: SourceStatus; code: string }) {
       <h3 className="module-note">TODAY · {quota.date} UTC</h3>
       <Meter label="Pages" used={quota.pagesUsed} cap={quota.pageCap} />
       <Meter label="Details" used={quota.detailsUsed} cap={quota.detailCap} />
-      <Meter label="Runs" used={quota.runsUsed} cap={quota.runCap} />
+      {quota.runCap === null ? (
+        <p className="status-line">Runs: {quota.runsUsed} · no daily cap</p>
+      ) : (
+        <Meter label="Runs" used={quota.runsUsed} cap={quota.runCap} />
+      )}
 
       <div className="tbl-wrap">
         <table className="data" aria-label={`${source.key} policy`}>

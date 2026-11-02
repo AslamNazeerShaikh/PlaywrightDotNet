@@ -76,6 +76,18 @@ namespace JobScrape.Domain.Tests.Access
         }
 
         [Fact]
+        public void RecordRunStartCountsWithoutACap()
+        {
+            var quota = SourceQuota.StartDay(SourceKey.Naukri, Now);
+
+            quota.RecordRunStart(Now);
+            quota.RecordRunStart(Now.AddMinutes(1));
+
+            Assert.Equal(2, quota.RunsStarted);
+            Assert.Equal(Now.AddMinutes(1), quota.UpdatedAt);
+        }
+
+        [Fact]
         public void ZeroCapBlocksEverything()
         {
             var quota = SourceQuota.StartDay(SourceKey.LinkedIn, Now);

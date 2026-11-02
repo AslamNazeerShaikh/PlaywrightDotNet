@@ -306,6 +306,21 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Single(harness.Store.Runs);
         }
 
+        [Fact]
+        public async Task NoDailyRunCapAllowsAnotherRun()
+        {
+            var harness = new ScrapeHarness();
+            harness.Settings = harness.Settings with { DailyRunCap = null };
+            harness.Source.Then(Page(null, Job("1")));
+            await RunOkAsync(harness);
+            harness.Source.Then(Page(null, Job("2")));
+
+            var result = await harness.Build().HandleAsync(harness.Request, Ct);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, harness.Store.Runs.Count);
+        }
+
         // ---- session ----
 
         [Fact]

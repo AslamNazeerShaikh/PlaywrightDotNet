@@ -57,7 +57,7 @@ export interface SourceStatus {
     detailsUsed: number;
     detailCap: number;
     runsUsed: number;
-    runCap: number;
+    runCap: number | null;
     challenges: number;
   };
   circuit: {

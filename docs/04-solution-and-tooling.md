@@ -391,7 +391,6 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "MaxDelayMs": 6000,
         "DailyPageCap": 25,
         "DailyDetailCap": 60,
-        "DailyRunCap": 2,
         "ChallengeCooldownMinutes": 45,
         "RequiresConsent": false,
         "UseApiFastPath": false
@@ -440,7 +439,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 }
 ```
 
-> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review.
+> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` is optional. Omit it for no daily run cap; the run count is still recorded for the Sources page.
 
 ### 5.2 Precedence and secrets
 
