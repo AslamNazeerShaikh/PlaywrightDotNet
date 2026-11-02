@@ -57,7 +57,11 @@ export function OverviewPage({
           />
           <Stat label="Samples" value={stats === null ? "0" : String(stats.count)} />
         </div>
-        {health !== null && <JsonBlock label="Latest health payload" value={health} />}
+        {health !== null && (
+          <div style={{ marginTop: "10px" }}>
+            <JsonBlock label="Latest health payload" value={health} />
+          </div>
+        )}
       </Module>
 
       <Module
