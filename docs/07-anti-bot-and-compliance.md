@@ -154,13 +154,18 @@ Install steps:
 
 1. Run `./vendor/download-ubol.sh`. It fetches the pinned uBOLite
    release and builds `vendor/ubol-chrome-max` with maximum filtering.
-2. Set `"Browser": {"AdblockMode": "ubol-max",
-   "ExtensionDir": "vendor/ubol-chrome-max"}`. The path resolves
-   against the content root.
-3. Launch headed. Headless, Firefox, and WebKit launches ignore the
-   setting. A set mode with a missing directory fails startup and
-   names the script; a directory lost mid-run logs once and launches
-   without the blocker.
+2. Keep the committed `appsettings.json` at `AdblockMode: null`. Add a
+   gitignored `src/backend/JobScrape.Api/appsettings.Local.json` with
+   `"Browser": {"AdblockMode": "ubol-max",
+   "ExtensionDir": "../../../vendor/ubol-chrome-max"}`. The API loads
+   that file when present, so a fresh clone starts without the blocker
+   and a developer can opt in locally. `ExtensionDir` resolves against the API
+   content root (`src/backend/JobScrape.Api`); `../../../` is the repo
+   root. An absolute path also works.
+3. Launch headed Chromium with the bundled channel. Headless, Firefox,
+   and WebKit launches ignore the setting. A set mode with a missing
+   directory fails startup and names the script; a directory lost
+   mid-run logs once and launches without the blocker.
 | Inert stealth init script | **No** | Removed permanently. |
 
 ---
