@@ -172,7 +172,7 @@ namespace JobScrape.Application.Tests.Scraping
             var summary = await RunAsync(harness);
 
             Assert.Equal(RunStage.Completed, summary.Stage);
-            Assert.Equal(2, summary.Stats.DetailsFetched);
+            Assert.Equal(1, summary.Stats.DetailsFetched);
             Assert.Equal(1, Assert.Single(harness.Store.Quotas).Challenges);
             Assert.Equal(1, Assert.Single(harness.Store.Circuits).ConsecutiveFailures);
             Assert.Equal(2, harness.Source.DetailRequests.Count);

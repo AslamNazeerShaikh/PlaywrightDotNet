@@ -619,7 +619,6 @@ namespace JobScrape.Application.Features.Scraping
                     detail => detail.Challenge,
                     cancellationToken
                 );
-                run.RecordDetail();
 
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
@@ -642,6 +641,7 @@ namespace JobScrape.Application.Features.Scraping
                     return true;
                 }
 
+                run.RecordDetail();
                 if (!TryMerge(scope, posting, result, decision))
                 {
                     run.RecordFailure();
