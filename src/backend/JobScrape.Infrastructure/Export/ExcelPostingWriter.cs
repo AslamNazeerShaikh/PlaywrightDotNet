@@ -42,8 +42,9 @@ namespace JobScrape.Infrastructure.Export
                     sheet.Cell(row, column + 1).Value = values[column];
                 }
 
-                // Column 9 is the posting URL: link it so it opens in Excel.
-                sheet.Cell(row, 9).SetHyperlink(new XLHyperlink(posting.Url));
+                // Link the posting URL cell so it opens in Excel.
+                var urlColumn = Array.IndexOf(ExportColumns.Headers, "Posting URL") + 1;
+                sheet.Cell(row, urlColumn).SetHyperlink(new XLHyperlink(posting.Url));
                 row++;
             }
 
