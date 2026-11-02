@@ -98,7 +98,7 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
-        public async Task ReplacedSkillsRecheckDropsAfterRefreshWithoutBreakingCounts()
+        public async Task MismatchedResightDropsBeforeRefreshWithoutBreakingCounts()
         {
             var harness = new ScrapeHarness(requiredSkills: ["c#"]);
             var seeded = JobPosting.Create(Job("1") with { Skills = ["C#"] }, Now);
@@ -112,7 +112,9 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Equal(0, run.Stats.PostingsNew);
             Assert.Equal(0, run.Stats.PostingsUpdated);
             Assert.Equal(0, run.Stats.Failures);
-            Assert.Equal(["Java"], Assert.Single(harness.Store.Postings).Skills.Select(s => s.Name));
+            var stored = Assert.Single(harness.Store.Postings);
+            Assert.Equal(["C#"], stored.Skills.Select(s => s.Name));
+            Assert.Equal(Now, stored.LastSeenAt);
         }
 
         [Fact]
