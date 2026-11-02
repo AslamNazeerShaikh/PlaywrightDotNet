@@ -1,6 +1,11 @@
 import { CodeTag, codeTone, constantCase, Field, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
-import type { ApiProblem, CreateSessionInput, SessionPayload } from "../lib/api.ts";
+import type {
+  ApiProblem,
+  CreateSessionInput,
+  SessionPayload,
+  UpdateSessionInput,
+} from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { SOURCES } from "./profiles.tsx";
 
@@ -18,19 +23,39 @@ export function SessionsPage({
   loading,
   creating,
   createProblem,
+  selectedId,
+  onSelect,
   onCreate,
+  onUpdate,
   onRefresh,
+  updating,
+  updateProblem,
 }: {
   sessions: SessionPayload[] | null;
   listProblem: ApiProblem | null;
   loading: boolean;
   creating: boolean;
   createProblem: ApiProblem | null;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   onCreate: (input: CreateSessionInput) => Promise<boolean>;
+  onUpdate: (id: string, input: UpdateSessionInput) => Promise<boolean>;
   onRefresh: () => void;
+  updating: boolean;
+  updateProblem: ApiProblem | null;
 }) {
   useRenderLog("SessionsPage");
   const fieldErrors = createProblem?.errors ?? {};
+  const updateFieldErrors = updateProblem?.errors ?? {};
+  const selected = sessions?.find((s) => s.id === selectedId) ?? null;
+
+  async function submitUpdate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selected === null) {
+      return;
+    }
+    await onUpdate(selected.id, readSessionUpdateForm(new FormData(event.currentTarget)));
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -155,8 +180,12 @@ export function SessionsPage({
               </thead>
               <tbody>
                 {sessions.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.name}</td>
+                  <tr key={s.id} aria-selected={s.id === selectedId}>
+                    <td>
+                      <button type="button" className="row-btn" onClick={() => onSelect(s.id)}>
+                        {s.name}
+                      </button>
+                    </td>
                     <td>
                       <CodeTag code={s.sourceKey} />
                     </td>
@@ -178,6 +207,78 @@ export function SessionsPage({
               </tbody>
             </table>
           </div>
+        )}
+      </Module>
+
+      <Module
+        code="SES-04"
+        title="Edit browser profile"
+        span="span-5"
+        note="PATCH /api/v1/sessions/{id}. The source is fixed; a rename moves the user-data directory."
+      >
+        {selected === null ? (
+          <p className="status-line">Select a browser profile name to edit it.</p>
+        ) : (
+          <>
+            <form
+              key={`${selected.id}:${selected.name}:${selected.engine}:${selected.channel}`}
+              onSubmit={submitUpdate}
+              aria-label="Edit browser profile"
+              noValidate
+            >
+              <Field label="NAME" name="name" errors={updateFieldErrors}>
+                <input
+                  className="input"
+                  name="name"
+                  aria-label="Edit profile name"
+                  defaultValue={selected.name}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </Field>
+              <div className="field-pair">
+                <Field label="ENGINE" name="engine" errors={updateFieldErrors}>
+                  <select
+                    className="input"
+                    name="engine"
+                    aria-label="Edit engine"
+                    defaultValue={selected.engine}
+                  >
+                    {ENGINES.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="CHANNEL" name="channel" errors={updateFieldErrors}>
+                  <select
+                    className="input"
+                    name="channel"
+                    aria-label="Edit channel"
+                    defaultValue={selected.channel}
+                  >
+                    {CHANNELS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <p className="status-line">Source: {selected.sourceKey}</p>
+              <button type="submit" className="btn" disabled={updating}>
+                {updating ? "SAVING…" : "SAVE CHANGES"}
+              </button>
+            </form>
+            {updateProblem !== null && (
+              <p className="alert" role="alert">
+                <CodeTag code={updateProblem.code} tone={codeTone(updateProblem.code)} />{" "}
+                {updateProblem.title}
+                {updateProblem.detail !== "" ? ` — ${updateProblem.detail}` : ""}
+              </p>
+            )}
+          </>
         )}
       </Module>
 
@@ -224,6 +325,16 @@ function StateRow({ state, text }: { state: SessionPayload["state"]; text: strin
       <td>{text}</td>
     </tr>
   );
+}
+
+/** Reads the edit form into the API body. */
+export function readSessionUpdateForm(data: FormData): UpdateSessionInput {
+  const text = (key: string) => String(data.get(key) ?? "").trim();
+  return {
+    name: text("name"),
+    engine: text("engine"),
+    channel: text("channel"),
+  };
 }
 
 /** COOLING_DOWN-style labels so states read like the deck's other codes. */

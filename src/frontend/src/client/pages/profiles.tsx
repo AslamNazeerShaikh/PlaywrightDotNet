@@ -1,7 +1,12 @@
 import { Abbr } from "../components/legend.tsx";
 import { CodeTag, codeTone, Field, JsonBlock, Module, plural } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
-import type { ApiProblem, CreateProfileInput, SearchProfilePayload } from "../lib/api.ts";
+import type {
+  ApiProblem,
+  CreateProfileInput,
+  SearchProfilePayload,
+  UpdateProfileInput,
+} from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
 
 /**
@@ -21,7 +26,10 @@ export function ProfilesPage({
   selectedId,
   onSelect,
   onCreate,
+  onUpdate,
   onRefresh,
+  updating,
+  updateProblem,
 }: {
   profiles: SearchProfilePayload[] | null;
   listProblem: ApiProblem | null;
@@ -31,11 +39,15 @@ export function ProfilesPage({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreate: (input: CreateProfileInput) => Promise<boolean>;
+  onUpdate: (id: string, input: UpdateProfileInput) => Promise<boolean>;
   onRefresh: () => void;
+  updating: boolean;
+  updateProblem: ApiProblem | null;
 }) {
   useRenderLog("ProfilesPage");
   const selected = profiles?.find((p) => p.id === selectedId) ?? null;
   const fieldErrors = createProblem?.errors ?? {};
+  const updateFieldErrors = updateProblem?.errors ?? {};
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,6 +56,14 @@ export function ProfilesPage({
     if (created) {
       form.reset();
     }
+  }
+
+  async function submitUpdate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selected === null) {
+      return;
+    }
+    await onUpdate(selected.id, readUpdateForm(new FormData(event.currentTarget)));
   }
 
   return (
@@ -246,6 +266,167 @@ export function ProfilesPage({
                 </tbody>
               </table>
             </div>
+            <form
+              key={`${selected.id}:${selected.updatedAt}`}
+              onSubmit={submitUpdate}
+              aria-label="Edit search profile"
+              noValidate
+              style={{ marginTop: "12px" }}
+            >
+              <Field label="NAME" name="name" errors={updateFieldErrors}>
+                <input
+                  className="input"
+                  name="name"
+                  aria-label="Edit name"
+                  defaultValue={selected.name}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="KEYWORDS" name="keywords" errors={updateFieldErrors}>
+                <input
+                  className="input"
+                  name="keywords"
+                  aria-label="Edit keywords"
+                  defaultValue={selected.keywords}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="LOCATIONS (COMMA-SEPARATED)"
+                name="locations"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="locations"
+                  aria-label="Edit locations"
+                  defaultValue={selected.locations.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="KEY SKILLS (COMMA-SEPARATED)"
+                name="requiredSkills"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="requiredSkills"
+                  aria-label="Edit key skills"
+                  defaultValue={selected.requiredSkills.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <div className="field-pair">
+                <Field label="EXPERIENCE (YRS)" name="experienceYears" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="experienceYears"
+                    aria-label="Edit experience years"
+                    inputMode="numeric"
+                    defaultValue={selected.experienceYears ?? ""}
+                  />
+                </Field>
+                <Field
+                  label="POSTED WITHIN (DAYS)"
+                  name="postedWithinDays"
+                  errors={updateFieldErrors}
+                >
+                  <input
+                    className="input"
+                    name="postedWithinDays"
+                    aria-label="Edit posted within days"
+                    inputMode="numeric"
+                    defaultValue={selected.postedWithinDays ?? ""}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX PAGES" name="maxPages" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxPages"
+                    aria-label="Edit max pages"
+                    inputMode="numeric"
+                    defaultValue={selected.maxPages}
+                  />
+                </Field>
+                <Field label="MAX JOBS" name="maxJobs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxJobs"
+                    aria-label="Edit max jobs"
+                    inputMode="numeric"
+                    defaultValue={selected.maxJobs}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX DETAILS" name="maxDetails" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxDetails"
+                    aria-label="Edit max details"
+                    inputMode="numeric"
+                    defaultValue={selected.maxDetails}
+                  />
+                </Field>
+                <Field label="MIN DELAY (MS)" name="minDelayMs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="minDelayMs"
+                    aria-label="Edit min delay"
+                    inputMode="numeric"
+                    defaultValue={selected.minDelayMs}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX DELAY (MS)" name="maxDelayMs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxDelayMs"
+                    aria-label="Edit max delay"
+                    inputMode="numeric"
+                    defaultValue={selected.maxDelayMs}
+                  />
+                </Field>
+                <span className="status-line">Source: {selected.sourceKey}</span>
+              </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="remoteOnly"
+                  aria-label="Edit remote only"
+                  defaultChecked={selected.remoteOnly}
+                />{" "}
+                REMOTE ONLY
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  aria-label="Edit enabled"
+                  defaultChecked={selected.enabled}
+                />{" "}
+                ENABLED
+              </label>
+              {updateFieldErrors["enabled"]?.map((message) => (
+                <span key={message} className="field-error" data-field="enabled">
+                  {message}
+                </span>
+              ))}
+              <button type="submit" className="btn" disabled={updating}>
+                {updating ? "SAVING…" : "SAVE CHANGES"}
+              </button>
+            </form>
+            {updateProblem !== null && (
+              <p className="alert" role="alert">
+                <CodeTag code={updateProblem.code} tone={codeTone(updateProblem.code)} />{" "}
+                {updateProblem.title}
+                {updateProblem.detail !== "" ? ` — ${updateProblem.detail}` : ""}
+              </p>
+            )}
             <div style={{ marginTop: "10px" }}>
               <JsonBlock label="Profile payload" value={selected} />
             </div>
@@ -294,29 +475,57 @@ export function ProfilesPage({
   );
 }
 
+/** Reads the edit form into the API body; blank numbers become null. */
+export function readUpdateForm(data: FormData): UpdateProfileInput {
+  return {
+    name: readText(data, "name"),
+    keywords: readText(data, "keywords"),
+    locations: readList(data, "locations"),
+    experienceYears: readNumber(data, "experienceYears"),
+    postedWithinDays: readNumber(data, "postedWithinDays"),
+    remoteOnly: data.get("remoteOnly") !== null,
+    requiredSkills: readList(data, "requiredSkills"),
+    maxPages: readNumber(data, "maxPages"),
+    maxJobs: readNumber(data, "maxJobs"),
+    maxDetails: readNumber(data, "maxDetails"),
+    minDelayMs: readNumber(data, "minDelayMs"),
+    maxDelayMs: readNumber(data, "maxDelayMs"),
+    enabled: data.get("enabled") !== null,
+  };
+}
+
 /** Reads the uncontrolled form into the API body; blank numbers become null. */
 export function readForm(data: FormData): CreateProfileInput {
-  const text = (key: string) => String(data.get(key) ?? "").trim();
-  const number = (key: string) => {
-    const raw = text(key);
-    return raw === "" ? null : Number(raw);
-  };
   return {
-    name: text("name"),
-    sourceKey: text("sourceKey"),
-    keywords: text("keywords"),
-    locations: text("locations")
-      .split(",")
-      .map((l) => l.trim())
-      .filter((l) => l !== ""),
-    experienceYears: number("experienceYears"),
-    postedWithinDays: number("postedWithinDays"),
+    name: readText(data, "name"),
+    sourceKey: readText(data, "sourceKey"),
+    keywords: readText(data, "keywords"),
+    locations: readList(data, "locations"),
+    experienceYears: readNumber(data, "experienceYears"),
+    postedWithinDays: readNumber(data, "postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
-    requiredSkills: text("requiredSkills")
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s !== ""),
+    requiredSkills: readList(data, "requiredSkills"),
   };
+}
+
+function readText(data: FormData, key: string): string {
+  return String(data.get(key) ?? "").trim();
+}
+
+function readNumber(data: FormData, key: string): number | null {
+  const raw = readText(data, key);
+  if (raw === "") {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function readList(data: FormData, key: string): string[] {
+  return readText(data, key)
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item !== "");
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

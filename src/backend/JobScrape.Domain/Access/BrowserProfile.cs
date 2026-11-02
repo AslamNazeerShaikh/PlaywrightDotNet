@@ -60,7 +60,7 @@ namespace JobScrape.Domain.Access
         /// Gets the name: letters, digits, <c>.</c>, <c>_</c>, <c>-</c>; it is
         /// also the directory name.
         /// </summary>
-        public string Name { get; }
+        public string Name { get; private set; }
 
         /// <summary>
         /// Gets the single source this profile is used for.
@@ -70,12 +70,12 @@ namespace JobScrape.Domain.Access
         /// <summary>
         /// Gets the browser engine.
         /// </summary>
-        public BrowserEngine Engine { get; }
+        public BrowserEngine Engine { get; private set; }
 
         /// <summary>
         /// Gets the engine channel.
         /// </summary>
-        public BrowserChannel Channel { get; }
+        public BrowserChannel Channel { get; private set; }
 
         /// <summary>
         /// Gets the user-data directory relative to the profiles root, with
@@ -130,6 +130,45 @@ namespace JobScrape.Domain.Access
         {
             ArgumentNullException.ThrowIfNull(source);
 
+            var trimmed = EnsureValidName(name);
+            EnsureValidEngineChannel(engine, channel);
+            return new BrowserProfile(BrowserProfileId.New(), trimmed, source, engine, channel);
+        }
+
+        /// <summary>
+        /// Renames the profile. The user-data directory keeps the old name
+        /// until the caller moves it; this method changes metadata only.
+        /// </summary>
+        /// <param name="name">The new safe name.</param>
+        /// <exception cref="DomainException">Thrown when the name is unsafe.</exception>
+        public void Rename(string? name)
+        {
+            var trimmed = EnsureValidName(name);
+            Name = trimmed;
+        }
+
+        /// <summary>
+        /// Changes the browser engine and channel for the next launch. An
+        /// open context keeps its current browser until it is released.
+        /// </summary>
+        /// <param name="engine">The new engine.</param>
+        /// <param name="channel">The new channel; branded channels require Chromium.</param>
+        /// <exception cref="DomainException">Thrown when the pair is invalid.</exception>
+        public void Configure(BrowserEngine engine, BrowserChannel channel)
+        {
+            EnsureValidEngineChannel(engine, channel);
+            Engine = engine;
+            Channel = channel;
+        }
+
+        /// <summary>
+        /// Trims and validates a profile name.
+        /// </summary>
+        /// <param name="name">The candidate name.</param>
+        /// <returns>The trimmed name.</returns>
+        /// <exception cref="DomainException">Thrown when the name is unsafe.</exception>
+        private static string EnsureValidName(string? name)
+        {
             var trimmed = name?.Trim() ?? string.Empty;
             if (!IsValidName(trimmed))
             {
@@ -138,6 +177,20 @@ namespace JobScrape.Domain.Access
                 );
             }
 
+            return trimmed;
+        }
+
+        /// <summary>
+        /// Validates an engine/channel pair.
+        /// </summary>
+        /// <param name="engine">The engine.</param>
+        /// <param name="channel">The channel.</param>
+        /// <exception cref="DomainException">Thrown when the pair is invalid.</exception>
+        private static void EnsureValidEngineChannel(
+            BrowserEngine engine,
+            BrowserChannel channel
+        )
+        {
             if (!Enum.IsDefined(engine) || !Enum.IsDefined(channel))
             {
                 throw new DomainException($"Unknown browser engine {engine} or channel {channel}.");
@@ -147,8 +200,6 @@ namespace JobScrape.Domain.Access
             {
                 throw new DomainException($"Channel {channel} requires the Chromium engine.");
             }
-
-            return new BrowserProfile(BrowserProfileId.New(), trimmed, source, engine, channel);
         }
 
         /// <summary>

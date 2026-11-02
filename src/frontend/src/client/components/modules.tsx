@@ -84,6 +84,7 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "OK" ||
     code === "HEALTHY" ||
     code === "CREATED" ||
+    code === "UPDATED" ||
     code === "RUN_STARTED" ||
     code === "COMPLETED"
   ) {
@@ -93,6 +94,7 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "VALIDATION_FAILED" ||
     code === "PROFILE_NAME_TAKEN" ||
     code === "SESSION_NAME_TAKEN" ||
+    code === "SESSION_RENAME_BLOCKED" ||
     code === "RUN_IN_PROGRESS" ||
     code === "QUOTA_EXCEEDED" ||
     code === "SOURCE_COOLING_DOWN" ||

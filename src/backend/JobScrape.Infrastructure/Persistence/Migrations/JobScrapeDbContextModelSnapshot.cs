@@ -52,7 +52,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")
-                        .HasColumnName("name");
+                        .HasColumnName("name")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -377,7 +378,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")
-                        .HasColumnName("name");
+                        .HasColumnName("name")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("Source")
                         .IsRequired()

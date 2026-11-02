@@ -27,6 +27,15 @@ namespace JobScrape.Api
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            // Local, gitignored overrides (for example uBOL enablement).
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Configuration.AddJsonFile(
+                    "appsettings.Local.json",
+                    optional: true,
+                    reloadOnChange: false
+                );
+            }
 
             // Controllers first: the API surface is controller-based so every
             // endpoint stays greppable and block-namespaced (no minimal-API
@@ -73,10 +82,12 @@ namespace JobScrape.Api
             builder.Services.AddTransient<GetSearchProfileHandler>();
             builder.Services.AddTransient<ListSearchProfilesHandler>();
             builder.Services.AddTransient<CreateSearchProfileHandler>();
+            builder.Services.AddTransient<UpdateSearchProfileHandler>();
             builder.Services.AddTransient<ListSourcesHandler>();
             builder.Services.AddTransient<ListSessionsHandler>();
             builder.Services.AddTransient<GetSessionHandler>();
             builder.Services.AddTransient<CreateSessionHandler>();
+            builder.Services.AddTransient<UpdateSessionHandler>();
             builder.Services.AddTransient<StartRunHandler>();
             builder.Services.AddTransient<ListRunsHandler>();
             builder.Services.AddTransient<GetRunHandler>();

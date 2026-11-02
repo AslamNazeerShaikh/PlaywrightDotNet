@@ -103,6 +103,13 @@ export interface CreateSessionInput {
   channel: string;
 }
 
+/** Body of PATCH /api/v1/sessions/{id}. The source is immutable. */
+export interface UpdateSessionInput {
+  name: string;
+  engine: string;
+  channel: string;
+}
+
 /** Body of POST /api/v1/search-profiles. Omitted caps default to the source policy. */
 export interface CreateProfileInput {
   name: string;
@@ -113,6 +120,23 @@ export interface CreateProfileInput {
   postedWithinDays: number | null;
   remoteOnly: boolean;
   requiredSkills: string[];
+}
+
+/** Body of PUT /api/v1/search-profiles/{id}. The source is immutable. */
+export interface UpdateProfileInput {
+  name: string;
+  keywords: string;
+  locations: string[];
+  experienceYears: number | null;
+  postedWithinDays: number | null;
+  remoteOnly: boolean;
+  requiredSkills: string[];
+  maxPages: number | null;
+  maxJobs: number | null;
+  maxDetails: number | null;
+  minDelayMs: number | null;
+  maxDelayMs: number | null;
+  enabled: boolean;
 }
 
 /** GET /api/v1/runs/{id}: a scrape run's stage, counters, and caps. Timestamps are UTC ISO. */
@@ -215,8 +239,14 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
     listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
     createSession: (input: CreateSessionInput) =>
       timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
+    updateSession: (id: string, input: UpdateSessionInput) =>
+      timed(() => send<SessionPayload>(fetchImpl, "PATCH", `/api/v1/sessions/${id}`, input)),
     createProfile: (input: CreateProfileInput) =>
       timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
+    updateProfile: (id: string, input: UpdateProfileInput) =>
+      timed(() =>
+        send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
+      ),
     listRuns: () => timed(() => get<RunList>(fetchImpl, "/api/v1/runs")),
     getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
     listRunPostings: (id: string) =>
@@ -243,7 +273,7 @@ function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
 
 async function send<T>(
   fetchImpl: FetchImpl,
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH" | "PUT",
   path: string,
   body?: unknown,
 ): Promise<ApiResult<T>> {

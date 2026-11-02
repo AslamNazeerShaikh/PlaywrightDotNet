@@ -58,6 +58,7 @@ namespace JobScrape.Api.Composition
             // Singleton: the container disposes it on shutdown, closing every
             // browser and flushing profile cookies.
             services.AddSingleton<BrowserSessionPool>();
+            services.AddSingleton<IBrowserProfileWorkspace, BrowserProfileWorkspace>();
             services.AddScoped<ISessionManager, PlaywrightSessionManager>();
             services.AddSingleton<IArtifactStore, FileArtifactStore>();
             // Registers one adapter per source; removing one (e.g. LinkedIn)

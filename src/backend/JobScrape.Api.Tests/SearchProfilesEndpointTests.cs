@@ -10,6 +10,7 @@ namespace JobScrape.Api.Tests
     public sealed class SearchProfilesEndpointTests
     {
         private static readonly string[] Pune = ["Pune"];
+        private static readonly string[] CSharp = ["C#"];
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -32,7 +33,7 @@ namespace JobScrape.Api.Tests
         public void RejectsNullHandlers()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new SearchProfilesController(null!, null!, null!)
+                new SearchProfilesController(null!, null!, null!, null!)
             );
         }
 
@@ -209,6 +210,233 @@ namespace JobScrape.Api.Tests
             var profile = await response.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             Assert.False(profile!.Enabled);
+        }
+
+        [Fact]
+        public async Task CaseVariantOfAnotherProfilesNameIsAConflict()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("taken"),
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("mine"),
+                Ct
+            );
+            var profile = await second.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+
+            using var replaced = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{profile!.Id}",
+                new
+                {
+                    name = "TAKEN",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 2,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 3000,
+                    maxDelayMs = 7000,
+                    enabled = true,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, replaced.StatusCode);
+            Assert.Contains(
+                "PROFILE_NAME_TAKEN",
+                await replaced.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
+        public async Task PutUpdatesEditableFieldsAndKeepsTheSource()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("before"),
+                Ct
+            );
+            var profile = await created.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+
+            using var patched = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{profile!.Id}",
+                new
+                {
+                    name = "after",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    experienceYears = 3,
+                    postedWithinDays = 1,
+                    remoteOnly = false,
+                    requiredSkills = CSharp,
+                    maxPages = 2,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 3000,
+                    maxDelayMs = 7000,
+                    enabled = false,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, patched.StatusCode);
+            var updated = await patched.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+            Assert.Equal("after", updated!.Name);
+            Assert.Equal("naukri", updated.SourceKey);
+            Assert.Equal("dotnet", updated.Keywords);
+            Assert.Equal(["Pune"], updated.Locations);
+            Assert.Equal(2, updated.MaxPages);
+            Assert.Equal(20, updated.MaxJobs);
+            Assert.Equal(10, updated.MaxDetails);
+            Assert.Equal(3000, updated.MinDelayMs);
+            Assert.Equal(7000, updated.MaxDelayMs);
+            Assert.False(updated.Enabled);
+
+            var fetched = await client.GetFromJsonAsync<SearchProfileResponse>(
+                $"api/v1/search-profiles/{profile.Id}",
+                Ct
+            );
+            Assert.Equal("after", fetched!.Name);
+        }
+
+        [Fact]
+        public async Task PutToItsOwnNameSucceeds()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("same"),
+                Ct
+            );
+            var profile = await created.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+
+            using var patched = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{profile!.Id}",
+                new
+                {
+                    name = "same",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 2,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 3000,
+                    maxDelayMs = 7000,
+                    enabled = true,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, patched.StatusCode);
+        }
+
+        [Fact]
+        public async Task PutToAnotherProfilesNameIsAConflict()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("taken"),
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("mine"),
+                Ct
+            );
+            var profile = await second.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+
+            using var patched = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{profile!.Id}",
+                new
+                {
+                    name = "taken",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 2,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 3000,
+                    maxDelayMs = 7000,
+                    enabled = true,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, patched.StatusCode);
+            Assert.Contains(
+                "PROFILE_NAME_TAKEN",
+                await patched.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
+        public async Task PutRejectsInvalidCapsAndMissingProfiles()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                Valid("caps"),
+                Ct
+            );
+            var profile = await created.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct);
+
+            using var invalid = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{profile!.Id}",
+                new
+                {
+                    name = "caps",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 30,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 1000,
+                    maxDelayMs = 7000,
+                    enabled = true,
+                },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+            Assert.Contains("maxPages", await invalid.Content.ReadAsStringAsync(Ct));
+
+            using var missing = await client.PutAsJsonAsync(
+                $"api/v1/search-profiles/{Guid.NewGuid()}",
+                new
+                {
+                    name = "missing",
+                    keywords = "dotnet",
+                    locations = Pune,
+                    remoteOnly = false,
+                    maxPages = 2,
+                    maxJobs = 20,
+                    maxDetails = 10,
+                    minDelayMs = 3000,
+                    maxDelayMs = 7000,
+                    enabled = true,
+                },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
         }
 
         [Fact]

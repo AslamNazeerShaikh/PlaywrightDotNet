@@ -82,6 +82,25 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a conflict for a browser-profile rename that cannot move
+        /// the user-data directory safely.
+        /// </summary>
+        /// <param name="sessionId">The profile being renamed.</param>
+        /// <param name="reason">Operator-safe reason.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo SessionRenameBlocked(Guid sessionId, string reason)
+        {
+            ArgumentNullException.ThrowIfNull(reason);
+            return new ErrorInfo(
+                "SESSION_RENAME_BLOCKED",
+                "Browser profile rename blocked.",
+                reason,
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["sessionId"] = sessionId }
+            );
+        }
+
+        /// <summary>
         /// Creates a not-found failure for a missing browser profile session.
         /// </summary>
         /// <param name="sessionId">The requested profile identifier.</param>

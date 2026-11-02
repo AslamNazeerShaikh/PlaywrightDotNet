@@ -225,7 +225,7 @@ namespace JobScrape.Application.Tests
                 await handler.HandleAsync(
                     Valid() with
                     {
-                        Name = new string('n', CreateSearchProfileHandler.MaxNameLength + 1),
+                        Name = new string('n', SearchProfileValidator.MaxNameLength + 1),
                         Locations = eleven,
                     },
                     Ct

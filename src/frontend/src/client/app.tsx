@@ -13,6 +13,8 @@ import {
   type SearchProfilePayload,
   type SessionPayload,
   type SourceList,
+  type UpdateProfileInput,
+  type UpdateSessionInput,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
@@ -65,6 +67,11 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [createSessionProblem, setCreateSessionProblem] = useState<ApiProblem | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [updateProfileProblem, setUpdateProfileProblem] = useState<ApiProblem | null>(null);
+  const [updatingSession, setUpdatingSession] = useState(false);
+  const [updateSessionProblem, setUpdateSessionProblem] = useState<ApiProblem | null>(null);
   const probeBusy = useRef(false);
   const lastProbeAt = useRef(0);
   const probeRef = useRef<() => void>(() => undefined);
@@ -250,6 +257,37 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     return true;
   }
 
+  async function updateProfile(id: string, input: UpdateProfileInput): Promise<boolean> {
+    setUpdatingProfile(true);
+    const { result, at } = await activeClient.updateProfile(id, input);
+    setUpdatingProfile(false);
+    if (!result.ok) {
+      setUpdateProfileProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setUpdateProfileProblem(null);
+    setSelectedProfileId(result.value.id);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: clockTime(at),
+        kind: "ok",
+        code: "UPDATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
+      }),
+    );
+    await loadProfiles();
+    return true;
+  }
+
   async function loadSources() {
     const ticket = ++tickets.current.sources;
     setSourcesLoading(true);
@@ -306,6 +344,37 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       return false;
     }
     setCreateSessionProblem(null);
+    await loadSessions();
+    return true;
+  }
+
+  async function updateSession(id: string, input: UpdateSessionInput): Promise<boolean> {
+    setUpdatingSession(true);
+    const { result, at } = await activeClient.updateSession(id, input);
+    setUpdatingSession(false);
+    if (!result.ok) {
+      setUpdateSessionProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: clockTime(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setUpdateSessionProblem(null);
+    setSelectedSessionId(result.value.id);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: clockTime(at),
+        kind: "ok",
+        code: "UPDATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
+      }),
+    );
     await loadSessions();
     return true;
   }
@@ -372,7 +441,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         </div>
       </header>
 
-
       <RulerTabs
         route={route}
         onSelect={
@@ -413,9 +481,15 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             creating={creating}
             createProblem={createProblem}
             selectedId={selectedProfileId}
-            onSelect={setSelectedProfileId}
+            onSelect={(id) => {
+              setSelectedProfileId(id);
+              setUpdateProfileProblem(null);
+            }}
             onCreate={createProfile}
+            onUpdate={updateProfile}
             onRefresh={() => void loadProfiles()}
+            updating={updatingProfile}
+            updateProblem={updateProfileProblem}
           />
         )}
         {route === "sources" && (
@@ -433,8 +507,16 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             loading={sessionsLoading}
             creating={creatingSession}
             createProblem={createSessionProblem}
+            selectedId={selectedSessionId}
+            onSelect={(id) => {
+              setSelectedSessionId(id);
+              setUpdateSessionProblem(null);
+            }}
             onCreate={createSession}
+            onUpdate={updateSession}
             onRefresh={() => void loadSessions()}
+            updating={updatingSession}
+            updateProblem={updateSessionProblem}
           />
         )}
         {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}

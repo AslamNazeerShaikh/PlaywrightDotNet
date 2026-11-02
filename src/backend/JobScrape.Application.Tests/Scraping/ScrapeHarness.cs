@@ -213,7 +213,11 @@ namespace JobScrape.Application.Tests.Scraping
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
             {
-                return Task.FromResult(SearchProfiles.Any(p => p.Name == name));
+                return Task.FromResult(
+                    SearchProfiles.Any(p =>
+                        string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
             }
 
             public Task AddAsync(SearchProfile profile, CancellationToken cancellationToken)
@@ -306,7 +310,11 @@ namespace JobScrape.Application.Tests.Scraping
                 CancellationToken cancellationToken
             )
             {
-                return Task.FromResult(BrowserProfiles.Any(p => p.Name == name));
+                return Task.FromResult(
+                    BrowserProfiles.Any(p =>
+                        string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
             }
 
             public Task AddAsync(BrowserProfile profile, CancellationToken cancellationToken)

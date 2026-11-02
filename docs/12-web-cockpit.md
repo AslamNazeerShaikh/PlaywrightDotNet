@@ -685,7 +685,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/search-profiles` | List profiles |
 | `POST` | `/api/v1/search-profiles` | Create profile |
 | `GET` | `/api/v1/search-profiles/{id}` | Profile detail |
-| `PATCH` | `/api/v1/search-profiles/{id}` | Update profile |
+| `PUT` | `/api/v1/search-profiles/{id}` | Replace the editable profile fields |
 | `DELETE` | `/api/v1/search-profiles/{id}` | Delete profile |
 | `POST` | `/api/v1/runs` | Start a run; `Idempotency-Key` required |
 | `GET` | `/api/v1/runs` | List runs (filter/sort/page) |
@@ -701,6 +701,8 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/exports` | Export history |
 | `GET` | `/api/v1/exports/{id}` | Status + download |
 | `GET` | `/api/v1/sessions` | Browser profiles and states |
+| `POST` | `/api/v1/sessions` | Create a browser profile |
+| `PATCH` | `/api/v1/sessions/{id}` | Update name, engine, or channel |
 | `POST` | `/api/v1/sessions/{id}/probe` | Probe a session |
 | `POST` | `/api/v1/sessions/{id}/login` | Launch headed manual login on the host |
 | `GET` | `/api/v1/quotas` | Per-source quota and circuit state |
@@ -723,8 +725,9 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).
 > **Not implemented:** `Idempotency-Key` on `POST /runs`, `/runs/{id}/events`
 > (SSE), `/runs/{id}/resume`, `/runs/{id}/artifacts`, `/artifacts/{id}`, and
-> BFF auth (§13.4). Sources and sessions are read/create only (no `PATCH`,
-> probe, or login).
+> BFF auth (§13.4). Sources are read-only. Sessions support create and
+> `PATCH` for name, engine, and channel; probe and login are not implemented.
+> Search profiles and sessions both have edit forms in the cockpit.
 
 ### 12.3 Run lifecycle
 
