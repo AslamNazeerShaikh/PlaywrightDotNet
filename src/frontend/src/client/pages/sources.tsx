@@ -22,9 +22,9 @@ export function SourcesPage({
   useRenderLog("SourcesPage");
   return (
     <>
-      <div className="page-head">
-        <h1>
-          <Scramble text="OPS-DECK // SOURCES" />
+      <div className="page-head" id="sources-div-1">
+        <h1 id="sources-h1-2">
+          <Scramble text="OPS-DECK // SOURCES"  id="sources-scramble-3"/>
         </h1>
         <p>
           Compliance gates, daily quota, and circuit state per source.
@@ -37,13 +37,13 @@ export function SourcesPage({
         title="Snapshot"
         span="span-12"
         note="GET /api/v1/sources. Enabling a source is configuration, not a click."
-      >
+       id="sources-module-4">
         <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
           {loading ? "LOADING…" : "REFRESH"}
         </button>
         {problem !== null && (
-          <p className="alert" role="alert">
-            <CodeTag code={problem.code} tone="warn" /> {problem.title}
+          <p className="alert" role="alert" id="sources-p-5">
+            <CodeTag code={problem.code} tone="warn"  id="sources-codetag-6"/> {problem.title}
           </p>
         )}
       </Module>
@@ -53,7 +53,7 @@ export function SourcesPage({
           key={source.key}
           source={source}
           code={`SRC-${String(i + 1).padStart(2, "0")}`}
-        />
+         id="sources-sourcecard-7"/>
       ))}
     </>
   );
@@ -62,49 +62,49 @@ export function SourcesPage({
 function SourceCard({ source, code }: { source: SourceStatus; code: string }) {
   const { policy, quota, circuit } = source;
   return (
-    <Module code={code} title={source.key.toUpperCase()} span="span-4">
-      <div className="tag-row" aria-label={`${source.key} status`}>
-        <CodeTag code={source.tier.toUpperCase()} tone={tierTone(source.tier)} />
+    <Module code={code} title={source.key.toUpperCase()} span="span-4" id="sources-module-8">
+      <div className="tag-row" aria-label={`${source.key} status`} id="sources-div-9">
+        <CodeTag code={source.tier.toUpperCase()} tone={tierTone(source.tier)}  id="sources-codetag-10"/>
         <CodeTag
           code={source.enabled ? "ENABLED" : "DISABLED"}
           tone={source.enabled ? "ok" : "warn"}
-        />
+         id="sources-codetag-11"/>
         <CodeTag
           code={source.gate.allowed ? "GATE OPEN" : "GATE BLOCKED"}
           tone={source.gate.allowed ? "ok" : "bad"}
-        />
+         id="sources-codetag-12"/>
         <CodeTag
           code={`CIRCUIT ${circuit.state.toUpperCase()}`}
           tone={circuitTone(circuit.state)}
-        />
+         id="sources-codetag-13"/>
       </div>
       {source.gate.reason !== null && <p className="status-line">{source.gate.reason}</p>}
 
       <h3 className="module-note">TODAY · {quota.date} UTC</h3>
-      <Meter label="Pages" used={quota.pagesUsed} cap={quota.pageCap} />
-      <Meter label="Details" used={quota.detailsUsed} cap={quota.detailCap} />
-      <Meter label="Runs" used={quota.runsUsed} cap={quota.runCap} />
+      <Meter label="Pages" used={quota.pagesUsed} cap={quota.pageCap}  id="sources-meter-14"/>
+      <Meter label="Details" used={quota.detailsUsed} cap={quota.detailCap}  id="sources-meter-15"/>
+      <Meter label="Runs" used={quota.runsUsed} cap={quota.runCap}  id="sources-meter-16"/>
 
-      <div className="tbl-wrap">
-        <table className="data" aria-label={`${source.key} policy`}>
-          <tbody>
-            <tr>
+      <div className="tbl-wrap" id="sources-div-17">
+        <table className="data" aria-label={`${source.key} policy`} id="sources-table-18">
+          <tbody id="sources-tbody-19">
+            <tr id="sources-tr-20">
               <th>Per run</th>
               <td>{`${plural(policy.maxPages, "page")} · ${plural(policy.maxJobs, "job")} · ${plural(policy.maxDetails, "detail")}`}</td>
             </tr>
-            <tr>
+            <tr id="sources-tr-21">
               <th>Delay window</th>
               <td>{`${policy.minDelayMs}–${policy.maxDelayMs} ms`}</td>
             </tr>
-            <tr>
+            <tr id="sources-tr-22">
               <th>Wall cooldown</th>
               <td>{`${policy.challengeCooldownMinutes} min`}</td>
             </tr>
-            <tr>
+            <tr id="sources-tr-23">
               <th>Walls today</th>
               <td>{quota.challenges}</td>
             </tr>
-            <tr>
+            <tr id="sources-tr-24">
               <th>Circuit</th>
               <td>{circuitText(circuit)}</td>
             </tr>
@@ -147,11 +147,11 @@ export function Meter({
       aria-valuemin={0}
       aria-valuemax={cap}
       aria-valuenow={used}
-    >
+     id="sources-div-25">
       <span>{label.toUpperCase()}</span>
       <span>{`${used} / ${cap}`}</span>
-      <div className="meter-track">
-        <div className="meter-bar" style={{ width: `${Math.round(ratio * 100)}%` }} />
+      <div className="meter-track" id="sources-div-26">
+        <div className="meter-bar" style={{ width: `${Math.round(ratio * 100)}%` }}  id="sources-div-27"/>
       </div>
     </div>
   );

@@ -50,9 +50,9 @@ export function SessionsPage({
 
   return (
     <>
-      <div className="page-head">
-        <h1>
-          <Scramble text="OPS-DECK // SESSIONS" />
+      <div className="page-head" id="sessions-div-1">
+        <h1 id="sessions-h1-2">
+          <Scramble text="OPS-DECK // SESSIONS"  id="sessions-scramble-3"/>
         </h1>
         <p>Persistent browser profiles, one per source, and their session health.</p>
       </div>
@@ -62,9 +62,9 @@ export function SessionsPage({
         title="New browser profile"
         span="span-4"
         note="POST /api/v1/sessions. The name is also the profile's directory."
-      >
-        <form onSubmit={submit} aria-label="New browser profile" noValidate>
-          <Field label="NAME" name="name" errors={fieldErrors}>
+       id="sessions-module-4">
+        <form onSubmit={submit} aria-label="New browser profile" noValidate id="sessions-form-5">
+          <Field label="NAME" name="name" errors={fieldErrors} id="sessions-field-6">
             <input
               className="input"
               name="name"
@@ -72,9 +72,9 @@ export function SessionsPage({
               placeholder="naukri-main"
               autoComplete="off"
               spellCheck={false}
-            />
+             id="sessions-input-7"/>
           </Field>
-          <Field label="SOURCE" name="sourceKey" errors={fieldErrors}>
+          <Field label="SOURCE" name="sourceKey" errors={fieldErrors} id="sessions-field-8">
             <select className="input" name="sourceKey" aria-label="Source" defaultValue="naukri">
               {SOURCES.map((s) => (
                 <option key={s} value={s}>
@@ -83,8 +83,8 @@ export function SessionsPage({
               ))}
             </select>
           </Field>
-          <div className="field-pair">
-            <Field label="ENGINE" name="engine" errors={fieldErrors}>
+          <div className="field-pair" id="sessions-div-9">
+            <Field label="ENGINE" name="engine" errors={fieldErrors} id="sessions-field-10">
               <select className="input" name="engine" aria-label="Engine" defaultValue="Chromium">
                 {ENGINES.map((e) => (
                   <option key={e} value={e}>
@@ -93,7 +93,7 @@ export function SessionsPage({
                 ))}
               </select>
             </Field>
-            <Field label="CHANNEL" name="channel" errors={fieldErrors}>
+            <Field label="CHANNEL" name="channel" errors={fieldErrors} id="sessions-field-11">
               <select className="input" name="channel" aria-label="Channel" defaultValue="Bundled">
                 {CHANNELS.map((c) => (
                   <option key={c} value={c}>
@@ -108,15 +108,15 @@ export function SessionsPage({
           </button>
         </form>
         {createProblem !== null && (
-          <p className="alert" role="alert">
-            <CodeTag code={createProblem.code} tone={codeTone(createProblem.code)} />{" "}
+          <p className="alert" role="alert" id="sessions-p-12">
+            <CodeTag code={createProblem.code} tone={codeTone(createProblem.code)}  id="sessions-codetag-13"/>{" "}
             {createProblem.title}
             {createProblem.detail !== "" ? ` — ${createProblem.detail}` : ""}
           </p>
         )}
         <p className="status-line">
           Login and probe need the Playwright session manager, which is not built yet. New profiles
-          stay <CodeTag code="NEW" /> until a probe verifies them.
+          stay <CodeTag code="NEW"  id="sessions-codetag-14"/> until a probe verifies them.
         </p>
       </Module>
 
@@ -125,13 +125,13 @@ export function SessionsPage({
         title="Browser profiles"
         span="span-8"
         note="GET /api/v1/sessions, ordered by name. Launch readiness is evaluated server-side now."
-      >
+       id="sessions-module-15">
         <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
           {loading ? "LOADING…" : "REFRESH"}
         </button>
         {listProblem !== null && (
-          <p className="alert" role="alert">
-            <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
+          <p className="alert" role="alert" id="sessions-p-16">
+            <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)}  id="sessions-codetag-17"/>{" "}
             {listProblem.title}
           </p>
         )}
@@ -139,10 +139,10 @@ export function SessionsPage({
           <p className="status-line">No browser profiles yet. Create one per source.</p>
         )}
         {sessions !== null && sessions.length > 0 && (
-          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
-            <table className="data" aria-label="Browser profiles">
-              <thead>
-                <tr>
+          <div className="tbl-wrap" style={{ marginTop: "10px" }} id="sessions-div-18">
+            <table className="data" aria-label="Browser profiles" id="sessions-table-19">
+              <thead id="sessions-thead-20">
+                <tr id="sessions-tr-21">
                   <th>Name</th>
                   <th>Source</th>
                   <th>Browser</th>
@@ -155,20 +155,20 @@ export function SessionsPage({
               </thead>
               <tbody>
                 {sessions.map((s) => (
-                  <tr key={s.id}>
+                  <tr key={s.id} id="sessions-tr-22">
                     <td>{s.name}</td>
-                    <td>
-                      <CodeTag code={s.sourceKey} />
+                    <td id="sessions-td-23">
+                      <CodeTag code={s.sourceKey}  id="sessions-codetag-24"/>
                     </td>
                     <td>{`${s.engine} · ${s.channel}`}</td>
-                    <td>
-                      <CodeTag code={stateLabel(s.state)} tone={stateTone(s.state)} />
+                    <td id="sessions-td-25">
+                      <CodeTag code={stateLabel(s.state)} tone={stateTone(s.state)}  id="sessions-codetag-26"/>
                     </td>
-                    <td>
+                    <td id="sessions-td-27">
                       <CodeTag
                         code={s.canLaunch ? "READY" : "BLOCKED"}
                         tone={s.canLaunch ? "ok" : "bad"}
-                      />
+                       id="sessions-codetag-28"/>
                     </td>
                     <td>{s.consecutiveChallenges}</td>
                     <td>{s.cooldownUntil ?? "—"}</td>
@@ -186,27 +186,27 @@ export function SessionsPage({
         title="Session states"
         span="span-12"
         note="The domain's state machine (docs/03-domain-model.md §6.2), rendered verbatim."
-      >
-        <div className="tbl-wrap">
-          <table className="data">
-            <thead>
-              <tr>
+       id="sessions-module-29">
+        <div className="tbl-wrap" id="sessions-div-30">
+          <table className="data" id="sessions-table-31">
+            <thead id="sessions-thead-32">
+              <tr id="sessions-tr-33">
                 <th>State</th>
                 <th>Meaning</th>
               </tr>
             </thead>
-            <tbody>
-              <StateRow state="New" text="Never verified, or reset. Needs a login and a probe." />
-              <StateRow state="Healthy" text="A probe verified the session." />
+            <tbody id="sessions-tbody-34">
+              <StateRow state="New" text="Never verified, or reset. Needs a login and a probe."  id="sessions-staterow-35"/>
+              <StateRow state="Healthy" text="A probe verified the session."  id="sessions-staterow-36"/>
               <StateRow
                 state="CoolingDown"
                 text="Stopped after a wall; launches are blocked until the cooldown ends."
-              />
-              <StateRow state="Expired" text="Cookies expired; a manual re-login is needed." />
+               id="sessions-staterow-37"/>
+              <StateRow state="Expired" text="Cookies expired; a manual re-login is needed."  id="sessions-staterow-38"/>
               <StateRow
                 state="ResetRequired"
                 text="Three walls in a row; reset or replace the profile."
-              />
+               id="sessions-staterow-39"/>
             </tbody>
           </table>
         </div>
@@ -217,9 +217,9 @@ export function SessionsPage({
 
 function StateRow({ state, text }: { state: SessionPayload["state"]; text: string }) {
   return (
-    <tr>
-      <td>
-        <CodeTag code={stateLabel(state)} tone={stateTone(state)} />
+    <tr id="sessions-tr-40">
+      <td id="sessions-td-41">
+        <CodeTag code={stateLabel(state)} tone={stateTone(state)}  id="sessions-codetag-42"/>
       </td>
       <td>{text}</td>
     </tr>

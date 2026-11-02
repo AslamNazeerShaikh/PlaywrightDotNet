@@ -30,12 +30,12 @@ export function Legend({ label, items }: { label: string; items: LegendItem[] })
 
 /** Colored dot: probe hits, status points. */
 export function Dot({ color }: { color: string }) {
-  return <span className="swatch-dot" style={{ backgroundColor: color }} aria-hidden="true" />;
+  return <span className="swatch-dot" style={{ backgroundColor: color }} aria-hidden="true"  id="legend-span-1"/>;
 }
 
 /** Rotated square: units on the tac-map. */
 export function Diamond({ color }: { color: string }) {
-  return <span className="swatch-diamond" style={{ borderColor: color }} aria-hidden="true" />;
+  return <span className="swatch-diamond" style={{ borderColor: color }} aria-hidden="true"  id="legend-span-2"/>;
 }
 
 /** Wire sample: solid for live, dashed for unknown. */
@@ -45,13 +45,13 @@ export function Wire({ color, dashed = false }: { color: string; dashed?: boolea
       className="swatch-wire"
       style={{ borderTopColor: color, borderTopStyle: dashed ? "dashed" : "solid" }}
       aria-hidden="true"
-    />
+     id="legend-span-3"/>
   );
 }
 
 /** Hollow ring: HQ marker, range bands. */
 export function Ring({ color }: { color: string }) {
-  return <span className="swatch-ring" style={{ borderColor: color }} aria-hidden="true" />;
+  return <span className="swatch-ring" style={{ borderColor: color }} aria-hidden="true"  id="legend-span-4"/>;
 }
 
 /** X mark: failed probes, kills. Pure CSS bars, no glyph-font dependency. */
@@ -61,7 +61,7 @@ export function Cross({ color }: { color: string }) {
       className="swatch-cross"
       style={{ ["--cross-color" as string]: color }}
       aria-hidden="true"
-    />
+     id="legend-span-5"/>
   );
 }
 
@@ -76,11 +76,11 @@ export function Glossary({ terms }: { terms: GlossaryTerm[] }) {
   return (
     <dl className="glossary">
       {terms.map((t) => (
-        <div key={t.abbr} className="glossary-row">
-          <dt>
+        <div key={t.abbr} className="glossary-row" id="legend-div-6">
+          <dt id="legend-dt-7">
             <abbr title={t.full}>{t.abbr}</abbr>
           </dt>
-          <dd>
+          <dd id="legend-dd-8">
             <strong>{t.full}.</strong> {t.hint}
           </dd>
         </div>

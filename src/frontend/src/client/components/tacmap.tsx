@@ -61,11 +61,11 @@ export function TacMap({
           ? "Tactical overview map: no contacts yet"
           : `Tactical overview map: ${samples.length} contacts`
       }
-    >
-      <defs>
+     id="tacmap-svg-1">
+      <defs id="tacmap-defs-2">
         <radialGradient id={`${uid}-sweep`}>
-          <stop offset="0%" style={{ stopColor: "var(--sig)", stopOpacity: 0.28 }} />
-          <stop offset="100%" style={{ stopColor: "var(--sig)", stopOpacity: 0 }} />
+          <stop offset="0%" style={{ stopColor: "var(--sig)", stopOpacity: 0.28 }}  id="tacmap-stop-3"/>
+          <stop offset="100%" style={{ stopColor: "var(--sig)", stopOpacity: 0 }}  id="tacmap-stop-4"/>
         </radialGradient>
       </defs>
 
@@ -81,18 +81,18 @@ export function TacMap({
           strokeWidth="1"
           strokeDasharray="6 6"
           opacity="0.7"
-        />
+         id="tacmap-circle-5"/>
       ))}
       {cardinals(cx, cy)}
 
       {motionOK && (
-        <g>
+        <g id="tacmap-g-6">
           <path
             className="tac-sweep"
             d={`M ${cx} ${cy} L ${cx} 20 A 160 160 0 0 1 ${cx + 103} ${cy - 123} Z`}
             fill={`url(#${uid}-sweep)`}
             style={{ transformOrigin: `${cx}px ${cy}px` }}
-          />
+           id="tacmap-path-7"/>
           {/* HQ sonar: cyan range rings breathing outward (r 17 → 70 and 17 → 95
               as scale). Additive — the emerald sweep keeps doing its job underneath. */}
           <circle
@@ -103,7 +103,7 @@ export function TacMap({
             fill="none"
             style={{ stroke: "var(--brand-2)", transformOrigin: `${cx}px ${cy}px` }}
             strokeWidth="1.5"
-          />
+           id="tacmap-circle-8"/>
           <circle
             className="tac-ping tac-ping-wide"
             cx={cx}
@@ -112,7 +112,7 @@ export function TacMap({
             fill="none"
             style={{ stroke: "var(--brand-3)", transformOrigin: `${cx}px ${cy}px` }}
             strokeWidth="1"
-          />
+           id="tacmap-circle-9"/>
         </g>
       )}
 
@@ -127,37 +127,37 @@ export function TacMap({
           strokeWidth="1.5"
           strokeDasharray={dashed ? "5 4" : undefined}
           className={dashed ? "flow-dash" : undefined}
-        />
+         id="tacmap-line-10"/>
       ))}
 
       {motionOK && live && (
         <g>
           {/* Packets ride browser → BFF → .NET and BFF → store; the keyframes
               hold the same waypoints as the wires above. */}
-          <circle className="tac-trace-api" r="3.5" style={{ fill: "var(--sig)" }} />
+          <circle className="tac-trace-api" r="3.5" style={{ fill: "var(--sig)" }}  id="tacmap-circle-11"/>
           <circle
             className="tac-trace-store"
             r="2.5"
             style={{ fill: "var(--sig)" }}
             opacity="0.8"
-          />
+           id="tacmap-circle-12"/>
         </g>
       )}
 
       {blips.map((b, i) =>
         b.ok ? (
-          <circle key={i} cx={b.x} cy={b.y} r="2.5" style={{ fill: "var(--sig)" }} opacity="0.9" />
+          <circle key={i} cx={b.x} cy={b.y} r="2.5" style={{ fill: "var(--sig)" }} opacity="0.9"  id="tacmap-circle-13"/>
         ) : (
-          <g key={i} style={{ stroke: "var(--red)" }} strokeWidth="2">
-            <line x1={b.x - 4} y1={b.y - 4} x2={b.x + 4} y2={b.y + 4} />
-            <line x1={b.x + 4} y1={b.y - 4} x2={b.x - 4} y2={b.y + 4} />
-            <circle cx={b.x} cy={b.y} r="7" fill="none" opacity="0.5" />
+          <g key={i} style={{ stroke: "var(--red)" }} strokeWidth="2" id="tacmap-g-14">
+            <line x1={b.x - 4} y1={b.y - 4} x2={b.x + 4} y2={b.y + 4}  id="tacmap-line-15"/>
+            <line x1={b.x + 4} y1={b.y - 4} x2={b.x - 4} y2={b.y + 4}  id="tacmap-line-16"/>
+            <circle cx={b.x} cy={b.y} r="7" fill="none" opacity="0.5"  id="tacmap-circle-17"/>
           </g>
         ),
       )}
 
       {nodes.map((n) => (
-        <g key={n.label}>
+        <g key={n.label} id="tacmap-g-18">
           <rect
             x={n.x - 7}
             y={n.y - 7}
@@ -167,7 +167,7 @@ export function TacMap({
             transform={`rotate(45 ${n.x} ${n.y})`}
             style={{ fill: "var(--canvas)", stroke: n.state }}
             strokeWidth="2"
-          />
+           id="tacmap-rect-19"/>
           {n.sub === "HQ" && (
             <circle
               cx={n.x}
@@ -177,7 +177,7 @@ export function TacMap({
               style={{ stroke: n.state }}
               strokeWidth="1"
               strokeDasharray="3 3"
-            />
+             id="tacmap-circle-20"/>
           )}
           <text
             x={n.x}
@@ -214,7 +214,7 @@ function gridLines() {
         y2={360}
         style={{ stroke: "var(--line)" }}
         opacity="0.5"
-      />,
+       id="tacmap-line-21"/>,
     );
   }
   for (let y = 40; y < 360; y += 40) {
@@ -227,7 +227,7 @@ function gridLines() {
         y2={y}
         style={{ stroke: "var(--line)" }}
         opacity="0.5"
-      />,
+       id="tacmap-line-22"/>,
     );
   }
   return <g>{lines}</g>;

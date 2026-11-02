@@ -41,14 +41,14 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
       aria-label={
         samples.length === 0 ? `${label}: no samples yet` : `${label}: ${samples.length} samples`
       }
-    >
+     id="sparkline-svg-1">
       <line
         x1={pad}
         y1={height - pad}
         x2={width - pad}
         y2={height - pad}
         style={{ stroke: "var(--line)" }}
-      />
+       id="sparkline-line-2"/>
       {samples.length === 0 ? (
         <text
           x={width / 2}
@@ -60,22 +60,22 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
         </text>
       ) : (
         <>
-          <defs>
+          <defs id="sparkline-defs-3">
             <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: "var(--sig)", stopOpacity: 0.32 }} />
-              <stop offset="100%" style={{ stopColor: "var(--sig)", stopOpacity: 0 }} />
+              <stop offset="0%" style={{ stopColor: "var(--sig)", stopOpacity: 0.32 }}  id="sparkline-stop-4"/>
+              <stop offset="100%" style={{ stopColor: "var(--sig)", stopOpacity: 0 }}  id="sparkline-stop-5"/>
             </linearGradient>
             {motionOK && (
               <>
                 <linearGradient id={`${uid}-sheen`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="30%" stopColor="#ffffff" stopOpacity="0" />
-                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.22" />
-                  <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
+                  <stop offset="30%" stopColor="#ffffff" stopOpacity="0"  id="sparkline-stop-6"/>
+                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.22"  id="sparkline-stop-7"/>
+                  <stop offset="70%" stopColor="#ffffff" stopOpacity="0"  id="sparkline-stop-8"/>
                 </linearGradient>
                 <clipPath id={`${uid}-clip`}>
                   <polygon
                     points={`${line} ${width - pad},${height - pad} ${pad},${height - pad}`}
-                  />
+                   id="sparkline-polygon-9"/>
                 </clipPath>
               </>
             )}
@@ -85,9 +85,9 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
               <polygon
                 points={`${line} ${width - pad},${height - pad} ${pad},${height - pad}`}
                 fill={`url(#${uid}-area)`}
-              />
+               id="sparkline-polygon-10"/>
               {motionOK && (
-                <g clipPath={`url(#${uid}-clip)`}>
+                <g clipPath={`url(#${uid}-clip)`} id="sparkline-g-11">
                   <rect
                     className="spark-sheen"
                     x={pad}
@@ -95,7 +95,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
                     width={width - pad * 2}
                     height={height}
                     fill={`url(#${uid}-sheen)`}
-                  />
+                   id="sparkline-rect-12"/>
                 </g>
               )}
               <polyline
@@ -104,7 +104,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
                 className="spark-draw"
                 style={{ stroke: "var(--sig)" }}
                 strokeWidth="1.5"
-              />
+               id="sparkline-polyline-13"/>
             </>
           )}
           {points.map((p, i) => (
@@ -118,7 +118,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
                 fill: p.ok ? "var(--sig)" : "var(--red)",
                 animationDelay: `${Math.min(i, 20) * 45}ms`,
               }}
-            />
+             id="sparkline-circle-14"/>
           ))}
           <text
             x={width - pad}
