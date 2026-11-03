@@ -1,11 +1,7 @@
-import { useMemo } from "react";
-
-import { FlowCanvas } from "../components/FlowCanvas.tsx";
 import { Abbr, Glossary, Legend, Wire } from "../components/legend.tsx";
 import { Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { useRenderLog } from "../lib/debug.ts";
-import { buildLifecycleNodesEdges } from "../lib/flow-graphs.ts";
 
 /**
  * Topology page: how the cockpit is wired. A sequence diagram for the request lifecycle (happy +
@@ -14,7 +10,6 @@ import { buildLifecycleNodesEdges } from "../lib/flow-graphs.ts";
  */
 export function TopologyPage({ upstream }: { upstream: string }) {
   useRenderLog("TopologyPage");
-  const lifecycle = useMemo(buildLifecycleNodesEdges, []);
   return (
     <>
       <div className="page-head">
@@ -30,12 +25,25 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         span="span-7"
         note="Three paths through the same proxy: hit, miss, plane down."
       >
-        <FlowCanvas
-          nodes={lifecycle.nodes}
-          edges={lifecycle.edges}
-          label="Request lifecycle sequence"
-          testId="lifecycle-flow"
-        />
+        <svg
+          className="diagram"
+          viewBox="0 0 640 210"
+          role="img"
+          aria-label="Request lifecycle sequence"
+        >
+          {lifeline(40, "BROWSER")}
+          {lifeline(230, "BFF :3000")}
+          {lifeline(420, ".NET :5208")}
+          {lifeline(580, "STORE")}
+          {arrow(40, 230, 44, "var(--sig)", "GET /api/v1/…")}
+          {arrow(230, 420, 60, "var(--sig)", "proxy → loopback")}
+          {arrow(420, 580, 76, "var(--sig)", "GetAsync(id)")}
+          {arrow(580, 420, 92, "var(--sig)", "hit? profile : null")}
+          {arrow(420, 230, 108, "var(--sig)", "200 · payload")}
+          {arrow(230, 40, 124, "var(--sig)", "stream back")}
+          {arrow(420, 230, 148, "var(--red)", "404 + PROFILE_NOT_FOUND")}
+          {arrow(230, 230, 178, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
+        </svg>
         <Legend
           label="Sequence key"
           items={[
@@ -211,5 +219,76 @@ export function TopologyPage({ upstream }: { upstream: string }) {
         />
       </Module>
     </>
+  );
+}
+
+function lifeline(x: number, label: string) {
+  return (
+    <g key={label}>
+      <rect
+        x={x - 58}
+        y={8}
+        width="116"
+        height="26"
+        rx="3"
+        style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+      />
+      <text
+        x={x}
+        y={25}
+        textAnchor="middle"
+        style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+        fontWeight="600"
+      >
+        {label}
+      </text>
+      <line
+        x1={x}
+        y1={38}
+        x2={x}
+        y2={202}
+        style={{ stroke: "var(--line)" }}
+        strokeDasharray="4 4"
+      />
+    </g>
+  );
+}
+
+function arrow(x1: number, x2: number, y: number, color: string, label: string, self = false) {
+  if (self) {
+    return (
+      <g key={`${label}-${y}`}>
+        <path
+          d={`M ${x1} ${y} h 34 v 14 h -34`}
+          fill="none"
+          style={{ stroke: color }}
+          strokeWidth="1.5"
+        />
+        <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+          {label}
+        </text>
+      </g>
+    );
+  }
+  const left = x1 < x2;
+  return (
+    <g key={`${label}-${y}`}>
+      <line x1={x1} y1={y} x2={x2} y2={y} style={{ stroke: color }} strokeWidth="1.5" />
+      <polygon
+        points={
+          left
+            ? `${x2},${y} ${x2 - 7},${y - 3.5} ${x2 - 7},${y + 3.5}`
+            : `${x2},${y} ${x2 + 7},${y - 3.5} ${x2 + 7},${y + 3.5}`
+        }
+        style={{ fill: color }}
+      />
+      <text
+        x={left ? x1 + 6 : x2 + 6}
+        y={y - 5}
+        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+      >
+        {label}
+      </text>
+    </g>
   );
 }
