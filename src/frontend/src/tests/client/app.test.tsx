@@ -586,6 +586,9 @@ describe("ops deck", () => {
     expect(queries.getByRole("list", { name: "Sequence key" })).toBeDefined();
     expect(queries.getByText("Backend for Frontend", { exact: false })).toBeDefined();
     expect(queries.getByText("DOTNET_UNREACHABLE", { exact: false })).toBeDefined();
+    expect(queries.getByText("HIT")).toBeDefined();
+    expect(queries.getByText("MISS")).toBeDefined();
+    expect(queries.getByText("DOWN")).toBeDefined();
   });
 
   test("deck defaults to cozy density and toggles without losing content", async () => {

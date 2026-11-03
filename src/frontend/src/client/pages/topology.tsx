@@ -27,22 +27,41 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       >
         <svg
           className="diagram"
-          viewBox="0 0 640 214"
+          viewBox="0 0 760 320"
           role="img"
           aria-label="Request lifecycle sequence"
         >
-          {lifeline(40, "BROWSER", "you are here")}
-          {lifeline(230, "BFF :3000", "loopback proxy")}
-          {lifeline(420, ".NET :5208", "gates + store")}
-          {lifeline(580, "STORE", "sqlite")}
-          {arrow(40, 230, 44, "var(--sig)", "GET /api/v1/…", false, 1)}
-          {arrow(230, 420, 60, "var(--sig)", "proxy → loopback", false, 2)}
-          {arrow(420, 580, 76, "var(--sig)", "GetAsync(id)", false, 3)}
-          {arrow(580, 420, 92, "var(--sig)", "hit? profile : null", false, 4)}
-          {arrow(420, 230, 108, "var(--sig)", "200 · payload", false, 5)}
-          {arrow(230, 40, 124, "var(--sig)", "stream back", false, 6)}
-          {arrow(420, 230, 148, "var(--red)", "404 + PROFILE_NOT_FOUND")}
-          {arrow(230, 230, 178, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
+          {lifeline(190, "BROWSER", "you are here")}
+          {lifeline(350, "BFF :3000", "loopback proxy")}
+          {lifeline(510, ".NET :5208", "gates + store")}
+          {lifeline(660, "STORE", "sqlite")}
+          {laneTag(64, "HIT", "200", "var(--sig)")}
+          {laneTag(184, "MISS", "404", "var(--red)")}
+          {laneTag(246, "DOWN", "502", "var(--amber)")}
+          <line
+            x1={88}
+            y1={176}
+            x2={752}
+            y2={176}
+            style={{ stroke: "var(--line)" }}
+            strokeDasharray="4 4"
+          />
+          <line
+            x1={88}
+            y1={238}
+            x2={752}
+            y2={238}
+            style={{ stroke: "var(--line)" }}
+            strokeDasharray="4 4"
+          />
+          {arrow(190, 350, 70, "var(--sig)", "GET /api/v1/…", false, 1)}
+          {arrow(350, 510, 88, "var(--sig)", "proxy → loopback", false, 2)}
+          {arrow(510, 660, 106, "var(--sig)", "GetAsync(id)", false, 3)}
+          {arrow(660, 510, 124, "var(--sig)", "hit? profile : null", false, 4)}
+          {arrow(510, 350, 142, "var(--sig)", "200 · payload", false, 5)}
+          {arrow(350, 190, 160, "var(--sig)", "stream back", false, 6)}
+          {arrow(510, 350, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
+          {arrow(350, 350, 258, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
         </svg>
         <Legend
           label="Sequence key"
@@ -242,24 +261,56 @@ function lifeline(x: number, label: string, caption?: string) {
       >
         {label}
       </text>
-      <line
-        x1={x}
-        y1={38}
-        x2={x}
-        y2={204}
-        style={{ stroke: "var(--line)" }}
-        strokeDasharray="4 4"
-      />
       {caption !== undefined && (
         <text
           x={x}
-          y={209}
+          y={44}
           textAnchor="middle"
           style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
         >
           {caption}
         </text>
       )}
+      <line
+        x1={x}
+        y1={50}
+        x2={x}
+        y2={292}
+        style={{ stroke: "var(--line)" }}
+        strokeDasharray="4 4"
+      />
+    </g>
+  );
+}
+
+function laneTag(y: number, name: string, code: string, color: string) {
+  return (
+    <g key={name}>
+      <rect
+        x={8}
+        y={y}
+        width="64"
+        height="30"
+        rx="3"
+        style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+      />
+      <text
+        x={40}
+        y={y + 12}
+        textAnchor="middle"
+        style={{ fill: color, fontSize: "var(--text-label)" }}
+        fontWeight="700"
+      >
+        {name}
+      </text>
+      <text
+        x={40}
+        y={y + 24}
+        textAnchor="middle"
+        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+      >
+        {code}
+      </text>
     </g>
   );
 }
@@ -282,8 +333,19 @@ function arrow(
           style={{ stroke: color }}
           strokeWidth="1.5"
         />
-        <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
-          {label}
+        <text
+          x={x1 + 40}
+          y={y + 1}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        >
+          API down → 502
+        </text>
+        <text
+          x={x1 + 40}
+          y={y + 13}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        >
+          DOTNET_UNREACHABLE
         </text>
       </g>
     );
