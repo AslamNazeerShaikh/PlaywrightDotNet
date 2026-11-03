@@ -146,3 +146,20 @@ export function Field({
     </label>
   );
 }
+
+/** The deck's refresh button: REFRESH idle, LOADING… disabled while the list reloads. */
+export function RefreshButton({
+  loading,
+  onRefresh,
+  label = "REFRESH",
+}: {
+  loading: boolean;
+  onRefresh: () => void;
+  label?: string;
+}) {
+  return (
+    <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
+      {loading ? "LOADING…" : label}
+    </button>
+  );
+}

@@ -1,4 +1,4 @@
-import { CodeTag, codeTone, constantCase, Field, Module } from "../components/modules.tsx";
+import { CodeTag, codeTone, constantCase, Field, Module, RefreshButton } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type {
   ApiProblem,
@@ -7,6 +7,7 @@ import type {
   UpdateSessionInput,
 } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
+import { readText } from "../lib/forms.ts";
 import { SOURCES } from "./profiles.tsx";
 
 /**
@@ -61,12 +62,11 @@ export function SessionsPage({
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const text = (key: string) => String(data.get(key) ?? "").trim();
     const created = await onCreate({
-      name: text("name"),
-      sourceKey: text("sourceKey"),
-      engine: text("engine"),
-      channel: text("channel"),
+      name: readText(data, "name"),
+      sourceKey: readText(data, "sourceKey"),
+      engine: readText(data, "engine"),
+      channel: readText(data, "channel"),
     });
     if (created) {
       form.reset();
@@ -151,9 +151,7 @@ export function SessionsPage({
         span="span-8"
         note="GET /api/v1/sessions, ordered by name. Launch readiness is evaluated server-side now."
       >
-        <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-          {loading ? "LOADING…" : "REFRESH"}
-        </button>
+        <RefreshButton loading={loading} onRefresh={onRefresh} />
         {listProblem !== null && (
           <p className="alert" role="alert">
             <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
@@ -164,7 +162,7 @@ export function SessionsPage({
           <p className="status-line">No browser profiles yet. Create one per source.</p>
         )}
         {sessions !== null && sessions.length > 0 && (
-          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
+          <div className="tbl-wrap" style={{ marginTop: "var(--gap)" }}>
             <table className="data" aria-label="Browser profiles">
               <thead>
                 <tr>
@@ -208,6 +206,37 @@ export function SessionsPage({
             </table>
           </div>
         )}
+      </Module>
+
+      <Module
+        code="SES-03"
+        title="Session states"
+        span="span-12"
+        note="The domain's state machine (docs/03-domain-model.md §6.2), rendered verbatim."
+      >
+        <div className="tbl-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <StateRow state="New" text="Never verified, or reset. Needs a login and a probe." />
+              <StateRow state="Healthy" text="A probe verified the session." />
+              <StateRow
+                state="CoolingDown"
+                text="Stopped after a wall; launches are blocked until the cooldown ends."
+              />
+              <StateRow state="Expired" text="Cookies expired; a manual re-login is needed." />
+              <StateRow
+                state="ResetRequired"
+                text="Three walls in a row; reset or replace the profile."
+              />
+            </tbody>
+          </table>
+        </div>
       </Module>
 
       <Module
@@ -281,37 +310,6 @@ export function SessionsPage({
           </>
         )}
       </Module>
-
-      <Module
-        code="SES-03"
-        title="Session states"
-        span="span-12"
-        note="The domain's state machine (docs/03-domain-model.md §6.2), rendered verbatim."
-      >
-        <div className="tbl-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>State</th>
-                <th>Meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              <StateRow state="New" text="Never verified, or reset. Needs a login and a probe." />
-              <StateRow state="Healthy" text="A probe verified the session." />
-              <StateRow
-                state="CoolingDown"
-                text="Stopped after a wall; launches are blocked until the cooldown ends."
-              />
-              <StateRow state="Expired" text="Cookies expired; a manual re-login is needed." />
-              <StateRow
-                state="ResetRequired"
-                text="Three walls in a row; reset or replace the profile."
-              />
-            </tbody>
-          </table>
-        </div>
-      </Module>
     </>
   );
 }
@@ -329,11 +327,10 @@ function StateRow({ state, text }: { state: SessionPayload["state"]; text: strin
 
 /** Reads the edit form into the API body. */
 export function readSessionUpdateForm(data: FormData): UpdateSessionInput {
-  const text = (key: string) => String(data.get(key) ?? "").trim();
   return {
-    name: text("name"),
-    engine: text("engine"),
-    channel: text("channel"),
+    name: readText(data, "name"),
+    engine: readText(data, "engine"),
+    channel: readText(data, "channel"),
   };
 }
 

@@ -1,5 +1,13 @@
 import { Abbr } from "../components/legend.tsx";
-import { CodeTag, codeTone, Field, JsonBlock, Module, plural } from "../components/modules.tsx";
+import {
+  CodeTag,
+  codeTone,
+  Field,
+  JsonBlock,
+  Module,
+  plural,
+  RefreshButton,
+} from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type {
   ApiProblem,
@@ -8,6 +16,7 @@ import type {
   UpdateProfileInput,
 } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
+import { readList, readNumber, readText } from "../lib/forms.ts";
 
 /**
  * Search-profile management: create form with inline server field errors, the persisted profile
@@ -178,9 +187,7 @@ export function ProfilesPage({
         span="span-7"
         note="GET /api/v1/search-profiles, ordered by name. Select a name for detail."
       >
-        <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-          {loading ? "LOADING…" : "REFRESH"}
-        </button>
+        <RefreshButton loading={loading} onRefresh={onRefresh} />
         {listProblem !== null && (
           <p className="alert" role="alert">
             <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
@@ -191,7 +198,7 @@ export function ProfilesPage({
           <p className="status-line">No profiles yet. Create one to get started.</p>
         )}
         {profiles !== null && profiles.length > 0 && (
-          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
+          <div className="tbl-wrap" style={{ marginTop: "var(--gap)" }}>
             <table className="data" aria-label="Search profiles">
               <thead>
                 <tr>
@@ -285,7 +292,7 @@ export function ProfilesPage({
               onSubmit={submitUpdate}
               aria-label="Edit search profile"
               noValidate
-              style={{ marginTop: "12px" }}
+              style={{ marginTop: "var(--gap)" }}
             >
               <Field label="NAME" name="name" errors={updateFieldErrors}>
                 <input
@@ -439,7 +446,7 @@ export function ProfilesPage({
                 ENABLED
               </label>
               {updateFieldErrors["enabled"]?.map((message) => (
-                <span key={message} className="field-error" data-field="enabled">
+                <span key={message} className="field-error" role="note" data-field="enabled">
                   {message}
                 </span>
               ))}
@@ -454,7 +461,7 @@ export function ProfilesPage({
                 {updateProblem.detail !== "" ? ` — ${updateProblem.detail}` : ""}
               </p>
             )}
-            <div style={{ marginTop: "10px" }}>
+            <div style={{ marginTop: "var(--gap)" }}>
               <JsonBlock label="Profile payload" value={selected} />
             </div>
           </>
@@ -535,26 +542,6 @@ export function readForm(data: FormData): CreateProfileInput {
     requiredSkills: readList(data, "requiredSkills"),
     companies: readList(data, "companies"),
   };
-}
-
-function readText(data: FormData, key: string): string {
-  return String(data.get(key) ?? "").trim();
-}
-
-function readNumber(data: FormData, key: string): number | null {
-  const raw = readText(data, key);
-  if (raw === "") {
-    return null;
-  }
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : null;
-}
-
-function readList(data: FormData, key: string): string[] {
-  return readText(data, key)
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item !== "");
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

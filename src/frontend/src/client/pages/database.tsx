@@ -291,7 +291,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                   <td>
                     <button
                       type="button"
-                      className="btn btn-ghost"
+                      className="row-btn"
                       onClick={() => {
                         setOffset(0);
                         setEditingPk(null);

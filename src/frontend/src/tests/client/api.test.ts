@@ -38,16 +38,6 @@ describe("api client", () => {
     expect(result).toEqual({ ok: true, value: { status: "ok", upstream: "http://x" } });
   });
 
-  test("fetchProfile returns the timed profile on success", async () => {
-    const client = createApiClient(
-      stubJson(200, { id: "abc", name: "Backend", sourceKey: "naukri" }),
-    );
-
-    const { result } = await client.fetchProfile("abc");
-
-    expect(result.ok).toBe(true);
-  });
-
   test("failures surface the stable problem code", async () => {
     const client = createApiClient(
       stubJson(404, {
@@ -58,7 +48,7 @@ describe("api client", () => {
       }),
     );
 
-    const { result } = await client.fetchProfile("abc");
+    const { result } = await client.fetchHealth();
 
     expect(result).toEqual({
       ok: false,
@@ -69,6 +59,68 @@ describe("api client", () => {
         code: "PROFILE_NOT_FOUND",
       },
     });
+  });
+
+  test("downloadRunExport returns the blob with the server filename", async () => {
+    const blob = new Blob(["a,b"], { type: "text/csv" });
+    const fetchImpl: FetchImpl = async (url) => {
+      expect(url).toBe("/api/v1/runs/r1/postings/export?format=csv&group=only");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        blob: async () => blob,
+        headers: { get: (name: string) => (name === "content-disposition" ? 'attachment; filename="custom.csv"' : null) },
+      };
+    };
+
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv", "only");
+
+    expect(result).toEqual({ ok: true, value: { blob, filename: "custom.csv" } });
+  });
+
+  test("downloadRunExport falls back to run-postings-{id}.{format} without a header", async () => {
+    const blob = new Blob(["x"], { type: "text/csv" });
+    const fetchImpl: FetchImpl = async (url) => {
+      expect(url).toBe("/api/v1/runs/r1/postings/export?format=xlsx");
+      return { ok: true, status: 200, json: async () => ({}), blob: async () => blob };
+    };
+
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "xlsx");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.filename).toBe("run-postings-r1.xlsx");
+    }
+  });
+
+  test("downloadRunExport maps a missing blob to BAD_RESPONSE", async () => {
+    const fetchImpl: FetchImpl = async () => ({ ok: true, status: 200, json: async () => ({}) });
+
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.code).toBe("BAD_RESPONSE");
+    }
+  });
+
+  test("downloadRunExport surfaces export problem codes", async () => {
+    const client = createApiClient(
+      stubJson(404, {
+        status: 404,
+        title: "Run not found.",
+        detail: "Run 'r9' does not exist.",
+        code: "ROW_NOT_FOUND",
+      }),
+    );
+
+    const { result } = await client.downloadRunExport("r9", "csv");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.code).toBe("ROW_NOT_FOUND");
+    }
   });
 
   test("network failure maps to BFF_UNREACHABLE", async () => {

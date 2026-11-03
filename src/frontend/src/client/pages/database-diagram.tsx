@@ -86,6 +86,7 @@ export function ErFlowDiagram({
               y={y + 19}
               textAnchor="middle"
               style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
+              fontWeight={t === selected ? "600" : undefined}
             >
               {label}
             </text>
@@ -199,6 +200,7 @@ export function TablesDiagram({
               y={y + 17}
               textAnchor="middle"
               style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
+              fontWeight={t.name === selected ? "600" : undefined}
             >
               {label}
             </text>

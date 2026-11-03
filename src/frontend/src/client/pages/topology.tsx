@@ -124,7 +124,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             </tbody>
           </table>
         </div>
-        <p className="status-line" style={{ marginTop: "10px" }}>
+        <p className="status-line" style={{ marginTop: "var(--gap)" }}>
           Failure rule: the browser shows the BFF answer. A 502 means the BFF is fine and the API is
           not — restart the data plane, not the deck.
         </p>

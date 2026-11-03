@@ -198,6 +198,7 @@ export interface RunPosting {
 export interface RunPostingList {
   runId: string;
   items: RunPosting[];
+  total: number;
 }
 
 /** Body of POST /api/v1/runs. */
@@ -206,6 +207,12 @@ export interface StartRunInput {
   browserProfileId: string;
   enrich: boolean;
 }
+
+/** Export file shape: csv streams text, xlsx is a workbook. */
+export type ExportFormat = "csv" | "xlsx";
+
+/** Which postings an export covers: everything, only the profile companies, or all but them. */
+export type ExportGroup = "all" | "only" | "exclude";
 
 import { renderDebugEnabled } from "./debug.ts";
 
@@ -261,14 +268,19 @@ export interface DbRowsResult {
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
-) => Promise<{ ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> }>;
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json(): Promise<unknown>;
+  text?(): Promise<string>;
+  blob?(): Promise<Blob>;
+  headers?: { get(name: string): string | null };
+}>;
 
 export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
-    fetchProfile: (id: string) =>
-      timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
     listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
     listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
     listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
@@ -282,10 +294,18 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
       timed(() =>
         send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
       ),
-    listRuns: () => timed(() => get<RunList>(fetchImpl, "/api/v1/runs")),
+    listRuns: (offset = 0, limit = 50) =>
+      timed(() => get<RunList>(fetchImpl, `/api/v1/runs?offset=${offset}&limit=${limit}`)),
     getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
-    listRunPostings: (id: string) =>
-      timed(() => get<RunPostingList>(fetchImpl, `/api/v1/runs/${id}/postings`)),
+    listRunPostings: (id: string, offset = 0, limit = 200) =>
+      timed(() =>
+        get<RunPostingList>(
+          fetchImpl,
+          `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
+        ),
+      ),
+    downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
+      timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
       timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
@@ -340,6 +360,87 @@ async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
 
 function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
   return send<T>(fetchImpl, "GET", path);
+}
+
+/**
+ * Downloads a run export as a Blob. The body is binary (xlsx) or text (csv), never JSON, so it
+ * bypasses `send`: failures still surface as problems via the shared `toProblem` mapping.
+ */
+async function downloadExport(
+  fetchImpl: FetchImpl,
+  id: string,
+  format: ExportFormat,
+  group: ExportGroup,
+): Promise<ApiResult<{ blob: Blob; filename: string }>> {
+  const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
+  const path = `/api/v1/runs/${id}/postings/export?${query}`;
+  let res: Awaited<ReturnType<FetchImpl>>;
+  try {
+    res = await fetchImpl(path, { method: "GET" });
+  } catch {
+    return {
+      ok: false,
+      problem: {
+        status: 0,
+        title: "Cockpit unreachable",
+        detail: "Could not reach the BFF. Is `bun run dev` running?",
+        code: "BFF_UNREACHABLE",
+      },
+    };
+  }
+  if (!res.ok) {
+    return { ok: false, problem: await toProblem(res) };
+  }
+  if (typeof res.blob !== "function") {
+    return {
+      ok: false,
+      problem: {
+        status: res.status,
+        title: "Unreadable response",
+        detail: "The export answer has no downloadable body.",
+        code: "BAD_RESPONSE",
+      },
+    };
+  }
+  let blob: Blob;
+  try {
+    blob = await res.blob();
+  } catch {
+    return {
+      ok: false,
+      problem: {
+        status: res.status,
+        title: "Unreadable response",
+        detail: "The export body could not be read.",
+        code: "BAD_RESPONSE",
+      },
+    };
+  }
+  return { ok: true, value: { blob, filename: exportFilename(res.headers, id, format) } };
+}
+
+/**
+ * The Content-Disposition filename when the server sends one, else the stable fallback
+ * `run-postings-{id}.{format}`.
+ */
+function exportFilename(
+  headers: { get(name: string): string | null } | undefined,
+  id: string,
+  format: ExportFormat,
+): string {
+  const raw = headers?.get("content-disposition") ?? null;
+  if (raw !== null) {
+    const match = /filename\*?=(?:UTF-8''|")?([^";\s]+)/i.exec(raw);
+    if (match?.[1] !== undefined) {
+      const name = match[1].replace(/"$/, "");
+      try {
+        return decodeURIComponent(name);
+      } catch {
+        return name;
+      }
+    }
+  }
+  return `run-postings-${id}.${format}`;
 }
 
 async function send<T>(

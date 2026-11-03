@@ -58,7 +58,7 @@ export function OverviewPage({
           <Stat label="Samples" value={stats === null ? "0" : String(stats.count)} />
         </div>
         {health !== null && (
-          <div style={{ marginTop: "10px" }}>
+          <div style={{ marginTop: "var(--gap)" }}>
             <JsonBlock label="Latest health payload" value={health} />
           </div>
         )}
@@ -80,7 +80,7 @@ export function OverviewPage({
           ]}
         />
         {stats !== null && (
-          <div className="stat-grid" style={{ marginTop: "10px" }}>
+          <div className="stat-grid" style={{ marginTop: "var(--gap)" }}>
             <Stat label="p50" value={formatMs(stats.p50)} />
             <Stat label="min" value={formatMs(stats.min)} />
             <Stat label="max" value={formatMs(stats.max)} />

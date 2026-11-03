@@ -17,6 +17,7 @@ import {
   type UpdateSessionInput,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
+import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
 import {
   latencyStats,
@@ -126,7 +127,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
           linkLogged.current = true;
           setEvents((e) =>
             pushEvent(e, {
-              at: clockTime(new Date().toISOString()),
+              at: formatClock(new Date().toISOString()),
               kind: "info",
               code: "BFF_LINK",
               detail: `BFF live · upstream ${result.value.upstream}`,
@@ -165,7 +166,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       }
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: ok ? "ok" : "err",
           code: ok ? "HEALTHY" : result.problem.code,
           detail: ok
@@ -217,7 +218,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -236,7 +237,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -248,7 +249,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setSelectedProfileId(result.value.id);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: "ok",
         code: "CREATED",
         detail: `${result.value.name} · ${result.value.sourceKey}`,
@@ -267,7 +268,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -279,7 +280,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setSelectedProfileId(result.value.id);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: "ok",
         code: "UPDATED",
         detail: `${result.value.name} · ${result.value.sourceKey}`,
@@ -331,7 +332,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setCreatingSession(false);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: result.ok ? "ok" : "err",
         code: result.ok ? "CREATED" : result.problem.code,
         detail: result.ok
@@ -358,7 +359,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -370,7 +371,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setSelectedSessionId(result.value.id);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: "ok",
         code: "UPDATED",
         detail: `${result.value.name} · ${result.value.sourceKey}`,
@@ -525,7 +526,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         {route === "database" && <DatabasePage client={activeClient} />}
       </main>
 
-      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "11px" }}>
+      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "var(--text-micro)" }}>
         <CodeTag code="STABLE-CODES" /> UI branches on codes, never prose · Bun + React, no Node ·
         IBM Plex Mono
       </footer>
@@ -570,7 +571,7 @@ function useNow(): string {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  return clockTime(now.toISOString());
+  return formatClock(now.toISOString());
 }
 
 function readHash(): DeckRoute {
@@ -578,12 +579,6 @@ function readHash(): DeckRoute {
     return "overview";
   }
   return parseRoute(window.location.hash);
-}
-
-function clockTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
 /** 502/0 means the wire or the plane is down; any other answer proves it lives. */

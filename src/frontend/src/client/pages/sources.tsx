@@ -1,4 +1,4 @@
-import { CodeTag, Module, plural } from "../components/modules.tsx";
+import { CodeTag, Module, plural, RefreshButton } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem, SourceList, SourceStatus } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
@@ -38,9 +38,7 @@ export function SourcesPage({
         span="span-12"
         note="GET /api/v1/sources. Enabling a source is configuration, not a click."
       >
-        <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-          {loading ? "LOADING…" : "REFRESH"}
-        </button>
+        <RefreshButton loading={loading} onRefresh={onRefresh} />
         {problem !== null && (
           <p className="alert" role="alert">
             <CodeTag code={problem.code} tone="warn" /> {problem.title}
@@ -80,7 +78,7 @@ function SourceCard({ source, code }: { source: SourceStatus; code: string }) {
       </div>
       {source.gate.reason !== null && <p className="status-line">{source.gate.reason}</p>}
 
-      <h3 className="module-note">TODAY · {quota.date} UTC</h3>
+      <p className="module-note">TODAY · {quota.date} UTC</p>
       <Meter label="Pages" used={quota.pagesUsed} cap={quota.pageCap} />
       <Meter label="Details" used={quota.detailsUsed} cap={quota.detailCap} />
       {quota.runCap === null ? (
