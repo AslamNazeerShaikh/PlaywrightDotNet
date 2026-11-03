@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { FlowCanvas } from "../components/FlowCanvas.tsx";
 import { Abbr, Glossary, Legend, Wire } from "../components/legend.tsx";
 import { CodeTag, Field, Module, plural } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiClient, ApiProblem, DbRowsResult, DbTableSchema } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
+import { buildTablesNodesEdges } from "../lib/flow-graphs.ts";
 import { ErFlowDiagram } from "./database-diagram.tsx";
 import { cellFull, cellText, readRowForm, readValue } from "./database-values.ts";
 
@@ -12,9 +14,9 @@ import { cellFull, cellText, readRowForm, readValue } from "./database-values.ts
 const LIMIT = 25;
 
 /**
- * Database page: browse every user table in the SQLite store, inspect its live schema, page
- * through rows, and run CRUD. Tables and foreign keys come from the API, so the diagram below
- * reflects the real database instead of a checked-in picture.
+ * Database page: browse every user table in the SQLite store, inspect its live schema, page through
+ * rows, and run CRUD. Tables and foreign keys come from the API, so the diagram below reflects the
+ * real database instead of a checked-in picture.
  */
 export function DatabasePage({ client }: { client: ApiClient }) {
   useRenderLog("DatabasePage");
@@ -245,6 +247,21 @@ export function DatabasePage({ client }: { client: ApiClient }) {
     }
   }
 
+  function selectTable(name: string) {
+    setOffset(0);
+    setEditingPk(null);
+    setCreating(false);
+    setArmed(null);
+    setNotice(null);
+    setSelected(name);
+  }
+
+  const tableNames = useMemo(() => tables.map((t) => t.name), [tables]);
+  const tablesGraph = useMemo(
+    () => buildTablesNodesEdges(tables, selected),
+    [tables, selected],
+  );
+
   return (
     <>
       <div className="page-head">
@@ -277,6 +294,16 @@ export function DatabasePage({ client }: { client: ApiClient }) {
           </p>
         )}
         <div className="tbl-wrap">
+          <FlowCanvas
+            nodes={tablesGraph.nodes}
+            edges={tablesGraph.edges}
+            height={240}
+            label="Tables graph"
+            testId="tables-flow"
+            onNodeClick={(_event, node) => selectTable(node.id)}
+          />
+        </div>
+        <div className="tbl-wrap">
           <table className="data" aria-label="Database tables">
             <thead>
               <tr>
@@ -292,12 +319,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                       type="button"
                       className="btn btn-ghost"
                       onClick={() => {
-                        setOffset(0);
-                        setEditingPk(null);
-                        setCreating(false);
-                        setArmed(null);
-                        setNotice(null);
-                        setSelected(t.name);
+                        selectTable(t.name);
                       }}
                     >
                       {t.name}
@@ -533,7 +555,9 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                                       type="button"
                                       className="btn btn-ghost"
                                       aria-label={
-                                        armed === pk ? `Confirm delete row ${pk}` : `Delete row ${pk}`
+                                        armed === pk
+                                          ? `Confirm delete row ${pk}`
+                                          : `Delete row ${pk}`
                                       }
                                       disabled={pk === "" || busy === `delete:${pk}`}
                                       onClick={() => void handleDelete(pk)}
@@ -601,11 +625,11 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             { key: "flow", swatch: <Wire color="var(--amber)" />, text: "data in and out" },
           ]}
         />
-        <ErFlowDiagram tables={tables.map((t) => t.name)} schemas={schemas} />
+        <ErFlowDiagram tables={tableNames} schemas={schemas} />
         <p className="status-line">
-          Solid lines are enforced foreign keys from the live schema. Dashed stubs share one
-          value, <Abbr term="source_key" full="Source key: which site a row came from" />, with no
-          database link. Runs do not own postings: a run&apos;s postings are the rows whose{" "}
+          Solid lines are enforced foreign keys from the live schema. Dashed stubs share one value,{" "}
+          <Abbr term="source_key" full="Source key: which site a row came from" />, with no database
+          link. Runs do not own postings: a run&apos;s postings are the rows whose{" "}
           <Abbr term="LastSeenAt" full="Last seen at: when a posting was last sighted" /> falls in
           the run window.
         </p>

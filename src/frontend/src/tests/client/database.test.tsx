@@ -4,9 +4,9 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import type { ApiClient } from "../../client/lib/api.ts";
-import { DatabasePage } from "../../client/pages/database.tsx";
 import { ErFlowDiagram } from "../../client/pages/database-diagram.tsx";
 import { cellText, coerce } from "../../client/pages/database-values.ts";
+import { DatabasePage } from "../../client/pages/database.tsx";
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -57,9 +57,7 @@ describe("database page", () => {
   test("tables, schema, and rows render from the API", async () => {
     const queries = render(<DatabasePage client={stubClient()} />);
 
-    await waitFor(() =>
-      expect(queries.getAllByText("search_profiles").length).toBeGreaterThan(0),
-    );
+    await waitFor(() => expect(queries.getAllByText("search_profiles").length).toBeGreaterThan(0));
     await waitFor(() => expect(queries.getByText("backend")).toBeDefined());
     expect(queries.getByRole("table", { name: "Database tables" })).toBeDefined();
     expect(queries.getByRole("table", { name: "search_profiles schema" })).toBeDefined();
@@ -96,7 +94,11 @@ describe("database page", () => {
     await waitFor(() => expect(queries.getByText("backend")).toBeDefined());
 
     fireEvent.click(queries.getByRole("button", { name: "NEW ROW" }));
-    const pairs: Array<[string, string]> = [["id", "p2"], ["name", "ml"], ["enabled", "1"]];
+    const pairs: Array<[string, string]> = [
+      ["id", "p2"],
+      ["name", "ml"],
+      ["enabled", "1"],
+    ];
     for (const [name, value] of pairs) {
       fireEvent.change(queries.getByLabelText(name), { target: { value } });
     }
@@ -149,7 +151,12 @@ describe("database page", () => {
       listDbTables: async () => ({
         result: {
           ok: false,
-          problem: { status: 502, title: "Down", detail: "unreachable", code: "DOTNET_UNREACHABLE" },
+          problem: {
+            status: 502,
+            title: "Down",
+            detail: "unreachable",
+            code: "DOTNET_UNREACHABLE",
+          },
         },
         ms: 1,
         at: "",
@@ -163,7 +170,13 @@ describe("database page", () => {
 
 describe("database helpers", () => {
   test("coerce reads numbers and booleans from the column type", () => {
-    const int = { name: "n", type: "INTEGER", notNull: true, primaryKey: false, defaultValue: null };
+    const int = {
+      name: "n",
+      type: "INTEGER",
+      notNull: true,
+      primaryKey: false,
+      defaultValue: null,
+    };
     const flag = { name: "f", type: "BOOL", notNull: false, primaryKey: false, defaultValue: null };
     expect(coerce(int, "42")).toBe(42);
     expect(coerce(int, "nope")).toBe("nope");
@@ -179,8 +192,10 @@ describe("database helpers", () => {
 
   test("the diagram draws one node per live table", () => {
     const queries = render(<ErFlowDiagram tables={["a", "b"]} schemas={{}} />);
-    const svg = queries.getByRole("img", { name: "Entity relationships and data flow" });
-    expect(svg.textContent).toContain("a");
-    expect(svg.textContent).toContain("DATA IN AND OUT");
+    const diagram = queries.getByRole("img", { name: "Entity relationships and data flow" });
+    const labels = Array.from(diagram.querySelectorAll("li")).map((li) => li.textContent);
+    expect(labels).toContain("a");
+    expect(labels).toContain("b");
+    expect(labels).toContain("DATA IN AND OUT");
   });
 });

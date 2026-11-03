@@ -24,7 +24,7 @@ export function TacMap({
   // The CSS kill-switch would freeze these layers mid-pose (a stuck sweep
   // wedge), so they only mount when motion is welcome.
   const [motionOK] = useState(
-    () => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches !== true,
   );
 
   const cx = 320;
