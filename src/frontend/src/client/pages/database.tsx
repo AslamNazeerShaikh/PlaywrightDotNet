@@ -5,7 +5,7 @@ import { CodeTag, Field, Module, plural } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiClient, ApiProblem, DbRowsResult, DbTableSchema } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
-import { ErFlowDiagram } from "./database-diagram.tsx";
+import { ErFlowDiagram, TablesDiagram } from "./database-diagram.tsx";
 import { cellFull, cellText, readRowForm, readValue } from "./database-values.ts";
 
 /** Rows per page in the data grid. The API clamps to 1-500; 25 keeps cells readable. */
@@ -276,6 +276,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             <CodeTag code={tablesProblem.code} tone="warn" /> {tablesProblem.title}
           </p>
         )}
+        <TablesDiagram tables={tables} selected={selected} />
         <div className="tbl-wrap">
           <table className="data" aria-label="Database tables">
             <thead>
@@ -601,7 +602,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             { key: "flow", swatch: <Wire color="var(--amber)" />, text: "data in and out" },
           ]}
         />
-        <ErFlowDiagram tables={tables.map((t) => t.name)} schemas={schemas} />
+        <ErFlowDiagram tables={tables.map((t) => t.name)} schemas={schemas} selected={selected} />
         <p className="status-line">
           Solid lines are enforced foreign keys from the live schema. Dashed stubs share one
           value, <Abbr term="source_key" full="Source key: which site a row came from" />, with no

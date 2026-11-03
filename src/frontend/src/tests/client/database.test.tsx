@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import type { ApiClient } from "../../client/lib/api.ts";
 import { DatabasePage } from "../../client/pages/database.tsx";
-import { ErFlowDiagram } from "../../client/pages/database-diagram.tsx";
+import { ErFlowDiagram, TablesDiagram } from "../../client/pages/database-diagram.tsx";
 import { cellText, coerce } from "../../client/pages/database-values.ts";
 
 beforeAll(() => {
@@ -182,5 +182,46 @@ describe("database helpers", () => {
     const svg = queries.getByRole("img", { name: "Entity relationships and data flow" });
     expect(svg.textContent).toContain("a");
     expect(svg.textContent).toContain("DATA IN AND OUT");
+  });
+
+  test("the diagram marks the selected table with the signal border", () => {
+    const queries = render(<ErFlowDiagram tables={["a", "b"]} schemas={{}} selected="b" />);
+    const svg = queries.getByRole("img", { name: "Entity relationships and data flow" });
+    const group = (name: string) =>
+      Array.from(svg.querySelectorAll("g")).find(
+        (g) => g.querySelector("title")?.textContent === name,
+      );
+    expect(group("b")?.querySelector("rect")?.getAttribute("style")).toContain("var(--sig)");
+    expect(group("a")?.querySelector("rect")?.getAttribute("style")).toContain("var(--line-hi)");
+  });
+
+  test("the tables map shows names, counts, and the selected table", () => {
+    const queries = render(
+      <TablesDiagram
+        tables={[
+          { name: "a", rowCount: 1 },
+          { name: "b", rowCount: 5 },
+        ]}
+        selected="b"
+      />,
+    );
+    const svg = queries.getByRole("img", { name: "Tables map" });
+    expect(svg.textContent).toContain("a");
+    expect(svg.textContent).toContain("1 row");
+    expect(svg.textContent).toContain("5 rows");
+    const rects = svg.querySelectorAll("rect");
+    expect(rects.length).toBe(2);
+    expect(rects[1]?.getAttribute("style")).toContain("var(--sig)");
+    expect(rects[0]?.getAttribute("style")).toContain("var(--line-hi)");
+  });
+
+  test("the tables map truncates long names but keeps the full name", () => {
+    const long = `table_${"x".repeat(30)}`;
+    const queries = render(
+      <TablesDiagram tables={[{ name: long, rowCount: 0 }]} selected={null} />,
+    );
+    const svg = queries.getByRole("img", { name: "Tables map" });
+    expect(svg.textContent).toContain("…");
+    expect(svg.querySelector("title")?.textContent).toBe(long);
   });
 });

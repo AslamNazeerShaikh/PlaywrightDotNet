@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "src/frontend/package.json": {
-    "mtime": 1793697083.4228137,
-    "seen": 1793697992.366339,
-    "ast_hash": "6c5fb541bdf433090b60285442def241",
+    "mtime": 1793712713.3873377,
+    "seen": 1793718037.262414,
+    "ast_hash": "fa77fa671d7d2c7c66b57a0dd7c83aa7",
     "semantic_hash": ""
   },
   "src/frontend/src/client/app.tsx": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/topology.tsx": {
-    "mtime": 1793697651.6937594,
-    "seen": 1793697992.3663502,
-    "ast_hash": "4bbb3a64094c403e2801c5fdcfbb9ad0",
+    "mtime": 1793717864.4142277,
+    "seen": 1793718037.262423,
+    "ast_hash": "f2f81ac960615190c36ac1b6fe7ebd67",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/router.test.ts": {
@@ -6035,28 +6035,10 @@
     "ast_hash": "22121274dfdbacd12bbde1872f282fe9",
     "semantic_hash": ""
   },
-  "src/frontend/src/client/components/FlowCanvas.tsx": {
-    "mtime": 1793697837.6852489,
-    "seen": 1793697992.3663402,
-    "ast_hash": "99eb2117c3e416a04d786cf1ea9a0c8f",
-    "semantic_hash": ""
-  },
-  "src/frontend/src/client/css.d.ts": {
-    "mtime": 1793697313.435659,
-    "seen": 1793697992.366343,
-    "ast_hash": "fb8214c6467938c43691a41c63101314",
-    "semantic_hash": ""
-  },
-  "src/frontend/src/client/lib/flow-graphs.ts": {
-    "mtime": 1793697569.0963175,
-    "seen": 1793697992.366344,
-    "ast_hash": "81f8c341e01a8c217781889f6de0060b",
-    "semantic_hash": ""
-  },
   "src/frontend/src/client/pages/database-diagram.tsx": {
-    "mtime": 1793697646.7523897,
-    "seen": 1793697992.366346,
-    "ast_hash": "1e4d4c58cb8515e0832c7e17999486ed",
+    "mtime": 1793717789.6794274,
+    "seen": 1793718037.26242,
+    "ast_hash": "78184684e0d2a61211673df402d3c61b",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database-values.ts": {
@@ -6066,21 +6048,15 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database.tsx": {
-    "mtime": 1793697656.4472501,
-    "seen": 1793697992.366347,
-    "ast_hash": "04f772b17ec9878f2eed1731cb8e8726",
+    "mtime": 1793717634.707418,
+    "seen": 1793718037.262421,
+    "ast_hash": "d31206d100f8712cdb9f91fec6aab0f1",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/database.test.tsx": {
-    "mtime": 1793697844.2590773,
-    "seen": 1793697992.3663518,
-    "ast_hash": "9525c6983d76a41b464c04ab7759a137",
-    "semantic_hash": ""
-  },
-  "src/frontend/src/tests/client/flow-graphs.test.ts": {
-    "mtime": 1793697844.2590756,
-    "seen": 1793697992.3663528,
-    "ast_hash": "8d2717e3718f2cd56c6197102f554a9b",
+    "mtime": 1793717856.477723,
+    "seen": 1793718037.2624261,
+    "ast_hash": "6693ef397517091e7cce62bd609e9d0d",
     "semantic_hash": ""
   },
   ".opencode/skills/graphify/SKILL.md": {

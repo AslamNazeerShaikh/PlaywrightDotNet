@@ -17,9 +17,11 @@ const GRID_ORIGIN_Y = 20;
 export function ErFlowDiagram({
   tables,
   schemas,
+  selected = null,
 }: {
   tables: string[];
   schemas: Record<string, DbTableSchema>;
+  selected?: string | null;
 }) {
   useRenderLog("ErFlowDiagram");
   const pos: Record<string, [number, number]> = {};
@@ -74,7 +76,10 @@ export function ErFlowDiagram({
               width={NODE_WIDTH}
               height={NODE_HEIGHT}
               rx="4"
-              style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+              style={{
+                fill: "var(--canvas)",
+                stroke: t === selected ? "var(--sig)" : "var(--line-hi)",
+              }}
             />
             <text
               x={x + NODE_WIDTH / 2}
@@ -152,6 +157,62 @@ export function ErFlowDiagram({
         </text>
         <FlowLane y={flowTitleY + 18} />
       </g>
+    </svg>
+  );
+}
+
+/** Static map. Selection mirrors the table buttons below; the map itself never handles clicks. */
+export function TablesDiagram({
+  tables,
+  selected,
+}: {
+  tables: Array<{ name: string; rowCount: number }>;
+  selected: string | null;
+}) {
+  useRenderLog("TablesDiagram");
+  const height =
+    GRID_ORIGIN_Y +
+    Math.ceil(Math.max(tables.length, 1) / COLUMNS) * GRID_GAP_Y +
+    NODE_HEIGHT;
+  return (
+    <svg className="diagram" viewBox={`0 0 760 ${height}`} role="img" aria-label="Tables map">
+      {tables.map((t, i) => {
+        const x = GRID_ORIGIN_X + (i % COLUMNS) * GRID_GAP_X;
+        const y = GRID_ORIGIN_Y + Math.floor(i / COLUMNS) * GRID_GAP_Y;
+        const label = t.name.length > 24 ? `${t.name.slice(0, 23)}…` : t.name;
+        return (
+          <g key={t.name}>
+            <title>{t.name}</title>
+            <rect
+              x={x}
+              y={y}
+              width={NODE_WIDTH}
+              height={NODE_HEIGHT + 16}
+              rx="4"
+              style={{
+                fill: "var(--canvas)",
+                stroke: t.name === selected ? "var(--sig)" : "var(--line-hi)",
+              }}
+            />
+            <text
+              x={x + NODE_WIDTH / 2}
+              y={y + 17}
+              textAnchor="middle"
+              style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+            >
+              {label}
+            </text>
+            <text
+              x={x + NODE_WIDTH / 2}
+              y={y + 32}
+              textAnchor="middle"
+              style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+            >
+              {`${t.rowCount} ${t.rowCount === 1 ? "row" : "rows"}`}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

@@ -27,20 +27,20 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       >
         <svg
           className="diagram"
-          viewBox="0 0 640 210"
+          viewBox="0 0 640 214"
           role="img"
           aria-label="Request lifecycle sequence"
         >
-          {lifeline(40, "BROWSER")}
-          {lifeline(230, "BFF :3000")}
-          {lifeline(420, ".NET :5208")}
-          {lifeline(580, "STORE")}
-          {arrow(40, 230, 44, "var(--sig)", "GET /api/v1/…")}
-          {arrow(230, 420, 60, "var(--sig)", "proxy → loopback")}
-          {arrow(420, 580, 76, "var(--sig)", "GetAsync(id)")}
-          {arrow(580, 420, 92, "var(--sig)", "hit? profile : null")}
-          {arrow(420, 230, 108, "var(--sig)", "200 · payload")}
-          {arrow(230, 40, 124, "var(--sig)", "stream back")}
+          {lifeline(40, "BROWSER", "you are here")}
+          {lifeline(230, "BFF :3000", "loopback proxy")}
+          {lifeline(420, ".NET :5208", "gates + store")}
+          {lifeline(580, "STORE", "sqlite")}
+          {arrow(40, 230, 44, "var(--sig)", "GET /api/v1/…", false, 1)}
+          {arrow(230, 420, 60, "var(--sig)", "proxy → loopback", false, 2)}
+          {arrow(420, 580, 76, "var(--sig)", "GetAsync(id)", false, 3)}
+          {arrow(580, 420, 92, "var(--sig)", "hit? profile : null", false, 4)}
+          {arrow(420, 230, 108, "var(--sig)", "200 · payload", false, 5)}
+          {arrow(230, 40, 124, "var(--sig)", "stream back", false, 6)}
           {arrow(420, 230, 148, "var(--red)", "404 + PROFILE_NOT_FOUND")}
           {arrow(230, 230, 178, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
         </svg>
@@ -222,7 +222,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
   );
 }
 
-function lifeline(x: number, label: string) {
+function lifeline(x: number, label: string, caption?: string) {
   return (
     <g key={label}>
       <rect
@@ -246,15 +246,33 @@ function lifeline(x: number, label: string) {
         x1={x}
         y1={38}
         x2={x}
-        y2={202}
+        y2={204}
         style={{ stroke: "var(--line)" }}
         strokeDasharray="4 4"
       />
+      {caption !== undefined && (
+        <text
+          x={x}
+          y={209}
+          textAnchor="middle"
+          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        >
+          {caption}
+        </text>
+      )}
     </g>
   );
 }
 
-function arrow(x1: number, x2: number, y: number, color: string, label: string, self = false) {
+function arrow(
+  x1: number,
+  x2: number,
+  y: number,
+  color: string,
+  label: string,
+  self = false,
+  step?: number,
+) {
   if (self) {
     return (
       <g key={`${label}-${y}`}>
@@ -282,8 +300,21 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
         }
         style={{ fill: color }}
       />
+      {step !== undefined && (
+        <g>
+          <circle cx={x1} cy={y} r="8" style={{ fill: "var(--sig)" }} />
+          <text
+            x={x1}
+            y={y + 3.5}
+            textAnchor="middle"
+            style={{ fill: "var(--canvas)", fontSize: "var(--text-micro)" }}
+          >
+            {step}
+          </text>
+        </g>
+      )}
       <text
-        x={left ? x1 + 6 : x2 + 6}
+        x={(left ? x1 + 6 : x2 + 6) + (step !== undefined ? 14 : 0)}
         y={y - 5}
         style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
       >
