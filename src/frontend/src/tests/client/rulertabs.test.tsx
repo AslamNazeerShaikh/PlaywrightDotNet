@@ -33,8 +33,9 @@ describe("ruler tabs", () => {
       "05SESSIONS",
       "06RUNS",
       "07TOPOLOGY",
+      "08DATABASE",
     ]);
-    expect(queries.getByText("NAV // 07 STOPS")).toBeDefined();
+    expect(queries.getByText("NAV // 08 STOPS")).toBeDefined();
     expect(
       queries.getByRole("link", { name: "02 ENGINE HEALTH" }).getAttribute("aria-current"),
     ).toBe("page");
@@ -42,11 +43,11 @@ describe("ruler tabs", () => {
 
   test("blip sits on the active stop with section digits", () => {
     const first = render(<RulerTabs route="overview" />);
-    expect(first.getByText("01/07")).toBeDefined();
+    expect(first.getByText("01/08")).toBeDefined();
     cleanup();
 
-    const last = render(<RulerTabs route="topology" />);
-    expect(last.getByText("07/07")).toBeDefined();
+    const last = render(<RulerTabs route="database" />);
+    expect(last.getByText("08/08")).toBeDefined();
   });
 
   test("selecting a stop navigates", () => {

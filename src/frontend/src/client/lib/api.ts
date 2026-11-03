@@ -227,10 +227,41 @@ export interface Timed<T> {
   at: string;
 }
 
+export interface DbTableInfo {
+  name: string;
+  rowCount: number;
+}
+
+export interface DbColumnInfo {
+  name: string;
+  type: string;
+  notNull: boolean;
+  primaryKey: boolean;
+  defaultValue: string | null;
+}
+
+export interface DbForeignKeyInfo {
+  column: string;
+  referencedTable: string;
+  referencedColumn: string;
+}
+
+export interface DbTableSchema {
+  name: string;
+  columns: DbColumnInfo[];
+  foreignKeys: DbForeignKeyInfo[];
+  primaryKeyColumn: string;
+}
+
+export interface DbRowsResult {
+  rows: Record<string, unknown>[];
+  total: number;
+}
+
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
-) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+) => Promise<{ ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> }>;
 
 export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   return {
@@ -259,6 +290,42 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
       timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
       timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
+    listDbTables: () => timed(() => get<{ items: DbTableInfo[] }>(fetchImpl, "/api/v1/db/tables")),
+    getDbSchema: (table: string) =>
+      timed(() =>
+        get<DbTableSchema>(fetchImpl, `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
+      ),
+    listDbRows: (table: string, offset: number, limit: number) =>
+      timed(() =>
+        get<DbRowsResult>(
+          fetchImpl,
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows?offset=${offset}&limit=${limit}`,
+        ),
+      ),
+    insertDbRow: (table: string, values: Record<string, unknown>) =>
+      timed(() =>
+        send<null>(
+          fetchImpl,
+          "POST",
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows`,
+          values,
+        ),
+      ),
+    updateDbRow: (table: string, pk: string, values: Record<string, unknown>) =>
+      timed(() =>
+        send<null>(fetchImpl, "PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
+          primaryKeyValue: pk,
+          values,
+        }),
+      ),
+    deleteDbRow: (table: string, pk: string) =>
+      timed(() =>
+        send<null>(
+          fetchImpl,
+          "DELETE",
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows/${encodeURIComponent(pk)}`,
+        ),
+      ),
   };
 }
 
@@ -277,14 +344,14 @@ function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
 
 async function send<T>(
   fetchImpl: FetchImpl,
-  method: "GET" | "POST" | "PATCH" | "PUT",
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
     console.debug(`[fetch] ${method} ${path}`);
   }
-  let res: { ok: boolean; status: number; json(): Promise<unknown> };
+  let res: { ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> };
   try {
     res =
       body === undefined
@@ -306,8 +373,37 @@ async function send<T>(
     };
   }
   if (res.ok) {
+    // 204 No Content (and any empty body) carries no JSON; treat as success.
+    if (res.status === 204) {
+      return { ok: true, value: undefined as T };
+    }
     // A 2xx that is not JSON (an HTML page from a misrouted upstream) is a
     // problem like any other, never a throw the caller has to remember.
+    // Prefer res.text() when available (real fetch / bun), else fall back to res.json().
+    if (typeof res.text === "function") {
+      let text = "";
+      try {
+        text = (await res.text()) ?? "";
+      } catch {
+        text = "";
+      }
+      if (text.trim() === "") {
+        return { ok: true, value: undefined as T };
+      }
+      try {
+        return { ok: true, value: JSON.parse(text) as T };
+      } catch {
+        return {
+          ok: false,
+          problem: {
+            status: res.status,
+            title: "Unreadable response",
+            detail: `The server answered ${res.status} with a body that is not JSON.`,
+            code: "BAD_RESPONSE",
+          },
+        };
+      }
+    }
     try {
       return { ok: true, value: (await res.json()) as T };
     } catch {

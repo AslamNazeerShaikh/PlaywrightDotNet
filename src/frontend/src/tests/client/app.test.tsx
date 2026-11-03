@@ -343,6 +343,7 @@ describe("ops deck", () => {
       "05SESSIONS",
       "06RUNS",
       "07TOPOLOGY",
+      "08DATABASE",
     ]);
   });
 

@@ -25,6 +25,7 @@ import {
   pushSample,
   type Sample,
 } from "./lib/telemetry.ts";
+import { DatabasePage } from "./pages/database.tsx";
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
@@ -521,6 +522,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         )}
         {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
         {route === "topology" && <TopologyPage upstream={upstream} />}
+        {route === "database" && <DatabasePage client={activeClient} />}
       </main>
 
       <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "11px" }}>

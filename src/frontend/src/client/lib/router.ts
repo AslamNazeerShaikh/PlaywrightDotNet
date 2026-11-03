@@ -5,7 +5,7 @@
  */
 
 export type DeckRoute =
-  "overview" | "health" | "profiles" | "sources" | "sessions" | "runs" | "topology";
+  "overview" | "health" | "profiles" | "sources" | "sessions" | "runs" | "topology" | "database";
 
 export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string }> = [
   { id: "overview", code: "01", label: "Overview" },
@@ -15,6 +15,7 @@ export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string 
   { id: "sessions", code: "05", label: "Sessions" },
   { id: "runs", code: "06", label: "Runs" },
   { id: "topology", code: "07", label: "Topology" },
+  { id: "database", code: "08", label: "Database" },
 ];
 
 /** Parses a location hash into a route; unknown or empty hashes fall home. */

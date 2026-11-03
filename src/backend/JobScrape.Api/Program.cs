@@ -1,12 +1,14 @@
 using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
 using JobScrape.Api.Runs;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
+using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
 using Serilog;
 
@@ -118,6 +120,23 @@ namespace JobScrape.Api
             builder.Services.AddJobScrapeDatabase(
                 builder.Configuration,
                 builder.Environment.ContentRootPath
+            );
+
+            // Raw SQLite explorer for the cockpit database page. Uses the same
+            // database file as EF Core; table/column names are validated.
+            var storageOptions =
+                builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+                ?? new StorageOptions();
+            var explorerPath = Path.GetFullPath(
+                storageOptions.DatabasePath,
+                builder.Environment.ContentRootPath
+            );
+            var explorerConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+            {
+                DataSource = explorerPath,
+            }.ToString();
+            builder.Services.AddSingleton<IDatabaseExplorer>(
+                new JobScrape.Infrastructure.Persistence.SqliteDatabaseExplorer(explorerConnectionString)
             );
 
             var app = builder.Build();
