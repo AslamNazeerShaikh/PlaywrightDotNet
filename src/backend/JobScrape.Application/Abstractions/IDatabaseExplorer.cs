@@ -55,7 +55,6 @@ namespace JobScrape.Application.Abstractions
     /// Summary of one database table.
     /// </summary>
     public sealed record DatabaseTableInfo(string Name, long RowCount);
-
     /// <summary>
     /// Column metadata for one table.
     /// </summary>
@@ -93,4 +92,27 @@ namespace JobScrape.Application.Abstractions
         IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows,
         long Total
     );
+
+    /// <summary>
+    /// Thrown when a database explorer operation names an unknown table.
+    /// </summary>
+    public sealed class TableNotFoundException(string tableName)
+        : KeyNotFoundException($"Table '{tableName}' was not found.")
+    {
+        /// <summary>Gets the unknown table name.</summary>
+        public string TableName { get; } = tableName;
+    }
+
+    /// <summary>
+    /// Thrown when a database explorer operation names an unknown row.
+    /// </summary>
+    public sealed class RowNotFoundException(string tableName, string primaryKeyValue)
+        : KeyNotFoundException($"Row '{primaryKeyValue}' was not found.")
+    {
+        /// <summary>Gets the table that was searched.</summary>
+        public string TableName { get; } = tableName;
+
+        /// <summary>Gets the requested primary key value.</summary>
+        public string PrimaryKeyValue { get; } = primaryKeyValue;
+    }
 }

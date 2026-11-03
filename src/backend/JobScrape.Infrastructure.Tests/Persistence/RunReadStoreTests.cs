@@ -59,7 +59,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var reload = database.Scope();
             var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddHours(1)));
 
-            var list = await store.ListAsync(10, Ct);
+            var list = await store.ListAsync(0, 10, Ct);
             Assert.Equal(2, list.Total);
             Assert.Equal([newer.Id.Value, older.Id.Value], list.Items.Select(r => r.Id));
             Assert.All(list.Items, r => Assert.Equal("backend", r.ProfileName));
@@ -67,11 +67,16 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.False(list.Items[0].IsTerminal);
             Assert.Equal(3, list.Items[0].MaxPages);
 
-            Assert.Single((await store.ListAsync(1, Ct)).Items);
+            Assert.Single((await store.ListAsync(0, 1, Ct)).Items);
+            Assert.Single((await store.ListAsync(1, 1, Ct)).Items);
+            Assert.Equal(older.Id.Value, (await store.ListAsync(1, 1, Ct)).Items[0].Id);
+            Assert.Equal([older.Id.Value], (await store.ListAsync(1, 2, Ct)).Items.Select(r => r.Id));
+            Assert.Empty((await store.ListAsync(5, 10, Ct)).Items);
             Assert.Equal("Pending", (await store.GetAsync(older.Id.Value, Ct))!.Stage);
             Assert.Null(await store.GetAsync(Guid.NewGuid(), Ct));
             Assert.Null(await store.GetAsync(Guid.Empty, Ct));
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(0, Ct));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(0, 0, Ct));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(-1, 10, Ct));
             Assert.Empty(reload.Db.ChangeTracker.Entries());
         }
 
@@ -82,12 +87,12 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var scope = database.Scope();
             var store = new RunReadStore(scope.Db, new FakeTimeProvider(Now));
 
-            var list = await store.ListAsync(10, Ct);
+            var list = await store.ListAsync(0, 10, Ct);
 
             Assert.Empty(list.Items);
             Assert.Equal(0, list.Total);
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-                store.ListPostingsAsync(Guid.NewGuid(), 0, Ct)
+                store.ListPostingsAsync(Guid.NewGuid(), 0, 0, Ct)
             );
             Assert.Throws<ArgumentNullException>(() =>
                 new RunReadStore(null!, new FakeTimeProvider(Now))
@@ -133,16 +138,22 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             // Still executing: the window runs to the clock's now.
             var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
 
-            var seen = await store.ListPostingsAsync(run.Id.Value, 50, Ct);
+            var seen = await store.ListPostingsAsync(run.Id.Value, 0, 50, Ct);
             Assert.Equal(["300", "200"], seen!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, seen.Total);
             Assert.False(seen.Items[0].IsNew);
             Assert.True(seen.Items[0].Enriched);
             Assert.True(seen.Items[1].IsNew);
             Assert.Equal(["C#"], seen.Items[1].Skills);
             Assert.Equal("Unknown", seen.Items[1].WorkMode);
 
-            Assert.Empty((await store.ListPostingsAsync(notStarted.Id.Value, 50, Ct))!.Items);
-            Assert.Null(await store.ListPostingsAsync(Guid.NewGuid(), 50, Ct));
+            var second = await store.ListPostingsAsync(run.Id.Value, 1, 1, Ct);
+            Assert.Equal(["200"], second!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, second.Total);
+
+            Assert.Empty((await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Items);
+            Assert.Equal(0, (await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Total);
+            Assert.Null(await store.ListPostingsAsync(Guid.NewGuid(), 0, 50, Ct));
         }
 
         [Fact]

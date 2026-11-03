@@ -1,5 +1,6 @@
 using JobScrape.Api.Http;
 using JobScrape.Application.Features.Runs;
+using JobScrape.Application.Results;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -56,14 +57,20 @@ namespace JobScrape.Api.Controllers
         /// <summary>
         /// Lists the most recent runs, newest first.
         /// </summary>
+        /// <param name="offset">How many newest runs to skip.</param>
+        /// <param name="limit">How many runs to return.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the runs.</returns>
         [HttpGet]
         public async Task<ActionResult<RunListResponse>> ListAsync(
-            CancellationToken cancellationToken
+            [FromQuery] int offset = 0,
+            [FromQuery] int limit = ListRunsHandler.Limit,
+            CancellationToken cancellationToken = default
         )
         {
-            return Ok(await _list.HandleAsync(cancellationToken));
+            offset = Math.Max(0, offset);
+            limit = limit <= 0 ? ListRunsHandler.Limit : Math.Clamp(limit, 1, 500);
+            return Ok(await _list.HandleAsync(offset, limit, cancellationToken));
         }
 
         /// <summary>
@@ -114,12 +121,21 @@ namespace JobScrape.Api.Controllers
         /// Lists the postings a run saw.
         /// </summary>
         /// <param name="id">The run identifier.</param>
+        /// <param name="offset">How many postings to skip.</param>
+        /// <param name="limit">How many postings to return.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the postings; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}/postings")]
-        public async Task<IResult> PostingsAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<IResult> PostingsAsync(
+            Guid id,
+            [FromQuery] int offset = 0,
+            [FromQuery] int limit = ListRunPostingsHandler.Limit,
+            CancellationToken cancellationToken = default
+        )
         {
-            var result = await _postings.HandleAsync(id, cancellationToken);
+            offset = Math.Max(0, offset);
+            limit = limit <= 0 ? ListRunPostingsHandler.Limit : Math.Clamp(limit, 1, 500);
+            var result = await _postings.HandleAsync(id, offset, limit, cancellationToken);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         }
 
@@ -148,14 +164,7 @@ namespace JobScrape.Api.Controllers
                 || !Enum.IsDefined(parsed)
             )
             {
-                return Results.BadRequest(
-                    new
-                    {
-                        code = "EXPORT_FORMAT_UNSUPPORTED",
-                        title = "Export format is not supported.",
-                        detail = $"Export format '{format}' is not supported. Use 'csv' or 'xlsx'.",
-                    }
-                );
+                return Errors.ExportFormatUnsupported(format).ToProblem();
             }
 
             var parsedGroup = (group ?? string.Empty).Trim().ToLowerInvariant() switch
@@ -167,14 +176,7 @@ namespace JobScrape.Api.Controllers
             };
             if (parsedGroup is null)
             {
-                return Results.BadRequest(
-                    new
-                    {
-                        code = "EXPORT_GROUP_UNSUPPORTED",
-                        title = "Export group is not supported.",
-                        detail = $"Export group '{group}' is not supported. Use 'all', 'only', or 'exclude'.",
-                    }
-                );
+                return Errors.ExportGroupUnsupported(group ?? string.Empty).ToProblem();
             }
 
             var result = await _export.HandleAsync(

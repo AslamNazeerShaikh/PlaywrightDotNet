@@ -1,4 +1,6 @@
+using JobScrape.Api.Http;
 using JobScrape.Application.Abstractions;
+using JobScrape.Application.Results;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -22,17 +24,17 @@ namespace JobScrape.Api.Controllers
 
         /// <summary>Lists tables.</summary>
         [HttpGet("tables")]
-        public async Task<IActionResult> ListTablesAsync(
+        public async Task<IResult> ListTablesAsync(
             CancellationToken cancellationToken
         )
         {
             var tables = await _explorer.ListTablesAsync(cancellationToken);
-            return Ok(new { items = tables });
+            return Results.Ok(new { items = tables });
         }
 
         /// <summary>Gets schema.</summary>
         [HttpGet("tables/{table}/schema")]
-        public async Task<IActionResult> SchemaAsync(
+        public async Task<IResult> SchemaAsync(
             string table,
             CancellationToken cancellationToken
         )
@@ -40,21 +42,27 @@ namespace JobScrape.Api.Controllers
             try
             {
                 var schema = await _explorer.GetSchemaAsync(table, cancellationToken);
-                return schema is null ? NotFound() : Ok(schema);
+                return schema is null
+                    ? Errors.TableNotFound(table).ToProblem()
+                    : Results.Ok(schema);
+            }
+            catch (TableNotFoundException)
+            {
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { code = "INVALID_TABLE", detail = ex.Message });
+                return Errors.InvalidTable(ex.Message).ToProblem();
             }
         }
 
         /// <summary>Lists rows.</summary>
         [HttpGet("tables/{table}/rows")]
-        public async Task<IActionResult> RowsAsync(
+        public async Task<IResult> RowsAsync(
             string table,
             [FromQuery] int offset = 0,
             [FromQuery] int limit = 50,
@@ -64,21 +72,25 @@ namespace JobScrape.Api.Controllers
             try
             {
                 var result = await _explorer.ListRowsAsync(table, offset, limit, cancellationToken);
-                return Ok(result);
+                return Results.Ok(result);
+            }
+            catch (TableNotFoundException)
+            {
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { code = "INVALID_TABLE", detail = ex.Message });
+                return Errors.InvalidTable(ex.Message).ToProblem();
             }
         }
 
         /// <summary>Inserts a row.</summary>
         [HttpPost("tables/{table}/rows")]
-        public async Task<IActionResult> InsertAsync(
+        public async Task<IResult> InsertAsync(
             string table,
             [FromBody] Dictionary<string, System.Text.Json.JsonElement>? values,
             CancellationToken cancellationToken
@@ -91,26 +103,29 @@ namespace JobScrape.Api.Controllers
                     values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
                     cancellationToken
                 );
-                return NoContent();
+                return Results.NoContent();
+            }
+            catch (TableNotFoundException)
+            {
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { code = "INVALID_INPUT", detail = ex.Message });
+                return Errors.InvalidInput(ex.Message).ToProblem();
             }
-            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            catch (Microsoft.Data.Sqlite.SqliteException)
             {
-                _ = ex;
-                return BadRequest(new { code = "DB_ERROR", detail = "The database operation failed." });
+                return Errors.DatabaseError().ToProblem();
             }
         }
 
         /// <summary>Updates a row.</summary>
         [HttpPut("tables/{table}/rows")]
-        public async Task<IActionResult> UpdateAsync(
+        public async Task<IResult> UpdateAsync(
             string table,
             [FromBody] UpdateRowRequest? request,
             CancellationToken cancellationToken
@@ -119,9 +134,7 @@ namespace JobScrape.Api.Controllers
             var primaryKeyValue = request?.PrimaryKeyValue;
             if (string.IsNullOrWhiteSpace(primaryKeyValue))
             {
-                return BadRequest(
-                    new { code = "INVALID_INPUT", detail = "PrimaryKeyValue is required." }
-                );
+                return Errors.InvalidInput("PrimaryKeyValue is required.").ToProblem();
             }
 
             try
@@ -132,26 +145,33 @@ namespace JobScrape.Api.Controllers
                     request!.Values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
                     cancellationToken
                 );
-                return NoContent();
+                return Results.NoContent();
+            }
+            catch (RowNotFoundException ex)
+            {
+                return Errors.TableRowNotFound(ex.TableName, ex.PrimaryKeyValue).ToProblem();
+            }
+            catch (TableNotFoundException)
+            {
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { code = "INVALID_INPUT", detail = ex.Message });
+                return Errors.InvalidInput(ex.Message).ToProblem();
             }
-            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            catch (Microsoft.Data.Sqlite.SqliteException)
             {
-                _ = ex;
-                return BadRequest(new { code = "DB_ERROR", detail = "The database operation failed." });
+                return Errors.DatabaseError().ToProblem();
             }
         }
 
         /// <summary>Deletes a row.</summary>
         [HttpDelete("tables/{table}/rows/{primaryKeyValue}")]
-        public async Task<IActionResult> DeleteAsync(
+        public async Task<IResult> DeleteAsync(
             string table,
             string primaryKeyValue,
             CancellationToken cancellationToken
@@ -160,20 +180,27 @@ namespace JobScrape.Api.Controllers
             try
             {
                 await _explorer.DeleteRowAsync(table, primaryKeyValue, cancellationToken);
-                return NoContent();
+                return Results.NoContent();
+            }
+            catch (RowNotFoundException ex)
+            {
+                return Errors.TableRowNotFound(ex.TableName, ex.PrimaryKeyValue).ToProblem();
+            }
+            catch (TableNotFoundException)
+            {
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                return Errors.TableNotFound(table).ToProblem();
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { code = "INVALID_INPUT", detail = ex.Message });
+                return Errors.InvalidInput(ex.Message).ToProblem();
             }
-            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            catch (Microsoft.Data.Sqlite.SqliteException)
             {
-                _ = ex;
-                return BadRequest(new { code = "DB_ERROR", detail = "The database operation failed." });
+                return Errors.DatabaseError().ToProblem();
             }
         }
     }

@@ -111,6 +111,196 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
+        [Fact]
+        public async Task UnknownTableSchemaReturnsTableNotFoundCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.GetAsync(
+                "api/v1/db/tables/does_not_exist/schema",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("TABLE_NOT_FOUND", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task UnknownTableRowsReturnsTableNotFoundCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.GetAsync(
+                "api/v1/db/tables/does_not_exist/rows?offset=0&limit=10",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("TABLE_NOT_FOUND", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task UpdateUnknownRowReturnsRowNotFoundCode()
+        {
+            using var client = _factory.CreateClient();
+            var missing = await client.PutAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                new
+                {
+                    primaryKeyValue = "no-such-row-xyz",
+                    values = new { consecutive_failures = 3 },
+                },
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+            var body = await missing.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("ROW_NOT_FOUND", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task DeleteUnknownRowReturnsRowNotFoundCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.DeleteAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows/no-such-row-xyz",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("ROW_NOT_FOUND", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task InvalidTableNameReturnsInvalidTableCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.GetAsync(
+                "api/v1/db/tables/bad-table!/schema",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("INVALID_TABLE", body.GetProperty("code").GetString());
+            Assert.Equal("Invalid table.", body.GetProperty("title").GetString());
+            Assert.Equal(
+                "Invalid table name. (Parameter 'tableName')",
+                body.GetProperty("detail").GetString()
+            );
+        }
+
+        [Fact]
+        public async Task InvalidTableNameOnRowsReturnsInvalidTableCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.GetAsync(
+                "api/v1/db/tables/bad-table!/rows?offset=0&limit=10",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("INVALID_TABLE", body.GetProperty("code").GetString());
+            Assert.Equal("Invalid table.", body.GetProperty("title").GetString());
+        }
+
+        [Fact]
+        public async Task InsertWithoutValidColumnsReturnsInvalidInputCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                new { },
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("INVALID_INPUT", body.GetProperty("code").GetString());
+            Assert.Equal("Invalid input.", body.GetProperty("title").GetString());
+            Assert.Equal(
+                "No valid columns supplied. (Parameter 'values')",
+                body.GetProperty("detail").GetString()
+            );
+        }
+
+        [Fact]
+        public async Task UpdateWithoutPrimaryKeyReturnsInvalidInputCode()
+        {
+            using var client = _factory.CreateClient();
+            using var response = await client.PutAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                new { primaryKeyValue = "", values = new { consecutive_failures = 3 } },
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal("INVALID_INPUT", body.GetProperty("code").GetString());
+            Assert.Equal("Invalid input.", body.GetProperty("title").GetString());
+            Assert.Equal(
+                "PrimaryKeyValue is required.",
+                body.GetProperty("detail").GetString()
+            );
+        }
+
+        [Fact]
+        public async Task DuplicateInsertReturnsDbErrorCode()
+        {
+            using var client = _factory.CreateClient();
+            var ct = TestContext.Current.CancellationToken;
+            var row = new
+            {
+                source_key = "dberr-src",
+                state = "Closed",
+                consecutive_failures = 0,
+                recent_failures = "[]",
+            };
+            using (var first = await client.PostAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                row,
+                ct
+            ))
+            {
+                Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+            }
+
+            try
+            {
+                using var second = await client.PostAsJsonAsync(
+                    "api/v1/db/tables/source_circuit_breakers/rows",
+                    row,
+                    ct
+                );
+                Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+                var body = await second.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(ct);
+                Assert.Equal("DB_ERROR", body.GetProperty("code").GetString());
+                Assert.Equal("Database operation failed.", body.GetProperty("title").GetString());
+                Assert.Equal(
+                    "The database operation failed.",
+                    body.GetProperty("detail").GetString()
+                );
+            }
+            finally
+            {
+                using var deleted = await client.DeleteAsync(
+                    "api/v1/db/tables/source_circuit_breakers/rows/dberr-src",
+                    ct
+                );
+                Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+            }
+        }
+
         private sealed record TablesResponse(List<TableInfo> Items);
         private sealed record TableInfo(string Name, long RowCount);
     }

@@ -261,13 +261,18 @@ namespace JobScrape.Application.Tests
                 return Task.FromResult(run?.Id == id ? run : null);
             }
 
-            public Task<RunListResponse> ListAsync(int limit, CancellationToken cancellationToken)
+            public Task<RunListResponse> ListAsync(
+                int offset,
+                int limit,
+                CancellationToken cancellationToken
+            )
             {
                 throw new NotImplementedException();
             }
 
             public Task<RunPostingListResponse?> ListPostingsAsync(
                 Guid runId,
+                int offset,
                 int limit,
                 CancellationToken cancellationToken
             )

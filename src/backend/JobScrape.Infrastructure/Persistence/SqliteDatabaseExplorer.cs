@@ -73,7 +73,7 @@ namespace JobScrape.Infrastructure.Persistence
             var tables = await GetUserTablesAsync(connection, ct);
             if (!tables.Contains(tableName))
             {
-                throw new KeyNotFoundException($"Table '{tableName}' was not found.");
+                throw new TableNotFoundException(tableName);
             }
         }
 
@@ -302,7 +302,7 @@ namespace JobScrape.Infrastructure.Persistence
             var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
             if (affected == 0)
             {
-                throw new KeyNotFoundException($"Row '{primaryKeyValue}' was not found.");
+                throw new RowNotFoundException(tableName, primaryKeyValue);
             }
         }
 
@@ -329,7 +329,7 @@ namespace JobScrape.Infrastructure.Persistence
             var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
             if (affected == 0)
             {
-                throw new KeyNotFoundException($"Row '{primaryKeyValue}' was not found.");
+                throw new RowNotFoundException(tableName, primaryKeyValue);
             }
         }
 

@@ -134,7 +134,15 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(["101", "102"], postings!.Items.Select(p => p.ExternalJobId).Order());
+            Assert.Equal(2, postings.Total);
             Assert.All(postings.Items, p => Assert.True(p.IsNew));
+
+            var secondPage = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?offset=1&limit=1",
+                Ct
+            );
+            Assert.Single(secondPage!.Items);
+            Assert.Equal(2, secondPage.Total);
 
             using var csv = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=csv",
@@ -191,12 +199,35 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(HttpStatusCode.BadRequest, badGroup.StatusCode);
+            var badGroupBody = await badGroup.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("EXPORT_GROUP_UNSUPPORTED", badGroupBody.GetProperty("code").GetString());
+            Assert.Equal(
+                "Export group is not supported.",
+                badGroupBody.GetProperty("title").GetString()
+            );
+            Assert.Equal(
+                "Export group 'nope' is not supported. Use 'all', 'only' or 'exclude'.",
+                badGroupBody.GetProperty("detail").GetString()
+            );
 
             using var badFormat = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=pdf",
                 Ct
             );
             Assert.Equal(HttpStatusCode.BadRequest, badFormat.StatusCode);
+            var badFormatBody = await badFormat.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal(
+                "EXPORT_FORMAT_UNSUPPORTED",
+                badFormatBody.GetProperty("code").GetString()
+            );
+            Assert.Equal(
+                "Export format is not supported.",
+                badFormatBody.GetProperty("title").GetString()
+            );
+            Assert.Equal(
+                "Export format 'pdf' is not supported. Use 'csv' or 'xlsx'.",
+                badFormatBody.GetProperty("detail").GetString()
+            );
 
             using var missing = await client.GetAsync(
                 $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=csv",
@@ -206,6 +237,20 @@ namespace JobScrape.Api.Tests
 
             var list = await client.GetFromJsonAsync<RunListResponse>("api/v1/runs", Ct);
             Assert.Equal(run.Id, Assert.Single(list!.Items).Id);
+            Assert.Equal(1, list.Total);
+
+            var skipped = await client.GetFromJsonAsync<RunListResponse>(
+                "api/v1/runs?offset=1&limit=50",
+                Ct
+            );
+            Assert.Empty(skipped!.Items);
+            Assert.Equal(1, skipped.Total);
+
+            var negative = await client.GetFromJsonAsync<RunListResponse>(
+                "api/v1/runs?offset=-5&limit=50",
+                Ct
+            );
+            Assert.Equal(run.Id, Assert.Single(negative!.Items).Id);
         }
 
         [Fact]
@@ -257,6 +302,7 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(["101"], postings!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, postings.Total);
 
             using var csv = await client.GetAsync(
                 $"api/v1/runs/{run.Id}/postings/export?format=csv",
