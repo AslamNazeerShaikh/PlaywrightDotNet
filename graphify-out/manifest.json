@@ -522,9 +522,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/app.test.tsx": {
-    "mtime": 1793694802.231732,
-    "seen": 1793697992.3663518,
-    "ast_hash": "7f32606f50d138ac65718df9d8b330e2",
+    "mtime": 1793718369.3696706,
+    "seen": 1793718838.3094342,
+    "ast_hash": "7713874c9e61c13f16ba79ce3eff9cf3",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/server/config.test.ts": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/topology.tsx": {
-    "mtime": 1793717864.4142277,
-    "seen": 1793718037.262423,
-    "ast_hash": "f2f81ac960615190c36ac1b6fe7ebd67",
+    "mtime": 1793718675.3830955,
+    "seen": 1793718838.309432,
+    "ast_hash": "63a4468d1e3feb4f8a7bfed9157c193d",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/router.test.ts": {
@@ -6036,9 +6036,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database-diagram.tsx": {
-    "mtime": 1793717789.6794274,
-    "seen": 1793718037.26242,
-    "ast_hash": "78184684e0d2a61211673df402d3c61b",
+    "mtime": 1793718675.3832984,
+    "seen": 1793718838.309428,
+    "ast_hash": "a918a24f9f8f3ccb3ba3cea3f18ef359",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database-values.ts": {

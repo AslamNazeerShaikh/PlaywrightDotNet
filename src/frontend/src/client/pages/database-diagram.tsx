@@ -85,7 +85,7 @@ export function ErFlowDiagram({
               x={x + NODE_WIDTH / 2}
               y={y + 19}
               textAnchor="middle"
-              style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+              style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
             >
               {label}
             </text>
@@ -105,7 +105,7 @@ export function ErFlowDiagram({
           <text
             x={(e.from[0] + e.to[0]) / 2 + 4}
             y={(e.from[1] + e.to[1]) / 2}
-            style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+            style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
           >
             {e.label}
           </text>
@@ -140,7 +140,7 @@ export function ErFlowDiagram({
           <text
             x={GRID_ORIGIN_X}
             y={busY + 14}
-            style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+            style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
           >
             source_key shared value, no FK
           </text>
@@ -150,7 +150,7 @@ export function ErFlowDiagram({
         <text
           x={GRID_ORIGIN_X}
           y={flowTitleY}
-          style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+          style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
           fontWeight="600"
         >
           DATA IN AND OUT
@@ -198,7 +198,7 @@ export function TablesDiagram({
               x={x + NODE_WIDTH / 2}
               y={y + 17}
               textAnchor="middle"
-              style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+              style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
             >
               {label}
             </text>
@@ -206,7 +206,7 @@ export function TablesDiagram({
               x={x + NODE_WIDTH / 2}
               y={y + 32}
               textAnchor="middle"
-              style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+              style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
             >
               {`${t.rowCount} ${t.rowCount === 1 ? "row" : "rows"}`}
             </text>
@@ -241,7 +241,7 @@ function FlowLane({ y }: { y: number }) {
             x={x + 70}
             y={y + 18}
             textAnchor="middle"
-            style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+            style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
             fontWeight="600"
           >
             {label}
@@ -272,13 +272,13 @@ function FlowLane({ y }: { y: number }) {
         style={{ stroke: "var(--amber)" }}
         strokeWidth="1.5"
       />
-      <text x={166} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+      <text x={166} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
         scrape
       </text>
-      <text x={326} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+      <text x={326} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
         proxy
       </text>
-      <text x={486} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+      <text x={486} y={y + 8} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
         upsert
       </text>
       <line
@@ -313,16 +313,16 @@ function FlowLane({ y }: { y: number }) {
         style={{ stroke: "var(--amber)" }}
         strokeWidth="1.5"
       />
-      <text x={438} y={y + 88} style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}>
+      <text x={438} y={y + 88} style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}>
         run postings window
       </text>
-      <text x={438} y={y + 100} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+      <text x={438} y={y + 100} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
         LastSeenAt in [start, finish]
       </text>
-      <text x={634} y={y + 88} style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}>
+      <text x={634} y={y + 88} style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}>
         csv / xlsx
       </text>
-      <text x={634} y={y + 100} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
+      <text x={634} y={y + 100} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
         export endpoints
       </text>
     </g>

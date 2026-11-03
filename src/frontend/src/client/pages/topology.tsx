@@ -256,7 +256,7 @@ function lifeline(x: number, label: string, caption?: string) {
         x={x}
         y={25}
         textAnchor="middle"
-        style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+        style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
         fontWeight="600"
       >
         {label}
@@ -266,7 +266,7 @@ function lifeline(x: number, label: string, caption?: string) {
           x={x}
           y={44}
           textAnchor="middle"
-          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
         >
           {caption}
         </text>
@@ -298,7 +298,7 @@ function laneTag(y: number, name: string, code: string, color: string) {
         x={40}
         y={y + 12}
         textAnchor="middle"
-        style={{ fill: color, fontSize: "var(--text-label)" }}
+        style={{ fill: color, fontSize: "var(--text-micro)" }}
         fontWeight="700"
       >
         {name}
@@ -307,7 +307,7 @@ function laneTag(y: number, name: string, code: string, color: string) {
         x={40}
         y={y + 24}
         textAnchor="middle"
-        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
       >
         {code}
       </text>
@@ -336,14 +336,14 @@ function arrow(
         <text
           x={x1 + 40}
           y={y + 1}
-          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
         >
           API down → 502
         </text>
         <text
           x={x1 + 40}
           y={y + 13}
-          style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
         >
           DOTNET_UNREACHABLE
         </text>
@@ -369,7 +369,7 @@ function arrow(
             x={x1}
             y={y + 3.5}
             textAnchor="middle"
-            style={{ fill: "var(--canvas)", fontSize: "var(--text-micro)" }}
+            style={{ fill: "var(--canvas)", fontSize: "var(--text-fine)" }}
           >
             {step}
           </text>
@@ -378,7 +378,7 @@ function arrow(
       <text
         x={(left ? x1 + 6 : x2 + 6) + (step !== undefined ? 14 : 0)}
         y={y - 5}
-        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
       >
         {label}
       </text>

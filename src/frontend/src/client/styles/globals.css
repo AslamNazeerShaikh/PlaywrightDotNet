@@ -57,6 +57,7 @@
    tokens instead of sprinkling overrides. */
 
 :root {
+  --text-fine: 9.5px;
   --text-micro: 10.5px;
   --text-label: 11.5px;
   --text-body: 12.5px;
@@ -149,6 +150,7 @@ body {
 .deck-root[data-density="compact"] {
   --gap: 9px;
   --pad: 10px;
+  --text-fine: 9px;
   --text-micro: 10px;
   --text-label: 10.5px;
   --text-body: 11.5px;
