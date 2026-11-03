@@ -68,6 +68,30 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal(HttpStatusCode.OK, rows.StatusCode);
 
+            // update
+            var update = await client.PutAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                new
+                {
+                    primaryKeyValue = "testsrc",
+                    values = new { consecutive_failures = 3 },
+                },
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
+
+            // unknown key reports not found
+            var missing = await client.PutAsJsonAsync(
+                "api/v1/db/tables/source_circuit_breakers/rows",
+                new
+                {
+                    primaryKeyValue = "no-such-row",
+                    values = new { consecutive_failures = 3 },
+                },
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+
             // delete
             var del = await client.DeleteAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows/testsrc",

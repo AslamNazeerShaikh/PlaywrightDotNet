@@ -20,6 +20,9 @@ namespace JobScrape.Infrastructure.Persistence
                 @"^[A-Za-z_][A-Za-z0-9_]*$"
             );
 
+        private static string Quote(string identifier) =>
+            $"\"{identifier.Replace("\"", "\"\"")}\"";
+
         private async Task<SqliteConnection> OpenAsync(CancellationToken ct)
         {
             var connection = new SqliteConnection(_connectionString);
@@ -92,8 +95,7 @@ namespace JobScrape.Infrastructure.Persistence
                 long count;
                 using (var cmd = connection.CreateCommand())
                 {
-                    var safe = table.Replace("\"", "\"\"");
-                    cmd.CommandText = $"SELECT COUNT(*) FROM \"{safe}\";";
+                    cmd.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
                     count = (long)(await cmd.ExecuteScalarAsync(cancellationToken) ?? 0L);
                 }
 
@@ -111,11 +113,19 @@ namespace JobScrape.Infrastructure.Persistence
         {
             using var connection = await OpenAsync(cancellationToken);
             await EnsureTableAsync(connection, tableName, cancellationToken);
+            return await GetSchemaInnerAsync(connection, tableName, cancellationToken);
+        }
 
+        private static async Task<DatabaseTableSchema> GetSchemaInnerAsync(
+            SqliteConnection connection,
+            string tableName,
+            CancellationToken cancellationToken
+        )
+        {
             var columns = new List<DatabaseColumnInfo>();
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = $"PRAGMA table_info(\"{tableName}\");";
+                cmd.CommandText = $"PRAGMA table_info({Quote(tableName)});";
                 using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
@@ -134,7 +144,7 @@ namespace JobScrape.Infrastructure.Persistence
             var foreignKeys = new List<DatabaseForeignKeyInfo>();
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = $"PRAGMA foreign_key_list(\"{tableName}\");";
+                cmd.CommandText = $"PRAGMA foreign_key_list({Quote(tableName)});";
                 using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
@@ -172,14 +182,14 @@ namespace JobScrape.Infrastructure.Persistence
             long total;
             using (var countCmd = connection.CreateCommand())
             {
-                countCmd.CommandText = $"SELECT COUNT(*) FROM \"{tableName}\";";
+                countCmd.CommandText = $"SELECT COUNT(*) FROM {Quote(tableName)};";
                 total = (long)(await countCmd.ExecuteScalarAsync(cancellationToken) ?? 0L);
             }
 
             var rows = new List<IReadOnlyDictionary<string, object?>>();
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = $"SELECT * FROM \"{tableName}\" LIMIT @limit OFFSET @offset;";
+                cmd.CommandText = $"SELECT * FROM {Quote(tableName)} LIMIT @limit OFFSET @offset;";
                 cmd.Parameters.AddWithValue("@limit", limit);
                 cmd.Parameters.AddWithValue("@offset", offset);
                 using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
@@ -218,11 +228,7 @@ namespace JobScrape.Infrastructure.Persistence
 
             using var connection = await OpenAsync(cancellationToken);
             await EnsureTableAsync(connection, tableName, cancellationToken);
-            var schema = await GetSchemaAsync(tableName, cancellationToken);
-            if (schema is null)
-            {
-                throw new KeyNotFoundException($"Table '{tableName}' was not found.");
-            }
+            var schema = await GetSchemaInnerAsync(connection, tableName, cancellationToken);
 
             var allowed = schema.Columns.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
             var columns = values.Keys
@@ -234,10 +240,10 @@ namespace JobScrape.Infrastructure.Persistence
                 throw new ArgumentException("No valid columns supplied.", nameof(values));
             }
 
-            var columnList = string.Join(", ", columns.Select(c => $"\"{c}\""));
+            var columnList = string.Join(", ", columns.Select(Quote));
             var paramList = string.Join(", ", columns.Select((_, i) => $"@p{i}"));
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"INSERT INTO \"{tableName}\" ({columnList}) VALUES ({paramList});";
+            cmd.CommandText = $"INSERT INTO {Quote(tableName)} ({columnList}) VALUES ({paramList});";
             for (var i = 0; i < columns.Count; i++)
             {
                 cmd.Parameters.AddWithValue($"@p{i}", ToDbValue(values[columns[i]]));
@@ -261,11 +267,7 @@ namespace JobScrape.Infrastructure.Persistence
 
             using var connection = await OpenAsync(cancellationToken);
             await EnsureTableAsync(connection, tableName, cancellationToken);
-            var schema = await GetSchemaAsync(tableName, cancellationToken);
-            if (schema is null)
-            {
-                throw new KeyNotFoundException($"Table '{tableName}' was not found.");
-            }
+            var schema = await GetSchemaInnerAsync(connection, tableName, cancellationToken);
 
             var pk = schema.PrimaryKeyColumn;
             if (!IsValidIdentifier(pk))
@@ -286,12 +288,11 @@ namespace JobScrape.Infrastructure.Persistence
 
             var setClause = string.Join(
                 ", ",
-                columns.Select((c, i) => $"\"{c}\" = @p{i}")
+                columns.Select((c, i) => $"{Quote(c)} = @p{i}")
             );
             using var cmd = connection.CreateCommand();
-            var safePk = pk.Replace("\"", "\"\"");
             cmd.CommandText =
-                $"UPDATE \"{tableName}\" SET {setClause} WHERE \"{safePk}\" = @pk;";
+                $"UPDATE {Quote(tableName)} SET {setClause} WHERE {Quote(pk)} = @pk;";
             for (var i = 0; i < columns.Count; i++)
             {
                 cmd.Parameters.AddWithValue($"@p{i}", ToDbValue(values[columns[i]]));
@@ -314,11 +315,7 @@ namespace JobScrape.Infrastructure.Persistence
         {
             using var connection = await OpenAsync(cancellationToken);
             await EnsureTableAsync(connection, tableName, cancellationToken);
-            var schema = await GetSchemaAsync(tableName, cancellationToken);
-            if (schema is null)
-            {
-                throw new KeyNotFoundException($"Table '{tableName}' was not found.");
-            }
+            var schema = await GetSchemaInnerAsync(connection, tableName, cancellationToken);
 
             var pk = schema.PrimaryKeyColumn;
             if (!IsValidIdentifier(pk))
@@ -326,9 +323,8 @@ namespace JobScrape.Infrastructure.Persistence
                 throw new ArgumentException("Invalid primary key column.", nameof(tableName));
             }
 
-            var safePk = pk.Replace("\"", "\"\"");
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"DELETE FROM \"{tableName}\" WHERE \"{safePk}\" = @pk;";
+            cmd.CommandText = $"DELETE FROM {Quote(tableName)} WHERE {Quote(pk)} = @pk;";
             cmd.Parameters.AddWithValue("@pk", primaryKeyValue);
             var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
             if (affected == 0)

@@ -35,7 +35,7 @@ describe("profiles api", () => {
     const { result } = await createApiClient(fetchImpl).listProfiles();
 
     expect(result).toEqual({ ok: true, value: { items: [profile], total: 1 } });
-    expect(calls).toEqual([{ url: "/api/v1/search-profiles", init: undefined }]);
+    expect(calls).toEqual([{ url: "/api/v1/search-profiles", init: { method: "GET" } }]);
   });
 
   test("createProfile POSTs JSON and returns the created profile", async () => {

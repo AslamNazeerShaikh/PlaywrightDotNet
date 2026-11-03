@@ -353,9 +353,11 @@ async function send<T>(
   }
   let res: { ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> };
   try {
+    // The method always travels, even without a body. A bare
+    // `fetchImpl(path)` would silently downgrade DELETE to GET.
     res =
       body === undefined
-        ? await fetchImpl(path)
+        ? await fetchImpl(path, { method })
         : await fetchImpl(path, {
             method,
             headers: { "content-type": "application/json" },

@@ -24,7 +24,7 @@ describe("sessions", () => {
       channel: "Bundled",
     });
 
-    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: undefined });
+    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: { method: "GET" } });
     expect(calls[1]?.init?.method).toBe("POST");
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       name: "main",

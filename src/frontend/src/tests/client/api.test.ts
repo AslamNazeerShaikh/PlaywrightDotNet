@@ -85,6 +85,31 @@ describe("api client", () => {
     }
   });
 
+  test("204 with no body succeeds without parsing", async () => {
+    const empty: FetchImpl = async () => ({ ok: true, status: 204, json: async () => ({}) });
+    const client = createApiClient(empty);
+
+    const { result } = await client.deleteDbRow("search_profiles", "abc");
+
+    expect(result.ok).toBe(true);
+  });
+
+  test("DELETE travels with its method and no body", async () => {
+    let seen: RequestInit | undefined;
+    let seenUrl = "";
+    const fetchImpl: FetchImpl = async (url, init) => {
+      seenUrl = url;
+      seen = init;
+      return { ok: true, status: 204, json: async () => ({}) };
+    };
+
+    await createApiClient(fetchImpl).deleteDbRow("search_profiles", "abc");
+
+    expect(seenUrl).toBe("/api/v1/db/tables/search_profiles/rows/abc");
+    expect(seen?.method).toBe("DELETE");
+    expect(seen?.body).toBeUndefined();
+  });
+
   test("non-json or code-less bodies fall back safely", async () => {
     const broken: FetchImpl = async () => ({
       ok: false,

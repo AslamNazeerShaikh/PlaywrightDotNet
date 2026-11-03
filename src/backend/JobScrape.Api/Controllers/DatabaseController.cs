@@ -80,7 +80,7 @@ namespace JobScrape.Api.Controllers
         [HttpPost("tables/{table}/rows")]
         public async Task<IActionResult> InsertAsync(
             string table,
-            [FromBody] Dictionary<string, System.Text.Json.JsonElement> values,
+            [FromBody] Dictionary<string, System.Text.Json.JsonElement>? values,
             CancellationToken cancellationToken
         )
         {
@@ -112,16 +112,24 @@ namespace JobScrape.Api.Controllers
         [HttpPut("tables/{table}/rows")]
         public async Task<IActionResult> UpdateAsync(
             string table,
-            [FromBody] UpdateRowRequest request,
+            [FromBody] UpdateRowRequest? request,
             CancellationToken cancellationToken
         )
         {
+            var primaryKeyValue = request?.PrimaryKeyValue;
+            if (string.IsNullOrWhiteSpace(primaryKeyValue))
+            {
+                return BadRequest(
+                    new { code = "INVALID_INPUT", detail = "PrimaryKeyValue is required." }
+                );
+            }
+
             try
             {
                 await _explorer.UpdateRowAsync(
                     table,
-                    request.PrimaryKeyValue,
-                    request.Values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
+                    primaryKeyValue,
+                    request!.Values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
                     cancellationToken
                 );
                 return NoContent();
