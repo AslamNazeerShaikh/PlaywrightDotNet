@@ -299,9 +299,10 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
 > The real file also pins `Microsoft.Extensions.Hosting` and
 > `Microsoft.Extensions.Http` (`10.0.14`), which no project references.
 > Anything else (`System.CommandLine`, Scalar, `Http.Resilience`,
-> `Microsoft.Data.Sqlite`, ClosedXML, `Microsoft.Playwright.Xunit.v3`,
+> `Microsoft.Data.Sqlite`, `Microsoft.Playwright.Xunit.v3`,
 > NSubstitute, Verify, MinVer) appears only in the pre-rename design matrix:
 > no `PackageVersion` and no `PackageReference` exists for it today.
+> ClosedXML `0.105.1` is pinned centrally and referenced by Infrastructure.
 
 ### 4.4 `NuGet.config`
 

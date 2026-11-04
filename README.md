@@ -80,6 +80,38 @@ Browse every user table in the SQLite store. Live schema, paged rows, CRUD, live
 <img src="docs/screenshots/08-database-dark.png" width="49%" alt="Database page in dark theme" />
 </div>
 
+## Verified stack
+
+Status means In use (referenced by a project today) or Planned (design-matrix version, no package reference yet).
+
+| Area | Package | Version | Status | What it does |
+| ---- | ------- | ------- | ------ | ------------ |
+| Runtime | .NET SDK / runtime | 10.0.403 / 10.0.14 | In use | LTS base. SDK pinned in `global.json`. Every project targets `net10.0`. |
+| Tests | xUnit.net v3 + VS adapter | 4.0.2 / 4.0.1 | In use | Test framework, assertions, and the Visual Studio runner across all test projects. |
+| Browser automation | `Microsoft.Playwright` | 1.64.1 | In use | Headed browsing with persistent per-profile contexts. Drivers for Chromium 156, Firefox 157, WebKit 27.2. |
+| Data access | EF Core SQLite + `Microsoft.Extensions` | 10.0.14 | In use | SQLite storage through EF Core. Options binding and DataAnnotations validation through Extensions. |
+| HTML parsing | AngleSharp | 1.8.6 | In use | Offline parsing of captured search and detail pages. |
+| Excel export | ClosedXML | 0.105.1 | In use | XLSX export of postings. Referenced by Infrastructure. |
+| Logging | Serilog + sinks and enrichers | 10.0.0 | In use | Compact JSON console and file logs. 90-day retention from validated options. |
+| CLI parsing | `System.CommandLine` | 2.0.14 | Planned | Future command-line surface. No package reference exists today. |
+| HTTP resilience | Polly v8 via `Microsoft.Extensions.Http.Resilience` | 10.0.0 | Planned | Future retry policy. No package reference exists today. |
+| API reference | `Microsoft.AspNetCore.OpenApi` | 10.0.14 | In use | OpenAPI document generated and served in Development. |
+| API docs UI | Scalar UI | 2.18.5 | Planned | Local reference UI for the Development OpenAPI document. No package reference exists today. |
+
+## What this project will be
+
+A modular monolith + CLI.
+
+| Capability | How it works |
+| ---------- | ------------ |
+| Search | Playwright drives public job pages with a persistent, headed browser profile. One identity per source. |
+| Collect | Extract, validate, and deduplicate postings, then store them in SQLite. |
+| Enrich and export | Optionally visit detail pages, then export CSV and Excel. |
+| Anti-bot | Stop, cool down, and ask a human at walls. No CAPTCHA solving, fingerprint spoofing, auth-wall bypass, or proxy rotation. |
+| Application style | Explicit use-case handlers with no mediator. Expected failures travel as `Result<T>`. Options validated at startup. Reusable query criteria as Specifications. API errors as Problem Details. |
+| Library use | Each package in its documented, recommended configuration. AOT and trimming are not design constraints. |
+| LinkedIn | High-risk source. Disabled by default. |
+
 ## Start here
 
 Read the documentation in this order:
@@ -102,28 +134,6 @@ Read the documentation in this order:
 16. [Runtime hardening](docs/15-runtime-hardening.md)
 17. [Library usage policy](docs/16-library-usage-policy.md)
 18. [ADRs](docs/10-adr/README.md)
-
-## Verified stack
-
-- .NET SDK **10.0.403** / runtime **10.0.14** (LTS through 2028-11-14)
-- xUnit.net v3 **4.0.2** (VS adapter 4.0.1)
-- Playwright for .NET **1.64.1** (Chromium 156, Firefox 157, WebKit 27.2)
-- EF Core / Microsoft.Extensions **10.0.14**
-- SQLite, System.CommandLine 2.0.14, AngleSharp, ClosedXML 0.105.1
-- Serilog 10.0.0 (compact JSON file logs, enrichers, 90-day retention) + Polly v8 HTTP resilience via `Microsoft.Extensions.Http.Resilience` 10.0.0
-- Scalar.AspNetCore 2.18.5 local API reference at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` 10.0.14
-
-## What this project will be
-
-A **modular monolith + CLI** that:
-
-- Searches public job pages with Playwright and a persistent, headed browser profile.
-- Extracts, validates, deduplicates, and stores postings in SQLite.
-- Optionally enriches details and exports CSV/Excel.
-- Handles anti-bot walls by **stopping, cooling down, and asking a human** — no CAPTCHA solving, fingerprint spoofing, auth-wall bypass, or proxy rotation.
-- Uses explicit use-case handlers — **no CQRS/MediatR** — with Result, Options, Specification, and Problem Details patterns.
-- Uses each library in its documented, recommended configuration; AOT/trimming is not a design constraint.
-- Treats LinkedIn as high-risk and disabled by default.
 
 ## Before implementation
 
