@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using JobScrape.Domain.Sourcing;
 
 namespace JobScrape.Infrastructure.Configuration
 {
@@ -24,14 +25,28 @@ namespace JobScrape.Infrastructure.Configuration
         /// <summary>
         /// Gets the default result pages per search.
         /// </summary>
-        [Range(1, 30)]
+        [Range(1, RunLimits.MaxPagesCeiling)]
         public int MaxPagesPerSearch { get; init; } = 1;
 
         /// <summary>
         /// Gets the default postings per run.
         /// </summary>
-        [Range(1, 1000)]
+        [Range(1, RunLimits.MaxJobsCeiling)]
         public int MaxJobsPerRun { get; init; } = 1;
+
+        /// <summary>
+        /// Gets the highest page cap a profile may request, or null to use
+        /// <see cref="MaxPagesPerSearch"/> as both default and ceiling.
+        /// </summary>
+        [Range(1, RunLimits.MaxPagesCeiling)]
+        public int? MaxPagesCeiling { get; init; }
+
+        /// <summary>
+        /// Gets the highest job cap a profile may request, or null to use
+        /// <see cref="MaxJobsPerRun"/> as both default and ceiling.
+        /// </summary>
+        [Range(1, RunLimits.MaxJobsCeiling)]
+        public int? MaxJobsCeiling { get; init; }
 
         /// <summary>
         /// Gets the default detail visits per run; 0 disables enrichment.
@@ -64,10 +79,17 @@ namespace JobScrape.Infrastructure.Configuration
         public int DailyDetailCap { get; init; }
 
         /// <summary>
-        /// Gets the runs allowed per UTC day.
+        /// Gets the runs allowed per UTC day. Zero blocks all runs. Ignored
+        /// when <see cref="UnlimitedRunCap"/> is true.
         /// </summary>
         [Range(0, 100)]
         public int DailyRunCap { get; init; }
+
+        /// <summary>
+        /// Gets a value indicating whether the source has no daily run cap.
+        /// Defaults to false so an omitted or mistyped cap stays fail-closed.
+        /// </summary>
+        public bool UnlimitedRunCap { get; init; }
 
         /// <summary>
         /// Gets how long a browser profile cools down after a wall, in minutes.

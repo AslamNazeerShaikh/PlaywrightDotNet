@@ -146,6 +146,14 @@ namespace JobScrape.Infrastructure.Persistence
         );
 
         /// <summary>
+        /// A string list as a JSON array, for small resume-style state.
+        /// </summary>
+        public static readonly ValueConverter<IReadOnlyList<string>, string> StringList = new(
+            ids => Json.WriteStringList(ids),
+            json => Json.ReadStringList(json)
+        );
+
+        /// <summary>
         /// Detects skill changes by normalized name and order, not by list reference.
         /// </summary>
         public static readonly ValueComparer<IReadOnlyList<JobSkill>> SkillsComparer = new(
@@ -183,7 +191,9 @@ namespace JobScrape.Infrastructure.Persistence
                         [.. criteria.Locations],
                         criteria.ExperienceYears,
                         criteria.PostedWithinDays,
-                        criteria.RemoteOnly
+                        criteria.RemoteOnly,
+                        [.. criteria.RequiredSkills],
+                        [.. criteria.Companies]
                     ),
                     Options
                 );
@@ -197,7 +207,9 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.Locations ?? [],
                     dto.ExperienceYears,
                     dto.PostedWithinDays,
-                    dto.RemoteOnly
+                    dto.RemoteOnly,
+                    dto.RequiredSkills ?? [],
+                    dto.Companies ?? []
                 );
             }
 
@@ -237,7 +249,8 @@ namespace JobScrape.Infrastructure.Persistence
                         stats.PostingsUpdated,
                         stats.DetailsFetched,
                         stats.Challenges,
-                        stats.Failures
+                        stats.Failures,
+                        stats.PostedDateMismatches
                     ),
                     Options
                 );
@@ -253,7 +266,8 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.PostingsUpdated,
                     dto.DetailsFetched,
                     dto.Challenges,
-                    dto.Failures
+                    dto.Failures,
+                    dto.PostedDateMismatches
                 );
             }
 
@@ -304,6 +318,16 @@ namespace JobScrape.Infrastructure.Persistence
                 return Read<string[]>(json).Select(JobSkill.Create).ToArray();
             }
 
+            public static string WriteStringList(IReadOnlyList<string> ids)
+            {
+                return JsonSerializer.Serialize(ids.ToArray(), Options);
+            }
+
+            public static string[] ReadStringList(string json)
+            {
+                return Read<string[]>(json);
+            }
+
             private static T Read<T>(string json)
             {
                 return JsonSerializer.Deserialize<T>(json, Options)
@@ -315,7 +339,9 @@ namespace JobScrape.Infrastructure.Persistence
                 string[]? Locations,
                 int? ExperienceYears,
                 int? PostedWithinDays,
-                bool RemoteOnly
+                bool RemoteOnly,
+                string[]? RequiredSkills,
+                string[]? Companies
             );
 
             private sealed record LimitsJson(
@@ -333,7 +359,8 @@ namespace JobScrape.Infrastructure.Persistence
                 int PostingsUpdated,
                 int DetailsFetched,
                 int Challenges,
-                int Failures
+                int Failures,
+                int PostedDateMismatches
             );
 
             private sealed record LocationJson(

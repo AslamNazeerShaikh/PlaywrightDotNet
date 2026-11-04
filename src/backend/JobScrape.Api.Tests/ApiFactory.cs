@@ -22,6 +22,8 @@ namespace JobScrape.Api.Tests
 
         public string DatabasePath => Path.Combine(_root, "data", "jobscrape.db");
 
+        public string ProfilesRoot => Path.Combine(_root, "data", "profiles");
+
         public bool DeleteLogsOnDispose { get; init; } = true;
 
         /// <summary>

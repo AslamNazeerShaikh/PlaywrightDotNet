@@ -25,7 +25,9 @@ namespace JobScrape.Infrastructure.Configuration
                     entry.Value.Enabled,
                     entry.Value.DailyPageCap,
                     entry.Value.DailyDetailCap,
-                    entry.Value.DailyRunCap,
+                    entry.Value.UnlimitedRunCap ? null : entry.Value.DailyRunCap,
+                    entry.Value.MaxPagesCeiling ?? entry.Value.MaxPagesPerSearch,
+                    entry.Value.MaxJobsCeiling ?? entry.Value.MaxJobsPerRun,
                     TimeSpan.FromMinutes(entry.Value.ChallengeCooldownMinutes),
                     SourcesOptionsValidator.ToRunLimits(entry.Value)
                 ))

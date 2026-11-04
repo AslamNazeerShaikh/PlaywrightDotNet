@@ -13,6 +13,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="AngleSharp" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <!-- Design-time only (migrations); never flows to consumers. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />

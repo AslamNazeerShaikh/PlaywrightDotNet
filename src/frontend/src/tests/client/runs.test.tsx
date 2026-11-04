@@ -4,13 +4,20 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import {
+  type ApiProblem,
   createApiClient,
   type FetchImpl,
   type RunPayload,
   type StartRunInput,
 } from "../../client/lib/api.ts";
 import type { LogEvent } from "../../client/lib/telemetry.ts";
-import { runDuration, RunsPage, stageTone, upsertRun } from "../../client/pages/runs.tsx";
+import {
+  profileInputs,
+  runDuration,
+  RunsPage,
+  stageTone,
+  upsertRun,
+} from "../../client/pages/runs.tsx";
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -29,6 +36,7 @@ const baseRun: RunPayload = {
   id: "r1",
   profileId: "p1",
   profileName: "backend",
+  companies: ["Infosys", "TCS"],
   sourceKey: "naukri",
   stage: "Searching",
   isTerminal: false,
@@ -74,13 +82,65 @@ describe("run helpers", () => {
     expect(runDuration({ ...baseRun, finishedAt: "2026-11-02T08:03:05Z" }, 0)).toBe("3 m 05 s");
     expect(runDuration({ ...baseRun, startedAt: null }, start)).toBe("—");
   });
+
+  test("profileInputs names every search input on one line", () => {
+    expect(
+      profileInputs({
+        id: "p1",
+        name: "backend",
+        sourceKey: "naukri",
+        keywords: "asp.net core c#",
+        locations: ["Pune", "Hyderabad"],
+        experienceYears: 6,
+        postedWithinDays: 1,
+        remoteOnly: false,
+        requiredSkills: ["C#", "ASP.NET Core"],
+        companies: [],
+        maxPages: 3,
+        maxJobs: 60,
+        maxDetails: 60,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        enabled: true,
+        createdAt: "2026-11-02T08:00:00Z",
+        updatedAt: "2026-11-02T08:00:00Z",
+      }),
+    ).toBe(
+      "Inputs: asp.net core c# · Pune, Hyderabad · 6 yrs · last 1d · skills: C#, ASP.NET Core",
+    );
+  });
+
+  test("profileInputs falls back when filters are absent", () => {
+    expect(
+      profileInputs({
+        id: "p1",
+        name: "remote",
+        sourceKey: "naukri",
+        keywords: "c#",
+        locations: [],
+        experienceYears: null,
+        postedWithinDays: null,
+        remoteOnly: true,
+        requiredSkills: [],
+        companies: [],
+        maxPages: 3,
+        maxJobs: 60,
+        maxDetails: 60,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        enabled: true,
+        createdAt: "2026-11-02T08:00:00Z",
+        updatedAt: "2026-11-02T08:00:00Z",
+      }),
+    ).toBe("Inputs: c# · remote · any exp · any date · no skill filter");
+  });
 });
 
 /**
  * A stateful fake of the runs API: POST starts a run that advances one stage per poll and completes
  * with two postings; a second POST while it executes answers RUN_IN_PROGRESS.
  */
-function runsBackend() {
+function runsBackend(companies: string[] = ["Infosys", "TCS"], failExport?: ApiProblem) {
   const runs: RunPayload[] = [];
   const calls: string[] = [];
   let polls = 0;
@@ -93,7 +153,21 @@ function runsBackend() {
     });
     if (url === "/api/v1/search-profiles") {
       return reply(200, {
-        items: [{ id: "p1", name: "backend", sourceKey: "naukri", enabled: true }],
+        items: [
+          {
+            id: "p1",
+            name: "backend",
+            sourceKey: "naukri",
+            keywords: "asp.net core c#",
+            locations: ["Pune", "Hyderabad"],
+            experienceYears: 6,
+            postedWithinDays: 1,
+            remoteOnly: false,
+            requiredSkills: ["C#", "ASP.NET Core"],
+            companies: ["Infosys", "TCS"],
+            enabled: true,
+          },
+        ],
         total: 1,
       });
     }
@@ -125,6 +199,7 @@ function runsBackend() {
       }
       const run = {
         ...baseRun,
+        companies,
         id: `r${runs.length + 1}`,
         stage: "StartingSession",
         pagesFetched: 0,
@@ -133,36 +208,64 @@ function runsBackend() {
       runs.unshift(run);
       return reply(202, run);
     }
-    if (url === "/api/v1/runs") {
-      return reply(200, { items: runs, total: runs.length });
+    if (url.startsWith("/api/v1/runs?")) {
+      const query = new URL(url, "http://deck").searchParams;
+      const offset = Number(query.get("offset") ?? 0);
+      const limit = Number(query.get("limit") ?? 50);
+      return reply(200, {
+        items: runs.slice(offset, offset + limit),
+        total: runs.length,
+      });
     }
-    const postings = /^\/api\/v1\/runs\/(r\d+)\/postings$/.exec(url);
+    const exportMatch = /^\/api\/v1\/runs\/(r\d+)\/postings\/export(\?|$)/.exec(url);
+    if (exportMatch) {
+      if (failExport !== undefined) {
+        return {
+          ok: false,
+          status: failExport.status,
+          json: async () => failExport,
+        };
+      }
+      const query = new URL(url, "http://deck").searchParams;
+      const format = query.get("format") ?? "csv";
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        blob: async () => new Blob(["a,b"], { type: "text/csv" }),
+        headers: {
+          get: (name: string) =>
+            name === "content-disposition"
+              ? `attachment; filename="run-postings-${exportMatch[1]}.${format}"`
+              : null,
+        },
+      };
+    }
+    const postings = /^\/api\/v1\/runs\/(r\d+)\/postings(\?|$)/.exec(url);
     if (postings) {
       const done = runs.find((r) => r.id === postings[1])?.isTerminal ?? false;
-      return reply(200, {
-        runId: postings[1],
-        items: done
-          ? [
-              {
-                id: "j1",
-                externalJobId: "101",
-                url: "https://www.naukri.com/job-listings-dotnet-dev-101",
-                title: "Senior .NET Developer",
-                company: "Contoso",
-                location: "Pune",
-                workMode: "Onsite",
-                experience: "5-8 Yrs",
-                salary: "15-25 Lacs PA",
-                postedAt: "2026-11-01T00:00:00Z",
-                skills: ["C#", "ASP.NET Core"],
-                enriched: true,
-                isNew: true,
-                firstSeenAt: "2026-11-02T08:00:10Z",
-                lastSeenAt: "2026-11-02T08:00:10Z",
-              },
-            ]
-          : [],
-      });
+      const items = done
+        ? [
+            {
+              id: "j1",
+              externalJobId: "101",
+              url: "https://www.naukri.com/job-listings-dotnet-dev-101",
+              title: "Senior .NET Developer",
+              company: "Contoso",
+              location: "Pune",
+              workMode: "Onsite",
+              experience: "5-8 Yrs",
+              salary: "15-25 Lacs PA",
+              postedAt: "2026-11-01T00:00:00Z",
+              skills: ["C#", "ASP.NET Core"],
+              enriched: true,
+              isNew: true,
+              firstSeenAt: "2026-11-02T08:00:10Z",
+              lastSeenAt: "2026-11-02T08:00:10Z",
+            },
+          ]
+        : [];
+      return reply(200, { runId: postings[1], items, total: items.length });
     }
     const one = /^\/api\/v1\/runs\/(r\d+)$/.exec(url);
     if (one) {
@@ -210,6 +313,16 @@ describe("runs page", () => {
         "Senior .NET Developer",
       ),
     );
+    const csv = queries.getByRole("button", { name: "Export all as CSV" });
+    expect(csv.textContent).toBe("CSV");
+    const xlsx = queries.getByRole("button", { name: "Export all as XLSX" });
+    expect(xlsx.textContent).toBe("XLSX");
+    expect(queries.getByRole("button", { name: "Export only companies as CSV" })).toBeDefined();
+    expect(
+      queries.getByRole("button", { name: "Export exclude companies as XLSX" }),
+    ).toBeDefined();
+    expect(calls).toContain("GET /api/v1/runs?offset=0&limit=50");
+    expect(calls).toContain("GET /api/v1/runs/r1/postings?offset=0&limit=200");
     expect(queries.getByRole("status").textContent).toContain("COMPLETED");
     expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
     // Run meters measure progress: a cap reached is done, never the quota red.
@@ -226,10 +339,108 @@ describe("runs page", () => {
     expect(calls.filter((c) => c === "GET /api/v1/runs/r1").length).toBe(settled);
   }, 15_000);
 
+  test("hides company split links when the run has no company list", async () => {
+    const { client } = runsBackend([]);
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    expect(queries.getByRole("button", { name: "Export all as CSV" })).toBeDefined();
+    expect(queries.queryByRole("button", { name: "Export only companies as CSV" })).toBeNull();
+    expect(queries.queryByRole("button", { name: "Export exclude companies as CSV" })).toBeNull();
+  }, 15_000);
+
+  test("export buttons download the blob with the server filename", async () => {
+    const { client } = runsBackend();
+    const events: LogEvent[] = [];
+    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    const created: string[] = [];
+    const revoked: string[] = [];
+    const clicked: Array<{ href: string; download: string }> = [];
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+    const origClick = HTMLAnchorElement.prototype.click;
+    URL.createObjectURL = ((blob: Blob) => {
+      expect(blob).toBeInstanceOf(Blob);
+      created.push("blob:mock");
+      return "blob:mock";
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = ((url: string) => {
+      revoked.push(url);
+    }) as typeof URL.revokeObjectURL;
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      clicked.push({
+        href: this.getAttribute("href") ?? "",
+        download: this.getAttribute("download") ?? "",
+      });
+    };
+    try {
+      fireEvent.click(queries.getByRole("button", { name: "Export only companies as XLSX" }));
+      await waitFor(() => expect(events.map((e) => e.code)).toContain("EXPORTED"), {
+        timeout: 6000,
+      });
+    } finally {
+      URL.createObjectURL = origCreate;
+      URL.revokeObjectURL = origRevoke;
+      HTMLAnchorElement.prototype.click = origClick;
+    }
+    expect(created).toEqual(["blob:mock"]);
+    expect(clicked).toEqual([{ href: "blob:mock", download: "run-postings-r1.xlsx" }]);
+    expect(revoked).toEqual(["blob:mock"]);
+  }, 15_000);
+
+  test("a failed export shows the problem code", async () => {
+    const { client } = runsBackend(["Infosys", "TCS"], {
+      status: 404,
+      title: "Run not found.",
+      detail: "Run 'r1' does not exist.",
+      code: "ROW_NOT_FOUND",
+    });
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    fireEvent.click(queries.getByRole("button", { name: "Export all as CSV" }));
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("ROW_NOT_FOUND"),
+    );
+  }, 15_000);
+
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {
     const { client } = runsBackend();
     const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    expect(queries.getByText(/^Inputs: /).textContent).toContain(
+      "Inputs: asp.net core c# · Pune, Hyderabad · 6 yrs · last 1d · skills: C#, ASP.NET Core",
+    );
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
     await waitFor(() => expect(queries.getByRole("button", { name: "CANCEL RUN" })).toBeDefined());

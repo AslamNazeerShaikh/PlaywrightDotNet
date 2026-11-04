@@ -53,7 +53,7 @@ namespace JobScrape.Domain.Sourcing
         /// <summary>
         /// Gets the operator-given name, trimmed.
         /// </summary>
-        public string Name { get; }
+        public string Name { get; private set; }
 
         /// <summary>
         /// Gets the source this profile searches. Fixed for the profile's life.
@@ -127,6 +127,30 @@ namespace JobScrape.Domain.Sourcing
             );
             profile.Raise(new SearchProfileCreated(profile.Id, source, now));
             return profile;
+        }
+
+        /// <summary>
+        /// Renames the profile. A value-equal replacement is a no-op. Name
+        /// uniqueness remains a repository concern.
+        /// </summary>
+        /// <param name="name">The new name. Trimmed; must be non-blank.</param>
+        /// <param name="now">The change time.</param>
+        /// <exception cref="DomainException">Thrown when <paramref name="name"/> is blank.</exception>
+        public void Rename(string? name, DateTimeOffset now)
+        {
+            var trimmed = name?.Trim() ?? string.Empty;
+            if (trimmed.Length == 0)
+            {
+                throw new DomainException("A search profile name is required.");
+            }
+
+            if (string.Equals(trimmed, Name, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            Name = trimmed;
+            Touch("name", now);
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ namespace JobScrape.Api.Controllers
         private readonly ListSessionsHandler _list;
         private readonly GetSessionHandler _get;
         private readonly CreateSessionHandler _create;
+        private readonly UpdateSessionHandler _update;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SessionsController"/> class.
@@ -23,19 +24,23 @@ namespace JobScrape.Api.Controllers
         /// <param name="list">The list handler.</param>
         /// <param name="get">The lookup handler.</param>
         /// <param name="create">The create handler.</param>
+        /// <param name="update">The update handler.</param>
         /// <exception cref="ArgumentNullException">Thrown when any handler is null.</exception>
         public SessionsController(
             ListSessionsHandler list,
             GetSessionHandler get,
-            CreateSessionHandler create
+            CreateSessionHandler create,
+            UpdateSessionHandler update
         )
         {
             ArgumentNullException.ThrowIfNull(list);
             ArgumentNullException.ThrowIfNull(get);
             ArgumentNullException.ThrowIfNull(create);
+            ArgumentNullException.ThrowIfNull(update);
             _list = list;
             _get = get;
             _create = create;
+            _update = update;
         }
 
         /// <summary>
@@ -83,6 +88,28 @@ namespace JobScrape.Api.Controllers
             return result.IsSuccess
                 ? Results.Created($"/api/v1/sessions/{result.Value.Id}", result.Value)
                 : result.Error.ToProblem();
+        }
+
+        /// <summary>
+        /// Updates a browser profile's name, engine, and channel. The source
+        /// is immutable. A rename moves the user-data directory.
+        /// </summary>
+        /// <param name="id">The profile to update.</param>
+        /// <param name="request">The fields to change.</param>
+        /// <param name="cancellationToken">Token to observe for client disconnect.</param>
+        /// <returns>
+        /// HTTP 200 with the updated profile, or a problem response: 400 with
+        /// field errors, 404 when absent, 409 on a name or directory conflict.
+        /// </returns>
+        [HttpPatch("{id:guid}")]
+        public async Task<IResult> UpdateAsync(
+            Guid id,
+            UpdateSessionRequest request,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _update.HandleAsync(id, request, cancellationToken);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         }
     }
 }

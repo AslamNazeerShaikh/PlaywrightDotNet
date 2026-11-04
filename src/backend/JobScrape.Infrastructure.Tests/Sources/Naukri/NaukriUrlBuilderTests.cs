@@ -9,9 +9,10 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
     {
         [Theory]
         [InlineData("dot net developer", "dot-net-developer")]
-        [InlineData("C#", "csharp")]
-        [InlineData(".NET Core", "dotnet-core")]
-        [InlineData("asp.net core c#", "aspdotnet-core-csharp")]
+        [InlineData("C#", "c-sharp")]
+        [InlineData(".NET Core", "dot-net-core")]
+        [InlineData("asp.net core c#", "asp-dot-net-core-c-sharp")]
+        [InlineData("ASP.Net, ASP.Net Core, C#", "asp-dot-net-asp-dot-net-core-c-sharp")]
         [InlineData("Pune", "pune")]
         [InlineData("Pune, Mumbai", "pune-mumbai")]
         [InlineData("Delhi / NCR", "delhi-ncr")]
@@ -21,7 +22,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [InlineData("Zürich", "zrich")]
         [InlineData("--", "")]
         [InlineData("", "")]
-        public void SlugFollowsPlaybookRules(string text, string expected)
+        public void SlugFollowsNaukriCanonicalRules(string text, string expected)
         {
             Assert.Equal(expected, NaukriUrlBuilder.Slug(text));
         }
@@ -34,13 +35,34 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 ["Pune", "Bengaluru"],
                 5,
                 7,
-                remoteOnly: false
+                remoteOnly: false,
+                []
             );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/dot-net-developer-jobs-in-pune?k=dot%20net%20developer&l=Pune%2C%20Bengaluru&experience=5&jobAge=7",
+                "https://www.naukri.com/dot-net-developer-jobs-in-pune?k=dot%20net%20developer&l=Pune%2C%20Bengaluru&nignbevent_src=jobsearchDeskGNB&experience=5&jobAge=7",
+                url.AbsoluteUri
+            );
+        }
+
+        [Fact]
+        public void SearchUrlMatchesTheLiveCanonicalPathThatKeepsFilters()
+        {
+            var criteria = new SearchCriteria(
+                "asp.net",
+                ["Pune", "Hyderabad", "Chennai", "Mumbai", "Bangalore", "Noida"],
+                6,
+                1,
+                remoteOnly: false,
+                []
+            );
+
+            var url = NaukriUrlBuilder.SearchUrl(criteria);
+
+            Assert.Equal(
+                "https://www.naukri.com/asp-dot-net-jobs-in-pune?k=asp.net&l=Pune%2C%20Hyderabad%2C%20Chennai%2C%20Mumbai%2C%20Bangalore%2C%20Noida&nignbevent_src=jobsearchDeskGNB&experience=6&jobAge=1",
                 url.AbsoluteUri
             );
         }
@@ -48,12 +70,12 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void SearchUrlOmitsAbsentFiltersAndEncodesKeywords()
         {
-            var criteria = new SearchCriteria("C#", ["Pune"], null, null, remoteOnly: false);
+            var criteria = new SearchCriteria("C#", ["Pune"], null, null, remoteOnly: false, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/csharp-jobs-in-pune?k=C%23&l=Pune",
+                "https://www.naukri.com/c-sharp-jobs-in-pune?k=C%23&l=Pune&nignbevent_src=jobsearchDeskGNB",
                 url.AbsoluteUri
             );
         }
@@ -61,12 +83,12 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void RemoteOnlySearchHasNoCityAndNoInventedRemoteFilter()
         {
-            var criteria = new SearchCriteria("asp.net core", [], 3, null, remoteOnly: true);
+            var criteria = new SearchCriteria("asp.net core", [], 3, null, remoteOnly: true, []);
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/aspdotnet-core-jobs?k=asp.net%20core&experience=3",
+                "https://www.naukri.com/asp-dot-net-core-jobs?k=asp.net%20core&nignbevent_src=jobsearchDeskGNB&experience=3",
                 url.AbsoluteUri
             );
         }
@@ -74,12 +96,19 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void KeywordsWithoutSlugCharactersFallBackToCityPath()
         {
-            var criteria = new SearchCriteria("++", ["Delhi / NCR"], null, 1, remoteOnly: false);
+            var criteria = new SearchCriteria(
+                "++",
+                ["Delhi / NCR"],
+                null,
+                1,
+                remoteOnly: false,
+                []
+            );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal(
-                "https://www.naukri.com/jobs-in-delhi-ncr?k=%2B%2B&l=Delhi%20%2F%20NCR&jobAge=1",
+                "https://www.naukri.com/jobs-in-delhi-ncr?k=%2B%2B&l=Delhi%20%2F%20NCR&nignbevent_src=jobsearchDeskGNB&jobAge=1",
                 url.AbsoluteUri
             );
         }
@@ -88,7 +117,14 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         public void SearchUrlIsNeverAPagedSlugUrl()
         {
             // Playbook §3.5: pages 2+ come from clicking Next, never "-2" URLs.
-            var criteria = new SearchCriteria(".net", ["Pune", "Mumbai"], 2, 30, remoteOnly: false);
+            var criteria = new SearchCriteria(
+                ".net",
+                ["Pune", "Mumbai"],
+                2,
+                30,
+                remoteOnly: false,
+                []
+            );
 
             var url = NaukriUrlBuilder.SearchUrl(criteria);
 

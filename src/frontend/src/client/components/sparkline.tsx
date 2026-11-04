@@ -23,7 +23,7 @@ export function Sparkline({ samples, label }: { samples: Sample[]; label: string
   // The CSS kill-switch would park the sheen band mid-chart, so it only
   // mounts when motion is welcome.
   const [motionOK] = useState(
-    () => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches !== true,
   );
 
   const points = samples.map((s, i) => {

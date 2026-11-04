@@ -1,8 +1,22 @@
 import { Abbr } from "../components/legend.tsx";
-import { CodeTag, codeTone, Field, JsonBlock, Module, plural } from "../components/modules.tsx";
+import {
+  CodeTag,
+  codeTone,
+  Field,
+  JsonBlock,
+  Module,
+  plural,
+  RefreshButton,
+} from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
-import type { ApiProblem, CreateProfileInput, SearchProfilePayload } from "../lib/api.ts";
+import type {
+  ApiProblem,
+  CreateProfileInput,
+  SearchProfilePayload,
+  UpdateProfileInput,
+} from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
+import { readList, readNumber, readText } from "../lib/forms.ts";
 
 /**
  * Search-profile management: create form with inline server field errors, the persisted profile
@@ -21,7 +35,10 @@ export function ProfilesPage({
   selectedId,
   onSelect,
   onCreate,
+  onUpdate,
   onRefresh,
+  updating,
+  updateProblem,
 }: {
   profiles: SearchProfilePayload[] | null;
   listProblem: ApiProblem | null;
@@ -31,11 +48,15 @@ export function ProfilesPage({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreate: (input: CreateProfileInput) => Promise<boolean>;
+  onUpdate: (id: string, input: UpdateProfileInput) => Promise<boolean>;
   onRefresh: () => void;
+  updating: boolean;
+  updateProblem: ApiProblem | null;
 }) {
   useRenderLog("ProfilesPage");
   const selected = profiles?.find((p) => p.id === selectedId) ?? null;
   const fieldErrors = createProblem?.errors ?? {};
+  const updateFieldErrors = updateProblem?.errors ?? {};
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +67,14 @@ export function ProfilesPage({
     }
   }
 
+  async function submitUpdate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selected === null) {
+      return;
+    }
+    await onUpdate(selected.id, readUpdateForm(new FormData(event.currentTarget)));
+  }
+
   return (
     <>
       <div className="page-head">
@@ -53,7 +82,8 @@ export function ProfilesPage({
           <Scramble text="OPS-DECK // SEARCH PROFILES" />
         </h1>
         <p>
-          Saved searches, persisted in SQLite. Caps start at the source policy and can only tighten.
+          Saved searches, persisted in SQLite. Caps start at the source policy; the source ceiling
+          is the most a profile may request.
         </p>
       </div>
 
@@ -99,6 +129,24 @@ export function ProfilesPage({
               autoComplete="off"
             />
           </Field>
+          <Field label="KEY SKILLS (COMMA-SEPARATED)" name="requiredSkills" errors={fieldErrors}>
+            <input
+              className="input"
+              name="requiredSkills"
+              aria-label="Key skills"
+              placeholder="C#, ASP.NET Core"
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="COMPANIES (COMMA-SEPARATED)" name="companies" errors={fieldErrors}>
+            <input
+              className="input"
+              name="companies"
+              aria-label="Companies"
+              placeholder="Infosys, TCS, Accenture"
+              autoComplete="off"
+            />
+          </Field>
           <div className="field-pair">
             <Field label="EXPERIENCE (YRS)" name="experienceYears" errors={fieldErrors}>
               <input
@@ -139,9 +187,7 @@ export function ProfilesPage({
         span="span-7"
         note="GET /api/v1/search-profiles, ordered by name. Select a name for detail."
       >
-        <button type="button" className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-          {loading ? "LOADING…" : "REFRESH"}
-        </button>
+        <RefreshButton loading={loading} onRefresh={onRefresh} />
         {listProblem !== null && (
           <p className="alert" role="alert">
             <CodeTag code={listProblem.code} tone={codeTone(listProblem.code)} />{" "}
@@ -152,7 +198,7 @@ export function ProfilesPage({
           <p className="status-line">No profiles yet. Create one to get started.</p>
         )}
         {profiles !== null && profiles.length > 0 && (
-          <div className="tbl-wrap" style={{ marginTop: "10px" }}>
+          <div className="tbl-wrap" style={{ marginTop: "var(--gap)" }}>
             <table className="data" aria-label="Search profiles">
               <thead>
                 <tr>
@@ -220,6 +266,16 @@ export function ProfilesPage({
                   />
                   <DetailRow label="Remote only" value={selected.remoteOnly ? "yes" : "no"} />
                   <DetailRow
+                    label="Key skills"
+                    value={
+                      selected.requiredSkills.length > 0 ? selected.requiredSkills.join(", ") : "—"
+                    }
+                  />
+                  <DetailRow
+                    label="Companies"
+                    value={selected.companies.length > 0 ? selected.companies.join(", ") : "—"}
+                  />
+                  <DetailRow
                     label="Caps"
                     value={`${plural(selected.maxPages, "page")} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
@@ -231,7 +287,181 @@ export function ProfilesPage({
                 </tbody>
               </table>
             </div>
-            <div style={{ marginTop: "10px" }}>
+            <form
+              key={`${selected.id}:${selected.updatedAt}`}
+              onSubmit={submitUpdate}
+              aria-label="Edit search profile"
+              noValidate
+              style={{ marginTop: "var(--gap)" }}
+            >
+              <Field label="NAME" name="name" errors={updateFieldErrors}>
+                <input
+                  className="input"
+                  name="name"
+                  aria-label="Edit name"
+                  defaultValue={selected.name}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="KEYWORDS" name="keywords" errors={updateFieldErrors}>
+                <input
+                  className="input"
+                  name="keywords"
+                  aria-label="Edit keywords"
+                  defaultValue={selected.keywords}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="LOCATIONS (COMMA-SEPARATED)"
+                name="locations"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="locations"
+                  aria-label="Edit locations"
+                  defaultValue={selected.locations.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="KEY SKILLS (COMMA-SEPARATED)"
+                name="requiredSkills"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="requiredSkills"
+                  aria-label="Edit key skills"
+                  defaultValue={selected.requiredSkills.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label="COMPANIES (COMMA-SEPARATED)"
+                name="companies"
+                errors={updateFieldErrors}
+              >
+                <input
+                  className="input"
+                  name="companies"
+                  aria-label="Edit companies"
+                  defaultValue={selected.companies.join(", ")}
+                  autoComplete="off"
+                />
+              </Field>
+              <div className="field-pair">
+                <Field label="EXPERIENCE (YRS)" name="experienceYears" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="experienceYears"
+                    aria-label="Edit experience years"
+                    inputMode="numeric"
+                    defaultValue={selected.experienceYears ?? ""}
+                  />
+                </Field>
+                <Field
+                  label="POSTED WITHIN (DAYS)"
+                  name="postedWithinDays"
+                  errors={updateFieldErrors}
+                >
+                  <input
+                    className="input"
+                    name="postedWithinDays"
+                    aria-label="Edit posted within days"
+                    inputMode="numeric"
+                    defaultValue={selected.postedWithinDays ?? ""}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX PAGES" name="maxPages" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxPages"
+                    aria-label="Edit max pages"
+                    inputMode="numeric"
+                    defaultValue={selected.maxPages}
+                  />
+                </Field>
+                <Field label="MAX JOBS" name="maxJobs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxJobs"
+                    aria-label="Edit max jobs"
+                    inputMode="numeric"
+                    defaultValue={selected.maxJobs}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX DETAILS" name="maxDetails" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxDetails"
+                    aria-label="Edit max details"
+                    inputMode="numeric"
+                    defaultValue={selected.maxDetails}
+                  />
+                </Field>
+                <Field label="MIN DELAY (MS)" name="minDelayMs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="minDelayMs"
+                    aria-label="Edit min delay"
+                    inputMode="numeric"
+                    defaultValue={selected.minDelayMs}
+                  />
+                </Field>
+              </div>
+              <div className="field-pair">
+                <Field label="MAX DELAY (MS)" name="maxDelayMs" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="maxDelayMs"
+                    aria-label="Edit max delay"
+                    inputMode="numeric"
+                    defaultValue={selected.maxDelayMs}
+                  />
+                </Field>
+                <span className="status-line">Source: {selected.sourceKey}</span>
+              </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="remoteOnly"
+                  aria-label="Edit remote only"
+                  defaultChecked={selected.remoteOnly}
+                />{" "}
+                REMOTE ONLY
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  aria-label="Edit enabled"
+                  defaultChecked={selected.enabled}
+                />{" "}
+                ENABLED
+              </label>
+              {updateFieldErrors["enabled"]?.map((message) => (
+                <span key={message} className="field-error" role="note" data-field="enabled">
+                  {message}
+                </span>
+              ))}
+              <button type="submit" className="btn" disabled={updating}>
+                {updating ? "SAVING…" : "SAVE CHANGES"}
+              </button>
+            </form>
+            {updateProblem !== null && (
+              <p className="alert" role="alert">
+                <CodeTag code={updateProblem.code} tone={codeTone(updateProblem.code)} />{" "}
+                {updateProblem.title}
+                {updateProblem.detail !== "" ? ` — ${updateProblem.detail}` : ""}
+              </p>
+            )}
+            <div style={{ marginTop: "var(--gap)" }}>
               <JsonBlock label="Profile payload" value={selected} />
             </div>
           </>
@@ -279,24 +509,38 @@ export function ProfilesPage({
   );
 }
 
+/** Reads the edit form into the API body; blank numbers become null. */
+export function readUpdateForm(data: FormData): UpdateProfileInput {
+  return {
+    name: readText(data, "name"),
+    keywords: readText(data, "keywords"),
+    locations: readList(data, "locations"),
+    experienceYears: readNumber(data, "experienceYears"),
+    postedWithinDays: readNumber(data, "postedWithinDays"),
+    remoteOnly: data.get("remoteOnly") !== null,
+    requiredSkills: readList(data, "requiredSkills"),
+    companies: readList(data, "companies"),
+    maxPages: readNumber(data, "maxPages"),
+    maxJobs: readNumber(data, "maxJobs"),
+    maxDetails: readNumber(data, "maxDetails"),
+    minDelayMs: readNumber(data, "minDelayMs"),
+    maxDelayMs: readNumber(data, "maxDelayMs"),
+    enabled: data.get("enabled") !== null,
+  };
+}
+
 /** Reads the uncontrolled form into the API body; blank numbers become null. */
 export function readForm(data: FormData): CreateProfileInput {
-  const text = (key: string) => String(data.get(key) ?? "").trim();
-  const number = (key: string) => {
-    const raw = text(key);
-    return raw === "" ? null : Number(raw);
-  };
   return {
-    name: text("name"),
-    sourceKey: text("sourceKey"),
-    keywords: text("keywords"),
-    locations: text("locations")
-      .split(",")
-      .map((l) => l.trim())
-      .filter((l) => l !== ""),
-    experienceYears: number("experienceYears"),
-    postedWithinDays: number("postedWithinDays"),
+    name: readText(data, "name"),
+    sourceKey: readText(data, "sourceKey"),
+    keywords: readText(data, "keywords"),
+    locations: readList(data, "locations"),
+    experienceYears: readNumber(data, "experienceYears"),
+    postedWithinDays: readNumber(data, "postedWithinDays"),
     remoteOnly: data.get("remoteOnly") !== null,
+    requiredSkills: readList(data, "requiredSkills"),
+    companies: readList(data, "companies"),
   };
 }
 

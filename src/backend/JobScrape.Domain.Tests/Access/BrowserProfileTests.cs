@@ -297,5 +297,44 @@ namespace JobScrape.Domain.Tests.Access
         {
             Assert.Throws<DomainException>(() => Create().MarkExpired());
         }
+
+        [Fact]
+        public void RenameChangesNameAndDerivedDirectory()
+        {
+            var profile = Create("before");
+
+            profile.Rename("  after  ");
+
+            Assert.Equal("after", profile.Name);
+            Assert.Equal("naukri/after", profile.UserDataDirectory);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("../escape")]
+        [InlineData(".hidden")]
+        public void RenameRejectsUnsafeNames(string name)
+        {
+            Assert.Throws<DomainException>(() => Create().Rename(name));
+        }
+
+        [Fact]
+        public void ConfigureChangesTheBrowserPair()
+        {
+            var profile = Create();
+
+            profile.Configure(BrowserEngine.Chromium, BrowserChannel.Chrome);
+
+            Assert.Equal(BrowserEngine.Chromium, profile.Engine);
+            Assert.Equal(BrowserChannel.Chrome, profile.Channel);
+        }
+
+        [Fact]
+        public void ConfigureRejectsBrandedChannelOnNonChromium()
+        {
+            Assert.Throws<DomainException>(() =>
+                Create().Configure(BrowserEngine.Firefox, BrowserChannel.Chrome)
+            );
+        }
     }
 }

@@ -20,9 +20,11 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
 
         public async Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
         {
-            return db.SearchProfiles.Local.Any(profile => profile.Name == name)
+            return db.SearchProfiles.Local.Any(profile =>
+                    string.Equals(profile.Name, name, StringComparison.OrdinalIgnoreCase)
+                )
                 || await db.SearchProfiles.AnyAsync(
-                    profile => profile.Name == name,
+                    profile => EF.Functions.Collate(profile.Name, "NOCASE") == name,
                     cancellationToken
                 );
         }

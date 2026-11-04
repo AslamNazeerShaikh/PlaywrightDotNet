@@ -10,7 +10,7 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         private static SearchCriteria Criteria(string keywords = "c#")
         {
-            return new SearchCriteria(keywords, ["Pune"], 6, 7, remoteOnly: false);
+            return new SearchCriteria(keywords, ["Pune"], 6, 7, remoteOnly: false, []);
         }
 
         private static RunLimits Limits(int maxPages = 3)
@@ -179,6 +179,29 @@ namespace JobScrape.Domain.Tests.Sourcing
 
             Assert.Throws<ArgumentNullException>(() => profile.UpdateCriteria(null!, Now));
             Assert.Throws<ArgumentNullException>(() => profile.UpdateLimits(null!, Now));
+        }
+
+        [Fact]
+        public void RenameChangesNameAndRaisesOnlyOnChange()
+        {
+            var profile = Create();
+            profile.ClearDomainEvents();
+
+            profile.Rename("  renamed  ", Now.AddMinutes(1));
+            profile.Rename("renamed", Now.AddMinutes(2));
+
+            Assert.Equal("renamed", profile.Name);
+            Assert.Equal(Now.AddMinutes(1), profile.UpdatedAt);
+            var updated = Assert.IsType<SearchProfileUpdated>(Assert.Single(profile.DomainEvents));
+            Assert.Equal("name", updated.ChangedField);
+        }
+
+        [Fact]
+        public void RenameRejectsBlankName()
+        {
+            var profile = Create();
+
+            Assert.Throws<DomainException>(() => profile.Rename("  ", Now));
         }
     }
 }

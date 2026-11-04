@@ -82,6 +82,25 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a conflict for a browser-profile rename that cannot move
+        /// the user-data directory safely.
+        /// </summary>
+        /// <param name="sessionId">The profile being renamed.</param>
+        /// <param name="reason">Operator-safe reason.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo SessionRenameBlocked(Guid sessionId, string reason)
+        {
+            ArgumentNullException.ThrowIfNull(reason);
+            return new ErrorInfo(
+                "SESSION_RENAME_BLOCKED",
+                "Browser profile rename blocked.",
+                reason,
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["sessionId"] = sessionId }
+            );
+        }
+
+        /// <summary>
         /// Creates a not-found failure for a missing browser profile session.
         /// </summary>
         /// <param name="sessionId">The requested profile identifier.</param>
@@ -276,6 +295,144 @@ namespace JobScrape.Application.Results
                 $"Run '{runId}' does not exist.",
                 ErrorKind.NotFound,
                 new Dictionary<string, object?> { ["runId"] = runId }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing database table.
+        /// </summary>
+        /// <param name="tableName">The requested table name, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo TableNotFound(string tableName)
+        {
+            ArgumentNullException.ThrowIfNull(tableName);
+            return new ErrorInfo(
+                "TABLE_NOT_FOUND",
+                "Table not found.",
+                $"Table '{tableName}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["tableName"] = tableName }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing database row.
+        /// </summary>
+        /// <param name="table">The table that was searched.</param>
+        /// <param name="pk">The requested primary key value, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo TableRowNotFound(string table, string pk)
+        {
+            ArgumentNullException.ThrowIfNull(table);
+            ArgumentNullException.ThrowIfNull(pk);
+            return new ErrorInfo(
+                "ROW_NOT_FOUND",
+                "Row not found.",
+                $"Row '{pk}' does not exist in table '{table}'.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["tableName"] = table, ["primaryKeyValue"] = pk }
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a database table name the explorer
+        /// rejects. Preserves the explorer's message verbatim.
+        /// </summary>
+        /// <param name="detail">Operator-safe detail from the explorer.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo InvalidTable(string detail)
+        {
+            ArgumentNullException.ThrowIfNull(detail);
+            return new ErrorInfo(
+                "INVALID_TABLE",
+                "Invalid table.",
+                detail,
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a database row write the explorer
+        /// rejects. Preserves the explorer's message verbatim.
+        /// </summary>
+        /// <param name="detail">Operator-safe detail from the explorer.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo InvalidInput(string detail)
+        {
+            ArgumentNullException.ThrowIfNull(detail);
+            return new ErrorInfo(
+                "INVALID_INPUT",
+                "Invalid input.",
+                detail,
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a database row write SQLite
+        /// refused. The driver message is never echoed: it can leak SQL.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo DatabaseError()
+        {
+            return new ErrorInfo(
+                "DB_ERROR",
+                "Database operation failed.",
+                "The database operation failed.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a company-split export when the
+        /// run has no company list.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo ExportCompaniesMissing()
+        {
+            return new ErrorInfo(
+                "EXPORT_COMPANIES_MISSING",
+                "Company filter is empty.",
+                "Add company names to the profile before using this export.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for an export format no writer renders.
+        /// </summary>
+        /// <param name="format">The requested format, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo ExportFormatUnsupported(string format)
+        {
+            ArgumentNullException.ThrowIfNull(format);
+            return new ErrorInfo(
+                "EXPORT_FORMAT_UNSUPPORTED",
+                "Export format is not supported.",
+                $"Export format '{format}' is not supported. Use 'csv' or 'xlsx'.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?> { ["format"] = format }
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for an export group no writer renders.
+        /// </summary>
+        /// <param name="group">The requested group, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo ExportGroupUnsupported(string group)
+        {
+            ArgumentNullException.ThrowIfNull(group);
+            return new ErrorInfo(
+                "EXPORT_GROUP_UNSUPPORTED",
+                "Export group is not supported.",
+                $"Export group '{group}' is not supported. Use 'all', 'only' or 'exclude'.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?> { ["group"] = group }
             );
         }
 

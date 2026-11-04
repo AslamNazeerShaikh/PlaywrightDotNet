@@ -13,7 +13,9 @@ namespace JobScrape.Application.Features.Scraping
     /// <param name="Enabled">False blocks every run against the source.</param>
     /// <param name="DailyPageCap">Result pages per UTC day.</param>
     /// <param name="DailyDetailCap">Detail pages per UTC day.</param>
-    /// <param name="DailyRunCap">Runs started per UTC day.</param>
+    /// <param name="DailyRunCap">Runs started per UTC day, or null for no run cap.</param>
+    /// <param name="MaxPagesCeiling">Highest page cap a profile may request.</param>
+    /// <param name="MaxJobsCeiling">Highest job cap a profile may request.</param>
     /// <param name="ChallengeCooldown">How long a profile cools down after a wall.</param>
     /// <param name="DefaultLimits">
     /// The policy caps and delay window for this source: new profiles start
@@ -24,7 +26,9 @@ namespace JobScrape.Application.Features.Scraping
         bool Enabled,
         int DailyPageCap,
         int DailyDetailCap,
-        int DailyRunCap,
+        int? DailyRunCap,
+        int MaxPagesCeiling,
+        int MaxJobsCeiling,
         TimeSpan ChallengeCooldown,
         RunLimits DefaultLimits
     );

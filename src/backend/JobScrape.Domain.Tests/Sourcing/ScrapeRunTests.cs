@@ -16,7 +16,7 @@ namespace JobScrape.Domain.Tests.Sourcing
             return SearchProfile.Create(
                 "backend",
                 SourceKey.Naukri,
-                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false),
+                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false, []),
                 new RunLimits(
                     maxPages,
                     60,

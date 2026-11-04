@@ -4,6 +4,7 @@ using AngleSharp.Dom;
 using JobScrape.Domain;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
+using JobScrape.Infrastructure.Sources;
 
 namespace JobScrape.Infrastructure.Sources.Naukri
 {
@@ -250,7 +251,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 using var fragment = NaukriHtml.Parse(html);
                 if (
                     fragment.Body is { } body
-                    && NaukriFields.LongText(NaukriHtml.ToPlainText(body)) is { } text
+                    && NaukriFields.LongText(
+                        HtmlPlainText.ToPlainText(body, static line => NaukriFields.Clean(line))
+                    )
+                        is { } text
                 )
                 {
                     return text;
@@ -266,7 +270,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             );
             return container is null
                 ? null
-                : NaukriFields.LongText(NaukriHtml.ToPlainText(container));
+                : NaukriFields.LongText(
+                    HtmlPlainText.ToPlainText(container, static line => NaukriFields.Clean(line))
+                );
         }
 
         /// <summary>

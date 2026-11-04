@@ -76,6 +76,18 @@ namespace JobScrape.Domain.Tests.Access
         }
 
         [Fact]
+        public void RecordRunStartCountsWithoutACap()
+        {
+            var quota = SourceQuota.StartDay(SourceKey.Naukri, Now);
+
+            quota.RecordRunStart(Now);
+            quota.RecordRunStart(Now.AddMinutes(1));
+
+            Assert.Equal(2, quota.RunsStarted);
+            Assert.Equal(Now.AddMinutes(1), quota.UpdatedAt);
+        }
+
+        [Fact]
         public void ZeroCapBlocksEverything()
         {
             var quota = SourceQuota.StartDay(SourceKey.LinkedIn, Now);
@@ -114,6 +126,7 @@ namespace JobScrape.Domain.Tests.Access
             Assert.Throws<DomainException>(() => quota.TryConsumePage(5, tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.TryConsumeDetail(5, tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.TryStartRun(5, tomorrowUtc));
+            Assert.Throws<DomainException>(() => quota.RecordRunStart(tomorrowUtc));
             Assert.Throws<DomainException>(() => quota.RecordChallenge(tomorrowUtc));
             Assert.Equal(0, quota.PagesFetched);
         }

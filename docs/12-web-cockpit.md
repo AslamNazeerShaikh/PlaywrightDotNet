@@ -685,7 +685,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/search-profiles` | List profiles |
 | `POST` | `/api/v1/search-profiles` | Create profile |
 | `GET` | `/api/v1/search-profiles/{id}` | Profile detail |
-| `PATCH` | `/api/v1/search-profiles/{id}` | Update profile |
+| `PUT` | `/api/v1/search-profiles/{id}` | Replace the editable profile fields |
 | `DELETE` | `/api/v1/search-profiles/{id}` | Delete profile |
 | `POST` | `/api/v1/runs` | Start a run; `Idempotency-Key` required |
 | `GET` | `/api/v1/runs` | List runs (filter/sort/page) |
@@ -701,6 +701,8 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/exports` | Export history |
 | `GET` | `/api/v1/exports/{id}` | Status + download |
 | `GET` | `/api/v1/sessions` | Browser profiles and states |
+| `POST` | `/api/v1/sessions` | Create a browser profile |
+| `PATCH` | `/api/v1/sessions/{id}` | Update name, engine, or channel |
 | `POST` | `/api/v1/sessions/{id}/probe` | Probe a session |
 | `POST` | `/api/v1/sessions/{id}/login` | Launch headed manual login on the host |
 | `GET` | `/api/v1/quotas` | Per-source quota and circuit state |
@@ -714,14 +716,20 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > (idempotent), and `GET /api/v1/runs/{id}/postings` (not in the table above:
 > postings of the run's source whose `LastSeenAt` falls in the run's
 > `[StartedAt, FinishedAt ?? now]` window, max 200 — valid because runs execute
-> one at a time). New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
+> one at a time), and `GET /api/v1/runs/{id}/postings/export?format=csv|xlsx`
+> (`text/csv` with BOM, or a `Jobs`-sheet workbook with posting-URL
+> hyperlinks; max 20 000 rows; `400 EXPORT_FORMAT_UNSUPPORTED` for anything
+> else). Add `group=only` or `group=exclude` to split the file by the
+> run's company snapshot; `400 EXPORT_GROUP_UNSUPPORTED` for anything else
+> and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
 > run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
 > before the run was recorded); gate refusals keep their own codes
 > (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).
 > **Not implemented:** `Idempotency-Key` on `POST /runs`, `/runs/{id}/events`
 > (SSE), `/runs/{id}/resume`, `/runs/{id}/artifacts`, `/artifacts/{id}`, and
-> BFF auth (§13.4). Sources and sessions are read/create only (no `PATCH`,
-> probe, or login).
+> BFF auth (§13.4). Sources are read-only. Sessions support create and
+> `PATCH` for name, engine, and channel; probe and login are not implemented.
+> Search profiles and sessions both have edit forms in the cockpit.
 
 ### 12.3 Run lifecycle
 

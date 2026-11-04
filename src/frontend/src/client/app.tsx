@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Compass } from "./components/compass.tsx";
 import { CodeTag } from "./components/modules.tsx";
 import { RulerTabs } from "./components/rulertabs.tsx";
 import { Scramble } from "./components/scramble.tsx";
@@ -14,8 +13,11 @@ import {
   type SearchProfilePayload,
   type SessionPayload,
   type SourceList,
+  type UpdateProfileInput,
+  type UpdateSessionInput,
 } from "./lib/api.ts";
 import { useRenderLog } from "./lib/debug.ts";
+import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
 import {
   latencyStats,
@@ -24,6 +26,7 @@ import {
   pushSample,
   type Sample,
 } from "./lib/telemetry.ts";
+import { DatabasePage } from "./pages/database.tsx";
 import { HealthPage } from "./pages/health.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
@@ -42,7 +45,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
   const [theme, setTheme] = useState<"dark" | "light">("light");
-  const [upstream, setUpstream] = useState("http://127.0.0.1:5207");
+  const [upstream, setUpstream] = useState("https://localhost:5208");
   const [bffLive, setBffLive] = useState(false);
   const [apiState, setApiState] = useState<"unknown" | "live" | "down">("unknown");
 
@@ -66,6 +69,11 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [createSessionProblem, setCreateSessionProblem] = useState<ApiProblem | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [updateProfileProblem, setUpdateProfileProblem] = useState<ApiProblem | null>(null);
+  const [updatingSession, setUpdatingSession] = useState(false);
+  const [updateSessionProblem, setUpdateSessionProblem] = useState<ApiProblem | null>(null);
   const probeBusy = useRef(false);
   const lastProbeAt = useRef(0);
   const probeRef = useRef<() => void>(() => undefined);
@@ -80,9 +88,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   // Stable sink for pages that log to the killfeed from their own effects.
   const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
 
-  // Pages sit evenly around the compass rose in tab order.
-  const heading = Math.round((ROUTES.findIndex((r) => r.id === route) * 360) / ROUTES.length);
-  const pageLabel = ROUTES.find((r) => r.id === route)?.label.toUpperCase() ?? "OVERVIEW";
   const stats = latencyStats(samples);
 
   // Theme lives on <html> so body-level surfaces (page grid texture,
@@ -122,7 +127,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
           linkLogged.current = true;
           setEvents((e) =>
             pushEvent(e, {
-              at: clockTime(new Date().toISOString()),
+              at: formatClock(new Date().toISOString()),
               kind: "info",
               code: "BFF_LINK",
               detail: `BFF live · upstream ${result.value.upstream}`,
@@ -161,7 +166,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       }
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: ok ? "ok" : "err",
           code: ok ? "HEALTHY" : result.problem.code,
           detail: ok
@@ -213,7 +218,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -232,7 +237,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       setApiState(planeDown(result.problem) ? "down" : "live");
       setEvents((e) =>
         pushEvent(e, {
-          at: clockTime(at),
+          at: formatClock(at),
           kind: "err",
           code: result.problem.code,
           detail: result.problem.title,
@@ -244,9 +249,40 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setSelectedProfileId(result.value.id);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: "ok",
         code: "CREATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
+      }),
+    );
+    await loadProfiles();
+    return true;
+  }
+
+  async function updateProfile(id: string, input: UpdateProfileInput): Promise<boolean> {
+    setUpdatingProfile(true);
+    const { result, at } = await activeClient.updateProfile(id, input);
+    setUpdatingProfile(false);
+    if (!result.ok) {
+      setUpdateProfileProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: formatClock(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setUpdateProfileProblem(null);
+    setSelectedProfileId(result.value.id);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: formatClock(at),
+        kind: "ok",
+        code: "UPDATED",
         detail: `${result.value.name} · ${result.value.sourceKey}`,
       }),
     );
@@ -296,7 +332,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     setCreatingSession(false);
     setEvents((e) =>
       pushEvent(e, {
-        at: clockTime(at),
+        at: formatClock(at),
         kind: result.ok ? "ok" : "err",
         code: result.ok ? "CREATED" : result.problem.code,
         detail: result.ok
@@ -310,6 +346,37 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       return false;
     }
     setCreateSessionProblem(null);
+    await loadSessions();
+    return true;
+  }
+
+  async function updateSession(id: string, input: UpdateSessionInput): Promise<boolean> {
+    setUpdatingSession(true);
+    const { result, at } = await activeClient.updateSession(id, input);
+    setUpdatingSession(false);
+    if (!result.ok) {
+      setUpdateSessionProblem(result.problem);
+      setApiState(planeDown(result.problem) ? "down" : "live");
+      setEvents((e) =>
+        pushEvent(e, {
+          at: formatClock(at),
+          kind: "err",
+          code: result.problem.code,
+          detail: result.problem.title,
+        }),
+      );
+      return false;
+    }
+    setUpdateSessionProblem(null);
+    setSelectedSessionId(result.value.id);
+    setEvents((e) =>
+      pushEvent(e, {
+        at: formatClock(at),
+        kind: "ok",
+        code: "UPDATED",
+        detail: `${result.value.name} · ${result.value.sourceKey}`,
+      }),
+    );
     await loadSessions();
     return true;
   }
@@ -376,8 +443,6 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         </div>
       </header>
 
-      <Compass heading={heading} page={pageLabel} />
-
       <RulerTabs
         route={route}
         onSelect={
@@ -418,9 +483,15 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             creating={creating}
             createProblem={createProblem}
             selectedId={selectedProfileId}
-            onSelect={setSelectedProfileId}
+            onSelect={(id) => {
+              setSelectedProfileId(id);
+              setUpdateProfileProblem(null);
+            }}
             onCreate={createProfile}
+            onUpdate={updateProfile}
             onRefresh={() => void loadProfiles()}
+            updating={updatingProfile}
+            updateProblem={updateProfileProblem}
           />
         )}
         {route === "sources" && (
@@ -438,15 +509,24 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             loading={sessionsLoading}
             creating={creatingSession}
             createProblem={createSessionProblem}
+            selectedId={selectedSessionId}
+            onSelect={(id) => {
+              setSelectedSessionId(id);
+              setUpdateSessionProblem(null);
+            }}
             onCreate={createSession}
+            onUpdate={updateSession}
             onRefresh={() => void loadSessions()}
+            updating={updatingSession}
+            updateProblem={updateSessionProblem}
           />
         )}
         {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
         {route === "topology" && <TopologyPage upstream={upstream} />}
+        {route === "database" && <DatabasePage client={activeClient} />}
       </main>
 
-      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "11px" }}>
+      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "var(--text-micro)" }}>
         <CodeTag code="STABLE-CODES" /> UI branches on codes, never prose · Bun + React, no Node ·
         IBM Plex Mono
       </footer>
@@ -491,7 +571,7 @@ function useNow(): string {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  return clockTime(now.toISOString());
+  return formatClock(now.toISOString());
 }
 
 function readHash(): DeckRoute {
@@ -499,12 +579,6 @@ function readHash(): DeckRoute {
     return "overview";
   }
   return parseRoute(window.location.hash);
-}
-
-function clockTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
 /** 502/0 means the wire or the plane is down; any other answer proves it lives. */

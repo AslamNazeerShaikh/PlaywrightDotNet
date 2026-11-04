@@ -135,9 +135,37 @@ Had the script run, it would have made the browser **more** detectable:
 | One pass at a time | **Yes** | Global semaphore + per-profile lock. |
 | No proxy rotation | **Yes** | Optional static egress only; no pools. |
 | No CAPTCHA solving | **Yes** | Hard rule, no code path. |
-| uBlock Origin Lite + fallback blocker | **Optional** | Tracker blocking can reduce fingerprint surface but also adds an extension signal. Default off; opt-in and measure. |
+| uBlock Origin Lite | **Optional** | Cuts tracker weight but adds an installed-extension signal. Default off; headed Chromium only, opt-in and measure (§5.1). |
 | Chrome-only stack | **No** | Chromium default; Firefox/WebKit compatibility. |
 | UA pinning / language stubs | **No** | Never. |
+
+### 5.1 uBlock Origin Lite (opt-in, headed only)
+
+The blocker trims ad and tracker weight from scrapes. It also adds an
+installed-extension signal, so it stays off unless measurement says it
+earns its place.
+
+Measure before keeping it. Run the same pages with and without the
+blocker and compare `time_to_first_posting`, `parse_failure_rate`, and
+`challenge_rate`. Keep it only when scrapes get faster with no worse
+challenge rate.
+
+Install steps:
+
+1. Run `./vendor/download-ubol.sh`. It fetches the pinned uBOLite
+   release and builds `vendor/ubol-chrome-max` with maximum filtering.
+2. Keep the committed `appsettings.json` at `AdblockMode: null`. Add a
+   gitignored `src/backend/JobScrape.Api/appsettings.Local.json` with
+   `"Browser": {"AdblockMode": "ubol-max",
+   "ExtensionDir": "../../../vendor/ubol-chrome-max"}`. The API loads
+   that file when present, so a fresh clone starts without the blocker
+   and a developer can opt in locally. `ExtensionDir` resolves against the API
+   content root (`src/backend/JobScrape.Api`); `../../../` is the repo
+   root. An absolute path also works.
+3. Launch headed Chromium with the bundled channel. Headless, Firefox,
+   and WebKit launches ignore the setting. A set mode with a missing
+   directory fails startup and names the script; a directory lost
+   mid-run logs once and launches without the blocker.
 | Inert stealth init script | **No** | Removed permanently. |
 
 ---
@@ -243,9 +271,11 @@ stateDiagram-v2
 
 | Source | Min/max delay | Pages/run | Jobs/run | Details/run | Pages/day | Details/day | Runs/day | First contact |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
-| **Naukri** | 2.5–6.0s | 3 | 60 | 60 | 25 | 60 | 2 | Headed |
+| **Naukri** | 2.5–6.0s | 3 (ceiling 1000) | 60 (ceiling 20000) | 60 | 1000 | 60 | no cap | Headed |
 | **Indeed** | 12–25s | 2 | 40 | 30 | 12 | 30 | 1 | Headed |
 | **LinkedIn** | 10–20s | 1 | 25 | 8 | 4 | 8 | 1 | Headed + consent |
+
+The Naukri ceilings are the highest a profile may request, not the recommended run size. Keep the starting volume unless a larger export is worth the extra risk.
 
 **Global rules**
 
@@ -524,7 +554,7 @@ If a requirement needs any of these, the answer is **no** or **re-scope with an 
 1. Stop the run; honor `Retry-After`.
 2. Record the source/page/endpoint.
 3. Wait at least the delay; default 30–60 min.
-4. Reduce pages/details/runs per day.
+4. Reduce pages and details per day. If the source has no run cap, set `DailyRunCap` and remove `UnlimitedRunCap` before resuming.
 5. Resume with one page; if 429 again, open the circuit for 24 h.
 
 ### 15.3 Account restriction / login wall

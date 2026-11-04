@@ -73,13 +73,19 @@ namespace JobScrape.Application.Features.Sessions
             }
 
             var engine = BrowserEngine.Chromium;
-            if (request.Engine is not null && !TryParseEnum(request.Engine, out engine))
+            if (
+                request.Engine is not null
+                && !SessionValidation.TryParseEnum(request.Engine, out engine)
+            )
             {
                 errors["engine"] = ["Choose Chromium, Firefox, or WebKit."];
             }
 
             var channel = BrowserChannel.Bundled;
-            if (request.Channel is not null && !TryParseEnum(request.Channel, out channel))
+            if (
+                request.Channel is not null
+                && !SessionValidation.TryParseEnum(request.Channel, out channel)
+            )
             {
                 errors["channel"] = ["Choose Bundled, Chrome, or Edge."];
             }
@@ -106,25 +112,5 @@ namespace JobScrape.Application.Features.Sessions
             return Result.Ok(SessionResponse.From(profile, _clock.GetUtcNow()));
         }
 
-        /// <summary>
-        /// Matches a declared member name exactly (case-insensitively).
-        /// <c>Enum.TryParse</c> is deliberately avoided: it also accepts
-        /// numbers and comma lists, so <c>"Chromium,Firefox"</c> would OR
-        /// into a defined value.
-        /// </summary>
-        /// <typeparam name="TEnum">The enum type.</typeparam>
-        /// <param name="raw">The raw text.</param>
-        /// <param name="value">The matched member.</param>
-        /// <returns>True when <paramref name="raw"/> is exactly a member name.</returns>
-        private static bool TryParseEnum<TEnum>(string raw, out TEnum value)
-            where TEnum : struct, Enum
-        {
-            var name = Enum.GetNames<TEnum>()
-                .FirstOrDefault(member =>
-                    string.Equals(member, raw.Trim(), StringComparison.OrdinalIgnoreCase)
-                );
-            value = name is null ? default : Enum.Parse<TEnum>(name);
-            return name is not null;
-        }
     }
 }

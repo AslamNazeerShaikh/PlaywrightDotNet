@@ -813,7 +813,7 @@ Validate on startup with DataAnnotations plus custom `IValidateOptions<T>` valid
 
 - Every `Sources:<key>` parses via `SourceKey.TryParse` (unknown keys fail with the section path).
 - Per-source DataAnnotations validate (caps, delays, cooldowns within range).
-- `RunLimits` domain ranges hold (`maxPages` 1–30, `maxJobs` 1–1000, `maxDetails` 0–1000, delay 1s–2m).
+- `RunLimits` domain ranges hold (`maxPages` 1–1000, `maxJobs` 1–20 000, `maxDetails` 0–1000, delay 1s–2m).
 - Enabling a non-`Standard` tier requires `Compliance:AcknowledgeSourceRisk = true`; `HighRisk` additionally requires `Compliance:AllowHighRiskSources = true`.
 - `StorageOptions` ranges hold (retention 1–3650 days, `MinimumFreeDiskBytes ≥ 1`); `RunOptions.RetryMaxAttempts` is 1–3.
 
@@ -925,7 +925,7 @@ flowchart LR
     BRW --> NK["naukri.com"]
 ```
 
-- `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj` (Development serves the OpenAPI document at `/openapi/v1.json`; no Swagger/Scalar UI is registered).
+- `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj` (Development serves the OpenAPI document at `/openapi/v1.json` and the Scalar reference UI at `/scalar`).
 - `bun run dev` in `src/frontend/` (BFF `:3000` + Tailwind watcher); `DOTNET_API_URL` points the proxy at the API.
 - Install a Playwright browser once after a build (see [Operations Runbook](09-operations-runbook.md)); a run opens a visible browser window on this machine.
 - No scheduler, no CLI, no exports: the deployable surface is the API plus the BFF.

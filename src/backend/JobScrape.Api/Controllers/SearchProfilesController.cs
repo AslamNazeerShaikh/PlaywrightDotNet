@@ -16,6 +16,7 @@ namespace JobScrape.Api.Controllers
         private readonly GetSearchProfileHandler _get;
         private readonly ListSearchProfilesHandler _list;
         private readonly CreateSearchProfileHandler _create;
+        private readonly UpdateSearchProfileHandler _update;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SearchProfilesController"/> class.
@@ -23,19 +24,23 @@ namespace JobScrape.Api.Controllers
         /// <param name="get">The lookup handler.</param>
         /// <param name="list">The list handler.</param>
         /// <param name="create">The create handler.</param>
+        /// <param name="update">The update handler.</param>
         /// <exception cref="ArgumentNullException">Thrown when any handler is null.</exception>
         public SearchProfilesController(
             GetSearchProfileHandler get,
             ListSearchProfilesHandler list,
-            CreateSearchProfileHandler create
+            CreateSearchProfileHandler create,
+            UpdateSearchProfileHandler update
         )
         {
             ArgumentNullException.ThrowIfNull(get);
             ArgumentNullException.ThrowIfNull(list);
             ArgumentNullException.ThrowIfNull(create);
+            ArgumentNullException.ThrowIfNull(update);
             _get = get;
             _list = list;
             _create = create;
+            _update = update;
         }
 
         /// <summary>
@@ -86,6 +91,29 @@ namespace JobScrape.Api.Controllers
             return result.IsSuccess
                 ? Results.Created($"/api/v1/search-profiles/{result.Value.Id}", result.Value)
                 : result.Error.ToProblem();
+        }
+
+        /// <summary>
+        /// Replaces the editable fields of an existing profile. The source is
+        /// immutable. This is a full replacement, so every editable field is
+        /// required.
+        /// </summary>
+        /// <param name="id">The profile to update.</param>
+        /// <param name="request">The replacement fields.</param>
+        /// <param name="cancellationToken">Token to observe for client disconnect.</param>
+        /// <returns>
+        /// HTTP 200 with the updated profile, or a problem response: 400 with
+        /// field errors, 404 when absent, 409 when the new name is taken.
+        /// </returns>
+        [HttpPut("{id:guid}")]
+        public async Task<IResult> UpdateAsync(
+            Guid id,
+            UpdateSearchProfileRequest request,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _update.HandleAsync(id, request, cancellationToken);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         }
     }
 }

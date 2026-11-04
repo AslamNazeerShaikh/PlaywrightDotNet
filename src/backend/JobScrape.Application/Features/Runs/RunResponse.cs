@@ -9,6 +9,7 @@ namespace JobScrape.Application.Features.Runs
     /// <param name="Id">The run identifier.</param>
     /// <param name="ProfileId">The search profile the run executed.</param>
     /// <param name="ProfileName">The profile's name, or null when the profile is gone.</param>
+    /// <param name="Companies">The profile's company list for the export split.</param>
     /// <param name="SourceKey">The source, e.g. <c>naukri</c>.</param>
     /// <param name="Stage">Lifecycle stage, e.g. <c>Searching</c>, <c>Completed</c>.</param>
     /// <param name="IsTerminal">Whether the run has ended and accepts no transitions.</param>
@@ -32,6 +33,7 @@ namespace JobScrape.Application.Features.Runs
         Guid Id,
         Guid ProfileId,
         string? ProfileName,
+        IReadOnlyList<string> Companies,
         string SourceKey,
         string Stage,
         bool IsTerminal,
@@ -67,6 +69,7 @@ namespace JobScrape.Application.Features.Runs
                 run.Id.Value,
                 run.ProfileId.Value,
                 profileName,
+                run.Companies,
                 run.Source.Value,
                 run.Stage.ToString(),
                 run.IsTerminal,

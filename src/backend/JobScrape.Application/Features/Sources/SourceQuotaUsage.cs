@@ -9,7 +9,7 @@ namespace JobScrape.Application.Features.Sources
     /// <param name="DetailsUsed">Detail pages visited today.</param>
     /// <param name="DetailCap">Daily detail cap.</param>
     /// <param name="RunsUsed">Runs started today.</param>
-    /// <param name="RunCap">Daily run cap.</param>
+    /// <param name="RunCap">Daily run cap, or null for no run cap.</param>
     /// <param name="Challenges">Walls hit today.</param>
     public sealed record SourceQuotaUsage(
         string Date,
@@ -18,7 +18,7 @@ namespace JobScrape.Application.Features.Sources
         int DetailsUsed,
         int DetailCap,
         int RunsUsed,
-        int RunCap,
+        int? RunCap,
         int Challenges
     );
 }

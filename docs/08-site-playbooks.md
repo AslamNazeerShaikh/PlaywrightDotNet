@@ -105,17 +105,18 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 | Primary anti-bot | Akamai (observed: `errors.edgesuite.net`) |
 | Headless | Blocked in the old project's measurements; use headed first contact (`JobScrape:Browser:Headless=false` by default) |
 | Pagination | SPA; click native **Next** |
-| Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day |
+| Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day; the shipped policy allows larger runs when the operator sets them |
 
 ### 3.2 Search flow
 
 1. Optional warm-up: home page, pause, scroll once.
-2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `experience`, `jobAge`).
+2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `nignbevent_src`, `experience`, and `jobAge` when a recency window is set).
 3. Wait for `a[href*="/job-listings-"]`; scroll to trigger lazy cards.
 4. Classify challenge; extract visible cards.
 5. Click native **Next**; wait for the result range/first-card fingerprint to change.
-6. Repeat until cap/no next.
-7. Optional detail enrichment with polite delays.
+6. Repeat until cap/no next. The handler drops cards older than the posted-within window (unknown dates pass; detail enrichment fills them) and cards whose observed skills definitively miss the profile's key skills, re-checking the merged skill set after every refresh.
+7. Optional detail enrichment with polite delays. Each detail's posted date is cross-checked against the card's: disagreements are logged with both values, counted in run stats, and the detail date wins. The resume position (pages completed, next cursor, seen ids) is saved after every page.
+8. Export the run's postings to CSV/XLSX, named `{source}-{profile}-{stamp}-{shortId}-postings.{csv,xlsx}` with hyperlinked posting URLs. When the profile has company names, `group=only` adds `-only-companies` and `group=exclude` adds `-exclude-companies` to the name.
 
 > **As implemented** (`JobScrape.Infrastructure/Sources/Naukri`, verified live 2026-11-01): step 1 is `PlaywrightSessionManager` (home page, random 1.5–3 s pause, one scroll, classify; a clean page marks the session verified). `NaukriJobSource` then waits up to 15 s for `div.srp-jobtuple-wrapper[data-job-id]`, scrolls 4 × 900 px, marks computed-invisible cards (`display`/`visibility`/opacity < 0.15/≤ 1 px/far off-screen) with `data-jobscrape-hidden`, classifies, and parses the HTML offline with AngleSharp (`NaukriSearchParser`). Details go through `NaukriDetailParser` (JSON-LD `JobPosting` first, DOM fallback). Playwright errors and timeouts become `TransientError`; only the run handler retries.
 
@@ -139,7 +140,9 @@ Search (query form — not used by the implementation):
 https://www.naukri.com/jobs?k={keywords}&l={location}&experience={years}&jobPostDate={days}&page=1
 
 Search (slug form, page 1 — NaukriUrlBuilder.SearchUrl; jobs-in-{city} / {kw}-jobs / jobs when a part is empty):
-https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&experience={years}&jobAge={days}
+https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k={keywords}&l={allCities}&nignbevent_src=jobsearchDeskGNB&experience={years}&jobAge={days}
+
+`jobAge` appears only when the profile sets a posted-within window. It is a best-effort hint; the run handler re-checks every posted date and drops stale cards. `nignbevent_src=jobsearchDeskGNB` is Naukri's own search-page marker; the live site answers some filter combinations without it with its error page. Do not add `sort=date`: the live site answers that combination with the same error page.
 
 Detail:
 https://www.naukri.com/job-listings-{slug}-{id}
@@ -148,8 +151,9 @@ https://www.naukri.com/job-listings-{slug}-{id}
 **Slug rules (from the old project, verified):**
 
 - lowercase.
-- `#` → `sharp`; `.` → `dot`; commas removed.
-- non-alphanumerics removed; whitespace → `-`; collapse dashes.
+- `#` becomes the word `sharp`; `.` becomes the word `dot`; commas removed. Words are joined by `-`. Live canonical examples: `asp.net` → `asp-dot-net`, `C#` → `c-sharp`, `.NET Core` → `dot-net-core`.
+- non-alphanumerics removed; whitespace → `-`; collapse dashes and trim edge dashes.
+- The path slug must match Naukri's canonical form. A mismatch makes Naukri redirect to its own path and drop the entire query string, silently losing every filter.
 - Multi-city: path uses **first city**; full comma list stays in `l`.
 - Do **not** navigate to `-2` slug URLs for pagination; the SPA loses filters. Click Next.
 
@@ -201,13 +205,13 @@ The old project and third-party scrapers use Naukri's private search API:
 
 | Cap | Default |
 |---|---|
-| Pages/search | 3 |
-| Jobs/run | 60 |
+| Pages/search | 3 (ceiling 1000) |
+| Jobs/run | 60 (ceiling 20000) |
 | Details/run | 60 |
 | Delay | 2.5–6.0s |
-| Pages/day | 25 |
+| Pages/day | 1000 |
 | Details/day | 60 |
-| Runs/day | 2 |
+| Runs/day | no cap by default |
 
 Challenge signals:
 
@@ -242,6 +246,7 @@ Fixture README must include capture date, URL shape, and selector version.
 - [ ] Detail parser handles missing salary/company without throwing.
 - [ ] Canonical URLs strip tracking params and keep the numeric ID.
 - [ ] Live canary (1 page, headed) either yields cards or a documented wall.
+- [ ] 24 h skill-match flow: profile with key skills (e.g. `C#, .NET, ASP.NET Core`) and posted-within 1 day keeps matching fresh postings, drops stale and skill-mismatched cards, counts card/detail date disagreements, and exports an XLSX whose posting URLs open as hyperlinks.
 
 ### 3.10 Known pitfalls (from the old project)
 
@@ -353,6 +358,7 @@ Response: stop immediately; no retry; cooldown 60 min; circuit open 24h; require
 - [ ] Guest fixture parses expected cards and canonical URLs.
 - [ ] Auth-wall fixture yields `LoginRequired` and zero jobs.
 - [ ] 429/999 fixture yields `RateLimited`; no retry is attempted.
+- [ ] `GetDetailAsync` is blocked without fetching (`SupportsDetails: false`).
 - [ ] With consent, a live canary is one page, headed, and stops on a wall.
 - [ ] Removing the adapter does not affect Naukri/Indeed or the core.
 
@@ -439,7 +445,7 @@ Response: stop; screenshot/HTML/trace; cooldown 60 min; circuit open 24h; do not
 - [ ] Opt-in gate works; no run without acknowledgment.
 - [ ] Search fixture parses expected cards and `jk` IDs.
 - [ ] Detail fixture extracts description and canonical `viewjob` URL.
-- [ ] Cloudflare fixture yields `SoftChallenge` and zero jobs.
+- [ ] Cloudflare fixture yields `AccessDenied` and zero jobs.
 - [ ] No call to `/graphql`, `/job/`, or private `/api/`.
 - [ ] Live canary is one page, headed, and either yields cards or stops with evidence.
 
@@ -578,7 +584,7 @@ After:
 | Fixture parse | Required | Required | Required |
 | JSON-LD support | Preferred | Preferred | Preferred |
 | Native pagination test | Required (Next click) | Required (`start`) | Required (`start`) |
-| Detail enrichment | Required | Required | Optional (cap 8) |
+| Detail enrichment | Required | Required | Unsupported (guest detail sits behind the sign-in wall; the adapter reports `SupportsDetails: false` and fails closed) |
 | Challenge fixture | Akamai | Cloudflare | Auth wall/429/999 |
 | Consent gate | No | Yes | Yes + interactive |
 | Live canary | 1 page headed | 1 page headed | 1 page headed, only if approved |

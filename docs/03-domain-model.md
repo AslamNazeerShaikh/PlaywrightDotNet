@@ -155,6 +155,7 @@ classDiagram
         +TryConsumePage(cap, now)
         +TryConsumeDetail(cap, now)
         +TryStartRun(cap, now)
+        +RecordRunStart(now)
         +RecordChallenge(DateTimeOffset)
     }
 
@@ -198,7 +199,7 @@ classDiagram
 - At least one keyword; total keyword length ≤ 500.
 - At least one location **or** `RemoteOnly = true`.
 - `experience` 0–50; `postedWithinDays` 1–30.
-- `maxPages` 1–30; `maxJobs` 1–1000; `maxDetails` 0–1000.
+- `maxPages` 1–1000; `maxJobs` 1–20 000; `maxDetails` 0–1000.
 - `minDelay` 1–60s; `maxDelay` ≥ `minDelay`; `maxDelay` ≤ 120s.
 - A profile cannot be enabled if its source is `HighRisk` and consent is not acknowledged (`Enable(highRiskConsentAcknowledged, now)`).
 
@@ -308,8 +309,9 @@ classDiagram
 
 **Behavior**
 
-- `TryConsumePage(cap)`, `TryConsumeDetail(cap)`, `TryStartRun(cap)`, `RecordChallenge()`.
-- Returns a typed `QuotaDecision` (`Allowed`, `Exceeded`).
+- `TryConsumePage(cap)`, `TryConsumeDetail(cap)`, `TryStartRun(cap)`, `RecordRunStart(now)`, `RecordChallenge()`.
+- `RecordRunStart` counts a run without a cap. The handler calls it when the source has no daily run cap.
+- `TryConsumePage`, `TryConsumeDetail`, and `TryStartRun` return a typed `QuotaDecision` (`Allowed`, `Exceeded`).
 
 ### 4.6 `RunEvent` (entity, not aggregate root)
 
@@ -329,7 +331,7 @@ classDiagram
 | `JobTitle` | `Value` | Trimmed, 1–300, no control chars. |
 | `CompanyName` | `Value` | Trimmed, 1–200. |
 | `CanonicalUrl` | `Value` (string) | Absolute `https`; host allowlisted per source; tracking params stripped. |
-| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote | Non-empty keyword; locations ≤ 10; experience 0–50; days 1–30. |
+| `SearchCriteria` | Keywords, locations, experience, postedWithinDays, remote, companies | Non-empty keyword; locations ≤ 10; experience 0–50; days 1–30; companies ≤ 200. |
 | `RunLimits` | Pages, jobs, details, min/max delay | Ranges as above; min ≤ max. |
 | `SalaryRange` | Min, max, currency, period | Min ≤ max; ISO-4217 currency; period enum. |
 | `JobLocation` | Raw, city, region, country, work mode | Raw non-empty; parsed parts optional; raw never discarded. |
@@ -376,8 +378,8 @@ public sealed record RunLimits
         TimeSpan minDelay,
         TimeSpan maxDelay)
     {
-        if (maxPages is < 1 or > 30) throw new DomainException("maxPages must be 1..30.");
-        if (maxJobs is < 1 or > 1000) throw new DomainException("maxJobs must be 1..1000.");
+        if (maxPages is < 1 or > 1000) throw new DomainException("maxPages must be 1..1000.");
+        if (maxJobs is < 1 or > 20000) throw new DomainException("maxJobs must be 1..20000.");
         if (maxDetails is < 0 or > 1000) throw new DomainException("maxDetails must be 0..1000.");
         if (minDelay < TimeSpan.FromSeconds(1)) throw new DomainException("minDelay >= 1s.");
         if (maxDelay < minDelay) throw new DomainException("maxDelay >= minDelay.");
@@ -562,7 +564,7 @@ Maps `ChallengeKind` to `ChallengeDecision` (verbatim from `ChallengePolicy.Deci
 
 ### 8.4 Quotas (`SourceQuota`)
 
-- Checks per-source daily caps: pages, details, runs (`TryConsumePage/TryConsumeDetail/TryStartRun` with the configured cap); quota rows are per `(source, UTC day)`, so restarts never reset the day.
+- Checks per-source daily caps: pages, details, and optionally runs (`TryConsumePage/TryConsumeDetail/TryStartRun` with the configured cap). A null run cap records the run with `RecordRunStart` and does not limit it. Quota rows are per `(source, UTC day)`, so restarts never reset the day.
 - Returns `QuotaDecision` (`IsAllowed`, kind, limit, used); when exceeded, nothing was consumed.
 - The run handler checks quota **before** starting the run and **before each page/detail**.
 - Quota is persisted; `RecordChallenge` counts walls against the day.

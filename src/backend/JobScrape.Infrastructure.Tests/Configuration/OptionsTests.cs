@@ -84,6 +84,36 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void UnlimitedRunCapCannotCoexistWithADailyRunCap()
+        {
+            var source = Naukri();
+            source = new SourceOptions
+            {
+                Enabled = source.Enabled,
+                BaseUrl = source.BaseUrl,
+                MaxPagesPerSearch = source.MaxPagesPerSearch,
+                MaxJobsPerRun = source.MaxJobsPerRun,
+                MaxDetailsPerRun = source.MaxDetailsPerRun,
+                MinDelayMs = source.MinDelayMs,
+                MaxDelayMs = source.MaxDelayMs,
+                DailyPageCap = source.DailyPageCap,
+                DailyDetailCap = source.DailyDetailCap,
+                DailyRunCap = 2,
+                UnlimitedRunCap = true,
+                ChallengeCooldownMinutes = source.ChallengeCooldownMinutes,
+            };
+
+            var result = Validate(new() { ["naukri"] = source });
+
+            Assert.False(result.Succeeded);
+            Assert.Contains(
+                "UnlimitedRunCap=true conflicts with DailyRunCap=2",
+                result.Failures!.Single(),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
         public void DelayWindowMustBeValidForTheDomain()
         {
             var result = Validate(
@@ -175,6 +205,46 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.Equal(2, settings.DailyRunCap);
             Assert.Equal(TimeSpan.FromMinutes(45), settings.ChallengeCooldown);
             Assert.Null(catalog.Find(SourceKey.Indeed));
+        }
+
+        [Fact]
+        public void UnlimitedRunCapMapsToNullAndAnOmittedCapStaysZero()
+        {
+            var capped = Naukri();
+            var unlimited = new SourceOptions
+            {
+                Enabled = capped.Enabled,
+                BaseUrl = capped.BaseUrl,
+                MaxPagesPerSearch = capped.MaxPagesPerSearch,
+                MaxJobsPerRun = capped.MaxJobsPerRun,
+                MaxDetailsPerRun = capped.MaxDetailsPerRun,
+                MinDelayMs = capped.MinDelayMs,
+                MaxDelayMs = capped.MaxDelayMs,
+                DailyPageCap = capped.DailyPageCap,
+                DailyDetailCap = capped.DailyDetailCap,
+                MaxPagesCeiling = 1000,
+                MaxJobsCeiling = 20_000,
+                UnlimitedRunCap = true,
+                ChallengeCooldownMinutes = capped.ChallengeCooldownMinutes,
+            };
+
+            var catalog = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["naukri"] = capped,
+                        ["indeed"] = unlimited,
+                    },
+                }
+            );
+
+            Assert.Equal(2, catalog.Find(SourceKey.Naukri)!.DailyRunCap);
+            Assert.Null(catalog.Find(SourceKey.Indeed)!.DailyRunCap);
+            Assert.Equal(3, catalog.Find(SourceKey.Naukri)!.MaxPagesCeiling);
+            Assert.Equal(1000, catalog.Find(SourceKey.Indeed)!.MaxPagesCeiling);
+            Assert.Equal(20_000, catalog.Find(SourceKey.Indeed)!.MaxJobsCeiling);
+            Assert.Equal(0, new SourceOptions().DailyRunCap);
         }
 
         [Fact]

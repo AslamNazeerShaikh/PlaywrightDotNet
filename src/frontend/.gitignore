@@ -26,6 +26,9 @@ playwright-report/
 .env.*
 !.env.example
 
+# Local dev-cert export for BFF -> API https (public cert, machine-specific)
+.certs/
+
 # Editor / OS
 .DS_Store
 .vscode/*

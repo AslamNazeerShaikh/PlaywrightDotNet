@@ -24,7 +24,7 @@ export function TacMap({
   // The CSS kill-switch would freeze these layers mid-pose (a stuck sweep
   // wedge), so they only mount when motion is welcome.
   const [motionOK] = useState(
-    () => !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches !== true,
   );
 
   const cx = 320;
@@ -36,7 +36,7 @@ export function TacMap({
   const nodes = [
     { x: 320, y: 46, label: "BROWSER", sub: "deck", state: "var(--sig)" },
     { x: 320, y: 180, label: "BFF :3000", sub: "HQ", state: "var(--sig)" },
-    { x: 534, y: 180, label: ".NET :5207", sub: "data plane", state: wire },
+    { x: 534, y: 180, label: ".NET :5208", sub: "data plane", state: wire },
     { x: 320, y: 314, label: "STORE", sub: "in-memory", state: wire },
   ];
   const links: Array<[number, number]> = [

@@ -17,10 +17,11 @@ namespace JobScrape.Application.Features.Runs
         /// <summary>
         /// Lists the newest runs.
         /// </summary>
+        /// <param name="offset">How many newest runs to skip; at least 0.</param>
         /// <param name="limit">How many runs to return; at least 1.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>Up to <paramref name="limit"/> runs, newest first, and the total count.</returns>
-        Task<RunListResponse> ListAsync(int limit, CancellationToken cancellationToken);
+        Task<RunListResponse> ListAsync(int offset, int limit, CancellationToken cancellationToken);
 
         /// <summary>
         /// Lists the postings a run saw: those of its source last seen
@@ -28,10 +29,27 @@ namespace JobScrape.Application.Features.Runs
         /// execute one at a time, so the window identifies the run's postings.
         /// </summary>
         /// <param name="runId">The run identifier.</param>
+        /// <param name="offset">How many postings to skip; at least 0.</param>
         /// <param name="limit">How many postings to return; at least 1.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The postings, or null when the run does not exist.</returns>
         Task<RunPostingListResponse?> ListPostingsAsync(
+            Guid runId,
+            int offset,
+            int limit,
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
+        /// Lists the postings a run saw, with the full stored fields for
+        /// export: the same window as <see cref="ListPostingsAsync"/>, most
+        /// recently seen first.
+        /// </summary>
+        /// <param name="runId">The run identifier.</param>
+        /// <param name="limit">How many postings to return; at least 1.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The postings, or null when the run does not exist.</returns>
+        Task<IReadOnlyList<ExportPosting>?> ListExportPostingsAsync(
             Guid runId,
             int limit,
             CancellationToken cancellationToken

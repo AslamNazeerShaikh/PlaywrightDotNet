@@ -24,5 +24,27 @@ namespace JobScrape.Infrastructure.Configuration
         /// </summary>
         [Range(5, 120)]
         public int NavigationTimeoutSeconds { get; init; } = 45;
+
+        /// <summary>
+        /// The only supported adblock mode: uBlock Origin Lite at maximum
+        /// filtering.
+        /// </summary>
+        public const string UbolMax = "ubol-max";
+
+        /// <summary>
+        /// Gets the optional adblock mode. Null (the default) launches
+        /// without blocking; the only accepted value is <see cref="UbolMax"/>.
+        /// </summary>
+        [RegularExpression(
+            "^ubol-max$",
+            ErrorMessage = "Browser:AdblockMode must be null or 'ubol-max'."
+        )]
+        public string? AdblockMode { get; init; }
+
+        /// <summary>
+        /// Gets the unpacked extension directory, resolved against the
+        /// content root. Required when <see cref="AdblockMode"/> is set.
+        /// </summary>
+        public string? ExtensionDir { get; init; }
     }
 }

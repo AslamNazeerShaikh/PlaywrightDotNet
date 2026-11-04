@@ -27,22 +27,41 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       >
         <svg
           className="diagram"
-          viewBox="0 0 640 300"
+          viewBox="0 0 760 320"
           role="img"
           aria-label="Request lifecycle sequence"
         >
-          {lifeline(40, "BROWSER")}
-          {lifeline(230, "BFF :3000")}
-          {lifeline(420, ".NET :5207")}
-          {lifeline(580, "STORE")}
-          {arrow(40, 230, 46, "var(--sig)", "GET /api/v1/…")}
-          {arrow(230, 420, 70, "var(--sig)", "proxy → loopback")}
-          {arrow(420, 580, 94, "var(--sig)", "GetAsync(id)")}
-          {arrow(580, 420, 118, "var(--sig)", "hit? profile : null")}
-          {arrow(420, 230, 142, "var(--sig)", "200 · payload")}
-          {arrow(230, 40, 166, "var(--sig)", "stream back")}
-          {arrow(420, 230, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
-          {arrow(230, 230, 246, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
+          {lifeline(190, "BROWSER", "you are here")}
+          {lifeline(350, "BFF :3000", "loopback proxy")}
+          {lifeline(510, ".NET :5208", "gates + store")}
+          {lifeline(660, "STORE", "sqlite")}
+          {laneTag(64, "HIT", "200", "var(--sig)")}
+          {laneTag(184, "MISS", "404", "var(--red)")}
+          {laneTag(246, "DOWN", "502", "var(--amber)")}
+          <line
+            x1={88}
+            y1={176}
+            x2={752}
+            y2={176}
+            style={{ stroke: "var(--line)" }}
+            strokeDasharray="4 4"
+          />
+          <line
+            x1={88}
+            y1={238}
+            x2={752}
+            y2={238}
+            style={{ stroke: "var(--line)" }}
+            strokeDasharray="4 4"
+          />
+          {arrow(190, 350, 70, "var(--sig)", "GET /api/v1/…", false, 1)}
+          {arrow(350, 510, 88, "var(--sig)", "proxy → loopback", false, 2)}
+          {arrow(510, 660, 106, "var(--sig)", "GetAsync(id)", false, 3)}
+          {arrow(660, 510, 124, "var(--sig)", "hit? profile : null", false, 4)}
+          {arrow(510, 350, 142, "var(--sig)", "200 · payload", false, 5)}
+          {arrow(350, 190, 160, "var(--sig)", "stream back", false, 6)}
+          {arrow(510, 350, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
+          {arrow(350, 350, 258, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
         </svg>
         <Legend
           label="Sequence key"
@@ -94,7 +113,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
                   <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
                   (ASP.NET)
                 </td>
-                <td>127.0.0.1:5207</td>
+                <td>localhost:5208</td>
                 <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
               </tr>
               <tr>
@@ -105,7 +124,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             </tbody>
           </table>
         </div>
-        <p className="status-line" style={{ marginTop: "10px" }}>
+        <p className="status-line" style={{ marginTop: "var(--gap)" }}>
           Failure rule: the browser shows the BFF answer. A 502 means the BFF is fine and the API is
           not — restart the data plane, not the deck.
         </p>
@@ -173,7 +192,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             {
               abbr: "API",
               full: "Application Programming Interface",
-              hint: "The .NET data plane on :5207. Controllers, handlers, and the store live here.",
+              hint: "The .NET data plane on :5208 (https; :5207 http fallback). Controllers, handlers, and the store live here.",
             },
             {
               abbr: "HQ",
@@ -222,7 +241,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
   );
 }
 
-function lifeline(x: number, label: string) {
+function lifeline(x: number, label: string, caption?: string) {
   return (
     <g key={label}>
       <rect
@@ -237,14 +256,24 @@ function lifeline(x: number, label: string) {
         x={x}
         y={25}
         textAnchor="middle"
-        style={{ fill: "var(--ink)", fontSize: "var(--text-label)" }}
+        style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
         fontWeight="600"
       >
         {label}
       </text>
+      {caption !== undefined && (
+        <text
+          x={x}
+          y={44}
+          textAnchor="middle"
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+        >
+          {caption}
+        </text>
+      )}
       <line
         x1={x}
-        y1={38}
+        y1={50}
         x2={x}
         y2={292}
         style={{ stroke: "var(--line)" }}
@@ -254,7 +283,47 @@ function lifeline(x: number, label: string) {
   );
 }
 
-function arrow(x1: number, x2: number, y: number, color: string, label: string, self = false) {
+function laneTag(y: number, name: string, code: string, color: string) {
+  return (
+    <g key={name}>
+      <rect
+        x={8}
+        y={y}
+        width="64"
+        height="30"
+        rx="3"
+        style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+      />
+      <text
+        x={40}
+        y={y + 12}
+        textAnchor="middle"
+        style={{ fill: color, fontSize: "var(--text-micro)" }}
+        fontWeight="700"
+      >
+        {name}
+      </text>
+      <text
+        x={40}
+        y={y + 24}
+        textAnchor="middle"
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+      >
+        {code}
+      </text>
+    </g>
+  );
+}
+
+function arrow(
+  x1: number,
+  x2: number,
+  y: number,
+  color: string,
+  label: string,
+  self = false,
+  step?: number,
+) {
   if (self) {
     return (
       <g key={`${label}-${y}`}>
@@ -264,8 +333,19 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
           style={{ stroke: color }}
           strokeWidth="1.5"
         />
-        <text x={x1 + 40} y={y + 5} style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}>
-          {label}
+        <text
+          x={x1 + 40}
+          y={y + 1}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+        >
+          API down → 502
+        </text>
+        <text
+          x={x1 + 40}
+          y={y + 13}
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+        >
+          DOTNET_UNREACHABLE
         </text>
       </g>
     );
@@ -282,10 +362,23 @@ function arrow(x1: number, x2: number, y: number, color: string, label: string, 
         }
         style={{ fill: color }}
       />
+      {step !== undefined && (
+        <g>
+          <circle cx={x1} cy={y} r="8" style={{ fill: "var(--sig)" }} />
+          <text
+            x={x1}
+            y={y + 3.5}
+            textAnchor="middle"
+            style={{ fill: "var(--canvas)", fontSize: "var(--text-fine)" }}
+          >
+            {step}
+          </text>
+        </g>
+      )}
       <text
-        x={left ? x1 + 6 : x2 + 6}
+        x={(left ? x1 + 6 : x2 + 6) + (step !== undefined ? 14 : 0)}
         y={y - 5}
-        style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
       >
         {label}
       </text>

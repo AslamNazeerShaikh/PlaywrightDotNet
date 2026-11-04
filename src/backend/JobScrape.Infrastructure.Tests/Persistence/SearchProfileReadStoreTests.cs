@@ -19,7 +19,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             return SearchProfile.Create(
                 name,
                 SourceKey.Naukri,
-                new SearchCriteria("c#", ["Pune"], 6, null, remoteOnly: false),
+                new SearchCriteria("c#", ["Pune"], 6, null, remoteOnly: false, []),
                 new RunLimits(2, 40, 0, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(7)),
                 Now
             );

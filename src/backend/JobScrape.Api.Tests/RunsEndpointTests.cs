@@ -27,6 +27,9 @@ namespace JobScrape.Api.Tests
     {
         private static readonly string[] Pune = ["Pune"];
 
+        private static readonly string[] DotNetSkills = ["C#", "ASP.NET Core"];
+        private static readonly string[] Contoso = ["Contoso"];
+
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
         private static ApiFactory Factory(FakeSource source)
@@ -57,6 +60,7 @@ namespace JobScrape.Api.Tests
                     sourceKey = "naukri",
                     keywords = "c#",
                     locations = Pune,
+                    companies = Contoso,
                 },
                 Ct
             );
@@ -95,7 +99,7 @@ namespace JobScrape.Api.Tests
         public void RejectsNullHandlers()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new RunsController(null!, null!, null!, null!, null!)
+                new RunsController(null!, null!, null!, null!, null!, null!)
             );
         }
 
@@ -116,6 +120,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
             Assert.Equal($"/api/v1/runs/{run!.Id}", started.Headers.Location!.OriginalString);
             Assert.Equal("backend", run.ProfileName);
+            Assert.Equal(["Contoso"], run.Companies);
 
             var done = await WaitAsync(client, run.Id, r => r.IsTerminal);
             Assert.Equal("Completed", done.Stage);
@@ -129,10 +134,262 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(["101", "102"], postings!.Items.Select(p => p.ExternalJobId).Order());
+            Assert.Equal(2, postings.Total);
             Assert.All(postings.Items, p => Assert.True(p.IsNew));
+
+            var secondPage = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?offset=1&limit=1",
+                Ct
+            );
+            Assert.Single(secondPage!.Items);
+            Assert.Equal(2, secondPage.Total);
+
+            using var csv = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, csv.StatusCode);
+            Assert.Equal("text/csv", csv.Content.Headers.ContentType!.MediaType);
+            var csvText = await csv.Content.ReadAsStringAsync(Ct);
+            Assert.StartsWith("Title,Company,Location,", csvText);
+            Assert.Contains("https://www.naukri.com/job-listings-dev-101", csvText);
+            var csvName = csv.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-backend-", csvName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.csv", csvName, StringComparison.Ordinal);
+
+            using var xlsx = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=xlsx",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, xlsx.StatusCode);
+            Assert.Equal(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsx.Content.Headers.ContentType!.MediaType
+            );
+            Assert.True((await xlsx.Content.ReadAsByteArrayAsync(Ct)).Length > 0);
+            var xlsxName = xlsx.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-backend-", xlsxName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.xlsx", xlsxName, StringComparison.Ordinal);
+
+            using var only = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=only",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, only.StatusCode);
+            var onlyText = await only.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("101", onlyText, StringComparison.Ordinal);
+            Assert.DoesNotContain("102", onlyText, StringComparison.Ordinal);
+            Assert.EndsWith(
+                "-postings-only-companies.csv",
+                only.Content.Headers.ContentDisposition!.FileNameStar!,
+                StringComparison.Ordinal
+            );
+
+            using var exclude = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=exclude",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, exclude.StatusCode);
+            var excludeText = await exclude.Content.ReadAsStringAsync(Ct);
+            Assert.DoesNotContain("101", excludeText, StringComparison.Ordinal);
+            Assert.Contains("102", excludeText, StringComparison.Ordinal);
+
+            using var badGroup = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv&group=nope",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, badGroup.StatusCode);
+            var badGroupBody = await badGroup.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("EXPORT_GROUP_UNSUPPORTED", badGroupBody.GetProperty("code").GetString());
+            Assert.Equal(
+                "Export group is not supported.",
+                badGroupBody.GetProperty("title").GetString()
+            );
+            Assert.Equal(
+                "Export group 'nope' is not supported. Use 'all', 'only' or 'exclude'.",
+                badGroupBody.GetProperty("detail").GetString()
+            );
+
+            using var badFormat = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=pdf",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, badFormat.StatusCode);
+            var badFormatBody = await badFormat.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal(
+                "EXPORT_FORMAT_UNSUPPORTED",
+                badFormatBody.GetProperty("code").GetString()
+            );
+            Assert.Equal(
+                "Export format is not supported.",
+                badFormatBody.GetProperty("title").GetString()
+            );
+            Assert.Equal(
+                "Export format 'pdf' is not supported. Use 'csv' or 'xlsx'.",
+                badFormatBody.GetProperty("detail").GetString()
+            );
+
+            using var missing = await client.GetAsync(
+                $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=csv",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
 
             var list = await client.GetFromJsonAsync<RunListResponse>("api/v1/runs", Ct);
             Assert.Equal(run.Id, Assert.Single(list!.Items).Id);
+            Assert.Equal(1, list.Total);
+
+            var skipped = await client.GetFromJsonAsync<RunListResponse>(
+                "api/v1/runs?offset=1&limit=50",
+                Ct
+            );
+            Assert.Empty(skipped!.Items);
+            Assert.Equal(1, skipped.Total);
+
+            var negative = await client.GetFromJsonAsync<RunListResponse>(
+                "api/v1/runs?offset=-5&limit=50",
+                Ct
+            );
+            Assert.Equal(run.Id, Assert.Single(negative!.Items).Id);
+        }
+
+        [Fact]
+        public async Task SkillMatchAndRecencyFlowKeepsOnlyMatchingFreshPostings()
+        {
+            var source = new FakeSource { Skilled = true };
+            await using var factory = Factory(source);
+            using var client = factory.CreateClient();
+
+            using var profile = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "dotnet-fresh",
+                    sourceKey = "naukri",
+                    keywords = "asp.net core c#",
+                    locations = Pune,
+                    postedWithinDays = 1,
+                    remoteOnly = false,
+                    requiredSkills = DotNetSkills,
+                },
+                Ct
+            );
+            var profileId = (
+                await profile.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct)
+            )!.Id;
+            using var session = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "naukri-main", sourceKey = "naukri" },
+                Ct
+            );
+            var sessionId = (await session.Content.ReadFromJsonAsync<SessionResponse>(Ct))!.Id;
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+
+            var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done.Stage);
+            Assert.Equal(1, done.PagesFetched);
+            Assert.Equal(1, done.PostingsFound);
+            Assert.Equal(1, done.PostingsNew);
+
+            var postings = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings",
+                Ct
+            );
+            Assert.Equal(["101"], postings!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, postings.Total);
+
+            using var csv = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=csv",
+                Ct
+            );
+            var csvText = await csv.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("job-listings-dev-101", csvText);
+            Assert.DoesNotContain("job-listings-dev-102", csvText);
+            Assert.DoesNotContain("job-listings-dev-103", csvText);
+            var fileName = csv.Content.Headers.ContentDisposition!.FileNameStar!;
+            Assert.StartsWith("naukri-dotnet-fresh-", fileName, StringComparison.Ordinal);
+            Assert.EndsWith("-postings.csv", fileName, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task ResightedPostingWithMismatchedSkillsStaysOutOfPostingsAndExport()
+        {
+            var source = new FakeSource { Skilled = true };
+            await using var factory = Factory(source);
+            using var client = factory.CreateClient();
+
+            using var profile = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = "dotnet-fresh",
+                    sourceKey = "naukri",
+                    keywords = "asp.net core c#",
+                    locations = Pune,
+                    postedWithinDays = 1,
+                    remoteOnly = false,
+                    requiredSkills = DotNetSkills,
+                },
+                Ct
+            );
+            var profileId = (
+                await profile.Content.ReadFromJsonAsync<SearchProfileResponse>(Ct)
+            )!.Id;
+            using var session = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "naukri-main", sourceKey = "naukri" },
+                Ct
+            );
+            var sessionId = (await session.Content.ReadFromJsonAsync<SessionResponse>(Ct))!.Id;
+
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run1 = await first.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done1 = await WaitAsync(client, run1!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done1.Stage);
+            Assert.Equal(1, done1.PostingsFound);
+
+            source.ResightMismatch = true;
+
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId, browserProfileId = sessionId },
+                Ct
+            );
+            var run2 = await second.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done2 = await WaitAsync(client, run2!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done2.Stage);
+            Assert.Equal(0, done2.PostingsFound);
+
+            var postings2 = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run2.Id}/postings",
+                Ct
+            );
+            Assert.Empty(postings2!.Items);
+
+            using var csv2 = await client.GetAsync(
+                $"api/v1/runs/{run2.Id}/postings/export?format=csv",
+                Ct
+            );
+            var csvText2 = await csv2.Content.ReadAsStringAsync(Ct);
+            Assert.DoesNotContain("job-listings-dev-101", csvText2);
+
+            var postings1 = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run1.Id}/postings",
+                Ct
+            );
+            var stored = Assert.Single(postings1!.Items);
+            Assert.Equal("101", stored.ExternalJobId);
+            Assert.Contains("C#", stored.Skills);
         }
 
         [Fact]
@@ -294,6 +551,10 @@ namespace JobScrape.Api.Tests
 
             public volatile bool Throws;
 
+            public volatile bool Skilled;
+
+            public volatile bool ResightMismatch;
+
             public TaskCompletionSource Entered { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -318,8 +579,18 @@ namespace JobScrape.Api.Tests
                     await Task.Delay(Timeout.Infinite, cancellationToken);
                 }
 
+                var now = DateTimeOffset.UtcNow;
+                JobSnapshot[] jobs = Skilled
+                    ? ResightMismatch
+                        ? [Snapshot("101", ["Java"], now.AddHours(-3))]
+                        : [
+                            Snapshot("101", ["C#", "ASP.NET Core"], now.AddHours(-2)),
+                            Snapshot("102", ["Java"], now.AddHours(-3)),
+                            Snapshot("103", ["C#"], now.AddDays(-5)),
+                        ]
+                    : [Snapshot("101"), Snapshot("102")];
                 return new SearchPageResult(
-                    [Snapshot("101"), Snapshot("102")],
+                    jobs,
                     null,
                     new PageFingerprint("101", "1 - 2 of 2"),
                     ChallengeAssessment.Clear
@@ -335,7 +606,11 @@ namespace JobScrape.Api.Tests
                 throw new NotSupportedException("Details are off for this fake.");
             }
 
-            private static JobSnapshot Snapshot(string id)
+            private static JobSnapshot Snapshot(
+                string id,
+                string[]? skills = null,
+                DateTimeOffset? postedAt = null
+            )
             {
                 return new JobSnapshot
                 {
@@ -343,6 +618,9 @@ namespace JobScrape.Api.Tests
                     ExternalJobId = id,
                     Url = $"https://www.naukri.com/job-listings-dev-{id}",
                     Title = $"Developer {id}",
+                    Company = id == "101" ? "Contoso" : "Fabrikam",
+                    Skills = skills ?? [],
+                    PostedAt = postedAt,
                 };
             }
         }

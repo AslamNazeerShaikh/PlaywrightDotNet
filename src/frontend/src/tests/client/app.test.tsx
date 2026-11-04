@@ -46,6 +46,8 @@ const savedProfile = {
   experienceYears: 6,
   postedWithinDays: 7,
   remoteOnly: false,
+  requiredSkills: ["C#"],
+  companies: ["Infosys", "TCS"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,
@@ -113,7 +115,7 @@ const sourceList = {
         detailsUsed: 60,
         detailCap: 60,
         runsUsed: 1,
-        runCap: 2,
+        runCap: null,
         challenges: 1,
       },
       circuit: {
@@ -167,6 +169,38 @@ function sessionsBackend() {
     if (url === "/healthz") {
       return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
     }
+    if (url.startsWith("/api/v1/sessions/") && init?.method === "PATCH") {
+      const id = url.slice("/api/v1/sessions/".length);
+      const body = JSON.parse(String(init.body)) as {
+        name: string;
+        engine: SessionPayload["engine"];
+        channel: SessionPayload["channel"];
+      };
+      const index = items.findIndex((s) => s.id === id);
+      if (index === -1) {
+        return reply(404, {
+          status: 404,
+          title: "Browser profile not found.",
+          detail: "",
+          code: "SESSION_NOT_FOUND",
+        });
+      }
+      if (items.some((s, i) => i !== index && s.name === body.name)) {
+        return reply(409, {
+          status: 409,
+          title: "Browser profile name already in use.",
+          detail: "",
+          code: "SESSION_NAME_TAKEN",
+        });
+      }
+      const updated: SessionPayload = {
+        ...items[index]!,
+        ...body,
+        userDataDirectory: `${items[index]!.sourceKey}/${body.name}`,
+      };
+      items[index] = updated;
+      return reply(200, updated);
+    }
     if (url === "/api/v1/sessions" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { name: string; sourceKey: string };
       if (body.name.includes("/")) {
@@ -209,11 +243,12 @@ function sessionsBackend() {
 }
 
 /**
- * A stateful fake of the profiles API: GET lists what POST created, POST validates like the server
- * (missing name → VALIDATION_FAILED with field errors, duplicate → PROFILE_NAME_TAKEN).
+ * A stateful fake of the profiles API: GET lists the seeded and created rows, POST validates like
+ * the server (missing name → VALIDATION_FAILED with field errors, duplicate → PROFILE_NAME_TAKEN),
+ * and PUT replaces the editable fields.
  */
-function profilesBackend() {
-  const items: (typeof savedProfile)[] = [];
+function profilesBackend(seed: (typeof savedProfile)[] = []) {
+  const items: (typeof savedProfile)[] = [...seed];
   const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
     const reply = (status: number, body: unknown) => ({
       ok: status >= 200 && status < 300,
@@ -222,6 +257,30 @@ function profilesBackend() {
     });
     if (url === "/healthz") {
       return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+    }
+    if (url.startsWith("/api/v1/search-profiles/") && init?.method === "PUT") {
+      const id = url.slice("/api/v1/search-profiles/".length);
+      const body = JSON.parse(String(init.body)) as Partial<typeof savedProfile>;
+      const index = items.findIndex((p) => p.id === id);
+      if (index === -1) {
+        return reply(404, {
+          status: 404,
+          title: "Search profile not found.",
+          detail: "",
+          code: "PROFILE_NOT_FOUND",
+        });
+      }
+      if (items.some((p, i) => i !== index && p.name === body.name)) {
+        return reply(409, {
+          status: 409,
+          title: "Profile name already in use.",
+          detail: "",
+          code: "PROFILE_NAME_TAKEN",
+        });
+      }
+      const updated = { ...items[index]!, ...body };
+      items[index] = updated;
+      return reply(200, updated);
     }
     if (url === "/api/v1/search-profiles" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { name: string; keywords: string };
@@ -284,6 +343,7 @@ describe("ops deck", () => {
       "05SESSIONS",
       "06RUNS",
       "07TOPOLOGY",
+      "08DATABASE",
     ]);
   });
 
@@ -367,6 +427,46 @@ describe("ops deck", () => {
     );
   });
 
+  test("editing a profile updates the list and the detail", async () => {
+    const queries = render(
+      <App client={profilesBackend([savedProfile])} initialRoute="profiles" />,
+    );
+    await waitFor(() => expect(queries.getByRole("button", { name: "backend" })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("button", { name: "backend" }));
+    fireEvent.change(queries.getByLabelText("Edit name"), {
+      target: { value: "backend-2" },
+    });
+    fireEvent.change(queries.getByLabelText("Edit keywords"), {
+      target: { value: "asp.net" },
+    });
+    fireEvent.click(queries.getByRole("button", { name: "SAVE CHANGES" }));
+
+    await waitFor(() => expect(queries.getByRole("button", { name: "backend-2" })).toBeDefined());
+    expect(queries.getByRole("table", { name: "Profile detail" }).textContent).toContain("asp.net");
+    expect(queries.queryByRole("alert")).toBeNull();
+  });
+
+  test("editing a profile to a taken name shows the conflict", async () => {
+    const queries = render(
+      <App
+        client={profilesBackend([savedProfile, { ...savedProfile, id: "p2", name: "other" }])}
+        initialRoute="profiles"
+      />,
+    );
+    await waitFor(() => expect(queries.getByRole("button", { name: "backend" })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("button", { name: "backend" }));
+    fireEvent.change(queries.getByLabelText("Edit name"), {
+      target: { value: "other" },
+    });
+    fireEvent.click(queries.getByRole("button", { name: "SAVE CHANGES" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("PROFILE_NAME_TAKEN"),
+    );
+  });
+
   test("sources page renders a card per source with gate, meters, and circuit", async () => {
     const queries = await renderDeck("sources");
 
@@ -378,6 +478,7 @@ describe("ops deck", () => {
     const naukri = queries.getByRole("region", { name: "NAUKRI" });
     expect(naukri.textContent).toContain("GATE OPEN");
     expect(naukri.textContent).toContain("CIRCUIT OPEN");
+    expect(naukri.textContent).toContain("Runs: 1 · no daily cap");
     expect(naukri.textContent).toContain("open until 2026-11-03T08:00:00Z");
     expect(naukri.textContent).toContain("3 pages · 60 jobs · 60 details");
     const meters = queries.getAllByRole("meter", { name: "Pages used" });
@@ -418,13 +519,61 @@ describe("ops deck", () => {
     );
   });
 
-  test("overview shows the tac-map, its key, feed key, compass, and catalog", async () => {
+  test("editing a browser profile moves its directory", async () => {
+    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "cooling",
+      ),
+    );
+
+    fireEvent.click(queries.getByRole("button", { name: "cooling" }));
+    fireEvent.change(queries.getByLabelText("Edit profile name"), {
+      target: { value: "renamed" },
+    });
+    fireEvent.click(queries.getByRole("button", { name: "SAVE CHANGES" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "indeed/renamed",
+      ),
+    );
+    expect(queries.queryByRole("alert")).toBeNull();
+  });
+
+  test("editing a browser profile to a taken name shows the conflict", async () => {
+    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "cooling",
+      ),
+    );
+
+    fireEvent.change(queries.getByLabelText("Profile name"), { target: { value: "taken" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE BROWSER PROFILE" }));
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
+        "taken",
+      ),
+    );
+
+    fireEvent.click(queries.getByRole("button", { name: "cooling" }));
+    fireEvent.change(queries.getByLabelText("Edit profile name"), {
+      target: { value: "taken" },
+    });
+    fireEvent.click(queries.getByRole("button", { name: "SAVE CHANGES" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("SESSION_NAME_TAKEN"),
+    );
+  });
+
+  test("overview shows the tac-map, its key, feed key, and catalog", async () => {
     const queries = await renderDeck("overview");
 
     expect(queries.getByLabelText("Tactical overview map", { exact: false })).toBeDefined();
     expect(queries.getByRole("list", { name: "Tac-map key" })).toBeDefined();
     expect(queries.getByRole("list", { name: "Killfeed key" })).toBeDefined();
-    expect(queries.getByLabelText("Heading 0 degrees, OVERVIEW")).toBeDefined();
     expect(queries.getByText("BFF_LINK")).toBeDefined();
     expect(queries.getByText("/api/v1/search-profiles/{id}")).toBeDefined();
     expect(queries.getByText("CreateSearchProfileHandler")).toBeDefined();
@@ -437,6 +586,9 @@ describe("ops deck", () => {
     expect(queries.getByRole("list", { name: "Sequence key" })).toBeDefined();
     expect(queries.getByText("Backend for Frontend", { exact: false })).toBeDefined();
     expect(queries.getByText("DOTNET_UNREACHABLE", { exact: false })).toBeDefined();
+    expect(queries.getByText("HIT")).toBeDefined();
+    expect(queries.getByText("MISS")).toBeDefined();
+    expect(queries.getByText("DOWN")).toBeDefined();
   });
 
   test("deck defaults to cozy density and toggles without losing content", async () => {

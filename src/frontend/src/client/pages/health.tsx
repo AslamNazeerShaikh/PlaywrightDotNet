@@ -1,4 +1,4 @@
-import { Abbr, Dot, Legend } from "../components/legend.tsx";
+import { Abbr, Dot, Legend, Wire } from "../components/legend.tsx";
 import { CodeTag, JsonBlock, Module, Stat } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import { Sparkline } from "../components/sparkline.tsx";
@@ -45,7 +45,7 @@ export function HealthPage({
           {checking ? "PROBING…" : "RUN HEALTH CHECK"}
         </button>
         {health !== null && (
-          <p className="status-line" role="status" style={{ marginTop: "10px" }}>
+          <p className="status-line" role="status" style={{ marginTop: "var(--gap)" }}>
             ENGINE <CodeTag code={health.status.toUpperCase()} tone="ok" /> @ {health.timeUtc}
           </p>
         )}
@@ -69,9 +69,10 @@ export function HealthPage({
           items={[
             { key: "hit", swatch: <Dot color="var(--sig)" />, text: "hit — probe answered" },
             { key: "miss", swatch: <Dot color="var(--red)" />, text: "miss — probe failed" },
+            { key: "line", swatch: <Wire color="var(--sig)" />, text: "round-trip ms over time" },
           ]}
         />
-        <div className="stat-grid" style={{ marginTop: "10px" }}>
+        <div className="stat-grid" style={{ marginTop: "var(--gap)" }}>
           <Stat label="Probes" value={stats === null ? "0" : String(stats.count)} />
           <Stat
             label="Last"

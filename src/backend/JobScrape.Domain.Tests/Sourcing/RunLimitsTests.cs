@@ -36,7 +36,8 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         [Theory]
         [InlineData(1)]
-        [InlineData(30)]
+        [InlineData(600)]
+        [InlineData(1000)]
         public void AcceptsPageBounds(int maxPages)
         {
             Assert.Equal(maxPages, Create(maxPages: maxPages).MaxPages);
@@ -44,7 +45,7 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         [Theory]
         [InlineData(0)]
-        [InlineData(31)]
+        [InlineData(1001)]
         [InlineData(-1)]
         public void RejectsPagesOutOfRange(int maxPages)
         {
@@ -53,7 +54,7 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         [Theory]
         [InlineData(1)]
-        [InlineData(1000)]
+        [InlineData(20_000)]
         public void AcceptsJobBounds(int maxJobs)
         {
             Assert.Equal(maxJobs, Create(maxJobs: maxJobs).MaxJobs);
@@ -61,7 +62,7 @@ namespace JobScrape.Domain.Tests.Sourcing
 
         [Theory]
         [InlineData(0)]
-        [InlineData(1001)]
+        [InlineData(20_001)]
         public void RejectsJobsOutOfRange(int maxJobs)
         {
             Assert.Throws<DomainException>(() => Create(maxJobs: maxJobs));

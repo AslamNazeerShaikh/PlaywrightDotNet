@@ -133,7 +133,7 @@ No production project may reference a test project. Domain references nothing. A
 > **Installed today** — every row below is a `PackageReference` in at least
 > one `.csproj`, versioned in `Directory.Packages.props` (central package
 > management + transitive pinning on). Anything else in the pre-rename
-> design matrix (`System.CommandLine`, Scalar, NSubstitute, ClosedXML, …)
+> design matrix (`System.CommandLine`, NSubstitute, …)
 > is approved for later slices but has **no reference in the tree yet** and
 > must not appear in diagrams as installed.
 
@@ -142,10 +142,13 @@ No production project may reference a test project. Domain references nothing. A
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
 | `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | Infrastructure | Options binding + DataAnnotations validation. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
+| `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Direct SQLite access for the raw database explorer. |
+| `Dapper` | `2.1.89` | Infrastructure | Micro-ORM for the raw database explorer (see ADR-0018). |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Headed browser automation: persistent contexts per browser profile, Naukri navigation. |
 | `AngleSharp` | `1.8.6` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
 | `Microsoft.AspNetCore.OpenApi` | `10.0.14` | Api | OpenAPI document generation (Development only). |
+| `Scalar.AspNetCore` | `2.18.5` | Api | Local interactive API reference at `/scalar` (Development only). |
 | `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
 | `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
 | `Serilog.Enrichers.Environment` | `3.0.1` | Api | Machine and environment names. |
@@ -177,18 +180,24 @@ flowchart LR
     LOG["Microsoft.Extensions<br/>.Logging.Abstractions"]
     OPT["Microsoft.Extensions<br/>.Options.DataAnnotations"]
     EF["Microsoft.EntityFrameworkCore<br/>.Sqlite + .Design"]
+    MDS["Microsoft.Data.Sqlite"]
+    DAP["Dapper"]
     PW["Microsoft.Playwright"]
     AS["AngleSharp"]
     OA["Microsoft.AspNetCore.OpenApi"]
+    SCA["Scalar.AspNetCore"]
     SER["Serilog<br/>AspNetCore + Sinks.Async<br/>+ 6 enrichers + Exceptions<br/>+ Demystifier"]
 
     APP --> LOG
     INF --> LOG
     INF --> OPT
     INF --> EF
+    INF --> MDS
+    INF --> DAP
     INF --> PW
     INF --> AS
     API --> OA
+    API --> SCA
     API --> SER
 ```
 
@@ -201,7 +210,6 @@ flowchart LR
 - `System.CommandLine.NamingConventionBinder` — legacy handler binding; prefer the library-recommended `SetAction`/`SetHandler`.
 - `Newtonsoft.Json` — `System.Text.Json` is the platform default; add Newtonsoft only for a concrete compatibility requirement.
 - `Polly` as a direct package — no HTTP resilience infrastructure exists yet; add Polly (or `Microsoft.Extensions.Http.Resilience`) only with a measured non-HTTP pipeline need. Never retry a challenge/wall regardless of library.
-- `Dapper` — EF Core handles both writes and read models.
 - `Seq`/ELK/OpenTelemetry exporters — local JSON logs are the v1 baseline; add centralized telemetry only when a real requirement appears.
 - `Selenium` — only if real Safari becomes mandatory.
 - `FluentAssertions` — xUnit assertions are sufficient; avoid the v8 license question.
@@ -298,10 +306,11 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
 
 > The real file also pins `Microsoft.Extensions.Hosting` and
 > `Microsoft.Extensions.Http` (`10.0.14`), which no project references.
-> Anything else (`System.CommandLine`, Scalar, `Http.Resilience`,
-> `Microsoft.Data.Sqlite`, ClosedXML, `Microsoft.Playwright.Xunit.v3`,
+> Anything else (`System.CommandLine`, `Http.Resilience`,
+> `Microsoft.Playwright.Xunit.v3`,
 > NSubstitute, Verify, MinVer) appears only in the pre-rename design matrix:
 > no `PackageVersion` and no `PackageReference` exists for it today.
+> ClosedXML `0.105.1` is pinned centrally and referenced by Infrastructure.
 
 ### 4.4 `NuGet.config`
 
@@ -386,15 +395,15 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "BaseUrl": "https://www.naukri.com",
         "MaxPagesPerSearch": 3,
         "MaxJobsPerRun": 60,
+        "MaxPagesCeiling": 1000,
+        "MaxJobsCeiling": 20000,
         "MaxDetailsPerRun": 60,
         "MinDelayMs": 2500,
         "MaxDelayMs": 6000,
-        "DailyPageCap": 25,
+        "DailyPageCap": 1000,
         "DailyDetailCap": 60,
-        "DailyRunCap": 2,
-        "ChallengeCooldownMinutes": 45,
-        "RequiresConsent": false,
-        "UseApiFastPath": false
+        "UnlimitedRunCap": true,
+        "ChallengeCooldownMinutes": 45
       },
       "indeed": {
         "Enabled": false,
@@ -407,8 +416,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "DailyPageCap": 12,
         "DailyDetailCap": 30,
         "DailyRunCap": 1,
-        "ChallengeCooldownMinutes": 60,
-        "RequiresConsent": true
+        "ChallengeCooldownMinutes": 60
       },
       "linkedin": {
         "Enabled": false,
@@ -421,8 +429,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
         "DailyPageCap": 4,
         "DailyDetailCap": 8,
         "DailyRunCap": 1,
-        "ChallengeCooldownMinutes": 60,
-        "RequiresConsent": true
+        "ChallengeCooldownMinutes": 60
       }
     },
     "Run": {
@@ -440,7 +447,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 }
 ```
 
-> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review.
+> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page. A profile may set `maxPages` up to `MaxPagesCeiling` and `maxJobs` up to `MaxJobsCeiling`; `MaxPagesPerSearch` and `MaxJobsPerRun` stay the new-profile defaults. The run stops when the site has fewer pages, so a high limit never invents pages.
 
 ### 5.2 Precedence and secrets
 
@@ -600,6 +607,79 @@ pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install --with-deps chromi
 ```
 
 On Linux CI, prefer the official Playwright Docker image or `install --with-deps`.
+
+### 7.4 HTTPS development loop (API + BFF over TLS)
+
+> **As implemented:** `src/backend/JobScrape.Api/Properties/launchSettings.json`
+> serves `http://localhost:5207;https://localhost:5208` on the `http` profile,
+> the cockpit BFF defaults to the HTTPS upstream
+> (`DOTNET_API_URL=https://localhost:5208` in `src/frontend/.env.example`)
+> and serves the deck itself over `https://127.0.0.1:3000`
+> (`BFF_TLS_CERT_FILE`/`BFF_TLS_KEY_FILE` in the same file, loaded by
+> `loadTls` in `src/frontend/src/server/index.ts`; both-or-neither, missing
+> files fail startup with the fix).
+
+One-time setup per developer machine (repo root):
+
+```bash
+# 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
+dotnet dev-certs https --trust
+
+# 2. Export its public cert (BFF -> API trust; gitignored, per machine).
+mkdir -p src/frontend/.certs
+dotnet dev-certs https --export-path src/frontend/.certs/devcert.pem \
+  --format Pem --no-password
+
+# 3. Export a cert/key pair so the BFF can serve HTTPS itself.
+# Password is a throwaway: the files stay gitignored on this machine.
+dotnet dev-certs https --export-path src/frontend/.certs/localhost.pfx \
+  --format Pfx -p jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -clcerts -nokeys \
+  -out src/frontend/.certs/localhost-cert.pem -passin pass:jobscrape-dev-only
+openssl pkcs12 -in src/frontend/.certs/localhost.pfx -nocerts -nodes \
+  -out src/frontend/.certs/localhost-key.pem -passin pass:jobscrape-dev-only
+rm src/frontend/.certs/localhost.pfx
+chmod 600 src/frontend/.certs/localhost-key.pem
+
+# 4. Copy env and start both servers.
+cp src/frontend/.env.example src/frontend/.env
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
+cd src/frontend && bun run dev
+```
+
+`bun run dev` needs no manual export: `dev:server` and `api:types` bake in
+`NODE_EXTRA_CA_CERTS=./.certs/devcert.pem` (Bun builds its CA store before
+`.env` loads, so a `.env`-only value would leave the proxy at
+`502 DOTNET_UNREACHABLE`).
+
+Files involved:
+
+| File | Change | Committed? |
+|---|---|---|
+| `src/backend/JobScrape.Api/Properties/launchSettings.json` | `applicationUrl` gains `https://localhost:5208` | Yes |
+| `src/frontend/.env.example` | HTTPS default, CA path, `BFF_TLS_*` pair | Yes |
+| `src/frontend/.gitignore` | Ignores `.certs/` | Yes |
+| `src/frontend/package.json` | `dev:server`/`api:types` carry `NODE_EXTRA_CA_CERTS` | Yes |
+| `src/frontend/src/server/config.ts` | `tlsCertFile`/`tlsKeyFile` + both-or-neither rule | Yes |
+| `src/frontend/src/server/index.ts` | `loadTls` + scheme-aware `Bun.serve` | Yes |
+| `src/frontend/.env` | Local overrides | No (gitignored) |
+| `src/frontend/.certs/` | `devcert.pem`, `localhost-cert.pem`, `localhost-key.pem` | No (gitignored) |
+| `src/frontend/README.md` (`HTTPS dev loop`) | Full per-machine steps | Yes |
+
+Rules:
+
+- Regenerate per machine with steps 1–3 above (never copy the cert or key
+  between machines); if the cert expires or `fetch` fails with
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run the same steps.
+- No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`
+  plus both `BFF_TLS_*` lines commented out for a plain-http BFF.
+- Browsers: Chrome/Safari accept `https://127.0.0.1:3000` via the step-1
+  keychain trust. Firefox uses its own store: import `localhost-cert.pem`
+  or add a one-time exception.
+- Verify with `curl https://localhost:5208/api/v1/health` (direct) and
+  `curl -k https://127.0.0.1:3000/api/v1/health` (through the BFF proxy;
+  `-k` only because curl on some platforms ignores the keychain trust —
+  the BFF-to-API hop itself is fully verified).
 
 ---
 
