@@ -10,10 +10,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 {
     /// <summary>
     /// The Naukri adapter (docs/08-site-playbooks.md §3): drives the run's
-    /// browser page and hands the HTML to the offline parsers. Page 1
-    /// navigates to the slug search URL; later pages click the native
-    /// <b>Next</b> and wait for the first-card/range fingerprint to change,
-    /// never navigating to a <c>-N</c> URL (the SPA drops its filters there).
+    /// browser page and hands the HTML to the offline parsers. A null
+    /// cursor navigates directly to the window's first page via the
+    /// <c>-N</c> slug URL; later pages click the native <b>Next</b>.
     /// Walls are classified, never retried or solved here.
     /// </summary>
     public sealed partial class NaukriJobSource : IJobSource
@@ -109,7 +108,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 if (request.Cursor is null)
                 {
-                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria);
+                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria, request.PageNumber);
                     LogSearchUrl(_logger, context.RunId.Value, request.PageNumber, url.AbsoluteUri);
                     var response = await page.GotoAsync(
                         url.AbsoluteUri,

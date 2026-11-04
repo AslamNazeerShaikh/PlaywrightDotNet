@@ -99,7 +99,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             int? status = null;
             try
             {
-                var start = CursorOffset(request.Cursor);
+                var start = request.Cursor is null
+                ? (request.PageNumber - 1) * IndeedUrlBuilder.PageSize
+                : CursorOffset(request.Cursor);
                 var response = await page.GotoAsync(
                     IndeedUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
                     new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
