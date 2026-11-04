@@ -108,7 +108,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 if (request.Cursor is null)
                 {
-                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria, request.PageNumber);
+                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria);
                     LogSearchUrl(_logger, context.RunId.Value, request.PageNumber, url.AbsoluteUri);
                     var response = await page.GotoAsync(
                         url.AbsoluteUri,
