@@ -4,6 +4,7 @@ using AngleSharp.Dom;
 using JobScrape.Domain;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
+using JobScrape.Infrastructure.Sources;
 
 namespace JobScrape.Infrastructure.Sources.Indeed
 {
@@ -144,7 +145,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                     CompanyName.MaxLength
                 ),
                 CompanyUrl = IndeedFields.CompanyPageUrl(
-                    company?.GetAttribute("href") ?? company?.QuerySelector("a")?.GetAttribute("href"),
+                    company?.GetAttribute("href")
+                        ?? company?.QuerySelector("a")?.GetAttribute("href"),
                     pageUrl
                 ),
                 Location = Location(document, jsonLd, location),
@@ -158,7 +160,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                     jsonLd?.Skills is { Count: > 0 } skills
                         ? skills
                         : document
-                            .QuerySelectorAll("[data-testid='jobsearch-JobMetadataHeader-item'] span")
+                            .QuerySelectorAll(
+                                "[data-testid='jobsearch-JobMetadataHeader-item'] span"
+                            )
                             .Select(chip => chip.TextContent)
                 ),
                 ApplyUrl = ApplyUrl(document, pageUrl),
@@ -221,7 +225,10 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 using var fragment = IndeedHtml.Parse(html);
                 if (
                     fragment.Body is { } body
-                    && IndeedFields.LongText(IndeedHtml.ToPlainText(body)) is { } text
+                    && IndeedFields.LongText(
+                        HtmlPlainText.ToPlainText(body, static line => IndeedFields.Clean(line))
+                    )
+                        is { } text
                 )
                 {
                     return text;
@@ -236,7 +243,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             );
             return container is null
                 ? null
-                : IndeedFields.LongText(IndeedHtml.ToPlainText(container));
+                : IndeedFields.LongText(
+                    HtmlPlainText.ToPlainText(container, static line => IndeedFields.Clean(line))
+                );
         }
 
         /// <summary>
@@ -254,7 +263,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             {
                 if (
                     !IndeedHtml.IsHidden(link)
-                    && IndeedFields.ExternalApplyUrl(link.GetAttribute("href"), pageUrl) is { } applyUrl
+                    && IndeedFields.ExternalApplyUrl(link.GetAttribute("href"), pageUrl)
+                        is { } applyUrl
                 )
                 {
                     return applyUrl;

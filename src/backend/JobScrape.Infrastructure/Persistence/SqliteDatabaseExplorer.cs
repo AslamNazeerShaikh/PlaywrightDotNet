@@ -115,6 +115,21 @@ namespace JobScrape.Infrastructure.Persistence
             CancellationToken cancellationToken
         )
         {
+            var columns = await ReadColumnsAsync(connection, tableName, cancellationToken);
+            var foreignKeys = await ReadForeignKeysAsync(connection, tableName, cancellationToken);
+            var pkColumn =
+                columns.FirstOrDefault(c => c.PrimaryKey)?.Name
+                ?? (columns.Count > 0 ? columns[0].Name : string.Empty);
+
+            return new DatabaseTableSchema(tableName, columns, foreignKeys, pkColumn);
+        }
+
+        private static async Task<List<DatabaseColumnInfo>> ReadColumnsAsync(
+            SqliteConnection connection,
+            string tableName,
+            CancellationToken cancellationToken
+        )
+        {
             var pragmaRows = await connection.QueryAsync<dynamic>(
                 new CommandDefinition(
                     $"PRAGMA table_info({Quote(tableName)});",
@@ -136,6 +151,15 @@ namespace JobScrape.Infrastructure.Persistence
                 );
             }
 
+            return columns;
+        }
+
+        private static async Task<List<DatabaseForeignKeyInfo>> ReadForeignKeysAsync(
+            SqliteConnection connection,
+            string tableName,
+            CancellationToken cancellationToken
+        )
+        {
             var fkRows = await connection.QueryAsync<dynamic>(
                 new CommandDefinition(
                     $"PRAGMA foreign_key_list({Quote(tableName)});",
@@ -155,11 +179,7 @@ namespace JobScrape.Infrastructure.Persistence
                 );
             }
 
-            var pkColumn =
-                columns.FirstOrDefault(c => c.PrimaryKey)?.Name
-                ?? (columns.Count > 0 ? columns[0].Name : string.Empty);
-
-            return new DatabaseTableSchema(tableName, columns, foreignKeys, pkColumn);
+            return foreignKeys;
         }
 
         /// <inheritdoc />
@@ -235,11 +255,7 @@ namespace JobScrape.Infrastructure.Persistence
 
             var columnList = string.Join(", ", columns.Select(Quote));
             var paramList = string.Join(", ", columns.Select((_, i) => $"@p{i}"));
-            var parameters = new DynamicParameters();
-            for (var i = 0; i < columns.Count; i++)
-            {
-                parameters.Add($"p{i}", ToDbValue(values[columns[i]]));
-            }
+            var parameters = ValueParameters(columns, values);
 
             await connection.ExecuteAsync(
                 new CommandDefinition(
@@ -285,11 +301,7 @@ namespace JobScrape.Infrastructure.Persistence
             }
 
             var setClause = string.Join(", ", columns.Select((c, i) => $"{Quote(c)} = @p{i}"));
-            var parameters = new DynamicParameters();
-            for (var i = 0; i < columns.Count; i++)
-            {
-                parameters.Add($"p{i}", ToDbValue(values[columns[i]]));
-            }
+            var parameters = ValueParameters(columns, values);
 
             parameters.Add("pk", primaryKeyValue);
             var affected = await connection.ExecuteAsync(
@@ -335,6 +347,20 @@ namespace JobScrape.Infrastructure.Persistence
             {
                 throw new RowNotFoundException(tableName, primaryKeyValue);
             }
+        }
+
+        private static DynamicParameters ValueParameters(
+            List<string> columns,
+            IReadOnlyDictionary<string, JsonElement> values
+        )
+        {
+            var parameters = new DynamicParameters();
+            for (var i = 0; i < columns.Count; i++)
+            {
+                parameters.Add($"p{i}", ToDbValue(values[columns[i]]));
+            }
+
+            return parameters;
         }
 
         private static object? GetRaw(IDictionary<string, object?> values, string key)
