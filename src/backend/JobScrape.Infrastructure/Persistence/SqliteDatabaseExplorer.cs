@@ -221,7 +221,7 @@ namespace JobScrape.Infrastructure.Persistence
                 var row = new Dictionary<string, object?>(StringComparer.Ordinal);
                 foreach (var pair in values)
                 {
-                    row[pair.Key] = pair.Value is DBNull ? null : pair.Value;
+                    row[pair.Key] = pair.Value is DBNull ? null : JsonSafe(pair.Value);
                 }
 
                 rows.Add(row);
@@ -229,6 +229,15 @@ namespace JobScrape.Infrastructure.Persistence
 
             return new DatabaseRowsResult(rows, total);
         }
+
+        // JSON numbers above 2^53 lose precision in JavaScript. Return those as strings so the
+        // cockpit can render .NET ticks and other large integers exactly.
+        private const long MaxJsonSafeInteger = 9_007_199_254_740_991L;
+
+        private static object? JsonSafe(object? value) =>
+            value is long number && (number > MaxJsonSafeInteger || number < -MaxJsonSafeInteger)
+                ? number.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : value;
 
         /// <inheritdoc />
         public async Task InsertRowAsync(
