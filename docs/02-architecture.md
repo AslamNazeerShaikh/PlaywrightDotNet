@@ -462,6 +462,8 @@ Not implemented: there is no `JobQueryHandler`, no job read model, and no export
 
 ## 8. Ports and adapters
 
+![Explicit architecture: driving adapters left, driven adapters right, application core in the red hexagon](explicit-architecture.svg)
+
 ### 8.1 Application ports
 
 > Verified verbatim against the interfaces (parameter names shortened to `ct` only where the doc abbreviates; everything else is exact).
