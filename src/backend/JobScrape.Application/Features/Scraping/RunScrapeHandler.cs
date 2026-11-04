@@ -462,15 +462,21 @@ namespace JobScrape.Application.Features.Scraping
             var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
             cursor = progress.NextCursor;
 
-            // The window starts at the profile's start page: consecutive runs
-            // split the listing into groups (1-30, then 31-60) by navigating
-            // directly to the window's first page.
+            // The window may start past page one so consecutive runs split
+            // the listing into groups (1-30, then 31-60). Naukri only
+            // advances through Next clicks: a cold load of a -N slug URL
+            // redirects to page 1, so pages before the window are visited
+            // and nothing from them is kept.
             var firstPage = run.Limits.StartPage;
             var lastPage = firstPage + run.Limits.MaxPages - 1;
 
-            // A fresh run starts at the window's first page; a resumed run
-            // restarts where its kept count points at.
-            var absolute = firstPage + progress.PagesCompleted;
+            // A fresh run starts at page one and walks forward; a resumed
+            // run restarts at the window page its kept count points at.
+            var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            if (absolute < firstPage)
+            {
+                LogAdvancingToStartPage(_logger, run.Id.Value, firstPage);
+            }
             for (; absolute <= lastPage; absolute++)
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
@@ -494,7 +500,7 @@ namespace JobScrape.Application.Features.Scraping
                     break;
                 }
 
-                if (progress.PagesCompleted > 0 || absolute != firstPage)
+                if (progress.PagesCompleted > 0 || absolute > 1)
                 {
                     await _delay.WaitAsync(politeness.NextDelay(), cancellationToken);
                 }
@@ -532,6 +538,18 @@ namespace JobScrape.Application.Features.Scraping
                 {
                     LogPaginationStopped(_logger, run.Id.Value, page, "repeated page");
                     break;
+                }
+
+                if (page < firstPage)
+                {
+                    // Before the window: advance the cursor, keep nothing.
+                    cursor = result.NextCursor;
+                    if (cursor is null)
+                    {
+                        break;
+                    }
+
+                    continue;
                 }
 
                 var now = _clock.GetUtcNow();
@@ -1075,6 +1093,16 @@ namespace JobScrape.Application.Features.Scraping
             Message = "Scrape request for profile {ProfileId} refused with {ErrorCode}"
         )]
         private static partial void LogRefused(ILogger logger, Guid profileId, string errorCode);
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Run {RunId} advancing to start page {StartPage}: earlier pages are visited, not kept"
+        )]
+        private static partial void LogAdvancingToStartPage(
+            ILogger logger,
+            Guid runId,
+            int startPage
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,

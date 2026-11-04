@@ -114,8 +114,9 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         }
 
         [Fact]
-        public void PageOneBuildsTheBareSlugUrl()
+        public void SearchUrlIsNeverAPagedSlugUrl()
         {
+            // Playbook §3.5: pages 2+ come from clicking Next, never "-2" URLs.
             var criteria = new SearchCriteria(
                 ".net",
                 ["Pune", "Mumbai"],
@@ -125,42 +126,12 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 []
             );
 
-            var url = NaukriUrlBuilder.SearchUrl(criteria, 1);
+            var url = NaukriUrlBuilder.SearchUrl(criteria);
 
             Assert.Equal("https", url.Scheme);
             Assert.Equal("www.naukri.com", url.Host);
             Assert.DoesNotMatch(new Regex(@"-\d+$"), url.AbsolutePath);
             Assert.DoesNotContain("page=", url.Query, StringComparison.Ordinal);
-        }
-
-        [Fact]
-        public void LaterPagesSuffixThePathSlugAndKeepTheQuery()
-        {
-            var criteria = new SearchCriteria(
-                "asp.net",
-                ["Pune", "Hyderabad"],
-                6,
-                1,
-                remoteOnly: false,
-                []
-            );
-
-            var url = NaukriUrlBuilder.SearchUrl(criteria, 3);
-
-            Assert.Equal(
-                "https://www.naukri.com/asp-dot-net-jobs-in-pune-3?k=asp.net&l=Pune%2C%20Hyderabad&nignbevent_src=jobsearchDeskGNB&experience=6&jobAge=1",
-                url.AbsoluteUri
-            );
-        }
-
-        [Fact]
-        public void PageBelowOneIsRejected()
-        {
-            var criteria = new SearchCriteria("C#", ["Pune"], null, null, remoteOnly: false, []);
-
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-                NaukriUrlBuilder.SearchUrl(criteria, 0)
-            );
         }
 
         [Fact]

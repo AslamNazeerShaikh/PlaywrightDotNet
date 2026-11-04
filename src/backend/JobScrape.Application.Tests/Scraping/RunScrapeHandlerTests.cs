@@ -103,10 +103,14 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
-        public async Task StartsAtTheConfiguredPageDirectly()
+        public async Task StartsAtTheConfiguredPageAndSkipsEarlierPostings()
         {
             var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
-            harness.Source.Then(Page("p3", Job("a")), Page(null, Job("b")));
+            harness.Source.Then(
+                Page("p2", Job("skip")),
+                Page("p3", Job("a")),
+                Page(null, Job("b"))
+            );
 
             var summary = await RunOkAsync(harness);
 
@@ -114,9 +118,14 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Equal(2, summary.Stats.PagesFetched);
             Assert.Equal(2, summary.Stats.PostingsNew);
             Assert.Equal(
-                [new SearchPageRequest(2, null), new SearchPageRequest(3, "p3")],
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(3, "p3"),
+                ],
                 harness.Source.Requests
             );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "skip");
             Assert.Equal(
                 ["a", "b"],
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
@@ -124,10 +133,11 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
-        public async Task ClosedBrowserOnTheFirstWindowPageEndsTheRunWithoutCrashing()
+        public async Task ClosedBrowserDuringSkipEndsTheRunWithoutCrashing()
         {
-            // A closed browser surfaces as a transient wall on the first
-            // window page: the run fails gracefully instead of crashing.
+            // A closed browser surfaces as a transient wall on a skipped
+            // page: the run fails gracefully instead of crashing, since
+            // nothing was keepable yet.
             var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
             harness.Source.Then(
                 Wall(ChallengeKind.TransientError),
@@ -139,7 +149,7 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Equal(RunStage.Failed, summary.Stage);
             Assert.Equal(1, summary.Stats.Failures);
             Assert.Equal(
-                [new SearchPageRequest(2, null), new SearchPageRequest(2, null)],
+                [new SearchPageRequest(1, null), new SearchPageRequest(1, null)],
                 harness.Source.Requests
             );
         }
