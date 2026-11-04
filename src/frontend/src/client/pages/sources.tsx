@@ -132,7 +132,14 @@ export function Meter({
 }) {
   // A zero quota cap means blocked for the day, so the bar reads full.
   // A zero run cap means that step is switched off, so the bar reads empty.
-  const ratio = cap <= 0 ? (progress ? 0 : 1) : Math.min(used / cap, 1);
+  const safeUsed = Number.isFinite(used) ? used : 0;
+  const safeCap = Number.isFinite(cap) ? cap : 0;
+  const ratio =
+    safeCap <= 0
+      ? progress
+        ? 0
+        : 1
+      : Math.min(Math.max(safeUsed / safeCap, 0), 1);
   const level = progress
     ? ratio >= 1
       ? "done"
@@ -149,11 +156,11 @@ export function Meter({
       role="meter"
       aria-label={`${label} used`}
       aria-valuemin={0}
-      aria-valuemax={cap}
-      aria-valuenow={used}
+      aria-valuemax={safeCap}
+      aria-valuenow={safeUsed}
     >
       <span>{label.toUpperCase()}</span>
-      <span>{`${used} / ${cap}`}</span>
+      <span>{`${safeUsed} / ${safeCap}`}</span>
       <div className="meter-track">
         <div className="meter-bar" style={{ width: `${Math.round(ratio * 100)}%` }} />
       </div>

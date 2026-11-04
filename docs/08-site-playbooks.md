@@ -183,7 +183,7 @@ https://www.naukri.com/job-listings-{slug}-{id}
 - After clicking, poll until the fingerprint changes; timeout ~20s. *(Implemented: 40 polls × 500 ms.)*
 - If the fingerprint does not change, stop (do not loop).
 - If Next is disabled/absent, stop.
-- Never navigate directly to a `-N` URL for pages 2+.
+- Never navigate directly to a `-N` URL for pages 2+. A cold load redirects to page 1 (verified 2026-11-04).
 
 ### 3.6 Optional private API fast path (feature-flagged)
 

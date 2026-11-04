@@ -135,9 +135,7 @@ namespace JobScrape.Application.Tests.Scraping
         [Fact]
         public async Task ClosedBrowserDuringSkipEndsTheRunWithoutCrashing()
         {
-            // A closed browser surfaces as a transient wall on a skipped
-            // page: the run fails gracefully instead of crashing, since
-            // nothing was keepable yet.
+            // Retry reuses the same page-1 request.
             var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
             harness.Source.Then(
                 Wall(ChallengeKind.TransientError),
