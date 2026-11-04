@@ -12,16 +12,16 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793292763.143955,
-    "seen": 1793606170.349694,
-    "ast_hash": "ab6f8abc2a4da4fe8b79b7a556ef9ae0",
-    "semantic_hash": "ab6f8abc2a4da4fe8b79b7a556ef9ae0"
+    "mtime": 1793795843.5047383,
+    "seen": 1793798132.802634,
+    "ast_hash": "15e440d564883ef7723a7f3e98f15dfe",
+    "semantic_hash": ""
   },
   "docs/00-executive-summary.md": {
-    "mtime": 1793457083.6979003,
-    "seen": 1793606170.349695,
-    "ast_hash": "5fad94d4e9c240f0e3a73c37f398e269",
-    "semantic_hash": "5fad94d4e9c240f0e3a73c37f398e269"
+    "mtime": 1793795841.012361,
+    "seen": 1793798132.802635,
+    "ast_hash": "50407151058aeccb2cfd3ac1fc99551d",
+    "semantic_hash": ""
   },
   "docs/01-research-analysis.md": {
     "mtime": 1793457083.6980867,
@@ -30,9 +30,9 @@
     "semantic_hash": "2b76b11e29baa16b43881d4ecd93b855"
   },
   "docs/02-architecture.md": {
-    "mtime": 1793648545.8616319,
-    "seen": 1793697992.3665469,
-    "ast_hash": "80446890c9b13d095283f480b611fc56",
+    "mtime": 1793795841.015915,
+    "seen": 1793798132.8026361,
+    "ast_hash": "750d3a2ab0a6ede7e7fe4ef166d15eed",
     "semantic_hash": ""
   },
   "docs/03-domain-model.md": {
@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "docs/04-solution-and-tooling.md": {
-    "mtime": 1793649078.919117,
-    "seen": 1793697992.366548,
-    "ast_hash": "8175ff63bc04f4cea07f6fc1e30af6e9",
+    "mtime": 1793795841.0200932,
+    "seen": 1793798132.802637,
+    "ast_hash": "b65e7acac716afa7d956853b718d4bdd",
     "semantic_hash": ""
   },
   "docs/05-gameplan.md": {
@@ -138,10 +138,10 @@
     "semantic_hash": "a1f4903dfe6036922c4b37df504ae544"
   },
   "docs/10-adr/README.md": {
-    "mtime": 1793457083.7016578,
-    "seen": 1793606170.349705,
-    "ast_hash": "5bd2e375ffc777a02229d6ffb5d27a3a",
-    "semantic_hash": "5bd2e375ffc777a02229d6ffb5d27a3a"
+    "mtime": 1793795838.3077643,
+    "seen": 1793798132.802649,
+    "ast_hash": "53615fbf7ab9441a2252270eaf0430d2",
+    "semantic_hash": ""
   },
   "docs/11-open-decisions.md": {
     "mtime": 1793457083.701782,
@@ -192,15 +192,15 @@
     "semantic_hash": "82bf22a47c3cdd0ea97aacb6c04bd77f"
   },
   "src/backend/JobScrape.Api/JobScrape.Api.csproj": {
-    "mtime": 1793643538.2139728,
-    "seen": 1793697992.366207,
-    "ast_hash": "1ee23a1a1307af325e4847e742484c52",
+    "mtime": 1793795652.9180732,
+    "seen": 1793798132.8022468,
+    "ast_hash": "acbd060980013055f9ef4753cbb9291d",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Program.cs": {
-    "mtime": 1793694699.3988307,
-    "seen": 1793697992.366207,
-    "ast_hash": "3881da4eca413b67da17a868a661b880",
+    "mtime": 1793796068.8345306,
+    "seen": 1793798132.8022468,
+    "ast_hash": "b0bb65a8e48a868239053d06de91e8cd",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Properties/launchSettings.json": {
@@ -312,9 +312,9 @@
     "semantic_hash": "79bd71cf5e87d2ccc079679e0ed8bc6d"
   },
   "src/backend/JobScrape.Infrastructure/JobScrape.Infrastructure.csproj": {
-    "mtime": 1793616128.1940382,
-    "seen": 1793616963.109656,
-    "ast_hash": "99d76228073f2bd63a78babf83ea8c7c",
+    "mtime": 1793795652.9177718,
+    "seen": 1793798132.802367,
+    "ast_hash": "8d10c243998b307380e813f5446e2a4e",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.slnx": {
@@ -2040,9 +2040,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Naukri/NaukriDetailParser.cs": {
-    "mtime": 1793604852.6036942,
-    "seen": 1793606170.34967,
-    "ast_hash": "7405ea7f7ccc62a5a6ef849b61511c77",
+    "mtime": 1793797560.8691854,
+    "seen": 1793798132.8023942,
+    "ast_hash": "ef96840fe9ab1683b433c49f76010eaa",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Naukri/NaukriFields.cs": {
@@ -2052,9 +2052,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Naukri/NaukriHtml.cs": {
-    "mtime": 1793604852.6038413,
-    "seen": 1793606170.349671,
-    "ast_hash": "29ea22ac49643d50106f23fc9039ac80",
+    "mtime": 1793797768.3498082,
+    "seen": 1793798132.8023949,
+    "ast_hash": "6384d11c54aa3a896e3a52e7d9398c23",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Naukri/NaukriJobSource.cs": {
@@ -5670,9 +5670,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Indeed/IndeedDetailParser.cs": {
-    "mtime": 1793615562.3295567,
-    "seen": 1793616963.109673,
-    "ast_hash": "4fd360703701a74c1c0a310a8575ba1e",
+    "mtime": 1793797560.9612086,
+    "seen": 1793798132.8023858,
+    "ast_hash": "633762513801e6404f4b874f3672c51c",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Indeed/IndeedFields.cs": {
@@ -5682,9 +5682,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Indeed/IndeedHtml.cs": {
-    "mtime": 1793615460.4893312,
-    "seen": 1793616963.109674,
-    "ast_hash": "d50a422bab35c424fc88a2d0301e96a7",
+    "mtime": 1793797768.3498085,
+    "seen": 1793798132.802387,
+    "ast_hash": "315edfe8a379ef80ba0baf28c5c93b3b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/Indeed/IndeedJobSource.cs": {
@@ -5730,9 +5730,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/LinkedIn/LinkedInHtml.cs": {
-    "mtime": 1793615801.5312603,
-    "seen": 1793616963.109678,
-    "ast_hash": "ff2e183c051d827e59d34e15b527d9bc",
+    "mtime": 1793797768.349808,
+    "seen": 1793798132.802391,
+    "ast_hash": "44f8f6ff66330ce6817c1588042f47e2",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Sources/LinkedIn/LinkedInJobSource.cs": {
@@ -5903,12 +5903,6 @@
     "ast_hash": "ee2adddbaf4e7c7b34de1161fccc8a3f",
     "semantic_hash": ""
   },
-  ".opencode/plugins/graphify.js": {
-    "mtime": 1793457083.6751373,
-    "seen": 1793697992.3661282,
-    "ast_hash": "dedd29af2cb8a6160dbaf9742a5080d4",
-    "semantic_hash": ""
-  },
   "src/backend/JobScrape.Api.Tests/DatabaseEndpointTests.cs": {
     "mtime": 1793721876.7200537,
     "seen": 1793722147.366391,
@@ -6030,9 +6024,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/SqliteDatabaseExplorer.cs": {
-    "mtime": 1793720884.2214205,
-    "seen": 1793722147.366518,
-    "ast_hash": "53cd812e6d01f4151abaa5ec6b8dc8b6",
+    "mtime": 1793797812.1860106,
+    "seen": 1793798132.802382,
+    "ast_hash": "757bdfb152b4874190c426721a3c522d",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database-diagram.tsx": {
@@ -6059,60 +6053,6 @@
     "ast_hash": "6693ef397517091e7cce62bd609e9d0d",
     "semantic_hash": ""
   },
-  ".opencode/skills/graphify/SKILL.md": {
-    "mtime": 1793457083.6871295,
-    "seen": 1793697992.366453,
-    "ast_hash": "5bd0c585c5fa42bb9a682a5900cfa556",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/add-watch.md": {
-    "mtime": 1793457083.6872752,
-    "seen": 1793697992.366453,
-    "ast_hash": "c1f65eb4102ad515149303c7f296b718",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/exports.md": {
-    "mtime": 1793457083.6876388,
-    "seen": 1793697992.3664541,
-    "ast_hash": "73968e2842f6eb742f96cf04c1f8db68",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/extraction-spec.md": {
-    "mtime": 1793280348.7701304,
-    "seen": 1793697992.3664541,
-    "ast_hash": "b50f43d87ae9a11bcf1082942e1f99d4",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/github-and-merge.md": {
-    "mtime": 1793457083.6878147,
-    "seen": 1793697992.3664541,
-    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/hooks.md": {
-    "mtime": 1793280348.7707472,
-    "seen": 1793697992.366455,
-    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/query.md": {
-    "mtime": 1793457083.6880255,
-    "seen": 1793697992.366455,
-    "ast_hash": "d650e8b65648aa27c5f99c3742e010c9",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/transcribe.md": {
-    "mtime": 1793457083.6881664,
-    "seen": 1793697992.366456,
-    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/update.md": {
-    "mtime": 1793457083.6884239,
-    "seen": 1793697992.366456,
-    "ast_hash": "54bb75d63631ba69e65d5908d52fbbd0",
-    "semantic_hash": ""
-  },
   "CLAUDE.md": {
     "mtime": 1793692593.3631434,
     "seen": 1793697992.366545,
@@ -6135,6 +6075,120 @@
     "mtime": 1793721000.1243765,
     "seen": 1793722147.366536,
     "ast_hash": "471b441c72479a01b29ea46fd7486870",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Sources/HtmlPlainText.cs": {
+    "mtime": 1793797732.4861214,
+    "seen": 1793798132.8023849,
+    "ast_hash": "4c72526ca2959e581edd7fcb93b27de1",
+    "semantic_hash": ""
+  },
+  "docs/10-adr/0018-dapper-sqlite-explorer.md": {
+    "mtime": 1793795707.3000147,
+    "seen": 1793798132.802648,
+    "ast_hash": "514bb0b6255b225713517f30fc30118b",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/README.md": {
+    "mtime": 1793794764.0975738,
+    "seen": 1793798132.802654,
+    "ast_hash": "0baf2a15a9a986a55f6db444e2e9585d",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/01-overview-dark.png": {
+    "mtime": 1793794698.8451753,
+    "seen": 1793798132.802669,
+    "ast_hash": "440eb9bf04e88469ba636d2b526d63b8",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/01-overview-light.png": {
+    "mtime": 1793794698.1027455,
+    "seen": 1793798132.80267,
+    "ast_hash": "f93e65e596fdc583d618b4461a20c649",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/02-health-dark.png": {
+    "mtime": 1793794702.7852328,
+    "seen": 1793798132.80267,
+    "ast_hash": "3f5b8fc22c8d5aad1a9894c8787c4e81",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/02-health-light.png": {
+    "mtime": 1793794702.09402,
+    "seen": 1793798132.8026712,
+    "ast_hash": "2e98d9ebcdd7383474bb150155c05019",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/03-profiles-dark.png": {
+    "mtime": 1793794706.7422497,
+    "seen": 1793798132.8026712,
+    "ast_hash": "558a5ab74f58d19d7bc2db5fa16d02cc",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/03-profiles-light.png": {
+    "mtime": 1793794706.031705,
+    "seen": 1793798132.8026721,
+    "ast_hash": "b9e1f98e3fd4478206a8b4cd231572f5",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/04-sources-dark.png": {
+    "mtime": 1793794710.7146258,
+    "seen": 1793798132.8026721,
+    "ast_hash": "16dc6ed02394c3d1516c01562cf74d6b",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/04-sources-light.png": {
+    "mtime": 1793794709.9952638,
+    "seen": 1793798132.8026721,
+    "ast_hash": "2468e3b32e3672a3a8fa688a026d6840",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/05-sessions-dark.png": {
+    "mtime": 1793794714.8093257,
+    "seen": 1793798132.8026729,
+    "ast_hash": "5787179ac1e10c119d53931fec678bb8",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/05-sessions-light.png": {
+    "mtime": 1793794714.0904224,
+    "seen": 1793798132.8026729,
+    "ast_hash": "c13f3cdbd1e2addaacc40b5e030f96a4",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/06-runs-dark.png": {
+    "mtime": 1793794718.8783107,
+    "seen": 1793798132.8026738,
+    "ast_hash": "9819ed1ccd42a29450ddfcba2f171d9e",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/06-runs-light.png": {
+    "mtime": 1793794718.1550403,
+    "seen": 1793798132.8026738,
+    "ast_hash": "1ffb0a3db089d6bbcee77a14d92cb44a",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/07-topology-dark.png": {
+    "mtime": 1793794722.8520799,
+    "seen": 1793798132.802675,
+    "ast_hash": "5de7bae37fb790ad5dbcbff8129c526a",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/07-topology-light.png": {
+    "mtime": 1793794722.1253302,
+    "seen": 1793798132.802675,
+    "ast_hash": "f4139e089b5b78e7f87d0dd16e94f83d",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/08-database-dark.png": {
+    "mtime": 1793794726.812211,
+    "seen": 1793798132.802676,
+    "ast_hash": "fc9c57f8542b6b523ac7fe7937299112",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/08-database-light.png": {
+    "mtime": 1793794726.0946362,
+    "seen": 1793798132.802676,
+    "ast_hash": "d6c366ce68ba29aa0292db404db7163f",
     "semantic_hash": ""
   }
 }
