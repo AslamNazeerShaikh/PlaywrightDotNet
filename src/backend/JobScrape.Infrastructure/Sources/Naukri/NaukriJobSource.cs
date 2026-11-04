@@ -93,7 +93,16 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(request);
-            var page = PageOf(context);
+            var page = ClosedPage(context.BrowserProfileId);
+            if (page is null)
+            {
+                // The operator closed the browser, or its renderer died,
+                // mid-run. A transient stop beats a crash: the handler
+                // retries once, then ends the run with whatever it kept.
+                return SearchPageResult.Blocked(
+                    Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                );
+            }
 
             int? status = null;
             try
@@ -176,7 +185,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(job);
-            var page = PageOf(context);
+            var page = ClosedPage(context.BrowserProfileId);
+            if (page is null)
+            {
+                return new JobDetailResult(
+                    null,
+                    Transient($"Browser page closed or crashed at detail {job.ExternalJobId.Value}.")
+                );
+            }
 
             try
             {
@@ -221,17 +237,23 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Gets the run's page, opened by the session manager before paging.
+        /// Gets the run's open page, or null when the browser was closed or
+        /// its renderer died. A disposed context throws on property access,
+        /// so that reads as gone too. Callers report a transient wall instead
+        /// of throwing, so the run stops gracefully instead of crashing.
         /// </summary>
-        /// <param name="context">The run context.</param>
-        /// <returns>The page.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when the profile has no open browser.</exception>
-        private IPage PageOf(SourceRunContext context)
+        /// <param name="profileId">The browser profile.</param>
+        /// <returns>The open page, or null when there is none.</returns>
+        private IPage? ClosedPage(BrowserProfileId profileId)
         {
-            return _pool.Find(context.BrowserProfileId)
-                ?? throw new InvalidOperationException(
-                    $"No open browser for profile '{context.BrowserProfileId}'."
-                );
+            try
+            {
+                return _pool.Find(profileId);
+            }
+            catch (ObjectDisposedException)
+            {
+                return null;
+            }
         }
 
         /// <summary>
