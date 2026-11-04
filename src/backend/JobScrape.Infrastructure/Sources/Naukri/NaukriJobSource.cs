@@ -10,11 +10,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 {
     /// <summary>
     /// The Naukri adapter (docs/08-site-playbooks.md §3): drives the run's
-    /// browser page and hands the HTML to the offline parsers. Page 1
-    /// navigates to the slug search URL; later pages click the native
-    /// <b>Next</b> and wait for the fingerprint to change, never
-    /// navigating to a <c>-N</c> URL (a cold load redirects to page 1).
-    /// Walls are classified, never retried or solved here.
+    /// browser page and hands the HTML to the offline parsers. A null cursor
+    /// always loads page 1 first: its range gives the listing size, so a
+    /// start page past the end fails fast instead of recording page 1 as
+    /// the window. A cold <c>-N</c> load redirects to filtered page 1, so
+    /// deep links are never used; pre-window pages advance through native
+    /// <b>Next</b> clicks. Later pages inside a run click Next and wait for
+    /// the fingerprint to change. Walls are classified, never retried or
+    /// solved here.
     /// </summary>
     public sealed partial class NaukriJobSource : IJobSource
     {
@@ -85,6 +88,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         public SourceCapabilities Capabilities { get; } = new(SupportsDetails: true);
 
         /// <inheritdoc />
+        /// <exception cref="StartPageOutOfRangeException">
+        /// Thrown when the requested start page is past the listing's last page.
+        /// </exception>
         public async Task<SearchPageResult> SearchPageAsync(
             SourceRunContext context,
             SearchPageRequest request,
@@ -104,65 +110,65 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 );
             }
 
-            int? status = null;
             try
             {
                 if (request.Cursor is null)
                 {
-                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria);
-                    LogSearchUrl(_logger, context.RunId.Value, request.PageNumber, url.AbsoluteUri);
-                    var response = await page.GotoAsync(
-                        url.AbsoluteUri,
+                    // Page 1 is always loaded first to learn the listing
+                    // size: a cold -N load redirects to filtered page 1.
+                    var page1Url = NaukriUrlBuilder.SearchUrl(context.Criteria);
+                    LogSearchUrl(
+                        _logger,
+                        context.RunId.Value,
+                        request.PageNumber,
+                        page1Url.AbsoluteUri
+                    );
+                    var probe = await page.GotoAsync(
+                        page1Url.AbsoluteUri,
                         new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
                     );
-                    status = response?.Status;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var first = await FinishPageAsync(
+                        page,
+                        context,
+                        request,
+                        probe?.Status,
+                        cancellationToken
+                    );
+                    var landedUrl = page.Url;
+                    LogLanded(_logger, context, request, landedUrl, first);
+                    if (
+                        first.Challenge.Kind == ChallengeKind.None && context.StartPage > 1
+                    )
+                    {
+                        var size = NaukriResultRange.Parse(first.Fingerprint?.ResultRange);
+                        if (size is not null && context.StartPage > size.MaxPage)
+                        {
+                            throw new StartPageOutOfRangeException(
+                                context.StartPage,
+                                size.MaxPage
+                            );
+                        }
+
+                        if (size is null && first.NextCursor is null)
+                        {
+                            // One page and no parseable range: the listing
+                            // has a single page, so any later start is past it.
+                            throw new StartPageOutOfRangeException(context.StartPage, 1);
+                        }
+                    }
+
+                    return first;
                 }
-                else if (!await ClickNextAsync(page, cancellationToken))
+
+                if (!await ClickNextAsync(page, cancellationToken))
                 {
                     // Next vanished or the page did not change: report the
                     // same page so the handler's repeated-page guard stops.
                     LogNextDidNotAdvance(_logger, context.RunId.Value, request.PageNumber);
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
-                var hasCards = await WaitForCardsAsync(page);
-                await ScrollAsync(page, cancellationToken);
-                await page.EvaluateAsync(MarkHiddenScript);
-
-                var challenge = NaukriChallengeClassifier.Classify(
-                    new Uri(page.Url),
-                    status,
-                    await page.TitleAsync(),
-                    await PageText.BodyAsync(page),
-                    hasCards
-                );
-                if (challenge.Kind != ChallengeKind.None)
-                {
-                    return SearchPageResult.Blocked(challenge);
-                }
-
-                var parsed = NaukriSearchParser.Parse(
-                    await page.ContentAsync(),
-                    _clock.GetUtcNow()
-                );
-                if (parsed.DroppedCards > 0)
-                {
-                    LogCardsDropped(
-                        _logger,
-                        context.RunId.Value,
-                        request.PageNumber,
-                        parsed.DroppedCards
-                    );
-                }
-
-                return new SearchPageResult(
-                    parsed.Jobs,
-                    parsed.HasNext ? NextCursor : null,
-                    parsed.FirstJobId is null && parsed.ResultRange is null
-                        ? null
-                        : new PageFingerprint(parsed.FirstJobId, parsed.ResultRange),
-                    ChallengeAssessment.Clear
-                );
+                return await FinishPageAsync(page, context, request, null, cancellationToken);
             }
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
@@ -174,6 +180,91 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
                 return SearchPageResult.Blocked(Transient("Search page timed out."));
             }
+        }
+
+        /// <summary>
+        /// Logs where a cold fetch landed with its range.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="context">The run context.</param>
+        /// <param name="request">The requested page.</param>
+        /// <param name="url">The landed URL.</param>
+        /// <param name="result">The parsed page.</param>
+        private static void LogLanded(
+            ILogger<NaukriJobSource> logger,
+            SourceRunContext context,
+            SearchPageRequest request,
+            string url,
+            SearchPageResult result
+        )
+        {
+            LogLandedPage(
+                logger,
+                context.RunId.Value,
+                request.PageNumber,
+                url,
+                result.Fingerprint?.ResultRange ?? "unknown"
+            );
+        }
+
+        /// <summary>
+        /// Reads the current page: waits for cards, scrolls, marks hidden
+        /// cards, classifies, and parses. The navigation status comes from
+        /// the goto that led here, or null after Next clicks.
+        /// </summary>
+        /// <param name="page">The run's page.</param>
+        /// <param name="context">The run context, for logs.</param>
+        /// <param name="request">The requested page, for logs.</param>
+        /// <param name="status">The navigation status, if any.</param>
+        /// <param name="cancellationToken">Token to observe.</param>
+        /// <returns>The fetched page.</returns>
+        private async Task<SearchPageResult> FinishPageAsync(
+            IPage page,
+            SourceRunContext context,
+            SearchPageRequest request,
+            int? status,
+            CancellationToken cancellationToken
+        )
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var hasCards = await WaitForCardsAsync(page);
+            await ScrollAsync(page, cancellationToken);
+            await page.EvaluateAsync(MarkHiddenScript);
+
+            var challenge = NaukriChallengeClassifier.Classify(
+                new Uri(page.Url),
+                status,
+                await page.TitleAsync(),
+                await PageText.BodyAsync(page),
+                hasCards
+            );
+            if (challenge.Kind != ChallengeKind.None)
+            {
+                return SearchPageResult.Blocked(challenge);
+            }
+
+            var parsed = NaukriSearchParser.Parse(
+                await page.ContentAsync(),
+                _clock.GetUtcNow()
+            );
+            if (parsed.DroppedCards > 0)
+            {
+                LogCardsDropped(
+                    _logger,
+                    context.RunId.Value,
+                    request.PageNumber,
+                    parsed.DroppedCards
+                );
+            }
+
+            return new SearchPageResult(
+                parsed.Jobs,
+                parsed.HasNext ? NextCursor : null,
+                parsed.FirstJobId is null && parsed.ResultRange is null
+                    ? null
+                    : new PageFingerprint(parsed.FirstJobId, parsed.ResultRange),
+                ChallengeAssessment.Clear
+            );
         }
 
         /// <inheritdoc />
@@ -390,6 +481,18 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Guid runId,
             int page,
             string url
+        );
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Naukri run {RunId} page {Page} landed on {Url} with range {Range}"
+        )]
+        private static partial void LogLandedPage(
+            ILogger logger,
+            Guid runId,
+            int page,
+            string url,
+            string range
         );
 
         [LoggerMessage(

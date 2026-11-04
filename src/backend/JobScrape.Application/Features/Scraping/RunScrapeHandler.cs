@@ -307,7 +307,13 @@ namespace JobScrape.Application.Features.Scraping
             await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
             LogStarted(_logger, run.Id.Value, source.Value, profile.Id.Value);
 
-            var context = new SourceRunContext(run.Id, source, browser.Id, profile.Criteria);
+            var context = new SourceRunContext(
+                run.Id,
+                source,
+                browser.Id,
+                profile.Criteria,
+                profile.Limits.StartPage
+            );
             return Result.Ok(
                 new RunScope(
                     run,
@@ -505,13 +511,30 @@ namespace JobScrape.Application.Features.Scraping
 
                 var page = absolute;
                 var request = new SearchPageRequest(page, cursor);
-                var result = await FetchWithRetryAsync(
-                    scope,
-                    $"page {page}",
-                    token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
-                    fetched => fetched.Challenge,
-                    cancellationToken
-                );
+                SearchPageResult result;
+                try
+                {
+                    result = await FetchWithRetryAsync(
+                        scope,
+                        $"page {page}",
+                        token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
+                        fetched => fetched.Challenge,
+                        cancellationToken
+                    );
+                }
+                catch (StartPageOutOfRangeException ex)
+                {
+                    // Fail with the precise reason instead of the generic
+                    // zero-page fail below. The run is non-terminal here
+                    // (searching just began), so Fail cannot throw.
+                    var outOfRange =
+                        $"start page {ex.StartPage} is past the last page {ex.MaxPage}";
+                    LogPaginationStopped(_logger, run.Id.Value, page, outOfRange);
+                    run.RecordFailure();
+                    run.Fail(ex.Message, _clock.GetUtcNow());
+                    await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                    return true;
+                }
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
                     scope.Browser.ConsecutiveChallenges,
