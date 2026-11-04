@@ -925,7 +925,7 @@ flowchart LR
     BRW --> NK["naukri.com"]
 ```
 
-- `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj` (Development serves the OpenAPI document at `/openapi/v1.json`; no Swagger/Scalar UI is registered).
+- `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj` (Development serves the OpenAPI document at `/openapi/v1.json` and the Scalar reference UI at `/scalar`).
 - `bun run dev` in `src/frontend/` (BFF `:3000` + Tailwind watcher); `DOTNET_API_URL` points the proxy at the API.
 - Install a Playwright browser once after a build (see [Operations Runbook](09-operations-runbook.md)); a run opens a visible browser window on this machine.
 - No scheduler, no CLI, no exports: the deployable surface is the API plus the BFF.

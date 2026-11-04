@@ -133,7 +133,7 @@ No production project may reference a test project. Domain references nothing. A
 > **Installed today** — every row below is a `PackageReference` in at least
 > one `.csproj`, versioned in `Directory.Packages.props` (central package
 > management + transitive pinning on). Anything else in the pre-rename
-> design matrix (`System.CommandLine`, Scalar, NSubstitute, ClosedXML, …)
+> design matrix (`System.CommandLine`, NSubstitute, …)
 > is approved for later slices but has **no reference in the tree yet** and
 > must not appear in diagrams as installed.
 
@@ -142,10 +142,13 @@ No production project may reference a test project. Domain references nothing. A
 | `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
 | `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | Infrastructure | Options binding + DataAnnotations validation. |
 | `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
+| `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Direct SQLite access for the raw database explorer. |
+| `Dapper` | `2.1.89` | Infrastructure | Micro-ORM for the raw database explorer (see ADR-0018). |
 | `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Headed browser automation: persistent contexts per browser profile, Naukri navigation. |
 | `AngleSharp` | `1.8.6` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
 | `Microsoft.AspNetCore.OpenApi` | `10.0.14` | Api | OpenAPI document generation (Development only). |
+| `Scalar.AspNetCore` | `2.18.5` | Api | Local interactive API reference at `/scalar` (Development only). |
 | `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
 | `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
 | `Serilog.Enrichers.Environment` | `3.0.1` | Api | Machine and environment names. |
@@ -177,18 +180,24 @@ flowchart LR
     LOG["Microsoft.Extensions<br/>.Logging.Abstractions"]
     OPT["Microsoft.Extensions<br/>.Options.DataAnnotations"]
     EF["Microsoft.EntityFrameworkCore<br/>.Sqlite + .Design"]
+    MDS["Microsoft.Data.Sqlite"]
+    DAP["Dapper"]
     PW["Microsoft.Playwright"]
     AS["AngleSharp"]
     OA["Microsoft.AspNetCore.OpenApi"]
+    SCA["Scalar.AspNetCore"]
     SER["Serilog<br/>AspNetCore + Sinks.Async<br/>+ 6 enrichers + Exceptions<br/>+ Demystifier"]
 
     APP --> LOG
     INF --> LOG
     INF --> OPT
     INF --> EF
+    INF --> MDS
+    INF --> DAP
     INF --> PW
     INF --> AS
     API --> OA
+    API --> SCA
     API --> SER
 ```
 
@@ -201,7 +210,6 @@ flowchart LR
 - `System.CommandLine.NamingConventionBinder` — legacy handler binding; prefer the library-recommended `SetAction`/`SetHandler`.
 - `Newtonsoft.Json` — `System.Text.Json` is the platform default; add Newtonsoft only for a concrete compatibility requirement.
 - `Polly` as a direct package — no HTTP resilience infrastructure exists yet; add Polly (or `Microsoft.Extensions.Http.Resilience`) only with a measured non-HTTP pipeline need. Never retry a challenge/wall regardless of library.
-- `Dapper` — EF Core handles both writes and read models.
 - `Seq`/ELK/OpenTelemetry exporters — local JSON logs are the v1 baseline; add centralized telemetry only when a real requirement appears.
 - `Selenium` — only if real Safari becomes mandatory.
 - `FluentAssertions` — xUnit assertions are sufficient; avoid the v8 license question.
@@ -298,8 +306,8 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
 
 > The real file also pins `Microsoft.Extensions.Hosting` and
 > `Microsoft.Extensions.Http` (`10.0.14`), which no project references.
-> Anything else (`System.CommandLine`, Scalar, `Http.Resilience`,
-> `Microsoft.Data.Sqlite`, `Microsoft.Playwright.Xunit.v3`,
+> Anything else (`System.CommandLine`, `Http.Resilience`,
+> `Microsoft.Playwright.Xunit.v3`,
 > NSubstitute, Verify, MinVer) appears only in the pre-rename design matrix:
 > no `PackageVersion` and no `PackageReference` exists for it today.
 > ClosedXML `0.105.1` is pinned centrally and referenced by Infrastructure.

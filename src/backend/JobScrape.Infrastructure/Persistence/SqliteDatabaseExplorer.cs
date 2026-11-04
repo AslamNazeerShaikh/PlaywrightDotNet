@@ -1,11 +1,12 @@
 using System.Text.Json;
+using Dapper;
 using JobScrape.Application.Abstractions;
 using Microsoft.Data.Sqlite;
 
 namespace JobScrape.Infrastructure.Persistence
 {
     /// <summary>
-    /// ADO.NET-backed <see cref="IDatabaseExplorer"/> over the SQLite file.
+    /// Dapper-backed <see cref="IDatabaseExplorer"/> over the SQLite file.
     /// Table/column identifiers are validated against the live schema and
     /// quoted; values are always parameterized.
     /// </summary>
@@ -15,13 +16,9 @@ namespace JobScrape.Infrastructure.Persistence
 
         private static bool IsValidIdentifier(string name) =>
             !string.IsNullOrWhiteSpace(name)
-            && System.Text.RegularExpressions.Regex.IsMatch(
-                name,
-                @"^[A-Za-z_][A-Za-z0-9_]*$"
-            );
+            && System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Za-z_][A-Za-z0-9_]*$");
 
-        private static string Quote(string identifier) =>
-            $"\"{identifier.Replace("\"", "\"\"")}\"";
+        private static string Quote(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
         private async Task<SqliteConnection> OpenAsync(CancellationToken ct)
         {
@@ -29,9 +26,9 @@ namespace JobScrape.Infrastructure.Persistence
             try
             {
                 await connection.OpenAsync(ct);
-                using var pragma = connection.CreateCommand();
-                pragma.CommandText = "PRAGMA foreign_keys = ON;";
-                await pragma.ExecuteNonQueryAsync(ct);
+                await connection.ExecuteAsync(
+                    new CommandDefinition("PRAGMA foreign_keys = ON;", cancellationToken: ct)
+                );
                 return connection;
             }
             catch
@@ -46,17 +43,13 @@ namespace JobScrape.Infrastructure.Persistence
             CancellationToken ct
         )
         {
-            var tables = new HashSet<string>(StringComparer.Ordinal);
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText =
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;";
-            using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-            {
-                tables.Add(reader.GetString(0));
-            }
-
-            return tables;
+            var names = await connection.QueryAsync<string>(
+                new CommandDefinition(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;",
+                    cancellationToken: ct
+                )
+            );
+            return new HashSet<string>(names, StringComparer.Ordinal);
         }
 
         private static async Task EnsureTableAsync(
@@ -92,12 +85,12 @@ namespace JobScrape.Infrastructure.Persistence
                     continue;
                 }
 
-                long count;
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
-                    count = (long)(await cmd.ExecuteScalarAsync(cancellationToken) ?? 0L);
-                }
+                var count = await connection.QuerySingleAsync<long>(
+                    new CommandDefinition(
+                        $"SELECT COUNT(*) FROM {Quote(table)};",
+                        cancellationToken: cancellationToken
+                    )
+                );
 
                 result.Add(new DatabaseTableInfo(table, count));
             }
@@ -122,40 +115,44 @@ namespace JobScrape.Infrastructure.Persistence
             CancellationToken cancellationToken
         )
         {
+            var pragmaRows = await connection.QueryAsync<dynamic>(
+                new CommandDefinition(
+                    $"PRAGMA table_info({Quote(tableName)});",
+                    cancellationToken: cancellationToken
+                )
+            );
             var columns = new List<DatabaseColumnInfo>();
-            using (var cmd = connection.CreateCommand())
+            foreach (var row in pragmaRows)
             {
-                cmd.CommandText = $"PRAGMA table_info({Quote(tableName)});";
-                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    columns.Add(
-                        new DatabaseColumnInfo(
-                            reader.GetString(1),
-                            reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                            reader.GetInt32(3) == 1,
-                            reader.GetInt32(5) != 0,
-                            reader.IsDBNull(4) ? null : reader.GetString(4)
-                        )
-                    );
-                }
+                var values = (IDictionary<string, object?>)row;
+                columns.Add(
+                    new DatabaseColumnInfo(
+                        GetString(values, "name") ?? string.Empty,
+                        GetString(values, "type") ?? string.Empty,
+                        GetInt(values, "notnull") == 1,
+                        GetInt(values, "pk") != 0,
+                        GetString(values, "dflt_value")
+                    )
+                );
             }
 
+            var fkRows = await connection.QueryAsync<dynamic>(
+                new CommandDefinition(
+                    $"PRAGMA foreign_key_list({Quote(tableName)});",
+                    cancellationToken: cancellationToken
+                )
+            );
             var foreignKeys = new List<DatabaseForeignKeyInfo>();
-            using (var cmd = connection.CreateCommand())
+            foreach (var row in fkRows)
             {
-                cmd.CommandText = $"PRAGMA foreign_key_list({Quote(tableName)});";
-                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    foreignKeys.Add(
-                        new DatabaseForeignKeyInfo(
-                            reader.GetString(3),
-                            reader.GetString(2),
-                            reader.GetString(4)
-                        )
-                    );
-                }
+                var values = (IDictionary<string, object?>)row;
+                foreignKeys.Add(
+                    new DatabaseForeignKeyInfo(
+                        GetString(values, "from") ?? string.Empty,
+                        GetString(values, "table") ?? string.Empty,
+                        GetString(values, "to") ?? string.Empty
+                    )
+                );
             }
 
             var pkColumn =
@@ -179,36 +176,35 @@ namespace JobScrape.Infrastructure.Persistence
             limit = Math.Clamp(limit <= 0 ? 50 : limit, 1, 500);
             offset = Math.Max(0, offset);
 
-            long total;
-            using (var countCmd = connection.CreateCommand())
-            {
-                countCmd.CommandText = $"SELECT COUNT(*) FROM {Quote(tableName)};";
-                total = (long)(await countCmd.ExecuteScalarAsync(cancellationToken) ?? 0L);
-            }
+            var total = await connection.QuerySingleAsync<long>(
+                new CommandDefinition(
+                    $"SELECT COUNT(*) FROM {Quote(tableName)};",
+                    cancellationToken: cancellationToken
+                )
+            );
+
+            var parameters = new DynamicParameters();
+            parameters.Add("limit", limit);
+            parameters.Add("offset", offset);
+            var dataRows = await connection.QueryAsync<dynamic>(
+                new CommandDefinition(
+                    $"SELECT * FROM {Quote(tableName)} LIMIT @limit OFFSET @offset;",
+                    parameters,
+                    cancellationToken: cancellationToken
+                )
+            );
 
             var rows = new List<IReadOnlyDictionary<string, object?>>();
-            using (var cmd = connection.CreateCommand())
+            foreach (var dataRow in dataRows)
             {
-                cmd.CommandText = $"SELECT * FROM {Quote(tableName)} LIMIT @limit OFFSET @offset;";
-                cmd.Parameters.AddWithValue("@limit", limit);
-                cmd.Parameters.AddWithValue("@offset", offset);
-                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-                var columnNames = Enumerable
-                    .Range(0, reader.FieldCount)
-                    .Select(i => reader.GetName(i))
-                    .ToArray();
-                while (await reader.ReadAsync(cancellationToken))
+                var values = (IDictionary<string, object?>)dataRow;
+                var row = new Dictionary<string, object?>(StringComparer.Ordinal);
+                foreach (var pair in values)
                 {
-                    var row = new Dictionary<string, object?>(StringComparer.Ordinal);
-                    for (var i = 0; i < reader.FieldCount; i++)
-                    {
-                        row[columnNames[i]] = reader.IsDBNull(i)
-                            ? null
-                            : reader.GetValue(i);
-                    }
-
-                    rows.Add(row);
+                    row[pair.Key] = pair.Value is DBNull ? null : pair.Value;
                 }
+
+                rows.Add(row);
             }
 
             return new DatabaseRowsResult(rows, total);
@@ -231,10 +227,7 @@ namespace JobScrape.Infrastructure.Persistence
             var schema = await GetSchemaInnerAsync(connection, tableName, cancellationToken);
 
             var allowed = schema.Columns.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
-            var columns = values.Keys
-                .Where(IsValidIdentifier)
-                .Where(allowed.Contains)
-                .ToList();
+            var columns = values.Keys.Where(IsValidIdentifier).Where(allowed.Contains).ToList();
             if (columns.Count == 0)
             {
                 throw new ArgumentException("No valid columns supplied.", nameof(values));
@@ -242,14 +235,19 @@ namespace JobScrape.Infrastructure.Persistence
 
             var columnList = string.Join(", ", columns.Select(Quote));
             var paramList = string.Join(", ", columns.Select((_, i) => $"@p{i}"));
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"INSERT INTO {Quote(tableName)} ({columnList}) VALUES ({paramList});";
+            var parameters = new DynamicParameters();
             for (var i = 0; i < columns.Count; i++)
             {
-                cmd.Parameters.AddWithValue($"@p{i}", ToDbValue(values[columns[i]]));
+                parameters.Add($"p{i}", ToDbValue(values[columns[i]]));
             }
 
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            await connection.ExecuteAsync(
+                new CommandDefinition(
+                    $"INSERT INTO {Quote(tableName)} ({columnList}) VALUES ({paramList});",
+                    parameters,
+                    cancellationToken: cancellationToken
+                )
+            );
         }
 
         /// <inheritdoc />
@@ -276,8 +274,8 @@ namespace JobScrape.Infrastructure.Persistence
             }
 
             var allowed = schema.Columns.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
-            var columns = values.Keys
-                .Where(IsValidIdentifier)
+            var columns = values
+                .Keys.Where(IsValidIdentifier)
                 .Where(allowed.Contains)
                 .Where(c => c != pk)
                 .ToList();
@@ -286,20 +284,21 @@ namespace JobScrape.Infrastructure.Persistence
                 throw new ArgumentException("No updatable values supplied.", nameof(values));
             }
 
-            var setClause = string.Join(
-                ", ",
-                columns.Select((c, i) => $"{Quote(c)} = @p{i}")
-            );
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText =
-                $"UPDATE {Quote(tableName)} SET {setClause} WHERE {Quote(pk)} = @pk;";
+            var setClause = string.Join(", ", columns.Select((c, i) => $"{Quote(c)} = @p{i}"));
+            var parameters = new DynamicParameters();
             for (var i = 0; i < columns.Count; i++)
             {
-                cmd.Parameters.AddWithValue($"@p{i}", ToDbValue(values[columns[i]]));
+                parameters.Add($"p{i}", ToDbValue(values[columns[i]]));
             }
 
-            cmd.Parameters.AddWithValue("@pk", primaryKeyValue);
-            var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
+            parameters.Add("pk", primaryKeyValue);
+            var affected = await connection.ExecuteAsync(
+                new CommandDefinition(
+                    $"UPDATE {Quote(tableName)} SET {setClause} WHERE {Quote(pk)} = @pk;",
+                    parameters,
+                    cancellationToken: cancellationToken
+                )
+            );
             if (affected == 0)
             {
                 throw new RowNotFoundException(tableName, primaryKeyValue);
@@ -323,14 +322,43 @@ namespace JobScrape.Infrastructure.Persistence
                 throw new ArgumentException("Invalid primary key column.", nameof(tableName));
             }
 
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"DELETE FROM {Quote(tableName)} WHERE {Quote(pk)} = @pk;";
-            cmd.Parameters.AddWithValue("@pk", primaryKeyValue);
-            var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
+            var parameters = new DynamicParameters();
+            parameters.Add("pk", primaryKeyValue);
+            var affected = await connection.ExecuteAsync(
+                new CommandDefinition(
+                    $"DELETE FROM {Quote(tableName)} WHERE {Quote(pk)} = @pk;",
+                    parameters,
+                    cancellationToken: cancellationToken
+                )
+            );
             if (affected == 0)
             {
                 throw new RowNotFoundException(tableName, primaryKeyValue);
             }
+        }
+
+        private static object? GetRaw(IDictionary<string, object?> values, string key)
+        {
+            foreach (var pair in values)
+            {
+                if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return pair.Value is DBNull ? null : pair.Value;
+                }
+            }
+
+            return null;
+        }
+
+        private static string? GetString(IDictionary<string, object?> values, string key) =>
+            GetRaw(values, key)?.ToString();
+
+        private static long GetInt(IDictionary<string, object?> values, string key)
+        {
+            var raw = GetRaw(values, key);
+            return raw is null
+                ? 0
+                : Convert.ToInt64(raw, System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static object? ToDbValue(JsonElement element) =>

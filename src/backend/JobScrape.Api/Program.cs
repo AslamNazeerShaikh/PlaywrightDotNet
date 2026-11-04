@@ -10,6 +10,7 @@ using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
+using Scalar.AspNetCore;
 using Serilog;
 
 namespace JobScrape.Api
@@ -136,16 +137,28 @@ namespace JobScrape.Api
                 DataSource = explorerPath,
             }.ToString();
             builder.Services.AddSingleton<IDatabaseExplorer>(
-                new JobScrape.Infrastructure.Persistence.SqliteDatabaseExplorer(explorerConnectionString)
+                new JobScrape.Infrastructure.Persistence.SqliteDatabaseExplorer(
+                    explorerConnectionString
+                )
             );
 
             var app = builder.Build();
 
-            // Development-only document endpoint; never proxied by the
-            // cockpit BFF and never exposed beyond loopback.
+            // Development-only document and reference endpoints; never
+            // proxied by the cockpit BFF and never exposed beyond loopback.
             if (app.Environment.IsDevelopment())
             {
-                app.MapOpenApi();
+                app.MapOpenApi().AllowAnonymous();
+
+                app.MapScalarApiReference(
+                        "/scalar",
+                        options =>
+                            options
+                                .WithTitle("JobLens API v1")
+                                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+                                .AddPreferredSecuritySchemes("Bearer")
+                    )
+                    .AllowAnonymous();
             }
 
             DatabaseRegistration.MigrateInDevelopment(app);
