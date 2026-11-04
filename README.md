@@ -7,7 +7,7 @@
 
 ## Architecture
 
-<img src="docs/explicit-architecture.svg" width="100%" alt="Hexagonal architecture: cockpit, driving and driven adapters, application core" />
+<img src="docs/explicit-architecture.svg" width="100%" alt="Ports-and-adapters architecture: control plane, application core, and driven adapters" />
 
 ## Screenshots
 
