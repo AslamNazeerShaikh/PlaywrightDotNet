@@ -5,9 +5,10 @@ using JobScrape.Domain.Sourcing;
 namespace JobScrape.Infrastructure.Sources.Naukri
 {
     /// <summary>
-    /// Builds Naukri page-1 search URLs (docs/08-site-playbooks.md §3.3).
-    /// Later pages are reached by clicking the native <b>Next</b> control, so
-    /// no builder emits a <c>-2</c> slug URL: the SPA loses its filters there.
+    /// Builds Naukri search URLs (docs/08-site-playbooks.md §3.3): page 1
+    /// uses the bare slug path; later pages append <c>-N</c> to the path
+    /// slug with the query string intact (live: <c>-3</c> keeps <c>k</c>,
+    /// <c>l</c>, and filters).
     /// </summary>
     public static class NaukriUrlBuilder
     {
@@ -90,7 +91,25 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="criteria"/> is null.</exception>
         public static Uri SearchUrl(SearchCriteria criteria)
         {
+            return SearchUrl(criteria, 1);
+        }
+
+        /// <summary>
+        /// Builds the search URL for one page. Page 1 builds exactly the
+        /// bare slug URL; later pages append <c>-N</c> to the path slug,
+        /// query string unchanged. Query values are percent-encoded; use
+        /// <see cref="Uri.AbsoluteUri"/> (not <see cref="Uri.ToString"/>,
+        /// which unescapes) when navigating.
+        /// </summary>
+        /// <param name="criteria">The validated search criteria. Must not be null.</param>
+        /// <param name="page">The absolute one-based page number, 1 and up.</param>
+        /// <returns>The absolute search URL for that page.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="criteria"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="page"/> is below 1.</exception>
+        public static Uri SearchUrl(SearchCriteria criteria, int page)
+        {
             ArgumentNullException.ThrowIfNull(criteria);
+            ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
 
             var keywordSlug = Slug(criteria.Keywords);
             var citySlug =
@@ -102,6 +121,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 (false, true) => $"jobs-in-{citySlug}",
                 _ => "jobs",
             };
+            if (page > 1)
+            {
+                path += $"-{page.ToString(CultureInfo.InvariantCulture)}";
+            }
 
             var query = new List<string> { Pair("k", criteria.Keywords) };
             if (criteria.Locations.Count > 0)

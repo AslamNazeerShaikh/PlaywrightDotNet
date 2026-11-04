@@ -91,7 +91,9 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             int? status = null;
             try
             {
-                var start = CursorOffset(request.Cursor);
+                var start = request.Cursor is null
+                ? (request.PageNumber - 1) * LinkedInUrlBuilder.PageSize
+                : CursorOffset(request.Cursor);
                 var response = await page.GotoAsync(
                     LinkedInUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
                     new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
