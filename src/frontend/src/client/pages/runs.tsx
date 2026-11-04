@@ -387,11 +387,7 @@ export function RunsPage({
                 {runs.map((r) => (
                   <tr key={r.id} aria-selected={r.id === selectedId}>
                     <td>
-                      <button
-                        type="button"
-                        className="row-btn"
-                        onClick={() => select(r.id)}
-                      >
+                      <button type="button" className="row-btn" onClick={() => select(r.id)}>
                         {stamp(r.startedAt ?? r.createdAt)}
                       </button>
                     </td>
@@ -399,7 +395,7 @@ export function RunsPage({
                     <td>
                       <CodeTag code={constantCase(r.stage)} tone={stageTone(r.stage)} />
                     </td>
-                    <td>{`${r.pagesFetched}/${r.maxPages}`}</td>
+                    <td>{`${r.pagesFetched}/${r.maxPages}${pageWindow(r.startPage, r.maxPages)}`}</td>
                     <td>{`${r.postingsFound} · ${r.postingsNew}`}</td>
                     <td>{r.detailsFetched}</td>
                     <td>{runDuration(r, Date.now())}</td>
@@ -475,7 +471,8 @@ export function RunsPage({
             </p>
             {selectedCompanies.length > 0 && (
               <p className="status-line">
-                Only companies ({selectedCompanies.length}):{" "}
+                Company filter ({selectedCompanies.length}{" "}
+                {selectedCompanies.length === 1 ? "company" : "companies"}): Only:{" "}
                 <ExportButton
                   label="CSV"
                   ariaLabel="Export only companies as CSV"
@@ -490,7 +487,7 @@ export function RunsPage({
                   onExport={() => void exportRun("xlsx", "only")}
                 />
                 {" · "}
-                Exclude companies ({selectedCompanies.length}):{" "}
+                Exclude:{" "}
                 <ExportButton
                   label="CSV"
                   ariaLabel="Export exclude companies as CSV"
@@ -614,7 +611,7 @@ function RunDetail({
         )}
       </div>
       <p className="status-line" role="status">
-        {`${run.profileName ?? "Deleted profile"} · ${run.sourceKey} · ${constantCase(run.stage)}`}
+        {`${run.profileName ?? "Deleted profile"} · ${run.sourceKey} · ${constantCase(run.stage)}${pageWindow(run.startPage, run.maxPages)}`}
         {run.failureReason !== null ? ` — ${run.failureReason}` : ""}
         {run.pauseReason !== null ? ` — paused: ${run.pauseReason}` : ""}
         {run.retryAt !== null ? ` · retry after ${stamp(run.retryAt)} UTC` : ""}
@@ -636,7 +633,7 @@ function RunDetail({
   );
 }
 
-/** One line of what the chosen profile will search: keywords, place, and filters. */
+/** One line of what the chosen profile will search: keywords, place, filters, and page window. */
 export function profileInputs(profile: SearchProfilePayload): string {
   const place = profile.remoteOnly ? "remote" : profile.locations.join(", ") || "—";
   const experience =
@@ -647,7 +644,20 @@ export function profileInputs(profile: SearchProfilePayload): string {
     profile.requiredSkills.length === 0
       ? "no skill filter"
       : `skills: ${profile.requiredSkills.join(", ")}`;
-  return `Inputs: ${profile.keywords} · ${place} · ${experience} · ${recency} · ${skills}`;
+  return `Inputs: ${profile.keywords} · ${place} · ${experience} · ${recency} · ${skills}${pageWindow(profile.startPage, profile.maxPages, " · pages ")}`;
+}
+
+/**
+ * Page window suffix for runs and profiles past page one, e.g. " · pages 31–60". A missing start
+ * page means 1: payloads written before the window existed.
+ */
+export function pageWindow(
+  startPage: number | null | undefined,
+  maxPages: number,
+  prefix = " · ",
+): string {
+  const first = startPage ?? 1;
+  return first > 1 ? `${prefix}${first}–${first + maxPages - 1}` : "";
 }
 
 /** Tone for a run stage tag: finished well, finished badly, waiting on a person, or moving. */
@@ -706,7 +716,13 @@ function ExportButton({
   onExport: () => void;
 }) {
   return (
-    <button type="button" className="row-btn" aria-label={ariaLabel} disabled={busy} onClick={onExport}>
+    <button
+      type="button"
+      className="row-btn"
+      aria-label={ariaLabel}
+      disabled={busy}
+      onClick={onExport}
+    >
       {label}
     </button>
   );

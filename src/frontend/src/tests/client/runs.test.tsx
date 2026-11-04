@@ -12,12 +12,14 @@ import {
 } from "../../client/lib/api.ts";
 import type { LogEvent } from "../../client/lib/telemetry.ts";
 import {
+  pageWindow,
   profileInputs,
   runDuration,
   RunsPage,
   stageTone,
   upsertRun,
 } from "../../client/pages/runs.tsx";
+import { Meter } from "../../client/pages/sources.tsx";
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -48,6 +50,7 @@ const baseRun: RunPayload = {
   challenges: 0,
   failures: 0,
   maxPages: 3,
+  startPage: 1,
   maxJobs: 60,
   maxDetails: 60,
   pauseReason: null,
@@ -57,6 +60,22 @@ const baseRun: RunPayload = {
   startedAt: "2026-11-02T08:00:00Z",
   finishedAt: null,
 };
+
+describe("run meters", () => {
+  test("a zero run cap reads empty, not full", () => {
+    const queries = render(<Meter label="Details" used={0} cap={0} progress />);
+    const meter = queries.getByRole("meter", { name: "Details used" });
+    expect(meter.textContent).toContain("0 / 0");
+    expect(meter.getAttribute("data-level")).toBe("ok");
+  });
+
+  test("a zero quota cap still reads blocked", () => {
+    const queries = render(<Meter label="Pages" used={0} cap={0} />);
+    expect(queries.getByRole("meter", { name: "Pages used" }).getAttribute("data-level")).toBe(
+      "full",
+    );
+  });
+});
 
 describe("run helpers", () => {
   test("stage tones: finished well, badly, waiting, or moving", () => {
@@ -97,6 +116,7 @@ describe("run helpers", () => {
         requiredSkills: ["C#", "ASP.NET Core"],
         companies: [],
         maxPages: 3,
+        startPage: 1,
         maxJobs: 60,
         maxDetails: 60,
         minDelayMs: 2500,
@@ -108,6 +128,40 @@ describe("run helpers", () => {
     ).toBe(
       "Inputs: asp.net core c# · Pune, Hyderabad · 6 yrs · last 1d · skills: C#, ASP.NET Core",
     );
+  });
+
+  test("pageWindow stays quiet on page one and shows later windows", () => {
+    expect(pageWindow(1, 30)).toBe("");
+    expect(pageWindow(undefined, 30)).toBe("");
+    expect(pageWindow(null, 30)).toBe("");
+    expect(pageWindow(31, 30)).toBe(" · 31–60");
+    expect(pageWindow(31, 30, " · pages ")).toBe(" · pages 31–60");
+  });
+
+  test("profileInputs shows a page window past page one", () => {
+    expect(
+      profileInputs({
+        id: "p1",
+        name: "backend",
+        sourceKey: "naukri",
+        keywords: "c#",
+        locations: ["Pune"],
+        experienceYears: null,
+        postedWithinDays: null,
+        remoteOnly: false,
+        requiredSkills: [],
+        companies: [],
+        maxPages: 30,
+        startPage: 31,
+        maxJobs: 60,
+        maxDetails: 0,
+        minDelayMs: 2500,
+        maxDelayMs: 6000,
+        enabled: true,
+        createdAt: "2026-11-02T08:00:00Z",
+        updatedAt: "2026-11-02T08:00:00Z",
+      }),
+    ).toBe("Inputs: c# · Pune · any exp · any date · no skill filter · pages 31–60");
   });
 
   test("profileInputs falls back when filters are absent", () => {
@@ -124,6 +178,7 @@ describe("run helpers", () => {
         requiredSkills: [],
         companies: [],
         maxPages: 3,
+        startPage: 1,
         maxJobs: 60,
         maxDetails: 60,
         minDelayMs: 2500,
@@ -318,9 +373,11 @@ describe("runs page", () => {
     const xlsx = queries.getByRole("button", { name: "Export all as XLSX" });
     expect(xlsx.textContent).toBe("XLSX");
     expect(queries.getByRole("button", { name: "Export only companies as CSV" })).toBeDefined();
-    expect(
-      queries.getByRole("button", { name: "Export exclude companies as XLSX" }),
-    ).toBeDefined();
+    expect(queries.getByRole("button", { name: "Export exclude companies as XLSX" })).toBeDefined();
+    const filterLine = [...queries.container.querySelectorAll("p.status-line")].find((p) =>
+      p.textContent?.includes("Company filter (2 companies)"),
+    );
+    expect(filterLine).toBeDefined();
     expect(calls).toContain("GET /api/v1/runs?offset=0&limit=50");
     expect(calls).toContain("GET /api/v1/runs/r1/postings?offset=0&limit=200");
     expect(queries.getByRole("status").textContent).toContain("COMPLETED");
@@ -428,9 +485,7 @@ describe("runs page", () => {
     );
 
     fireEvent.click(queries.getByRole("button", { name: "Export all as CSV" }));
-    await waitFor(() =>
-      expect(queries.getByRole("alert").textContent).toContain("ROW_NOT_FOUND"),
-    );
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("ROW_NOT_FOUND"));
   }, 15_000);
 
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {

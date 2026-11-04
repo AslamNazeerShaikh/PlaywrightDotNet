@@ -462,11 +462,21 @@ namespace JobScrape.Application.Features.Scraping
             var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
             cursor = progress.NextCursor;
 
-            for (var page = progress.PagesCompleted + 1; page <= run.Limits.MaxPages; page++)
+            // The window may start past page one so consecutive runs split
+            // the listing into groups (1-30, then 31-60). Pages before the
+            // window are still visited, the adapters only advance through
+            // Next links, but nothing from them is kept.
+            var firstPage = run.Limits.StartPage;
+            var lastPage = firstPage + run.Limits.MaxPages - 1;
+
+            // A fresh run starts at page one and walks forward; a resumed
+            // run restarts at the window page its kept count points at.
+            var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            for (; absolute <= lastPage; absolute++)
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, page, "job cap reached");
+                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached");
                     break;
                 }
 
@@ -476,21 +486,27 @@ namespace JobScrape.Application.Features.Scraping
                 );
                 if (!pageQuota.IsAllowed)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, page, "daily page quota exhausted");
+                    LogPaginationStopped(
+                        _logger,
+                        run.Id.Value,
+                        absolute,
+                        "daily page quota exhausted"
+                    );
                     break;
                 }
 
-                if (page > 1)
+                if (progress.PagesCompleted > 0 || absolute > 1)
                 {
                     await _delay.WaitAsync(politeness.NextDelay(), cancellationToken);
                 }
 
+                var page = absolute;
                 var request = new SearchPageRequest(page, cursor);
                 var result = await FetchWithRetryAsync(
                     scope,
                     $"page {page}",
                     token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
-                    page => page.Challenge,
+                    fetched => fetched.Challenge,
                     cancellationToken
                 );
                 var decision = ChallengePolicy.Decide(
@@ -517,6 +533,18 @@ namespace JobScrape.Application.Features.Scraping
                 {
                     LogPaginationStopped(_logger, run.Id.Value, page, "repeated page");
                     break;
+                }
+
+                if (page < firstPage)
+                {
+                    // Before the window: advance the cursor, keep nothing.
+                    cursor = result.NextCursor;
+                    if (cursor is null)
+                    {
+                        break;
+                    }
+
+                    continue;
                 }
 
                 var now = _clock.GetUtcNow();

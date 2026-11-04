@@ -286,6 +286,7 @@ namespace JobScrape.Api.Tests
                     requiredSkills = CSharp,
                     companies = InfosysOnly,
                     maxPages = 2,
+                    startPage = 4,
                     maxJobs = 20,
                     maxDetails = 10,
                     minDelayMs = 3000,
@@ -303,6 +304,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal(["Pune"], updated.Locations);
             Assert.Equal(["Infosys"], updated.Companies);
             Assert.Equal(2, updated.MaxPages);
+            Assert.Equal(4, updated.StartPage);
             Assert.Equal(20, updated.MaxJobs);
             Assert.Equal(10, updated.MaxDetails);
             Assert.Equal(3000, updated.MinDelayMs);

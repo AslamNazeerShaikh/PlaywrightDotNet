@@ -685,7 +685,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/search-profiles` | List profiles |
 | `POST` | `/api/v1/search-profiles` | Create profile |
 | `GET` | `/api/v1/search-profiles/{id}` | Profile detail |
-| `PUT` | `/api/v1/search-profiles/{id}` | Replace the editable profile fields |
+| `PUT` | `/api/v1/search-profiles/{id}` | Replace the editable profile fields, including the page window (`startPage`, `maxPages`) |
 | `DELETE` | `/api/v1/search-profiles/{id}` | Delete profile |
 | `POST` | `/api/v1/runs` | Start a run; `Idempotency-Key` required |
 | `GET` | `/api/v1/runs` | List runs (filter/sort/page) |

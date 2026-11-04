@@ -103,6 +103,36 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task StartsAtTheConfiguredPageAndSkipsEarlierPostings()
+        {
+            var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
+            harness.Source.Then(
+                Page("p2", Job("skip")),
+                Page("p3", Job("a")),
+                Page(null, Job("b"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(2, summary.Stats.PagesFetched);
+            Assert.Equal(2, summary.Stats.PostingsNew);
+            Assert.Equal(
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(3, "p3"),
+                ],
+                harness.Source.Requests
+            );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "skip");
+            Assert.Equal(
+                ["a", "b"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
+        }
+
+        [Fact]
         public async Task RepeatedPageStopsPagination()
         {
             var harness = new ScrapeHarness();

@@ -21,6 +21,7 @@ namespace JobScrape.Application.Features.Runs
     /// <param name="Challenges">Walls hit.</param>
     /// <param name="Failures">Pages or details that failed after retries.</param>
     /// <param name="MaxPages">The run's page cap.</param>
+    /// <param name="StartPage">The run's first page.</param>
     /// <param name="MaxJobs">The run's posting cap.</param>
     /// <param name="MaxDetails">The run's detail cap.</param>
     /// <param name="PauseReason">The wall that paused the run, while paused.</param>
@@ -45,6 +46,7 @@ namespace JobScrape.Application.Features.Runs
         int Challenges,
         int Failures,
         int MaxPages,
+        int StartPage,
         int MaxJobs,
         int MaxDetails,
         string? PauseReason,
@@ -81,6 +83,7 @@ namespace JobScrape.Application.Features.Runs
                 run.Stats.Challenges,
                 run.Stats.Failures,
                 run.Limits.MaxPages,
+                run.Limits.StartPage,
                 run.Limits.MaxJobs,
                 run.Limits.MaxDetails,
                 run.PauseReason?.ToString(),
