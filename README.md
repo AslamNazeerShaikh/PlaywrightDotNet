@@ -1,6 +1,6 @@
 # PlaywrightDotNet — JobLens
 
-> **Status:** backend API and ops-deck cockpit implemented with 971 backend tests green; final review before the PR to main.
+> **Status:** production ready back-end API and ops-deck cockpit front-end.
 >
 > Polite, low-volume job-board automation on .NET 10. Playwright collects from Naukri, Indeed India, and opt-in LinkedIn into SQLite, with skill-demand analysis and hyperlinked Excel snapshots, plus a live ops-deck cockpit.
 > A modular monolith built to be read: explicit use-case handlers, 971 behavior-pinned tests, and docs that match the tree.
