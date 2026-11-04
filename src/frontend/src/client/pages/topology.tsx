@@ -1,3 +1,4 @@
+import { DiagramDefs, type DiagramTone, markerId, TONE } from "../components/diagram.tsx";
 import { Abbr, Glossary, Legend, Wire } from "../components/legend.tsx";
 import { Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
@@ -27,41 +28,59 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       >
         <svg
           className="diagram"
-          viewBox="0 0 760 320"
+          viewBox="0 0 940 524"
           role="img"
           aria-label="Request lifecycle sequence"
         >
-          {lifeline(190, "BROWSER", "you are here")}
-          {lifeline(350, "BFF :3000", "loopback proxy")}
-          {lifeline(510, ".NET :5208", "gates + store")}
-          {lifeline(660, "STORE", "sqlite")}
-          {laneTag(64, "HIT", "200", "var(--sig)")}
-          {laneTag(184, "MISS", "404", "var(--red)")}
-          {laneTag(246, "DOWN", "502", "var(--amber)")}
-          <line
-            x1={88}
-            y1={176}
-            x2={752}
-            y2={176}
-            style={{ stroke: "var(--line)" }}
-            strokeDasharray="4 4"
-          />
-          <line
-            x1={88}
-            y1={238}
-            x2={752}
-            y2={238}
-            style={{ stroke: "var(--line)" }}
-            strokeDasharray="4 4"
-          />
-          {arrow(190, 350, 70, "var(--sig)", "GET /api/v1/…", false, 1)}
-          {arrow(350, 510, 88, "var(--sig)", "proxy → loopback", false, 2)}
-          {arrow(510, 660, 106, "var(--sig)", "GetAsync(id)", false, 3)}
-          {arrow(660, 510, 124, "var(--sig)", "hit? profile : null", false, 4)}
-          {arrow(510, 350, 142, "var(--sig)", "200 · payload", false, 5)}
-          {arrow(350, 190, 160, "var(--sig)", "stream back", false, 6)}
-          {arrow(510, 350, 206, "var(--red)", "404 + PROFILE_NOT_FOUND")}
-          {arrow(350, 350, 258, "var(--amber)", "API down → 502 DOTNET_UNREACHABLE", true)}
+          <DiagramDefs prefix="top" />
+          {nodeHeader(130, "BROWSER", "operator tab", "cyan")}
+          {nodeHeader(370, "BFF :3000", "Bun.serve proxy", "green")}
+          {nodeHeader(610, ".NET :5208", "ASP.NET controllers", "violet")}
+          {nodeHeader(850, "SQLITE", "artifacts/data", "amber")}
+          {lifeline(130)}
+          {lifeline(370)}
+          {lifeline(610)}
+          {lifeline(850)}
+          <text
+            x={250}
+            y={88}
+            textAnchor="middle"
+            style={{ fill: "var(--faint)", fontSize: "var(--text-fine)" }}
+          >
+            same-origin
+          </text>
+          <text
+            x={490}
+            y={88}
+            textAnchor="middle"
+            style={{ fill: "var(--faint)", fontSize: "var(--text-fine)" }}
+          >
+            loopback
+          </text>
+          <text
+            x={730}
+            y={88}
+            textAnchor="middle"
+            style={{ fill: "var(--faint)", fontSize: "var(--text-fine)" }}
+          >
+            Dapper
+          </text>
+
+          {laneBand(108, 190, "green", "HIT", "200")}
+          {message(130, 370, 136, "green", "GET /api/v1/search-profiles/:id")}
+          {message(370, 610, 166, "green", "forward /api/*")}
+          {message(610, 850, 196, "green", "GetAsync(profileId)")}
+          {message(850, 610, 226, "amber", "profile row", true)}
+          {message(610, 370, 256, "green", "200 · profile JSON", true)}
+          {message(370, 130, 286, "green", "stream back", true)}
+
+          {laneBand(310, 86, "red", "MISS", "404")}
+          {message(610, 370, 338, "red", "404 · PROFILE_NOT_FOUND")}
+          {message(370, 130, 368, "red", "404 · problem+json", true)}
+
+          {laneBand(408, 100, "amber", "DOWN", "502")}
+          {selfLoop(370, 430, "amber", "connect refused", "ECONNREFUSED")}
+          {message(370, 130, 482, "amber", "502 · DOTNET_UNREACHABLE", true)}
         </svg>
         <Legend
           label="Sequence key"
@@ -71,110 +90,115 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             {
               key: "down",
               swatch: <Wire color="var(--amber)" />,
-              text: "plane down — self-loop answers 502",
+              text: "plane down — BFF answers 502",
             },
           ]}
         />
       </Module>
 
-      <Module
-        code="TOP-02"
-        title="Processes"
-        span="span-5"
-        note={
-          <>
-            Loopback-only. No <Abbr term="CORS" full="Cross-Origin Resource Sharing" />, no
-            cross-origin calls, ever.
-          </>
-        }
-      >
-        <div className="tbl-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Process</th>
-                <th>Binds</th>
-                <th>Owns</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <Abbr term="BFF" full="Backend for Frontend" /> (Bun.serve)
-                </td>
-                <td>127.0.0.1:3000</td>
-                <td>
-                  /healthz, /api/* proxy, <Abbr term="SPA" full="Single-Page Application" /> static,{" "}
-                  <Abbr term="HMR" full="Hot Module Replacement" /> in dev
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <Abbr term="API" full="Application Programming Interface: the .NET data plane" />{" "}
-                  (ASP.NET)
-                </td>
-                <td>localhost:5208</td>
-                <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
-              </tr>
-              <tr>
-                <td>Upstream</td>
-                <td>{upstream}</td>
-                <td>DOTNET_API_URL; the single wire between processes</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="status-line" style={{ marginTop: "var(--gap)" }}>
-          Failure rule: the browser shows the BFF answer. A 502 means the BFF is fine and the API is
-          not — restart the data plane, not the deck.
-        </p>
-      </Module>
+      <div className="module-stack">
+        <Module
+          code="TOP-02"
+          title="Processes"
+          span="span-5"
+          note={
+            <>
+              Loopback-only. No <Abbr term="CORS" full="Cross-Origin Resource Sharing" />, no
+              cross-origin calls, ever.
+            </>
+          }
+        >
+          <div className="tbl-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Process</th>
+                  <th>Binds</th>
+                  <th>Owns</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <Abbr term="BFF" full="Backend for Frontend" /> (Bun.serve)
+                  </td>
+                  <td>127.0.0.1:3000</td>
+                  <td>
+                    /healthz, /api/* proxy, <Abbr term="SPA" full="Single-Page Application" />{" "}
+                    static, <Abbr term="HMR" full="Hot Module Replacement" /> in dev
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <Abbr
+                      term="API"
+                      full="Application Programming Interface: the .NET data plane"
+                    />{" "}
+                    (ASP.NET)
+                  </td>
+                  <td>localhost:5208</td>
+                  <td>Controllers, handlers, in-memory store, RFC 9457 mapping</td>
+                </tr>
+                <tr>
+                  <td>Upstream</td>
+                  <td>{upstream}</td>
+                  <td>DOTNET_API_URL; the single wire between processes</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="status-line" style={{ marginTop: "var(--gap)" }}>
+            Failure rule: the browser shows the BFF answer. A 502 means the BFF is fine and the API
+            is not — restart the data plane, not the deck.
+          </p>
+        </Module>
 
-      <Module
-        code="TOP-03"
-        title="Layer contract"
-        span="span-12"
-        note="Who may talk to whom, enforced by construction."
-      >
-        <div className="tbl-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>From</th>
-                <th>To</th>
-                <th>Via</th>
-                <th>Forbidden</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>React pages</td>
-                <td>BFF</td>
-                <td>Same-origin fetch to /api/*</td>
-                <td>Direct API URLs, CORS workarounds</td>
-              </tr>
-              <tr>
-                <td>BFF proxy</td>
-                <td>.NET API</td>
-                <td>Loopback fetch, hop-by-hop headers stripped</td>
-                <td>Forwarding cookies or auth headers it does not own</td>
-              </tr>
-              <tr>
-                <td>API controller</td>
-                <td>Handler → store</td>
-                <td>Constructor-injected use-case handler</td>
-                <td>Mediator, CQRS buses, generic repositories</td>
-              </tr>
-              <tr>
-                <td>Failures</td>
-                <td>Browser</td>
-                <td>Result → RFC 9457 + stable code + traceId</td>
-                <td>Stack traces, prose-sniffing in the UI</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Module>
+        <Module
+          code="TOP-03"
+          title="Layer contract"
+          span="span-5"
+          note="Who may talk to whom, enforced by construction."
+        >
+          <div className="tbl-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Via</th>
+                  <th>Forbidden</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>React pages</td>
+                  <td>BFF</td>
+                  <td>Same-origin fetch to /api/*</td>
+                  <td>Direct API URLs, CORS workarounds</td>
+                </tr>
+                <tr>
+                  <td>BFF proxy</td>
+                  <td>.NET API</td>
+                  <td>Loopback fetch, hop-by-hop headers stripped</td>
+                  <td>Forwarding cookies or auth headers it does not own</td>
+                </tr>
+                <tr>
+                  <td>API controller</td>
+                  <td>Handler → store</td>
+                  <td>Constructor-injected use-case handler</td>
+                  <td>Mediator, CQRS buses, generic repositories</td>
+                </tr>
+                <tr>
+                  <td>Failures</td>
+                  <td>Browser</td>
+                  <td>Result → RFC 9457 + stable code + traceId</td>
+                  <td>Stack traces, prose-sniffing in the UI</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Module>
+      </div>
 
       <Module
         code="TOP-04"
@@ -241,71 +265,77 @@ export function TopologyPage({ upstream }: { upstream: string }) {
   );
 }
 
-function lifeline(x: number, label: string, caption?: string) {
+function nodeHeader(x: number, label: string, caption: string, tone: DiagramTone) {
   return (
-    <g key={label}>
+    <g>
       <rect
-        x={x - 58}
-        y={8}
-        width="116"
-        height="26"
-        rx="3"
-        style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+        x={x - 75}
+        y={18}
+        width="150"
+        height="40"
+        rx="6"
+        style={{ fill: TONE[tone].fill, stroke: TONE[tone].stroke }}
+        strokeWidth="1.3"
       />
       <text
         x={x}
-        y={25}
+        y={42}
         textAnchor="middle"
         style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
         fontWeight="600"
       >
         {label}
       </text>
-      {caption !== undefined && (
-        <text
-          x={x}
-          y={44}
-          textAnchor="middle"
-          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
-        >
-          {caption}
-        </text>
-      )}
-      <line
-        x1={x}
-        y1={50}
-        x2={x}
-        y2={292}
-        style={{ stroke: "var(--line)" }}
-        strokeDasharray="4 4"
-      />
+      <text
+        x={x}
+        y={72}
+        textAnchor="middle"
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+      >
+        {caption}
+      </text>
     </g>
   );
 }
 
-function laneTag(y: number, name: string, code: string, color: string) {
+function lifeline(x: number) {
   return (
-    <g key={name}>
+    <line
+      x1={x}
+      y1={100}
+      x2={x}
+      y2={500}
+      strokeDasharray="4 6"
+      style={{ stroke: "var(--line-hi)" }}
+      strokeWidth="1"
+    />
+  );
+}
+
+function laneBand(y: number, h: number, tone: DiagramTone, label: string, code: string) {
+  return (
+    <g>
+      <rect x={12} y={y} width="916" height={h} rx="8" style={{ fill: TONE[tone].fill }} />
       <rect
-        x={8}
-        y={y}
-        width="64"
-        height="30"
-        rx="3"
-        style={{ fill: "var(--canvas)", stroke: "var(--line-hi)" }}
+        x={22}
+        y={y + 10}
+        width="86"
+        height="44"
+        rx="5"
+        style={{ fill: "var(--panel)", stroke: TONE[tone].stroke }}
       />
       <text
-        x={40}
-        y={y + 12}
+        x={65}
+        y={y + 27}
         textAnchor="middle"
-        style={{ fill: color, fontSize: "var(--text-micro)" }}
+        style={{ fill: TONE[tone].text, fontSize: "var(--text-micro)" }}
         fontWeight="700"
       >
-        {name}
+        {label}
       </text>
       <text
-        x={40}
-        y={y + 24}
+        x={65}
+        y={y + 41}
         textAnchor="middle"
         style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
       >
@@ -315,72 +345,56 @@ function laneTag(y: number, name: string, code: string, color: string) {
   );
 }
 
-function arrow(
-  x1: number,
-  x2: number,
+function message(
+  from: number,
+  to: number,
   y: number,
-  color: string,
+  tone: DiagramTone,
   label: string,
-  self = false,
-  step?: number,
+  dashed = false,
 ) {
-  if (self) {
-    return (
-      <g key={`${label}-${y}`}>
-        <path
-          d={`M ${x1} ${y} h 34 v 14 h -34`}
-          fill="none"
-          style={{ stroke: color }}
-          strokeWidth="1.5"
-        />
-        <text
-          x={x1 + 40}
-          y={y + 1}
-          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
-        >
-          API down → 502
-        </text>
-        <text
-          x={x1 + 40}
-          y={y + 13}
-          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
-        >
-          DOTNET_UNREACHABLE
-        </text>
-      </g>
-    );
-  }
-  const left = x1 < x2;
+  const rightward = to > from;
+  const x1 = rightward ? from + 5 : from - 5;
+  const x2 = rightward ? to - 11 : to + 11;
   return (
-    <g key={`${label}-${y}`}>
-      <line x1={x1} y1={y} x2={x2} y2={y} style={{ stroke: color }} strokeWidth="1.5" />
-      <polygon
-        points={
-          left
-            ? `${x2},${y} ${x2 - 7},${y - 3.5} ${x2 - 7},${y + 3.5}`
-            : `${x2},${y} ${x2 + 7},${y - 3.5} ${x2 + 7},${y + 3.5}`
-        }
-        style={{ fill: color }}
+    <g>
+      <line
+        x1={x1}
+        y1={y}
+        x2={x2}
+        y2={y}
+        strokeDasharray={dashed ? "5 4" : undefined}
+        style={{ stroke: TONE[tone].stroke }}
+        strokeWidth="1.5"
+        markerEnd={`url(#${markerId("top", tone)})`}
       />
-      {step !== undefined && (
-        <g>
-          <circle cx={x1} cy={y} r="8" style={{ fill: "var(--sig)" }} />
-          <text
-            x={x1}
-            y={y + 3.5}
-            textAnchor="middle"
-            style={{ fill: "var(--canvas)", fontSize: "var(--text-fine)" }}
-          >
-            {step}
-          </text>
-        </g>
-      )}
       <text
-        x={(left ? x1 + 6 : x2 + 6) + (step !== undefined ? 14 : 0)}
-        y={y - 5}
-        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+        x={(from + to) / 2}
+        y={y - 9}
+        textAnchor="middle"
+        style={{ fill: TONE[tone].text, fontSize: "var(--text-fine)" }}
       >
         {label}
+      </text>
+    </g>
+  );
+}
+
+function selfLoop(x: number, y: number, tone: DiagramTone, line: string, code: string) {
+  return (
+    <g>
+      <path
+        d={`M${x + 5},${y} H${x + 38} Q${x + 46},${y} ${x + 46},${y + 8} V${y + 20} Q${x + 46},${y + 28} ${x + 38},${y + 28} H${x + 11}`}
+        fill="none"
+        style={{ stroke: TONE[tone].stroke }}
+        strokeWidth="1.5"
+        markerEnd={`url(#${markerId("top", tone)})`}
+      />
+      <text x={x + 58} y={y + 10} style={{ fill: TONE[tone].text, fontSize: "var(--text-fine)" }}>
+        {line}
+      </text>
+      <text x={x + 58} y={y + 22} style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}>
+        {code}
       </text>
     </g>
   );

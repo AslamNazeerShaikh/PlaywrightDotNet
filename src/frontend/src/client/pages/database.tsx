@@ -6,15 +6,21 @@ import { Scramble } from "../components/scramble.tsx";
 import type { ApiClient, ApiProblem, DbRowsResult, DbTableSchema } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { ErFlowDiagram, TablesDiagram } from "./database-diagram.tsx";
-import { cellFull, cellText, readRowForm, readValue } from "./database-values.ts";
+import {
+  cellFull,
+  cellText,
+  isTimestampColumn,
+  readRowForm,
+  readValue,
+} from "./database-values.ts";
 
 /** Rows per page in the data grid. The API clamps to 1-500; 25 keeps cells readable. */
 const LIMIT = 25;
 
 /**
- * Database page: browse every user table in the SQLite store, inspect its live schema, page
- * through rows, and run CRUD. Tables and foreign keys come from the API, so the diagram below
- * reflects the real database instead of a checked-in picture.
+ * Database page: browse every user table in the SQLite store, inspect its live schema, page through
+ * rows, and run CRUD. Tables and foreign keys come from the API, so the diagram below reflects the
+ * real database instead of a checked-in picture.
  */
 export function DatabasePage({ client }: { client: ApiClient }) {
   useRenderLog("DatabasePage");
@@ -260,62 +266,66 @@ export function DatabasePage({ client }: { client: ApiClient }) {
       <Module
         code="DB-00"
         title="Tables"
-        span="span-4"
+        span="span-12"
         note={`${plural(tables.length, "table")} · GET /api/v1/db/tables`}
       >
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={() => void loadTables()}
-          disabled={tablesLoading}
-        >
-          {tablesLoading ? "LOADING…" : "REFRESH"}
-        </button>
+        <div className="toolbar">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => void loadTables()}
+            disabled={tablesLoading}
+          >
+            {tablesLoading ? "LOADING…" : "REFRESH"}
+          </button>
+        </div>
         {tablesProblem !== null && (
           <p className="alert" role="alert">
             <CodeTag code={tablesProblem.code} tone="warn" /> {tablesProblem.title}
           </p>
         )}
-        <TablesDiagram tables={tables} selected={selected} />
-        <div className="tbl-wrap">
-          <table className="data" aria-label="Database tables">
-            <thead>
-              <tr>
-                <th>Table</th>
-                <th>Rows</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tables.map((t) => (
-                <tr key={t.name} aria-current={t.name === selected ? "true" : undefined}>
-                  <td>
-                    <button
-                      type="button"
-                      className="row-btn"
-                      onClick={() => {
-                        setOffset(0);
-                        setEditingPk(null);
-                        setCreating(false);
-                        setArmed(null);
-                        setNotice(null);
-                        setSelected(t.name);
-                      }}
-                    >
-                      {t.name}
-                    </button>
-                  </td>
-                  <td>{t.rowCount}</td>
+        <div className="db-inventory">
+          <TablesDiagram tables={tables} selected={selected} schemas={schemas} />
+          <div className="tbl-wrap">
+            <table className="data" aria-label="Database tables">
+              <thead>
+                <tr>
+                  <th>Table</th>
+                  <th>Rows</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tables.map((t) => (
+                  <tr key={t.name} aria-current={t.name === selected ? "true" : undefined}>
+                    <td>
+                      <button
+                        type="button"
+                        className="row-btn"
+                        onClick={() => {
+                          setOffset(0);
+                          setEditingPk(null);
+                          setCreating(false);
+                          setArmed(null);
+                          setNotice(null);
+                          setSelected(t.name);
+                        }}
+                      >
+                        {t.name}
+                      </button>
+                    </td>
+                    <td>{t.rowCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </Module>
 
       <Module
         code="DB-01"
         title={selected !== null ? selected : "Schema"}
-        span="span-8"
+        span="span-12"
         note="Columns, types, and keys from PRAGMA table_info."
       >
         {schemaProblem !== null && (
@@ -331,7 +341,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
               <CodeTag code={plural(schema.foreignKeys.length, "foreign key")} />
             </div>
             <div className="tbl-wrap">
-              <table className="data" aria-label={`${schema.name} schema`}>
+              <table className="data schema-table" aria-label={`${schema.name} schema`}>
                 <thead>
                   <tr>
                     <th>Column</th>
@@ -407,14 +417,16 @@ export function DatabasePage({ client }: { client: ApiClient }) {
         )}
         {selected !== null && schema !== null && (
           <>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setCreating((v) => !v)}
-              disabled={rowsLoading}
-            >
-              {creating ? "CLOSE FORM" : "NEW ROW"}
-            </button>
+            <div className="toolbar">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setCreating((v) => !v)}
+                disabled={rowsLoading}
+              >
+                {creating ? "CLOSE FORM" : "NEW ROW"}
+              </button>
+            </div>
             {creating && (
               <form
                 aria-label={`New row in ${selected}`}
@@ -468,13 +480,13 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                   }}
                 >
                   <div className="tbl-wrap">
-                    <table className="data" aria-label={`${selected} rows`}>
+                    <table className="data rows-table" aria-label={`${selected} rows`}>
                       <thead>
                         <tr>
                           {schema.columns.map((c) => (
                             <th key={c.name}>{c.name}</th>
                           ))}
-                          <th>Actions</th>
+                          <th className="actions-cell">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -484,7 +496,11 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                           return (
                             <tr key={pk === "" ? `row-${i}` : pk}>
                               {schema.columns.map((c) => (
-                                <td key={c.name} title={cellFull(row[c.name])}>
+                                <td
+                                  key={c.name}
+                                  className={isTimestampColumn(c.name) ? "cell-time" : undefined}
+                                  title={cellFull(row[c.name], c.name)}
+                                >
                                   {isOpen && c.name !== schema.primaryKeyColumn ? (
                                     <input
                                       className="input"
@@ -497,33 +513,39 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                                       }
                                     />
                                   ) : (
-                                    cellText(row[c.name])
+                                    cellText(row[c.name], c.name)
                                   )}
                                 </td>
                               ))}
-                              <td>
+                              <td className="actions-cell">
                                 {isOpen ? (
-                                  <>
+                                  <div className="row-actions" key="edit-actions">
                                     <button
-                                      type="submit"
-                                      className="btn"
+                                      type="button"
+                                      className="btn btn-sm"
                                       disabled={busy === `update:${editingPk}`}
+                                      onClick={(event) => {
+                                        const form = event.currentTarget.form;
+                                        if (form !== null) {
+                                          void handleUpdate(form, pk);
+                                        }
+                                      }}
                                     >
                                       {busy === `update:${editingPk}` ? "SAVING…" : "SAVE"}
                                     </button>
                                     <button
                                       type="button"
-                                      className="btn btn-ghost"
+                                      className="btn btn-sm btn-ghost"
                                       onClick={() => setEditingPk(null)}
                                     >
                                       Cancel
                                     </button>
-                                  </>
+                                  </div>
                                 ) : (
-                                  <>
+                                  <div className="row-actions" key="view-actions">
                                     <button
                                       type="button"
-                                      className="btn btn-ghost"
+                                      className="btn btn-sm btn-ghost"
                                       aria-label={`Edit row ${pk}`}
                                       disabled={pk === ""}
                                       onClick={() => setEditingPk(pk)}
@@ -532,9 +554,11 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                                     </button>
                                     <button
                                       type="button"
-                                      className="btn btn-ghost"
+                                      className="btn btn-sm btn-ghost"
                                       aria-label={
-                                        armed === pk ? `Confirm delete row ${pk}` : `Delete row ${pk}`
+                                        armed === pk
+                                          ? `Confirm delete row ${pk}`
+                                          : `Delete row ${pk}`
                                       }
                                       disabled={pk === "" || busy === `delete:${pk}`}
                                       onClick={() => void handleDelete(pk)}
@@ -545,7 +569,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                                           ? "SURE?"
                                           : "Delete"}
                                     </button>
-                                  </>
+                                  </div>
                                 )}
                               </td>
                             </tr>
@@ -555,29 +579,31 @@ export function DatabasePage({ client }: { client: ApiClient }) {
                     </table>
                   </div>
                 </form>
-                <p className="status-line">
+                <div className="pager">
                   <button
                     type="button"
-                    className="btn btn-ghost"
+                    className="btn btn-ghost btn-sm"
                     disabled={offset === 0 || rowsLoading}
                     onClick={() => setOffset(Math.max(0, offset - LIMIT))}
                   >
                     PREV
-                  </button>{" "}
-                  {rowsLoading
-                    ? "Loading…"
-                    : rows.total === 0
-                      ? "0 of 0"
-                      : `${offset + 1}–${Math.min(offset + LIMIT, rows.total)} of ${plural(rows.total, "row")}`}{" "}
+                  </button>
+                  <span>
+                    {rowsLoading
+                      ? "Loading…"
+                      : rows.total === 0
+                        ? "0 of 0"
+                        : `${offset + 1}–${Math.min(offset + LIMIT, rows.total)} of ${plural(rows.total, "row")}`}
+                  </span>
                   <button
                     type="button"
-                    className="btn btn-ghost"
+                    className="btn btn-ghost btn-sm"
                     disabled={offset + LIMIT >= rows.total || rowsLoading}
                     onClick={() => setOffset(offset + LIMIT)}
                   >
                     NEXT
                   </button>
-                </p>
+                </div>
               </>
             )}
           </>
@@ -588,7 +614,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
         code="DB-03"
         title="Shape and flow"
         span="span-12"
-        note="One diagram: live tables and keys above, data in and out below."
+        note="Live tables and keys above; the real write and read paths below."
       >
         <Legend
           label="Diagram key"
@@ -596,19 +622,29 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             { key: "fk", swatch: <Wire color="var(--sig)" />, text: "physical FK (enforced)" },
             {
               key: "logical",
-              swatch: <Wire color="var(--dim)" dashed />,
-              text: "source_key value shared, no FK",
+              swatch: <Wire color="var(--brand-3)" dashed />,
+              text: "same id or source_key, no FK",
             },
-            { key: "flow", swatch: <Wire color="var(--amber)" />, text: "data in and out" },
+            {
+              key: "window",
+              swatch: <Wire color="var(--amber)" dashed />,
+              text: "postings time window, no FK",
+            },
           ]}
         />
-        <ErFlowDiagram tables={tables.map((t) => t.name)} schemas={schemas} selected={selected} />
+        <ErFlowDiagram
+          tables={tables.map((t) => t.name)}
+          schemas={schemas}
+          selected={selected}
+          counts={Object.fromEntries(tables.map((t) => [t.name, t.rowCount]))}
+        />
         <p className="status-line">
-          Solid lines are enforced foreign keys from the live schema. Dashed stubs share one
-          value, <Abbr term="source_key" full="Source key: which site a row came from" />, with no
-          database link. Runs do not own postings: a run&apos;s postings are the rows whose{" "}
-          <Abbr term="LastSeenAt" full="Last seen at: when a posting was last sighted" /> falls in
-          the run window.
+          Solid lines are enforced foreign keys from the live schema. Dashed violet lines share one
+          value, <Abbr term="source_key" full="Source key: which site a row came from" /> or a run
+          id, with no database link. Runs do not own postings: a run&apos;s postings are the rows
+          whose <Abbr term="LastSeenAt" full="Last seen at: when a posting was last sighted" />{" "}
+          falls in the run window. Scraping runs inside .NET through Playwright; the BFF only
+          proxies the browser&apos;s API calls and never talks to a source site.
         </p>
         <Glossary
           terms={[
