@@ -12,6 +12,7 @@ namespace JobScrape.Application.Features.SearchProfiles
     /// <param name="PostedWithinDays">Optional recency window, 1–30 days.</param>
     /// <param name="RemoteOnly">True to search remote roles only.</param>
     /// <param name="MaxPages">Page cap, up to the source default.</param>
+    /// <param name="StartPage">First page fetched, 1 and up; the window ends at startPage + maxPages - 1.</param>
     /// <param name="MaxJobs">Job cap, up to the source default.</param>
     /// <param name="MaxDetails">Detail cap, up to the source default.</param>
     /// <param name="MinDelayMs">Shortest delay, at least the source default.</param>
@@ -27,6 +28,7 @@ namespace JobScrape.Application.Features.SearchProfiles
         int? PostedWithinDays,
         bool RemoteOnly,
         int? MaxPages,
+        int? StartPage,
         int? MaxJobs,
         int? MaxDetails,
         int? MinDelayMs,

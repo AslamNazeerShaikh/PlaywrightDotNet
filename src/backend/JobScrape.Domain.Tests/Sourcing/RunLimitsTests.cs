@@ -10,7 +10,8 @@ namespace JobScrape.Domain.Tests.Sourcing
             int maxJobs = 60,
             int maxDetails = 60,
             double minDelaySeconds = 2,
-            double maxDelaySeconds = 6
+            double maxDelaySeconds = 6,
+            int startPage = 1
         )
         {
             return new RunLimits(
@@ -18,7 +19,8 @@ namespace JobScrape.Domain.Tests.Sourcing
                 maxJobs,
                 maxDetails,
                 TimeSpan.FromSeconds(minDelaySeconds),
-                TimeSpan.FromSeconds(maxDelaySeconds)
+                TimeSpan.FromSeconds(maxDelaySeconds),
+                startPage
             );
         }
 
@@ -27,11 +29,21 @@ namespace JobScrape.Domain.Tests.Sourcing
         {
             var limits = Create();
 
+            Assert.Equal(1, limits.StartPage);
             Assert.Equal(3, limits.MaxPages);
             Assert.Equal(60, limits.MaxJobs);
             Assert.Equal(60, limits.MaxDetails);
             Assert.Equal(TimeSpan.FromSeconds(2), limits.MinDelay);
             Assert.Equal(TimeSpan.FromSeconds(6), limits.MaxDelay);
+        }
+
+        [Fact]
+        public void AcceptsAPageWindowPastPageOne()
+        {
+            var limits = Create(startPage: 31, maxPages: 30);
+
+            Assert.Equal(31, limits.StartPage);
+            Assert.Equal(30, limits.MaxPages);
         }
 
         [Theory]
@@ -124,6 +136,36 @@ namespace JobScrape.Domain.Tests.Sourcing
         {
             Assert.Equal(Create(), Create());
             Assert.NotEqual(Create(), Create(maxPages: 4));
+            Assert.NotEqual(Create(), Create(startPage: 31));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(1001)]
+        public void RejectsStartPageOutOfRange(int startPage)
+        {
+            Assert.Throws<DomainException>(() => Create(startPage: startPage));
+        }
+
+        [Theory]
+        [InlineData(992, 10)]
+        [InlineData(1000, 2)]
+        [InlineData(500, 502)]
+        public void RejectsWindowPastTheCeiling(int startPage, int maxPages)
+        {
+            Assert.Throws<DomainException>(() =>
+                Create(startPage: startPage, maxPages: maxPages)
+            );
+        }
+
+        [Fact]
+        public void AcceptsWindowEndingAtTheCeiling()
+        {
+            var limits = Create(startPage: 991, maxPages: 10);
+
+            Assert.Equal(991, limits.StartPage);
+            Assert.Equal(10, limits.MaxPages);
         }
     }
 }

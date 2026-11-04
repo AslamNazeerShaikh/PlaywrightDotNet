@@ -47,6 +47,7 @@ function profile(id: string, name: string): SearchProfilePayload {
     requiredSkills: [],
     companies: [],
     maxPages: 3,
+    startPage: 1,
     maxJobs: 60,
     maxDetails: 60,
     minDelayMs: 2500,

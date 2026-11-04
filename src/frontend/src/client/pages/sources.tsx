@@ -130,7 +130,9 @@ export function Meter({
   /** Progress toward a goal (a run's caps): reaching the cap is done, not a warning. */
   progress?: boolean;
 }) {
-  const ratio = cap <= 0 ? 1 : Math.min(used / cap, 1);
+  // A zero quota cap means blocked for the day, so the bar reads full.
+  // A zero run cap means that step is switched off, so the bar reads empty.
+  const ratio = cap <= 0 ? (progress ? 0 : 1) : Math.min(used / cap, 1);
   const level = progress
     ? ratio >= 1
       ? "done"

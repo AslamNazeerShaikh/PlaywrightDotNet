@@ -1,15 +1,15 @@
 namespace JobScrape.Domain.Sourcing
 {
     /// <summary>
-    /// Hard caps for one scrape run: pages, jobs, detail visits, and the
-    /// jittered delay window between requests. Caps are politeness limits,
-    /// not entitlements; the ranges below are the outer bounds any profile
-    /// may request (docs/03-domain-model.md §4.1).
+    /// Hard caps for one scrape run: the page window, job and detail
+    /// caps, and the jittered delay window between requests. Caps are
+    /// politeness limits, not entitlements; the ranges below are the
+    /// outer bounds any profile may request (docs/03-domain-model.md §4.1).
     /// </summary>
     public sealed record RunLimits
     {
         /// <summary>
-        /// Highest page cap any profile may request.
+        /// Highest page any profile may request, as a start page or window end.
         /// </summary>
         public const int MaxPagesCeiling = 1000;
 
@@ -21,7 +21,8 @@ namespace JobScrape.Domain.Sourcing
         /// <summary>
         /// Initializes a new instance, rejecting any value outside its range.
         /// </summary>
-        /// <param name="maxPages">Result pages per run, 1–1000.</param>
+        /// <param name="startPage">First result page fetched in a run, 1–1000.</param>
+        /// <param name="maxPages">Result pages per run, 1–1000. The window ends at startPage + maxPages - 1.</param>
         /// <param name="maxJobs">Postings collected per run, 1–20 000.</param>
         /// <param name="maxDetails">Detail pages visited per run, 0–1000; 0 disables enrichment.</param>
         /// <param name="minDelay">Shortest delay between requests, 1–60 seconds.</param>
@@ -32,12 +33,25 @@ namespace JobScrape.Domain.Sourcing
             int maxJobs,
             int maxDetails,
             TimeSpan minDelay,
-            TimeSpan maxDelay
+            TimeSpan maxDelay,
+            int startPage = 1
         )
         {
+            if (startPage is < 1 or > MaxPagesCeiling)
+            {
+                throw new DomainException($"startPage must be 1..{MaxPagesCeiling}.");
+            }
+
             if (maxPages is < 1 or > MaxPagesCeiling)
             {
                 throw new DomainException($"maxPages must be 1..{MaxPagesCeiling}.");
+            }
+
+            if (startPage + maxPages - 1 > MaxPagesCeiling)
+            {
+                throw new DomainException(
+                    $"Pages {startPage}..{startPage + maxPages - 1} exceed the page ceiling of {MaxPagesCeiling}."
+                );
             }
 
             if (maxJobs is < 1 or > MaxJobsCeiling)
@@ -67,12 +81,19 @@ namespace JobScrape.Domain.Sourcing
                 throw new DomainException("maxDelay must be <= 2m.");
             }
 
+            StartPage = startPage;
             MaxPages = maxPages;
             MaxJobs = maxJobs;
             MaxDetails = maxDetails;
             MinDelay = minDelay;
             MaxDelay = maxDelay;
         }
+
+        /// <summary>
+        /// Gets the first result page fetched in a run. Page groups split a
+        /// site's listing into windows: 1–30, then 31–60.
+        /// </summary>
+        public int StartPage { get; }
 
         /// <summary>
         /// Gets the maximum number of result pages fetched in one run.

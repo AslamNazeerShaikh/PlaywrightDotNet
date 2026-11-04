@@ -23,6 +23,7 @@ export interface SearchProfilePayload {
   requiredSkills: string[];
   companies: string[];
   maxPages: number;
+  startPage: number;
   maxJobs: number;
   maxDetails: number;
   minDelayMs: number;
@@ -135,6 +136,7 @@ export interface UpdateProfileInput {
   requiredSkills: string[];
   companies: string[];
   maxPages: number | null;
+  startPage: number | null;
   maxJobs: number | null;
   maxDetails: number | null;
   minDelayMs: number | null;
@@ -159,6 +161,7 @@ export interface RunPayload {
   challenges: number;
   failures: number;
   maxPages: number;
+  startPage: number;
   maxJobs: number;
   maxDetails: number;
   pauseReason: string | null;
