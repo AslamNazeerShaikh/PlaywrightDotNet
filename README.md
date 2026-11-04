@@ -4,6 +4,82 @@
 >
 > A cross-platform .NET 10 job-board automation and public job-posting collector for Naukri, Indeed India, and (opt-in) LinkedIn.
 
+## Screenshots
+
+The ops-deck control plane at 1920 width, full-page height. Light left, dark right. Full gallery with per-page notes lives in [docs/screenshots](docs/screenshots/README.md).
+
+### 01 Overview
+
+Central dashboard. Engine state, proxy latency, tac-map, endpoint catalog, and killfeed.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/01-overview-light.png" width="49%" alt="Overview page in light theme" />
+<img src="docs/screenshots/01-overview-dark.png" width="49%" alt="Overview page in dark theme" />
+</div>
+
+### 02 Engine Health
+
+Probe control, full health payload, latency stats, and sample history.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/02-health-light.png" width="49%" alt="Engine Health page in light theme" />
+<img src="docs/screenshots/02-health-dark.png" width="49%" alt="Engine Health page in dark theme" />
+</div>
+
+### 03 Search Profiles
+
+Create and edit search profiles with inline server field errors. Persisted in SQLite.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/03-profiles-light.png" width="49%" alt="Search Profiles page in light theme" />
+<img src="docs/screenshots/03-profiles-dark.png" width="49%" alt="Search Profiles page in dark theme" />
+</div>
+
+### 04 Sources
+
+One card per job source. Compliance gate, daily quota meters, policy caps, circuit state.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/04-sources-light.png" width="49%" alt="Sources page in light theme" />
+<img src="docs/screenshots/04-sources-dark.png" width="49%" alt="Sources page in dark theme" />
+</div>
+
+### 05 Sessions
+
+Browser-profile sessions. One identity per source, launch readiness at a glance.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/05-sessions-light.png" width="49%" alt="Sessions page in light theme" />
+<img src="docs/screenshots/05-sessions-dark.png" width="49%" alt="Sessions page in dark theme" />
+</div>
+
+### 06 Runs
+
+Start a scrape, follow it live, cancel it, read postings with CSV and XLSX export.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/06-runs-light.png" width="49%" alt="Runs page in light theme" />
+<img src="docs/screenshots/06-runs-dark.png" width="49%" alt="Runs page in dark theme" />
+</div>
+
+### 07 Topology
+
+Request lifecycle sequence, component map of the two processes, layer contract.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/07-topology-light.png" width="49%" alt="Topology page in light theme" />
+<img src="docs/screenshots/07-topology-dark.png" width="49%" alt="Topology page in dark theme" />
+</div>
+
+### 08 Database
+
+Browse every user table in the SQLite store. Live schema, paged rows, CRUD, live diagram.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/08-database-light.png" width="49%" alt="Database page in light theme" />
+<img src="docs/screenshots/08-database-dark.png" width="49%" alt="Database page in dark theme" />
+</div>
+
 ## Start here
 
 Read the documentation in this order:
