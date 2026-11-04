@@ -657,6 +657,9 @@ export function pageWindow(
   prefix = " · ",
 ): string {
   const first = startPage ?? 1;
+  if (!Number.isFinite(first) || !Number.isFinite(maxPages) || maxPages < 1) {
+    return "";
+  }
   return first > 1 ? `${prefix}${first}–${first + maxPages - 1}` : "";
 }
 

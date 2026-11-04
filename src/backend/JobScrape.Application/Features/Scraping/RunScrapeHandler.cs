@@ -462,11 +462,9 @@ namespace JobScrape.Application.Features.Scraping
             var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
             cursor = progress.NextCursor;
 
-            // The window may start past page one so consecutive runs split
-            // the listing into groups (1-30, then 31-60). Naukri only
-            // advances through Next clicks: a cold load of a -N slug URL
-            // redirects to page 1, so pages before the window are visited
-            // and nothing from them is kept.
+            // A cold load of a -N slug URL redirects to page 1, so
+            // pre-window pages are visited, not kept (Naukri: Next
+            // clicks; Indeed/LinkedIn: direct offsets).
             var firstPage = run.Limits.StartPage;
             var lastPage = firstPage + run.Limits.MaxPages - 1;
 
@@ -546,6 +544,12 @@ namespace JobScrape.Application.Features.Scraping
                     cursor = result.NextCursor;
                     if (cursor is null)
                     {
+                        LogPaginationStopped(
+                            _logger,
+                            run.Id.Value,
+                            page,
+                            "no further pages before the window"
+                        );
                         break;
                     }
 

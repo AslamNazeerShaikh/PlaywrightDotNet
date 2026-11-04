@@ -10,9 +10,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 {
     /// <summary>
     /// The Naukri adapter (docs/08-site-playbooks.md §3): drives the run's
-    /// browser page and hands the HTML to the offline parsers. A null
-    /// cursor navigates directly to the window's first page via the
-    /// <c>-N</c> slug URL; later pages click the native <b>Next</b>.
+    /// browser page and hands the HTML to the offline parsers. Page 1
+    /// navigates to the slug search URL; later pages click the native
+    /// <b>Next</b> and wait for the fingerprint to change, never
+    /// navigating to a <c>-N</c> URL (a cold load redirects to page 1).
     /// Walls are classified, never retried or solved here.
     /// </summary>
     public sealed partial class NaukriJobSource : IJobSource

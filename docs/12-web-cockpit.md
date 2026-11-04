@@ -691,7 +691,6 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/api/v1/runs` | List runs (filter/sort/page) |
 | `GET` | `/api/v1/runs/{id}` | Run detail, stats, artifacts |
 | `POST` | `/api/v1/runs/{id}/cancel` | Cooperative cancel |
-| `POST` | `/api/v1/runs/{id}/resume` | Resume after challenge/cooldown |
 | `GET` | `/api/v1/runs/{id}/events` | SSE stream |
 | `GET` | `/api/v1/runs/{id}/artifacts` | Artifact list |
 | `GET` | `/api/v1/artifacts/{id}` | Authenticated download |

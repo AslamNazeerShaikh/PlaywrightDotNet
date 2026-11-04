@@ -5,8 +5,9 @@ namespace JobScrape.Domain.Sourcing
     /// <summary>
     /// The resumable position of one scrape run: pages completed, the
     /// adapter cursor for the next page, and the external ids already
-    /// counted. Saved after every fetched page, so an interrupted run can
-    /// continue without recounting or refetching what it already saw.
+    /// counted. Saved after every kept page, so an interrupted run
+    /// restarts at the window page its kept count points at; a run
+    /// interrupted before its first keep visits the skipped pages again.
     /// </summary>
     public sealed class ScrapeRunProgress
     {

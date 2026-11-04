@@ -724,7 +724,7 @@ flowchart TB
 - Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported and the handler's repeated-page guard stops.
 - `PlaywrightException` / `TimeoutException` (unless cancelled) → `TransientError`, which only the handler may retry.
 
-**`IndeedJobSource`:** page 1 navigates to `IndeedUrlBuilder.SearchUrl`; later pages navigate directly with the cursor's `start` offset. Cards are semantic DOM (`div.job_seen_beacon` / `data-testid`); details read JSON-LD first, then DOM. It is restricted-tier and disabled by default.
+**`IndeedJobSource`:** page 1 navigates to `IndeedUrlBuilder.SearchUrl`; later pages navigate directly with the cursor's `start` offset. A null cursor derives the offset from the absolute page number, so windowed runs start at their own offset. Cards are semantic DOM (`div.job_seen_beacon` / `data-testid`); details read JSON-LD first, then DOM. It is restricted-tier and disabled by default.
 
 **`LinkedInJobSource`:** guest search only, with DOM cards (`li.jobs-search-results__list-item` / `div.job-card-container`) and a fallback link selector. `SupportsDetails: false`; `GetDetailAsync` returns `LoginRequired` without fetching because guest detail pages sit behind the sign-in wall. It is high-risk and disabled by default.
 
