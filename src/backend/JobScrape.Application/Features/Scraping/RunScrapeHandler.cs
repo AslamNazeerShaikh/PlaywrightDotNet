@@ -472,6 +472,10 @@ namespace JobScrape.Application.Features.Scraping
             // A fresh run starts at page one and walks forward; a resumed
             // run restarts at the window page its kept count points at.
             var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            if (absolute < firstPage)
+            {
+                LogAdvancingToStartPage(_logger, run.Id.Value, firstPage);
+            }
             for (; absolute <= lastPage; absolute++)
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
@@ -1088,6 +1092,16 @@ namespace JobScrape.Application.Features.Scraping
             Message = "Scrape request for profile {ProfileId} refused with {ErrorCode}"
         )]
         private static partial void LogRefused(ILogger logger, Guid profileId, string errorCode);
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Run {RunId} advancing to start page {StartPage}: earlier pages are visited, not kept"
+        )]
+        private static partial void LogAdvancingToStartPage(
+            ILogger logger,
+            Guid runId,
+            int startPage
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,

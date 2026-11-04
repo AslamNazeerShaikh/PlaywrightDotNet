@@ -447,7 +447,7 @@ Set `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>` for the rele
 }
 ```
 
-> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page. A profile may set `maxPages` up to `MaxPagesCeiling` and `maxJobs` up to `MaxJobsCeiling`; `MaxPagesPerSearch` and `MaxJobsPerRun` stay the new-profile defaults. The run stops when the site has fewer pages, so a high limit never invents pages. A profile may also set `startPage` (default 1): the run fetches `maxPages` pages starting there, so groups of runs cover a listing in windows (1–30, then 31–60). Pages before the window still cost one Next click each; they are visited, not kept.
+> The caps above are **starting defaults, not entitlements**. Lower them when a source challenges; never raise them without a review. `DailyRunCap` defaults to 0, which blocks runs. Set `UnlimitedRunCap: true` to remove the daily run cap; the run count is still recorded for the Sources page. A profile may set `maxPages` up to `MaxPagesCeiling` and `maxJobs` up to `MaxJobsCeiling`; `MaxPagesPerSearch` and `MaxJobsPerRun` stay the new-profile defaults. The run stops when the site has fewer pages, so a high limit never invents pages. A profile may also set `startPage` (default 1): the run fetches `maxPages` pages starting there, so groups of runs cover a listing in windows (1–30, then 31–60). Pages before the window still cost one Next click each; they are visited, not kept. A browser closed mid-run ends the run gracefully instead of crashing it.
 
 ### 5.2 Precedence and secrets
 

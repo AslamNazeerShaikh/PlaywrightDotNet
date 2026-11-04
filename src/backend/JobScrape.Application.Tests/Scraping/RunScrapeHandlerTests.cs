@@ -133,6 +133,25 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task ClosedBrowserDuringSkipEndsTheRunWithoutCrashing()
+        {
+            // A closed browser surfaces as a transient wall on the skipped
+            // page: the run fails gracefully instead of crashing, since
+            // nothing was keepable yet.
+            var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
+            harness.Source.Then(
+                Wall(ChallengeKind.TransientError),
+                Wall(ChallengeKind.TransientError)
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Failed, summary.Stage);
+            Assert.Equal(1, summary.Stats.Failures);
+            Assert.Equal(2, harness.Source.Requests.Count);
+        }
+
+        [Fact]
         public async Task RepeatedPageStopsPagination()
         {
             var harness = new ScrapeHarness();
