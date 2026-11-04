@@ -17,17 +17,20 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         private const string Origin = "https://www.naukri.com/";
 
         /// <summary>
-        /// Turns free text into a Naukri path slug, following the verified
-        /// rules of the old project: lower-case; <c>#</c> becomes
-        /// <c>sharp</c>; <c>.</c> becomes <c>dot</c>; whitespace and hyphens
-        /// become <c>-</c>; commas and every other non-alphanumeric character
-        /// are removed; dash runs collapse and edge dashes are trimmed. Only
-        /// ASCII letters and digits survive, so the slug is always URL-safe.
+        /// Turns free text into a Naukri path slug. Naukri's live canonical
+        /// paths keep <c>dot</c> and <c>sharp</c> as separate words:
+        /// <c>asp.net</c> becomes <c>asp-dot-net</c> and <c>C#</c> becomes
+        /// <c>c-sharp</c>. A mismatched slug makes Naukri redirect to its own
+        /// path and drop the query string, which silently loses every filter.
+        /// Whitespace and hyphens collapse to one <c>-</c>; commas and every
+        /// other non-alphanumeric character are removed; edge dashes are
+        /// trimmed. Only ASCII letters and digits survive, so the slug is
+        /// always URL-safe.
         /// </summary>
         /// <example>
         /// <c>"dot net developer"</c> → <c>dot-net-developer</c>;
-        /// <c>"C#"</c> → <c>csharp</c>; <c>".NET Core"</c> → <c>dotnet-core</c>;
-        /// <c>"asp.net core c#"</c> → <c>aspdotnet-core-csharp</c>;
+        /// <c>"C#"</c> → <c>c-sharp</c>; <c>".NET Core"</c> → <c>dot-net-core</c>;
+        /// <c>"asp.net core c#"</c> → <c>asp-dot-net-core-c-sharp</c>;
         /// <c>"Delhi / NCR"</c> → <c>delhi-ncr</c>; <c>"C++"</c> → <c>c</c>.
         /// </example>
         /// <param name="text">The text to slug. Must not be null.</param>
@@ -47,19 +50,15 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 }
                 else if (lower == '#')
                 {
-                    builder.Append("sharp");
+                    AppendWord(builder, "sharp");
                 }
                 else if (lower == '.')
                 {
-                    builder.Append("dot");
+                    AppendWord(builder, "dot");
                 }
-                else if (
-                    (char.IsWhiteSpace(lower) || lower == '-')
-                    && builder.Length > 0
-                    && builder[^1] != '-'
-                )
+                else if (char.IsWhiteSpace(lower) || lower == '-')
                 {
-                    builder.Append('-');
+                    AppendSeparator(builder);
                 }
             }
 
@@ -68,10 +67,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
         /// <summary>
         /// Builds the page-1 search URL in the slug form:
-        /// <c>https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k=…&amp;l=…&amp;experience=…&amp;jobAge=…</c>.
+        /// <c>https://www.naukri.com/{slug(keywords)}-jobs-in-{slug(firstCity)}?k=…&amp;l=…&amp;nignbevent_src=…&amp;experience=…&amp;jobAge=…</c>.
         /// The path carries the first city only; <c>l</c> carries every city,
         /// joined with <c>", "</c>. <c>experience</c> and <c>jobAge</c> are
-        /// omitted when the criteria leave them unset. Without locations (a
+        /// omitted when the criteria leave them unset. <c>nignbevent_src</c>
+        /// is Naukri's own search-page marker; without it the live site can
+        /// answer with its error page. <c>sort=date</c> is deliberately not
+        /// sent: the live site answers that combination with its error page.
+        /// The run handler re-checks every posted date. Without locations (a
         /// remote-only profile) the path is <c>{slug(keywords)}-jobs</c> and
         /// <c>l</c> is omitted: remote is <b>not</b> filtered through the URL,
         /// because no verified Naukri query parameter exists for it; remote
@@ -106,6 +109,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 query.Add(Pair("l", string.Join(", ", criteria.Locations)));
             }
 
+            query.Add(Pair("nignbevent_src", "jobsearchDeskGNB"));
+
             if (criteria.ExperienceYears is { } years)
             {
                 query.Add(Pair("experience", years.ToString(CultureInfo.InvariantCulture)));
@@ -117,6 +122,32 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
 
             return new Uri($"{Origin}{path}?{string.Join('&', query)}", UriKind.Absolute);
+        }
+
+        /// <summary>
+        /// Appends a word with separators on both sides, so <c>asp.net</c>
+        /// becomes <c>asp-dot-net</c> rather than <c>aspdotnet</c>.
+        /// </summary>
+        /// <param name="builder">The slug builder.</param>
+        /// <param name="word">The word to append.</param>
+        private static void AppendWord(StringBuilder builder, string word)
+        {
+            AppendSeparator(builder);
+            builder.Append(word);
+            AppendSeparator(builder);
+        }
+
+        /// <summary>
+        /// Appends one separator unless the slug is empty or already ends
+        /// with one.
+        /// </summary>
+        /// <param name="builder">The slug builder.</param>
+        private static void AppendSeparator(StringBuilder builder)
+        {
+            if (builder.Length > 0 && builder[^1] != '-')
+            {
+                builder.Append('-');
+            }
         }
 
         /// <summary>

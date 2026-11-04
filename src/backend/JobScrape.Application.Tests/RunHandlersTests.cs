@@ -24,7 +24,7 @@ namespace JobScrape.Application.Tests
                 SearchProfile.Create(
                     "backend",
                     SourceKey.Naukri,
-                    new SearchCriteria("c#", ["Pune"], null, null, false),
+                    new SearchCriteria("c#", ["Pune"], null, null, false, []),
                     new RunLimits(3, 60, 60, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
                     Now
                 ),
@@ -155,22 +155,79 @@ namespace JobScrape.Application.Tests
                 (await new GetRunHandler(store).HandleAsync(Guid.Empty, Ct)).Error.Code
             );
 
-            var list = await new ListRunsHandler(store).HandleAsync(Ct);
+            var list = await new ListRunsHandler(store).HandleAsync(0, ListRunsHandler.Limit, Ct);
             Assert.Equal(ListRunsHandler.Limit, store.LastLimit);
+            Assert.Equal(0, store.LastOffset);
             Assert.Single(list.Items);
 
             var postings = new ListRunPostingsHandler(store);
-            var listed = Assert.Single((await postings.HandleAsync(run.Id, Ct)).Value.Items);
+            var listed = Assert.Single(
+                (await postings.HandleAsync(run.Id, 0, ListRunPostingsHandler.Limit, Ct)).Value.Items
+            );
             Assert.Equal("Developer", listed.Title);
             Assert.Equal(ListRunPostingsHandler.Limit, store.LastLimit);
+            Assert.Equal(0, store.LastOffset);
             Assert.Equal(
                 "RUN_NOT_FOUND",
-                (await postings.HandleAsync(Guid.NewGuid(), Ct)).Error.Code
+                (await postings.HandleAsync(Guid.NewGuid(), 0, ListRunPostingsHandler.Limit, Ct)).Error.Code
             );
             Assert.Equal(
                 "VALIDATION_FAILED",
-                (await postings.HandleAsync(Guid.Empty, Ct)).Error.Code
+                (await postings.HandleAsync(Guid.Empty, 0, ListRunPostingsHandler.Limit, Ct)).Error.Code
             );
+        }
+
+        [Fact]
+        public async Task PagingForwardsOffsetFirstWithAsymmetricValues()
+        {
+            var runs = new[]
+            {
+                RunResponse.From(Run(RunStage.StartingSession), null),
+                RunResponse.From(Run(RunStage.StartingSession), null),
+                RunResponse.From(Run(RunStage.StartingSession), null),
+            };
+            var store = new FakeRunStore(runs);
+
+            var page = await new ListRunsHandler(store).HandleAsync(1, 2, Ct);
+            Assert.Equal([runs[1].Id, runs[2].Id], page.Items.Select(r => r.Id));
+            Assert.Equal(1, store.LastOffset);
+            Assert.Equal(2, store.LastLimit);
+
+            var postings = await new ListRunPostingsHandler(store).HandleAsync(
+                runs[0].Id,
+                1,
+                2,
+                Ct
+            );
+            Assert.True(postings.IsSuccess);
+            Assert.Equal(1, store.LastOffset);
+            Assert.Equal(2, store.LastLimit);
+        }
+
+        [Fact]
+        public async Task PagingClampsNegativeOffsetAndOutOfRangeLimit()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+
+            await new ListRunsHandler(store).HandleAsync(-5, 0, Ct);
+            Assert.Equal((0, ListRunsHandler.Limit), (store.LastOffset, store.LastLimit));
+
+            await new ListRunsHandler(store).HandleAsync(0, 9999, Ct);
+            Assert.Equal((0, 500), (store.LastOffset, store.LastLimit));
+
+            var postings = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                -3,
+                0,
+                Ct
+            );
+            Assert.True(postings.IsSuccess);
+            Assert.Equal((0, ListRunPostingsHandler.Limit), (store.LastOffset, store.LastLimit));
+
+            var capped = await new ListRunPostingsHandler(store).HandleAsync(run.Id, 2, 9999, Ct);
+            Assert.True(capped.IsSuccess);
+            Assert.Equal((2, 500), (store.LastOffset, store.LastLimit));
         }
 
         [Fact]
@@ -286,26 +343,35 @@ namespace JobScrape.Application.Tests
         {
             public int LastLimit { get; private set; }
 
+            public int LastOffset { get; private set; }
+
             public Task<RunResponse?> GetAsync(Guid id, CancellationToken cancellationToken)
             {
                 return Task.FromResult(runs.FirstOrDefault(r => r.Id == id));
             }
 
-            public Task<RunListResponse> ListAsync(int limit, CancellationToken cancellationToken)
-            {
-                LastLimit = limit;
-                return Task.FromResult(
-                    new RunListResponse(runs.Take(limit).ToArray(), runs.Length)
-                );
-            }
-
-            public Task<RunPostingListResponse?> ListPostingsAsync(
-                Guid runId,
+            public Task<RunListResponse> ListAsync(
+                int offset,
                 int limit,
                 CancellationToken cancellationToken
             )
             {
                 LastLimit = limit;
+                LastOffset = offset;
+                return Task.FromResult(
+                    new RunListResponse(runs.Skip(offset).Take(limit).ToArray(), runs.Length)
+                );
+            }
+
+            public Task<RunPostingListResponse?> ListPostingsAsync(
+                Guid runId,
+                int offset,
+                int limit,
+                CancellationToken cancellationToken
+            )
+            {
+                LastLimit = limit;
+                LastOffset = offset;
                 RunPostingResponse posting = new(
                     Guid.NewGuid(),
                     "101",
@@ -325,9 +391,40 @@ namespace JobScrape.Application.Tests
                 );
                 return Task.FromResult(
                     runs.Any(r => r.Id == runId)
-                        ? new RunPostingListResponse(runId, [posting])
+                        ? new RunPostingListResponse(runId, [posting], 1)
                         : null
                 );
+            }
+
+            public Task<IReadOnlyList<ExportPosting>?> ListExportPostingsAsync(
+                Guid runId,
+                int limit,
+                CancellationToken cancellationToken
+            )
+            {
+                LastLimit = limit;
+                ExportPosting posting = new(
+                    Guid.NewGuid(),
+                    "101",
+                    "naukri",
+                    "https://www.naukri.com/job-listings-dev-101",
+                    null,
+                    "Developer",
+                    null,
+                    null,
+                    "Unknown",
+                    null,
+                    null,
+                    null,
+                    [],
+                    null,
+                    Now,
+                    Now
+                );
+                IReadOnlyList<ExportPosting>? items = runs.Any(r => r.Id == runId)
+                    ? [posting]
+                    : null;
+                return Task.FromResult(items);
             }
         }
     }

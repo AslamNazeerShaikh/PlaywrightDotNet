@@ -75,7 +75,7 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 | **ClosedXML** | `0.105.1` | Trusted cross-platform Excel with hyperlinks. |
 | **Scalar.AspNetCore** | `2.18.5` | Local interactive API reference/testing at `/scalar`; Development only, paired with `Microsoft.AspNetCore.OpenApi` `10.0.14`. |
 
-Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Dapper, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
+Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
 
 Application code uses explicit use-case handlers and four small patterns: **Result**, **Options**, **Specification**, and **Problem Details**. See [Application Patterns](14-application-patterns.md).
 

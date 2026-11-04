@@ -287,10 +287,17 @@ namespace JobScrape.Application.Features.Scraping
             }
 
             var quota = await FindOrStartQuotaAsync(source, now, cancellationToken);
-            var runQuota = quota.TryStartRun(settings.DailyRunCap, now);
-            if (!runQuota.IsAllowed)
+            if (settings.DailyRunCap is { } runCap)
             {
-                return Result.Fail<RunScope>(Errors.QuotaExceeded(source, runQuota));
+                var runQuota = quota.TryStartRun(runCap, now);
+                if (!runQuota.IsAllowed)
+                {
+                    return Result.Fail<RunScope>(Errors.QuotaExceeded(source, runQuota));
+                }
+            }
+            else
+            {
+                quota.RecordRunStart(now);
             }
 
             var run = ScrapeRun.Create(profile, now);
@@ -444,10 +451,18 @@ namespace JobScrape.Application.Features.Scraping
             var run = scope.Run;
             var politeness = new PolitenessPolicy(run.Limits, _random);
             var seenPages = new HashSet<PageFingerprint>();
-            var seenJobs = new HashSet<string>(StringComparer.Ordinal);
             string? cursor = null;
 
-            for (var page = 1; page <= run.Limits.MaxPages; page++)
+            // A saved position is normally absent: each run gets a fresh id.
+            // When present (an interrupted run picked back up), pagination
+            // continues after the last completed page without recounting.
+            var progress =
+                await _stores.Progress.GetAsync(run.Id, cancellationToken)
+                ?? ScrapeRunProgress.Start(run.Id, _clock.GetUtcNow());
+            var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
+            cursor = progress.NextCursor;
+
+            for (var page = progress.PagesCompleted + 1; page <= run.Limits.MaxPages; page++)
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
                 {
@@ -514,6 +529,9 @@ namespace JobScrape.Application.Features.Scraping
                     cancellationToken
                 );
                 run.RecordPage(stats, now);
+                var nextCursor = result.NextCursor;
+                progress.RecordPage(run.Stats.PagesFetched, nextCursor, seenJobs, now);
+                await _stores.Progress.SaveAsync(progress, cancellationToken);
                 await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
                 LogPageRecorded(
                     _logger,
@@ -524,7 +542,7 @@ namespace JobScrape.Application.Features.Scraping
                     stats.PostingsUpdated
                 );
 
-                cursor = result.NextCursor;
+                cursor = nextCursor;
                 if (cursor is null)
                 {
                     break;
@@ -608,7 +626,6 @@ namespace JobScrape.Application.Features.Scraping
                     detail => detail.Challenge,
                     cancellationToken
                 );
-                run.RecordDetail();
 
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
@@ -631,6 +648,7 @@ namespace JobScrape.Application.Features.Scraping
                     return true;
                 }
 
+                run.RecordDetail();
                 if (!TryMerge(scope, posting, result, decision))
                 {
                     run.RecordFailure();
@@ -643,7 +661,10 @@ namespace JobScrape.Application.Features.Scraping
         }
 
         /// <summary>
-        /// Merges a usable detail into its posting.
+        /// Merges a usable detail into its posting. Before merging, the
+        /// card's posted date is cross-checked against the detail's: on a
+        /// disagreement both values are logged and counted, and the detail
+        /// date wins the merge.
         /// </summary>
         /// <param name="scope">The running run.</param>
         /// <param name="posting">The posting being enriched.</param>
@@ -664,6 +685,7 @@ namespace JobScrape.Application.Features.Scraping
 
             try
             {
+                CrossCheckPostedDate(scope, posting, result.Detail);
                 posting.Refresh(result.Detail, _clock.GetUtcNow());
                 return true;
             }
@@ -679,6 +701,36 @@ namespace JobScrape.Application.Features.Scraping
                 );
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Compares the card's posted date with the detail's before the
+        /// detail merges. A disagreement is logged with both values and
+        /// counted; the detail date wins because
+        /// <see cref="JobPosting.Refresh"/> prefers observed fields.
+        /// </summary>
+        /// <param name="scope">The running run.</param>
+        /// <param name="posting">The posting holding the card's date.</param>
+        /// <param name="detail">The detail snapshot.</param>
+        private void CrossCheckPostedDate(RunScope scope, JobPosting posting, JobSnapshot detail)
+        {
+            if (
+                posting.PostedAt is not { } card
+                || detail.PostedAt is not { } fresh
+                || card == fresh
+            )
+            {
+                return;
+            }
+
+            scope.Run.RecordPostedDateMismatch();
+            LogPostedDateMismatch(
+                _logger,
+                scope.Run.Id.Value,
+                posting.ExternalJobId.Value,
+                card,
+                fresh
+            );
         }
 
         /// <summary>
@@ -788,7 +840,13 @@ namespace JobScrape.Application.Features.Scraping
 
         /// <summary>
         /// Creates or refreshes the page's postings, up to the remaining job
-        /// cap. A posting is counted once per run; a card that fails domain
+        /// cap. Two profile gates run before anything is stored: cards older
+        /// than the posted-within window are stale, and cards whose observed
+        /// skills definitively miss the required list are out of scope.
+        /// Postings with no observed skills stay candidates for enrichment.
+        /// The gate reads the snapshot alone: a merge replaces stored skills
+        /// with observed ones, so a passing snapshot leaves matching skills.
+        /// A posting is counted once per run; a card that fails domain
         /// validation is dropped with a warning (docs/02-architecture.md §12.1).
         /// </summary>
         /// <param name="scope">The running run.</param>
@@ -808,6 +866,7 @@ namespace JobScrape.Application.Features.Scraping
         )
         {
             var source = scope.Context.Source;
+            var criteria = scope.Context.Criteria;
             int found = 0,
                 added = 0,
                 updated = 0;
@@ -830,6 +889,17 @@ namespace JobScrape.Application.Features.Scraping
                     continue;
                 }
 
+                if (IsStale(criteria, snapshot, now))
+                {
+                    LogCardDropped(
+                        _logger,
+                        scope.Run.Id.Value,
+                        snapshot.ExternalJobId,
+                        "stale posted date"
+                    );
+                    continue;
+                }
+
                 try
                 {
                     var id = ExternalJobId.Create(snapshot.ExternalJobId);
@@ -839,20 +909,40 @@ namespace JobScrape.Application.Features.Scraping
                     }
 
                     var existing = await _stores.Postings.FindAsync(source, id, cancellationToken);
-                    if (existing is null)
+                    if (IsSkillMismatch(criteria, snapshot.Skills))
                     {
-                        existing = JobPosting.Create(snapshot, now);
-                        await _stores.Postings.AddAsync(existing, cancellationToken);
+                        LogCardDropped(
+                            _logger,
+                            scope.Run.Id.Value,
+                            snapshot.ExternalJobId,
+                            "skill mismatch"
+                        );
+                        continue;
+                    }
+
+                    ContentHash? before = null;
+                    var posting = existing;
+                    if (posting is null)
+                    {
+                        posting = JobPosting.Create(snapshot, now);
+                        await _stores.Postings.AddAsync(posting, cancellationToken);
+                    }
+                    else
+                    {
+                        before = posting.ContentHash;
+                        posting.Refresh(snapshot, now);
+                    }
+
+                    if (before is null)
+                    {
                         added++;
                     }
                     else
                     {
-                        var before = existing.ContentHash;
-                        existing.Refresh(snapshot, now);
-                        updated += existing.ContentHash == before ? 0 : 1;
+                        updated += posting.ContentHash == before ? 0 : 1;
                     }
 
-                    scope.Touched.Add(existing);
+                    scope.Touched.Add(posting);
                     found++;
                 }
                 catch (DomainException ex)
@@ -864,6 +954,52 @@ namespace JobScrape.Application.Features.Scraping
             }
 
             return new PageStats(found, added, updated);
+        }
+
+        /// <summary>
+        /// Tests a card against the profile's recency window.
+        /// </summary>
+        /// <param name="criteria">The profile's search criteria.</param>
+        /// <param name="snapshot">The card snapshot.</param>
+        /// <param name="now">The sighting time.</param>
+        /// <returns>True when the card is older than the window allows.</returns>
+        private static bool IsStale(
+            SearchCriteria criteria,
+            JobSnapshot snapshot,
+            DateTimeOffset now
+        )
+        {
+            if (criteria.PostedWithinDays is not { } days)
+            {
+                return false;
+            }
+
+            // An unknown posted date passes: card parsers often lack one
+            // and detail enrichment fills it in.
+            if (snapshot.PostedAt is not { } postedAt)
+            {
+                return false;
+            }
+
+            return postedAt < now.AddDays(-days);
+        }
+
+        /// <summary>
+        /// Tests observed skill names against the profile's required list.
+        /// Postings with no observed skills pass as enrichment candidates;
+        /// only a definitive non-overlap drops the card.
+        /// </summary>
+        /// <param name="criteria">The profile's search criteria.</param>
+        /// <param name="skillNames">The observed skill names.</param>
+        /// <returns>True when skills were observed and none is required.</returns>
+        private static bool IsSkillMismatch(
+            SearchCriteria criteria,
+            IEnumerable<string?> skillNames
+        )
+        {
+            return criteria.RequiredSkills.Count > 0
+                && skillNames.Any(name => !string.IsNullOrWhiteSpace(name))
+                && !SkillMatcher.Matches(skillNames, criteria.RequiredSkills);
         }
 
         /// <summary>
@@ -993,6 +1129,18 @@ namespace JobScrape.Application.Features.Scraping
             Guid runId,
             string externalJobId,
             string reason
+        );
+
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Run {RunId} card/detail posted-date mismatch for {ExternalJobId}: card {CardPostedAt} vs detail {DetailPostedAt}; detail wins"
+        )]
+        private static partial void LogPostedDateMismatch(
+            ILogger logger,
+            Guid runId,
+            string externalJobId,
+            DateTimeOffset cardPostedAt,
+            DateTimeOffset detailPostedAt
         );
 
         [LoggerMessage(

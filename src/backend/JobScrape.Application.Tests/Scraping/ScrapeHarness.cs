@@ -28,14 +28,22 @@ namespace JobScrape.Application.Tests.Scraping
             SourceKey? source = null,
             int maxPages = 3,
             int maxJobs = 60,
-            int maxDetails = 0
+            int maxDetails = 0,
+            string[]? requiredSkills = null
         )
         {
             var key = source ?? SourceKey.Naukri;
             Profile = SearchProfile.Create(
                 "backend",
                 key,
-                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false),
+                new SearchCriteria(
+                    "c#",
+                    ["Pune"],
+                    null,
+                    null,
+                    remoteOnly: false,
+                    requiredSkills ?? []
+                ),
                 new RunLimits(
                     maxPages,
                     maxJobs,
@@ -61,6 +69,8 @@ namespace JobScrape.Application.Tests.Scraping
                 25,
                 60,
                 2,
+                DefaultLimits.MaxPages,
+                DefaultLimits.MaxJobs,
                 TimeSpan.FromMinutes(45),
                 DefaultLimits
             );
@@ -165,6 +175,7 @@ namespace JobScrape.Application.Tests.Scraping
                 IBrowserProfileRepository,
                 ISourceQuotaRepository,
                 ISourceCircuitBreakerRepository,
+                IScrapeRunProgressRepository,
                 IUnitOfWork
         {
             public List<SearchProfile> SearchProfiles { get; } = [];
@@ -172,6 +183,8 @@ namespace JobScrape.Application.Tests.Scraping
             public List<ScrapeRun> Runs { get; } = [];
 
             public List<JobPosting> Postings { get; } = [];
+
+            public List<ScrapeRunProgress> Progress { get; } = [];
 
             public List<BrowserProfile> BrowserProfiles { get; } = [];
 
@@ -189,7 +202,7 @@ namespace JobScrape.Application.Tests.Scraping
 
             public ScrapeStores AsStores()
             {
-                return new ScrapeStores(this, this, this, this, this, this, this);
+                return new ScrapeStores(this, this, this, this, this, this, this, this);
             }
 
             public Task<SearchProfile?> GetAsync(
@@ -202,7 +215,11 @@ namespace JobScrape.Application.Tests.Scraping
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
             {
-                return Task.FromResult(SearchProfiles.Any(p => p.Name == name));
+                return Task.FromResult(
+                    SearchProfiles.Any(p =>
+                        string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
             }
 
             public Task AddAsync(SearchProfile profile, CancellationToken cancellationToken)
@@ -247,6 +264,42 @@ namespace JobScrape.Application.Tests.Scraping
                 );
             }
 
+            public Task<ScrapeRunProgress?> GetProgressAsync(
+                ScrapeRunId id,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(Progress.FirstOrDefault(p => p.Id == id));
+            }
+
+            async Task<ScrapeRunProgress?> IScrapeRunProgressRepository.GetAsync(
+                ScrapeRunId id,
+                CancellationToken cancellationToken
+            )
+            {
+                return await GetProgressAsync(id, cancellationToken);
+            }
+
+            public Task SaveAsync(ScrapeRunProgress progress, CancellationToken cancellationToken)
+            {
+                var existing = Progress.FirstOrDefault(p => p.Id == progress.Id);
+                if (existing is null)
+                {
+                    Progress.Add(progress);
+                }
+                else
+                {
+                    existing.RecordPage(
+                        progress.PagesCompleted,
+                        progress.NextCursor,
+                        progress.SeenExternalIds,
+                        progress.UpdatedAt
+                    );
+                }
+
+                return Task.CompletedTask;
+            }
+
             public Task AddAsync(JobPosting posting, CancellationToken cancellationToken)
             {
                 Postings.Add(posting);
@@ -259,7 +312,11 @@ namespace JobScrape.Application.Tests.Scraping
                 CancellationToken cancellationToken
             )
             {
-                return Task.FromResult(BrowserProfiles.Any(p => p.Name == name));
+                return Task.FromResult(
+                    BrowserProfiles.Any(p =>
+                        string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
             }
 
             public Task AddAsync(BrowserProfile profile, CancellationToken cancellationToken)

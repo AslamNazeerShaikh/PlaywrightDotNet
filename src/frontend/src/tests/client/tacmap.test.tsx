@@ -31,7 +31,7 @@ describe("tac-map", () => {
 
     expect(queries.getByLabelText("Tactical overview map", { exact: false })).toBeDefined();
     expect(queries.getByText("BFF :3000")).toBeDefined();
-    expect(queries.getByText(".NET :5207")).toBeDefined();
+    expect(queries.getByText(".NET :5208")).toBeDefined();
     expect(queries.getByText("HQ")).toBeDefined();
   });
 

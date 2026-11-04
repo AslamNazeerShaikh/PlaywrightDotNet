@@ -100,8 +100,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 if (request.Cursor is null)
                 {
+                    var url = NaukriUrlBuilder.SearchUrl(context.Criteria);
+                    LogSearchUrl(_logger, context.RunId.Value, request.PageNumber, url.AbsoluteUri);
                     var response = await page.GotoAsync(
-                        NaukriUrlBuilder.SearchUrl(context.Criteria).AbsoluteUri,
+                        url.AbsoluteUri,
                         new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
                     );
                     status = response?.Status;
@@ -356,6 +358,17 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Message = "Naukri Next did not advance for run {RunId} on page {Page}"
         )]
         private static partial void LogNextDidNotAdvance(ILogger logger, Guid runId, int page);
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Naukri run {RunId} page {Page} navigates to {Url}"
+        )]
+        private static partial void LogSearchUrl(
+            ILogger logger,
+            Guid runId,
+            int page,
+            string url
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,

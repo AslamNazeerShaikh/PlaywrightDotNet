@@ -25,7 +25,17 @@ namespace JobScrape.Application.Tests
 
         private static SourceSettings Settings(SourceKey source, bool enabled = true)
         {
-            return new SourceSettings(source, enabled, 25, 60, 2, TimeSpan.FromMinutes(45), Policy);
+            return new SourceSettings(
+                source,
+                enabled,
+                25,
+                60,
+                2,
+                Policy.MaxPages,
+                Policy.MaxJobs,
+                TimeSpan.FromMinutes(45),
+                Policy
+            );
         }
 
         private static ListSourcesHandler Create(
@@ -62,6 +72,22 @@ namespace JobScrape.Application.Tests
             Assert.Equal(new SourceCircuit("Closed", null, false, 0, 0), naukri.Circuit);
             Assert.Empty(store.Quotas);
             Assert.Empty(store.Circuits);
+        }
+
+        [Fact]
+        public async Task NullRunCapIsReportedAsNoCap()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var handler = Create(
+                store,
+                ComplianceConsent.None,
+                Settings(SourceKey.Naukri) with { DailyRunCap = null }
+            );
+
+            var naukri = Assert.Single((await handler.HandleAsync(Ct)).Items);
+
+            Assert.Null(naukri.Quota.RunCap);
+            Assert.Equal(0, naukri.Quota.RunsUsed);
         }
 
         [Fact]

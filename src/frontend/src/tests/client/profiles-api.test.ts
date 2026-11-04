@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createApiClient, type FetchImpl } from "../../client/lib/api.ts";
-import { readForm } from "../../client/pages/profiles.tsx";
+import { readForm, readUpdateForm } from "../../client/pages/profiles.tsx";
 
 const profile = {
   id: "p1",
@@ -10,8 +10,10 @@ const profile = {
   keywords: "c#",
   locations: ["Pune"],
   experienceYears: 6,
-  postedWithinDays: null,
+  postedWithinDays: 1,
   remoteOnly: false,
+  requiredSkills: ["C#", "ASP.NET Core"],
+  companies: ["Infosys", "TCS"],
   maxPages: 3,
   maxJobs: 60,
   maxDetails: 60,
@@ -33,7 +35,7 @@ describe("profiles api", () => {
     const { result } = await createApiClient(fetchImpl).listProfiles();
 
     expect(result).toEqual({ ok: true, value: { items: [profile], total: 1 } });
-    expect(calls).toEqual([{ url: "/api/v1/search-profiles", init: undefined }]);
+    expect(calls).toEqual([{ url: "/api/v1/search-profiles", init: { method: "GET" } }]);
   });
 
   test("createProfile POSTs JSON and returns the created profile", async () => {
@@ -48,14 +50,47 @@ describe("profiles api", () => {
       keywords: "c#",
       locations: ["Pune"],
       experienceYears: 6,
-      postedWithinDays: null,
+      postedWithinDays: 1,
       remoteOnly: false,
+      requiredSkills: ["C#", "ASP.NET Core"],
+      companies: ["Infosys", "TCS"],
     };
 
     const { result } = await createApiClient(fetchImpl).createProfile(input);
 
     expect(result).toEqual({ ok: true, value: profile });
     expect(seen?.method).toBe("POST");
+    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(JSON.parse(String(seen?.body))).toEqual(input);
+  });
+
+  test("updateProfile PUTs JSON to the profile id", async () => {
+    let seen: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (_url, init) => {
+      seen = init;
+      return { ok: true, status: 200, json: async () => profile };
+    };
+    const input = {
+      name: "backend-2",
+      keywords: "asp.net",
+      locations: ["Pune"],
+      experienceYears: 6,
+      postedWithinDays: 1,
+      remoteOnly: false,
+      requiredSkills: ["C#"],
+      companies: ["Infosys", "TCS"],
+      maxPages: 2,
+      maxJobs: 20,
+      maxDetails: 10,
+      minDelayMs: 3000,
+      maxDelayMs: 7000,
+      enabled: true,
+    };
+
+    const { result } = await createApiClient(fetchImpl).updateProfile("p1", input);
+
+    expect(result).toEqual({ ok: true, value: profile });
+    expect(seen?.method).toBe("PUT");
     expect(seen?.headers).toEqual({ "content-type": "application/json" });
     expect(JSON.parse(String(seen?.body))).toEqual(input);
   });
@@ -81,6 +116,8 @@ describe("profiles api", () => {
       experienceYears: null,
       postedWithinDays: null,
       remoteOnly: false,
+      requiredSkills: [],
+      companies: [],
     });
 
     expect(result.ok).toBe(false);
@@ -120,6 +157,7 @@ describe("profile form", () => {
     data.set("locations", " Pune, ,Hyderabad ,");
     data.set("experienceYears", "6");
     data.set("postedWithinDays", " ");
+    data.set("requiredSkills", " C#, ,ASP.NET Core ,");
 
     expect(readForm(data)).toEqual({
       name: "backend",
@@ -129,6 +167,8 @@ describe("profile form", () => {
       experienceYears: 6,
       postedWithinDays: null,
       remoteOnly: false,
+      requiredSkills: ["C#", "ASP.NET Core"],
+      companies: [],
     });
   });
 
@@ -138,5 +178,40 @@ describe("profile form", () => {
 
     expect(readForm(data).remoteOnly).toBe(true);
     expect(readForm(data).locations).toEqual([]);
+  });
+
+  test("readUpdateForm reads every editable field", () => {
+    const data = new FormData();
+    data.set("name", "  renamed ");
+    data.set("keywords", " asp.net ");
+    data.set("locations", " Pune, ,Hyderabad ,");
+    data.set("requiredSkills", " C#, ,ASP.NET Core ,");
+    data.set("companies", " Infosys, ,TCS ,");
+    data.set("experienceYears", "6");
+    data.set("postedWithinDays", "");
+    data.set("maxPages", "2");
+    data.set("maxJobs", "20");
+    data.set("maxDetails", "10");
+    data.set("minDelayMs", "3000");
+    data.set("maxDelayMs", "7000");
+    data.set("remoteOnly", "on");
+    data.set("enabled", "on");
+
+    expect(readUpdateForm(data)).toEqual({
+      name: "renamed",
+      keywords: "asp.net",
+      locations: ["Pune", "Hyderabad"],
+      experienceYears: 6,
+      postedWithinDays: null,
+      remoteOnly: true,
+      requiredSkills: ["C#", "ASP.NET Core"],
+      companies: ["Infosys", "TCS"],
+      maxPages: 2,
+      maxJobs: 20,
+      maxDetails: 10,
+      minDelayMs: 3000,
+      maxDelayMs: 7000,
+      enabled: true,
+    });
   });
 });

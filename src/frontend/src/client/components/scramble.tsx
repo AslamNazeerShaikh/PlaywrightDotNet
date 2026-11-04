@@ -29,7 +29,7 @@ export function Scramble({
   const [display, setDisplay] = useState(() => fullScramble(text));
 
   useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true) {
       setDisplay(text);
       return;
     }

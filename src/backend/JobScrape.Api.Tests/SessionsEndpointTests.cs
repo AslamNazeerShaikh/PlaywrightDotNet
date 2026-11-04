@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using JobScrape.Api.Controllers;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Sessions;
+using JobScrape.Domain.Access;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace JobScrape.Api.Tests
@@ -14,7 +17,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public void RejectsNullHandlers()
         {
-            Assert.Throws<ArgumentNullException>(() => new SessionsController(null!, null!, null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                new SessionsController(null!, null!, null!, null!)
+            );
         }
 
         [Fact]
@@ -111,6 +116,142 @@ namespace JobScrape.Api.Tests
                 StringComparison.Ordinal
             );
             Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        }
+
+        [Fact]
+        public async Task PatchRenamesTheProfileAndMovesItsDirectory()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "before", sourceKey = "naukri" },
+                Ct
+            );
+            var session = await created.Content.ReadFromJsonAsync<SessionResponse>(Ct);
+
+            var oldDirectory = Path.Combine(factory.ProfilesRoot, "naukri", "before");
+            Directory.CreateDirectory(oldDirectory);
+            await File.WriteAllTextAsync(Path.Combine(oldDirectory, "marker.txt"), "kept", Ct);
+
+            using var patched = await client.PatchAsJsonAsync(
+                $"api/v1/sessions/{session!.Id}",
+                new { name = "after", engine = "Chromium", channel = "Bundled" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, patched.StatusCode);
+            var updated = await patched.Content.ReadFromJsonAsync<SessionResponse>(Ct);
+            Assert.Equal("after", updated!.Name);
+            Assert.Equal("naukri/after", updated.UserDataDirectory);
+            Assert.False(Directory.Exists(oldDirectory));
+            Assert.True(
+                File.Exists(
+                    Path.Combine(factory.ProfilesRoot, "naukri", "after", "marker.txt")
+                )
+            );
+        }
+
+        [Fact]
+        public async Task PatchToAnotherProfilesNameIsAConflict()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "taken", sourceKey = "naukri" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "mine", sourceKey = "naukri" },
+                Ct
+            );
+            var session = await second.Content.ReadFromJsonAsync<SessionResponse>(Ct);
+
+            using var patched = await client.PatchAsJsonAsync(
+                $"api/v1/sessions/{session!.Id}",
+                new { name = "taken", engine = "Chromium", channel = "Bundled" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, patched.StatusCode);
+            Assert.Contains(
+                "SESSION_NAME_TAKEN",
+                await patched.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
+        public async Task RenameWhileTheProfileIsOpenReturnsAConflict()
+        {
+            await using var factory = new ApiFactory
+            {
+                TestServices = services =>
+                    services.AddSingleton<IBrowserProfileWorkspace>(new BusyWorkspace()),
+            };
+            using var client = factory.CreateClient();
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "before", sourceKey = "naukri" },
+                Ct
+            );
+            var session = await created.Content.ReadFromJsonAsync<SessionResponse>(Ct);
+
+            using var patched = await client.PatchAsJsonAsync(
+                $"api/v1/sessions/{session!.Id}",
+                new { name = "after", engine = "Chromium", channel = "Bundled" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, patched.StatusCode);
+            Assert.Contains(
+                "SESSION_RENAME_BLOCKED",
+                await patched.Content.ReadAsStringAsync(Ct),
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
+        public async Task PatchRejectsInvalidNamesAndMissingProfiles()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var created = await client.PostAsJsonAsync(
+                "api/v1/sessions",
+                new { name = "valid", sourceKey = "naukri" },
+                Ct
+            );
+            var session = await created.Content.ReadFromJsonAsync<SessionResponse>(Ct);
+
+            using var invalid = await client.PatchAsJsonAsync(
+                $"api/v1/sessions/{session!.Id}",
+                new { name = "../escape", engine = "Firefox", channel = "Chrome" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+            Assert.Contains("name", await invalid.Content.ReadAsStringAsync(Ct));
+
+            using var missing = await client.PatchAsJsonAsync(
+                $"api/v1/sessions/{Guid.NewGuid()}",
+                new { name = "missing", engine = "Chromium", channel = "Bundled" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        }
+
+        private sealed class BusyWorkspace : IBrowserProfileWorkspace
+        {
+            public Task<ProfileDirectoryRename> RenameAsync(
+                BrowserProfile profile,
+                string newName,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(ProfileDirectoryRename.ProfileInUse);
+            }
         }
     }
 }

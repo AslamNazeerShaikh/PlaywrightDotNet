@@ -9,10 +9,20 @@ namespace JobScrape.Domain.Sourcing
     public sealed record RunLimits
     {
         /// <summary>
+        /// Highest page cap any profile may request.
+        /// </summary>
+        public const int MaxPagesCeiling = 1000;
+
+        /// <summary>
+        /// Highest job cap any profile may request.
+        /// </summary>
+        public const int MaxJobsCeiling = 20_000;
+
+        /// <summary>
         /// Initializes a new instance, rejecting any value outside its range.
         /// </summary>
-        /// <param name="maxPages">Result pages per run, 1–30.</param>
-        /// <param name="maxJobs">Postings collected per run, 1–1000.</param>
+        /// <param name="maxPages">Result pages per run, 1–1000.</param>
+        /// <param name="maxJobs">Postings collected per run, 1–20 000.</param>
         /// <param name="maxDetails">Detail pages visited per run, 0–1000; 0 disables enrichment.</param>
         /// <param name="minDelay">Shortest delay between requests, 1–60 seconds.</param>
         /// <param name="maxDelay">Longest delay between requests, at least <paramref name="minDelay"/> and at most 2 minutes.</param>
@@ -25,14 +35,14 @@ namespace JobScrape.Domain.Sourcing
             TimeSpan maxDelay
         )
         {
-            if (maxPages is < 1 or > 30)
+            if (maxPages is < 1 or > MaxPagesCeiling)
             {
-                throw new DomainException("maxPages must be 1..30.");
+                throw new DomainException($"maxPages must be 1..{MaxPagesCeiling}.");
             }
 
-            if (maxJobs is < 1 or > 1000)
+            if (maxJobs is < 1 or > MaxJobsCeiling)
             {
-                throw new DomainException("maxJobs must be 1..1000.");
+                throw new DomainException($"maxJobs must be 1..{MaxJobsCeiling}.");
             }
 
             if (maxDetails is < 0 or > 1000)

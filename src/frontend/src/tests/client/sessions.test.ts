@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createApiClient, type FetchImpl } from "../../client/lib/api.ts";
-import { stateLabel, stateTone } from "../../client/pages/sessions.tsx";
+import { readSessionUpdateForm, stateLabel, stateTone } from "../../client/pages/sessions.tsx";
 
 describe("sessions", () => {
   test("listSessions GETs and createSession POSTs JSON", async () => {
@@ -24,11 +24,64 @@ describe("sessions", () => {
       channel: "Bundled",
     });
 
-    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: undefined });
+    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: { method: "GET" } });
     expect(calls[1]?.init?.method).toBe("POST");
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       name: "main",
       sourceKey: "naukri",
+      engine: "Chromium",
+      channel: "Bundled",
+    });
+  });
+
+  test("updateSession PATCHes JSON to the session id", async () => {
+    let seen: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (_url, init) => {
+      seen = init;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "s1",
+          name: "after",
+          sourceKey: "naukri",
+          engine: "Chromium",
+          channel: "Bundled",
+          state: "New",
+          userDataDirectory: "naukri/after",
+          canLaunch: true,
+          cooldownUntil: null,
+          consecutiveChallenges: 0,
+          lastUsedAt: null,
+          lastVerifiedAt: null,
+        }),
+      };
+    };
+
+    const { result } = await createApiClient(fetchImpl).updateSession("s1", {
+      name: "after",
+      engine: "Chromium",
+      channel: "Bundled",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(seen?.method).toBe("PATCH");
+    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(JSON.parse(String(seen?.body))).toEqual({
+      name: "after",
+      engine: "Chromium",
+      channel: "Bundled",
+    });
+  });
+
+  test("readSessionUpdateForm trims every field", () => {
+    const data = new FormData();
+    data.set("name", "  after ");
+    data.set("engine", " Chromium ");
+    data.set("channel", " Bundled ");
+
+    expect(readSessionUpdateForm(data)).toEqual({
+      name: "after",
       engine: "Chromium",
       channel: "Bundled",
     });

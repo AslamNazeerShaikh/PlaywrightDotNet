@@ -2,6 +2,8 @@ using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Infrastructure.Browser;
 using JobScrape.Infrastructure.Configuration;
+using JobScrape.Infrastructure.Sources.Indeed;
+using JobScrape.Infrastructure.Sources.LinkedIn;
 using JobScrape.Infrastructure.Sources.Naukri;
 using Microsoft.Extensions.Options;
 
@@ -10,7 +12,7 @@ namespace JobScrape.Api.Composition
     /// <summary>
     /// Registers the browser layer and the source adapters: one Playwright
     /// pool for the process, a session manager per run scope, wall
-    /// artifacts on disk, and the Naukri adapter.
+    /// artifacts on disk, and the Naukri, Indeed, and LinkedIn adapters.
     /// </summary>
     public static class BrowserRegistration
     {
@@ -35,6 +37,9 @@ namespace JobScrape.Api.Composition
                 .BindConfiguration(BrowserOptions.SectionName)
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<BrowserOptions>>(
+                new BrowserOptionsValidator(contentRoot)
+            );
             services.AddSingleton(provider =>
             {
                 var storage = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
@@ -43,15 +48,25 @@ namespace JobScrape.Api.Composition
                     Path.GetFullPath(storage.ProfilesRoot, contentRoot),
                     Path.GetFullPath(storage.ArtifactsRoot, contentRoot),
                     browser.Headless,
-                    TimeSpan.FromSeconds(browser.NavigationTimeoutSeconds)
+                    TimeSpan.FromSeconds(browser.NavigationTimeoutSeconds),
+                    browser.AdblockMode,
+                    browser.ExtensionDir is null
+                        ? null
+                        : Path.GetFullPath(browser.ExtensionDir, contentRoot)
                 );
             });
             // Singleton: the container disposes it on shutdown, closing every
             // browser and flushing profile cookies.
             services.AddSingleton<BrowserSessionPool>();
+            services.AddSingleton<IBrowserProfileWorkspace, BrowserProfileWorkspace>();
             services.AddScoped<ISessionManager, PlaywrightSessionManager>();
             services.AddSingleton<IArtifactStore, FileArtifactStore>();
+            // Registers one adapter per source; removing one (e.g. LinkedIn)
+            // only removes its registration, never core code. Indeed and
+            // LinkedIn stay disabled by default and gated on consent.
             services.AddSingleton<IJobSource, NaukriJobSource>();
+            services.AddSingleton<IJobSource, IndeedJobSource>();
+            services.AddSingleton<IJobSource, LinkedInJobSource>();
             services.AddSingleton<JobSourceRegistry>();
             return services;
         }

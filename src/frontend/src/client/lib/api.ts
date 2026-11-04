@@ -20,6 +20,8 @@ export interface SearchProfilePayload {
   experienceYears: number | null;
   postedWithinDays: number | null;
   remoteOnly: boolean;
+  requiredSkills: string[];
+  companies: string[];
   maxPages: number;
   maxJobs: number;
   maxDetails: number;
@@ -56,7 +58,7 @@ export interface SourceStatus {
     detailsUsed: number;
     detailCap: number;
     runsUsed: number;
-    runCap: number;
+    runCap: number | null;
     challenges: number;
   };
   circuit: {
@@ -102,6 +104,13 @@ export interface CreateSessionInput {
   channel: string;
 }
 
+/** Body of PATCH /api/v1/sessions/{id}. The source is immutable. */
+export interface UpdateSessionInput {
+  name: string;
+  engine: string;
+  channel: string;
+}
+
 /** Body of POST /api/v1/search-profiles. Omitted caps default to the source policy. */
 export interface CreateProfileInput {
   name: string;
@@ -111,6 +120,26 @@ export interface CreateProfileInput {
   experienceYears: number | null;
   postedWithinDays: number | null;
   remoteOnly: boolean;
+  requiredSkills: string[];
+  companies: string[];
+}
+
+/** Body of PUT /api/v1/search-profiles/{id}. The source is immutable. */
+export interface UpdateProfileInput {
+  name: string;
+  keywords: string;
+  locations: string[];
+  experienceYears: number | null;
+  postedWithinDays: number | null;
+  remoteOnly: boolean;
+  requiredSkills: string[];
+  companies: string[];
+  maxPages: number | null;
+  maxJobs: number | null;
+  maxDetails: number | null;
+  minDelayMs: number | null;
+  maxDelayMs: number | null;
+  enabled: boolean;
 }
 
 /** GET /api/v1/runs/{id}: a scrape run's stage, counters, and caps. Timestamps are UTC ISO. */
@@ -118,6 +147,7 @@ export interface RunPayload {
   id: string;
   profileId: string;
   profileName: string | null;
+  companies: string[];
   sourceKey: string;
   stage: string;
   isTerminal: boolean;
@@ -168,6 +198,7 @@ export interface RunPosting {
 export interface RunPostingList {
   runId: string;
   items: RunPosting[];
+  total: number;
 }
 
 /** Body of POST /api/v1/runs. */
@@ -176,6 +207,12 @@ export interface StartRunInput {
   browserProfileId: string;
   enrich: boolean;
 }
+
+/** Export file shape: csv streams text, xlsx is a workbook. */
+export type ExportFormat = "csv" | "xlsx";
+
+/** Which postings an export covers: everything, only the profile companies, or all but them. */
+export type ExportGroup = "all" | "only" | "exclude";
 
 import { renderDebugEnabled } from "./debug.ts";
 
@@ -197,32 +234,118 @@ export interface Timed<T> {
   at: string;
 }
 
+export interface DbTableInfo {
+  name: string;
+  rowCount: number;
+}
+
+export interface DbColumnInfo {
+  name: string;
+  type: string;
+  notNull: boolean;
+  primaryKey: boolean;
+  defaultValue: string | null;
+}
+
+export interface DbForeignKeyInfo {
+  column: string;
+  referencedTable: string;
+  referencedColumn: string;
+}
+
+export interface DbTableSchema {
+  name: string;
+  columns: DbColumnInfo[];
+  foreignKeys: DbForeignKeyInfo[];
+  primaryKeyColumn: string;
+}
+
+export interface DbRowsResult {
+  rows: Record<string, unknown>[];
+  total: number;
+}
+
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
-) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json(): Promise<unknown>;
+  text?(): Promise<string>;
+  blob?(): Promise<Blob>;
+  headers?: { get(name: string): string | null };
+}>;
 
 export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
-    fetchProfile: (id: string) =>
-      timed(() => get<SearchProfilePayload>(fetchImpl, `/api/v1/search-profiles/${id}`)),
     listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
     listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
     listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
     createSession: (input: CreateSessionInput) =>
       timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
+    updateSession: (id: string, input: UpdateSessionInput) =>
+      timed(() => send<SessionPayload>(fetchImpl, "PATCH", `/api/v1/sessions/${id}`, input)),
     createProfile: (input: CreateProfileInput) =>
       timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
-    listRuns: () => timed(() => get<RunList>(fetchImpl, "/api/v1/runs")),
+    updateProfile: (id: string, input: UpdateProfileInput) =>
+      timed(() =>
+        send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
+      ),
+    listRuns: (offset = 0, limit = 50) =>
+      timed(() => get<RunList>(fetchImpl, `/api/v1/runs?offset=${offset}&limit=${limit}`)),
     getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
-    listRunPostings: (id: string) =>
-      timed(() => get<RunPostingList>(fetchImpl, `/api/v1/runs/${id}/postings`)),
+    listRunPostings: (id: string, offset = 0, limit = 200) =>
+      timed(() =>
+        get<RunPostingList>(
+          fetchImpl,
+          `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
+        ),
+      ),
+    downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
+      timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
       timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
       timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
+    listDbTables: () => timed(() => get<{ items: DbTableInfo[] }>(fetchImpl, "/api/v1/db/tables")),
+    getDbSchema: (table: string) =>
+      timed(() =>
+        get<DbTableSchema>(fetchImpl, `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
+      ),
+    listDbRows: (table: string, offset: number, limit: number) =>
+      timed(() =>
+        get<DbRowsResult>(
+          fetchImpl,
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows?offset=${offset}&limit=${limit}`,
+        ),
+      ),
+    insertDbRow: (table: string, values: Record<string, unknown>) =>
+      timed(() =>
+        send<null>(
+          fetchImpl,
+          "POST",
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows`,
+          values,
+        ),
+      ),
+    updateDbRow: (table: string, pk: string, values: Record<string, unknown>) =>
+      timed(() =>
+        send<null>(fetchImpl, "PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
+          primaryKeyValue: pk,
+          values,
+        }),
+      ),
+    deleteDbRow: (table: string, pk: string) =>
+      timed(() =>
+        send<null>(
+          fetchImpl,
+          "DELETE",
+          `/api/v1/db/tables/${encodeURIComponent(table)}/rows/${encodeURIComponent(pk)}`,
+        ),
+      ),
   };
 }
 
@@ -239,20 +362,103 @@ function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
   return send<T>(fetchImpl, "GET", path);
 }
 
+/**
+ * Downloads a run export as a Blob. The body is binary (xlsx) or text (csv), never JSON, so it
+ * bypasses `send`: failures still surface as problems via the shared `toProblem` mapping.
+ */
+async function downloadExport(
+  fetchImpl: FetchImpl,
+  id: string,
+  format: ExportFormat,
+  group: ExportGroup,
+): Promise<ApiResult<{ blob: Blob; filename: string }>> {
+  const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
+  const path = `/api/v1/runs/${id}/postings/export?${query}`;
+  let res: Awaited<ReturnType<FetchImpl>>;
+  try {
+    res = await fetchImpl(path, { method: "GET" });
+  } catch {
+    return {
+      ok: false,
+      problem: {
+        status: 0,
+        title: "Cockpit unreachable",
+        detail: "Could not reach the BFF. Is `bun run dev` running?",
+        code: "BFF_UNREACHABLE",
+      },
+    };
+  }
+  if (!res.ok) {
+    return { ok: false, problem: await toProblem(res) };
+  }
+  if (typeof res.blob !== "function") {
+    return {
+      ok: false,
+      problem: {
+        status: res.status,
+        title: "Unreadable response",
+        detail: "The export answer has no downloadable body.",
+        code: "BAD_RESPONSE",
+      },
+    };
+  }
+  let blob: Blob;
+  try {
+    blob = await res.blob();
+  } catch {
+    return {
+      ok: false,
+      problem: {
+        status: res.status,
+        title: "Unreadable response",
+        detail: "The export body could not be read.",
+        code: "BAD_RESPONSE",
+      },
+    };
+  }
+  return { ok: true, value: { blob, filename: exportFilename(res.headers, id, format) } };
+}
+
+/**
+ * The Content-Disposition filename when the server sends one, else the stable fallback
+ * `run-postings-{id}.{format}`.
+ */
+function exportFilename(
+  headers: { get(name: string): string | null } | undefined,
+  id: string,
+  format: ExportFormat,
+): string {
+  const raw = headers?.get("content-disposition") ?? null;
+  if (raw !== null) {
+    const match = /filename\*?=(?:UTF-8''|")?([^";\s]+)/i.exec(raw);
+    if (match?.[1] !== undefined) {
+      const name = match[1].replace(/"$/, "");
+      try {
+        return decodeURIComponent(name);
+      } catch {
+        return name;
+      }
+    }
+  }
+  return `run-postings-${id}.${format}`;
+}
+
 async function send<T>(
   fetchImpl: FetchImpl,
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
     console.debug(`[fetch] ${method} ${path}`);
   }
-  let res: { ok: boolean; status: number; json(): Promise<unknown> };
+  let res: { ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> };
   try {
+    // The method always travels, even without a body. A bare
+    // `fetchImpl(path)` would silently downgrade DELETE to GET.
     res =
       body === undefined
-        ? await fetchImpl(path)
+        ? await fetchImpl(path, { method })
         : await fetchImpl(path, {
             method,
             headers: { "content-type": "application/json" },
@@ -270,8 +476,37 @@ async function send<T>(
     };
   }
   if (res.ok) {
+    // 204 No Content (and any empty body) carries no JSON; treat as success.
+    if (res.status === 204) {
+      return { ok: true, value: undefined as T };
+    }
     // A 2xx that is not JSON (an HTML page from a misrouted upstream) is a
     // problem like any other, never a throw the caller has to remember.
+    // Prefer res.text() when available (real fetch / bun), else fall back to res.json().
+    if (typeof res.text === "function") {
+      let text = "";
+      try {
+        text = (await res.text()) ?? "";
+      } catch {
+        text = "";
+      }
+      if (text.trim() === "") {
+        return { ok: true, value: undefined as T };
+      }
+      try {
+        return { ok: true, value: JSON.parse(text) as T };
+      } catch {
+        return {
+          ok: false,
+          problem: {
+            status: res.status,
+            title: "Unreadable response",
+            detail: `The server answered ${res.status} with a body that is not JSON.`,
+            code: "BAD_RESPONSE",
+          },
+        };
+      }
+    }
     try {
       return { ok: true, value: (await res.json()) as T };
     } catch {

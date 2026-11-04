@@ -22,8 +22,27 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 ## UI design
 
 - When designing or developing UI in `src/frontend/`, consult the ui-skills catalog first: `list_skills` filtered by topic/intent, then `get_skill` for the smallest useful set. Start with the `ibelick/ui-skills-root` router skill when unsure which applies.
+- Project-local UI skill pack also installed (`.opencode/skills/ui-ux-pro-max/`, plus `design`, `design-system`, `ui-styling`, `slides`, `banner-design`, `brand`): use `/ui-ux-pro-max` as orchestrator, or the sibling directly. Data lookups run via `python3 .opencode/skills/<skill>/scripts/search.py` (stdlib only). Image-generation steps in `banner-design`/`design` need the author's sibling skills (`frontend-design`, `ai-artist`) + API keys and are skipped without them. See [docs/18-harness-packs.md](docs/18-harness-packs.md).
 - Design baseline is 1920×1080 (16:9, ~141 PPI); fluid type/layout bottoms out below and ceilings at the baseline. See `src/frontend/README.md` § Design baseline.
 - Reference: [UI Skills](https://www.ui-skills.com/skills) · [MCP docs](https://www.ui-skills.com/mcp/docs).
+
+## Agent workflow (pstack)
+
+- pstack is installed project-locally (`.opencode/skills/`, `.opencode/agents/`, `.opencode/commands/`). See [docs/17-pstack-opencode.md](docs/17-pstack-opencode.md).
+- For any non-trivial task, start with `/poteto-mode`: it matches the request to a playbook and routes to the other skills as steps need them.
+- Role-to-model mapping lives in `.opencode/pstack-models.md` (auto-loaded). A step needing a Cursor-only feature (Bugbot, Automations, cloud agents) is skipped with a one-line `Skipped in OpenCode:` note per `.opencode/docs/harness/opencode.md`.
+- `deslop` ships from `cursor-team-kit` (`.opencode/skills/deslop/`, `/deslop` command).
+
+## ECC (secondary workflow pack)
+
+- ECC commands live in `.opencode/commands/` (`/plan`, `/code-review`, `/security`, `/build-fix`, `/e2e`, `/refactor-clean`, `/orchestrate`, `/learn`, `/checkpoint`, `/verify`, `/eval`, `/update-docs`, `/test-coverage`, `/harness-audit`, `/quality-gate`, `/model-route`, `/loop-start`, `/loop-status`, `/skill-create`) backed by 8 agents in `.opencode/opencode.json` (`planner`, `code-reviewer`, `security-reviewer`, `tdd-guide`, `build-error-resolver`, `e2e-runner`, `doc-updater`, `refactor-cleaner`) and consolidated rules in `.opencode/instructions/INSTRUCTIONS.md` (auto-loaded). No plugin hooks/tools (not built); instinct system, language-specific agents/reviewers (go/rust/java/kotlin/cpp/php/ruby), `setup-pm`, `security-scan` (needs AgentShield), and ECC `/tdd` (name owned by pstack) are skipped. See [docs/18-harness-packs.md](docs/18-harness-packs.md).
+- `/tdd` is the pstack skill; ECC's TDD agent is reachable via `/test-coverage` and the `tdd-guide` subagent.
+
+## Caveman (token saver, global install)
+
+- Caveman is installed globally (`~/.config/opencode/plugins/caveman`, skills, commands, 3 `cavecrew` agents), not in this repo. It routes `openai`/`anthropic`/`opencode-go` provider traffic through its compressor; other providers bypass it.
+- Repo rule: responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose. This matches the project's existing tone rules.
+- `/caveman-stats` measures savings. `caveman off <rock>` disables a rock globally. Never commit machine-specific caveman state; repo carries no caveman files.
 
 ## graphify
 
@@ -32,7 +51,7 @@ This project has a knowledge graph at graphify-out/ with god nodes, community st
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
 Rules:
-- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. The graph also indexes the full `.opencode/` corpus (every skill, playbook, reference, command, agent, and the harness docs), so skill discovery ("which skill/command achieves X") goes through `graphify query` too, then read the located `SKILL.md` in full before invoking it. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.

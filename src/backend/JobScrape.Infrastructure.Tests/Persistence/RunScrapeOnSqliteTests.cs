@@ -27,7 +27,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             var profile = SearchProfile.Create(
                 "backend",
                 SourceKey.Naukri,
-                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false),
+                new SearchCriteria("c#", ["Pune"], null, null, remoteOnly: false, []),
                 new RunLimits(3, 60, 0, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(6)),
                 Now
             );
@@ -61,6 +61,8 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                             25,
                             60,
                             2,
+                            profile.Limits.MaxPages,
+                            profile.Limits.MaxJobs,
                             TimeSpan.FromMinutes(45),
                             profile.Limits
                         ),

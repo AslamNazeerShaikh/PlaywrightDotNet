@@ -1,5 +1,6 @@
 using JobScrape.Api.Http;
 using JobScrape.Application.Features.Runs;
+using JobScrape.Application.Results;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -18,6 +19,7 @@ namespace JobScrape.Api.Controllers
         private readonly GetRunHandler _get;
         private readonly CancelRunHandler _cancel;
         private readonly ListRunPostingsHandler _postings;
+        private readonly ExportRunPostingsHandler _export;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RunsController"/> class.
@@ -27,13 +29,15 @@ namespace JobScrape.Api.Controllers
         /// <param name="get">Gets one run.</param>
         /// <param name="cancel">Cancels runs.</param>
         /// <param name="postings">Lists a run's postings.</param>
+        /// <param name="export">Exports a run's postings.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunsController(
             StartRunHandler start,
             ListRunsHandler list,
             GetRunHandler get,
             CancelRunHandler cancel,
-            ListRunPostingsHandler postings
+            ListRunPostingsHandler postings,
+            ExportRunPostingsHandler export
         )
         {
             ArgumentNullException.ThrowIfNull(start);
@@ -41,24 +45,32 @@ namespace JobScrape.Api.Controllers
             ArgumentNullException.ThrowIfNull(get);
             ArgumentNullException.ThrowIfNull(cancel);
             ArgumentNullException.ThrowIfNull(postings);
+            ArgumentNullException.ThrowIfNull(export);
             _start = start;
             _list = list;
             _get = get;
             _cancel = cancel;
             _postings = postings;
+            _export = export;
         }
 
         /// <summary>
         /// Lists the most recent runs, newest first.
         /// </summary>
+        /// <param name="offset">How many newest runs to skip.</param>
+        /// <param name="limit">How many runs to return.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the runs.</returns>
         [HttpGet]
         public async Task<ActionResult<RunListResponse>> ListAsync(
-            CancellationToken cancellationToken
+            [FromQuery] int offset = 0,
+            [FromQuery] int limit = ListRunsHandler.Limit,
+            CancellationToken cancellationToken = default
         )
         {
-            return Ok(await _list.HandleAsync(cancellationToken));
+            offset = Math.Max(0, offset);
+            limit = limit <= 0 ? ListRunsHandler.Limit : Math.Clamp(limit, 1, 500);
+            return Ok(await _list.HandleAsync(offset, limit, cancellationToken));
         }
 
         /// <summary>
@@ -109,13 +121,73 @@ namespace JobScrape.Api.Controllers
         /// Lists the postings a run saw.
         /// </summary>
         /// <param name="id">The run identifier.</param>
+        /// <param name="offset">How many postings to skip.</param>
+        /// <param name="limit">How many postings to return.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the postings; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}/postings")]
-        public async Task<IResult> PostingsAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<IResult> PostingsAsync(
+            Guid id,
+            [FromQuery] int offset = 0,
+            [FromQuery] int limit = ListRunPostingsHandler.Limit,
+            CancellationToken cancellationToken = default
+        )
         {
-            var result = await _postings.HandleAsync(id, cancellationToken);
+            offset = Math.Max(0, offset);
+            limit = limit <= 0 ? ListRunPostingsHandler.Limit : Math.Clamp(limit, 1, 500);
+            var result = await _postings.HandleAsync(id, offset, limit, cancellationToken);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
+        }
+
+        /// <summary>
+        /// Exports the postings a run saw as a file.
+        /// </summary>
+        /// <param name="id">The run identifier.</param>
+        /// <param name="format"><c>csv</c> or <c>xlsx</c>; defaults to <c>csv</c>.</param>
+        /// <param name="group"><c>all</c>, <c>only</c>, or <c>exclude</c>; defaults to <c>all</c>.</param>
+        /// <param name="cancellationToken">Aborted when the client disconnects.</param>
+        /// <returns>
+        /// 200 with the file; 400 <c>EXPORT_FORMAT_UNSUPPORTED</c>,
+        /// <c>EXPORT_GROUP_UNSUPPORTED</c>, or <c>EXPORT_COMPANIES_MISSING</c>;
+        /// 404 <c>RUN_NOT_FOUND</c>.
+        /// </returns>
+        [HttpGet("{id:guid}/postings/export")]
+        public async Task<IResult> ExportAsync(
+            Guid id,
+            [FromQuery] string format = "csv",
+            [FromQuery] string group = "all",
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (
+                !Enum.TryParse<ExportFormat>(format, ignoreCase: true, out var parsed)
+                || !Enum.IsDefined(parsed)
+            )
+            {
+                return Errors.ExportFormatUnsupported(format).ToProblem();
+            }
+
+            var parsedGroup = (group ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "all" => CompanyExportGroup.All,
+                "only" => CompanyExportGroup.Only,
+                "exclude" => CompanyExportGroup.Exclude,
+                _ => (CompanyExportGroup?)null,
+            };
+            if (parsedGroup is null)
+            {
+                return Errors.ExportGroupUnsupported(group ?? string.Empty).ToProblem();
+            }
+
+            var result = await _export.HandleAsync(
+                id,
+                parsed,
+                parsedGroup.Value,
+                cancellationToken
+            );
+            return result.IsSuccess
+                ? Results.File(result.Value.Content, result.Value.ContentType, result.Value.FileName)
+                : result.Error.ToProblem();
         }
     }
 }

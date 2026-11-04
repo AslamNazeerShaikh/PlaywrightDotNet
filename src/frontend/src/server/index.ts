@@ -31,6 +31,33 @@ export function createHandler(config: CockpitConfig) {
   };
 }
 
+/**
+ * Loads the TLS keypair when the config carries one. Returns undefined for plain HTTP. Throws when
+ * a configured file is missing so a half-wired checkout fails fast with the fix instead of serving
+ * the wrong scheme.
+ */
+export async function loadTls(
+  config: CockpitConfig,
+): Promise<{ cert: ReturnType<typeof Bun.file>; key: ReturnType<typeof Bun.file> } | undefined> {
+  if (config.tlsCertFile === undefined && config.tlsKeyFile === undefined) {
+    return undefined;
+  }
+  // parseConfig guarantees both-or-neither; the casts below hold by construction.
+  const cert = Bun.file(config.tlsCertFile as string);
+  const key = Bun.file(config.tlsKeyFile as string);
+  if (!(await cert.exists())) {
+    throw new Error(
+      `BFF_TLS_CERT_FILE not found: ${config.tlsCertFile}. Export the dev cert first (see README "HTTPS dev loop").`,
+    );
+  }
+  if (!(await key.exists())) {
+    throw new Error(
+      `BFF_TLS_KEY_FILE not found: ${config.tlsKeyFile}. Export the dev cert first (see README "HTTPS dev loop").`,
+    );
+  }
+  return { cert, key };
+}
+
 /** BFF self-check. Never touches the .NET API. */
 export function healthResponse(config: CockpitConfig): Response {
   return Response.json({ status: "ok", upstream: config.dotnetApiUrl });
@@ -76,8 +103,16 @@ if (import.meta.main) {
     "/*": isProduction ? serveDist : homepage,
   };
 
-  Bun.serve({ port: config.port, hostname: "127.0.0.1", routes });
-  console.log(`jobscrape-cockpit BFF listening on http://127.0.0.1:${config.port}`);
+  const tls = await loadTls(config);
+  const scheme = tls === undefined ? "http" : "https";
+
+  Bun.serve({
+    port: config.port,
+    hostname: "127.0.0.1",
+    ...(tls !== undefined ? { tls } : {}),
+    routes,
+  });
+  console.log(`jobscrape-cockpit BFF listening on ${scheme}://127.0.0.1:${config.port}`);
 }
 
 /** Serves `dist/client` with SPA fallback to `index.html`. Production only. */

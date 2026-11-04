@@ -3,6 +3,7 @@ using JobScrape.Domain;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
+using JobScrape.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -22,7 +23,14 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             return SearchProfile.Create(
                 name,
                 source ?? SourceKey.Naukri,
-                new SearchCriteria("asp.net core", ["Pune", "Hyderabad"], 6, 7, remoteOnly: false),
+                new SearchCriteria(
+                    "asp.net core",
+                    ["Pune", "Hyderabad"],
+                    6,
+                    7,
+                    remoteOnly: false,
+                    ["C#", "ASP.NET Core"]
+                ),
                 new RunLimits(3, 60, 10, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
                 Now
             );
@@ -79,7 +87,20 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var scope = database.Scope();
 
             Assert.Empty(await scope.Db.Database.GetPendingMigrationsAsync(Ct));
-            Assert.Single(await scope.Db.Database.GetAppliedMigrationsAsync(Ct));
+            Assert.True((await scope.Db.Database.GetAppliedMigrationsAsync(Ct)).Count() >= 3);
+        }
+
+        [Fact]
+        public void CriteriaJsonWithoutCompaniesReadsAsEmpty()
+        {
+            const string json =
+                """{"keywords":"c#","locations":["Pune"],"experienceYears":null,"postedWithinDays":null,"remoteOnly":false,"requiredSkills":[]}""";
+
+            var criteria = Assert.IsType<SearchCriteria>(
+                DomainConverters.SearchCriteria.ConvertFromProvider(json)
+            );
+
+            Assert.Empty(criteria.Companies);
         }
 
         [Fact]
@@ -111,7 +132,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var count = scope.Db.Database.GetDbConnection().CreateCommand();
             count.CommandText =
                 "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite%';";
-            Assert.Equal(6L, await count.ExecuteScalarAsync(Ct));
+            Assert.Equal(7L, await count.ExecuteScalarAsync(Ct));
 
             await scope
                 .Db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>()
@@ -161,6 +182,44 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
             await Assert.ThrowsAsync<DbUpdateException>(() =>
                 scope.Get<IUnitOfWork>().SaveChangesAsync(Ct)
+            );
+        }
+
+        [Fact]
+        public async Task RunProgressRoundTripsAndOverwrites()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var id = ScrapeRunId.New();
+            await using (var scope = database.Scope())
+            {
+                var stored = ScrapeRunProgress.Start(id, Now);
+                stored.RecordPage(1, "next", ["101"], Now);
+                await scope.Get<IScrapeRunProgressRepository>().SaveAsync(stored, Ct);
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            await using (var scope = database.Scope())
+            {
+                var loaded = await scope.Get<IScrapeRunProgressRepository>().GetAsync(id, Ct);
+
+                Assert.NotNull(loaded);
+                Assert.Equal(1, loaded.PagesCompleted);
+                Assert.Equal("next", loaded.NextCursor);
+                Assert.Equal(["101"], loaded.SeenExternalIds);
+                loaded.RecordPage(2, null, ["101", "102"], Now.AddMinutes(1));
+                await scope.Get<IScrapeRunProgressRepository>().SaveAsync(loaded, Ct);
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            await using var reload = database.Scope();
+            var reloaded = await reload.Get<IScrapeRunProgressRepository>().GetAsync(id, Ct);
+
+            Assert.NotNull(reloaded);
+            Assert.Equal(2, reloaded.PagesCompleted);
+            Assert.Null(reloaded.NextCursor);
+            Assert.Equal(["101", "102"], reloaded.SeenExternalIds);
+            Assert.Null(
+                await reload.Get<IScrapeRunProgressRepository>().GetAsync(ScrapeRunId.New(), Ct)
             );
         }
 

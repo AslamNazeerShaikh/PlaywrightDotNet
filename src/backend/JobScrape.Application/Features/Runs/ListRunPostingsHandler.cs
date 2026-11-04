@@ -27,13 +27,22 @@ namespace JobScrape.Application.Features.Runs
         }
 
         /// <summary>
-        /// Lists up to <see cref="Limit"/> postings for the run.
+        /// Lists up to <paramref name="limit"/> postings for the run,
+        /// skipping <paramref name="offset"/> most recent first. Coerces
+        /// <paramref name="offset"/> to at least 0 and
+        /// <paramref name="limit"/> to 1..500 (non-positive resets to
+        /// <see cref="Limit"/>), mirroring the controller so direct callers
+        /// get the same window; the store still rejects out-of-range values.
         /// </summary>
         /// <param name="runId">The run identifier.</param>
+        /// <param name="offset">How many postings to skip.</param>
+        /// <param name="limit">How many postings to return.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The postings; <c>VALIDATION_FAILED</c> for an empty id; or <c>RUN_NOT_FOUND</c>.</returns>
         public async Task<Result<RunPostingListResponse>> HandleAsync(
             Guid runId,
+            int offset,
+            int limit,
             CancellationToken cancellationToken
         )
         {
@@ -42,7 +51,12 @@ namespace JobScrape.Application.Features.Runs
                 return Result.Fail<RunPostingListResponse>(RunIds.Required());
             }
 
-            var postings = await _store.ListPostingsAsync(runId, Limit, cancellationToken);
+            var postings = await _store.ListPostingsAsync(
+                runId,
+                Math.Max(0, offset),
+                limit <= 0 ? Limit : Math.Clamp(limit, 1, 500),
+                cancellationToken
+            );
             return postings is null
                 ? Result.Fail<RunPostingListResponse>(Errors.RunNotFound(runId))
                 : Result.Ok(postings);

@@ -306,6 +306,36 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Single(harness.Store.Runs);
         }
 
+        [Fact]
+        public async Task HighPageCapStopsAtTheLastAvailablePage()
+        {
+            var harness = new ScrapeHarness(maxPages: 600);
+            harness.Source.Then(Page(null, Job("1")));
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(1, summary.Stats.PagesFetched);
+        }
+
+        [Fact]
+        public async Task NoDailyRunCapAllowsAnotherRun()
+        {
+            var harness = new ScrapeHarness();
+            harness.Settings = harness.Settings with { DailyRunCap = null };
+            harness.Source.Then(Page(null, Job("1")));
+            await RunOkAsync(harness);
+            harness.Source.Then(Page(null, Job("2")));
+            await RunOkAsync(harness);
+            harness.Source.Then(Page(null, Job("3")));
+
+            var result = await harness.Build().HandleAsync(harness.Request, Ct);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(3, harness.Store.Runs.Count);
+            Assert.Equal(3, Assert.Single(harness.Store.Quotas).RunsStarted);
+        }
+
         // ---- session ----
 
         [Fact]

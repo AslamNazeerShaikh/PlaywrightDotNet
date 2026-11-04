@@ -1,12 +1,16 @@
 using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
 using JobScrape.Api.Runs;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
+using JobScrape.Infrastructure.Configuration;
+using JobScrape.Infrastructure.Export;
+using Scalar.AspNetCore;
 using Serilog;
 
 namespace JobScrape.Api
@@ -26,6 +30,15 @@ namespace JobScrape.Api
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            // Local, gitignored overrides (for example uBOL enablement).
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Configuration.AddJsonFile(
+                    "appsettings.Local.json",
+                    optional: true,
+                    reloadOnChange: false
+                );
+            }
 
             // Controllers first: the API surface is controller-based so every
             // endpoint stays greppable and block-namespaced (no minimal-API
@@ -72,15 +85,20 @@ namespace JobScrape.Api
             builder.Services.AddTransient<GetSearchProfileHandler>();
             builder.Services.AddTransient<ListSearchProfilesHandler>();
             builder.Services.AddTransient<CreateSearchProfileHandler>();
+            builder.Services.AddTransient<UpdateSearchProfileHandler>();
             builder.Services.AddTransient<ListSourcesHandler>();
             builder.Services.AddTransient<ListSessionsHandler>();
             builder.Services.AddTransient<GetSessionHandler>();
             builder.Services.AddTransient<CreateSessionHandler>();
+            builder.Services.AddTransient<UpdateSessionHandler>();
             builder.Services.AddTransient<StartRunHandler>();
             builder.Services.AddTransient<ListRunsHandler>();
             builder.Services.AddTransient<GetRunHandler>();
             builder.Services.AddTransient<CancelRunHandler>();
             builder.Services.AddTransient<ListRunPostingsHandler>();
+            builder.Services.AddTransient<ExportRunPostingsHandler>();
+            builder.Services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
+            builder.Services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             builder.Services.AddScoped<RunScrapeHandler>();
@@ -105,13 +123,42 @@ namespace JobScrape.Api
                 builder.Environment.ContentRootPath
             );
 
+            // Raw SQLite explorer for the cockpit database page. Uses the same
+            // database file as EF Core; table/column names are validated.
+            var storageOptions =
+                builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+                ?? new StorageOptions();
+            var explorerPath = Path.GetFullPath(
+                storageOptions.DatabasePath,
+                builder.Environment.ContentRootPath
+            );
+            var explorerConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+            {
+                DataSource = explorerPath,
+            }.ToString();
+            builder.Services.AddSingleton<IDatabaseExplorer>(
+                new JobScrape.Infrastructure.Persistence.SqliteDatabaseExplorer(
+                    explorerConnectionString
+                )
+            );
+
             var app = builder.Build();
 
-            // Development-only document endpoint; never proxied by the
-            // cockpit BFF and never exposed beyond loopback.
+            // Development-only document and reference endpoints; never
+            // proxied by the cockpit BFF and never exposed beyond loopback.
             if (app.Environment.IsDevelopment())
             {
-                app.MapOpenApi();
+                app.MapOpenApi().AllowAnonymous();
+
+                app.MapScalarApiReference(
+                        "/scalar",
+                        options =>
+                            options
+                                .WithTitle("JobLens API v1")
+                                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+                                .AddPreferredSecuritySchemes("Bearer")
+                    )
+                    .AllowAnonymous();
             }
 
             DatabaseRegistration.MigrateInDevelopment(app);
