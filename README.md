@@ -1,12 +1,11 @@
 # PlaywrightDotNet — JobLens
 
-> **Status:** planning complete; implementation has not started.
+> **Status:** backend API and ops-deck cockpit implemented with 971 backend tests green; final review before the PR to main.
 >
-> A cross-platform .NET 10 job-board automation and public job-posting collector for Naukri, Indeed India, and (opt-in) LinkedIn.
+> Polite, low-volume job-board automation on .NET 10. Playwright collects from Naukri, Indeed India, and opt-in LinkedIn into SQLite, with skill-demand analysis and hyperlinked Excel snapshots, plus a live ops-deck cockpit.
+> A modular monolith built to be read: explicit use-case handlers, 971 behavior-pinned tests, and docs that match the tree.
 
 ## Screenshots
-
-The ops-deck control plane at 1920 width, full-page height. Light left, dark right. Full gallery with per-page notes lives in [docs/screenshots](docs/screenshots/README.md).
 
 ### 01 Overview
 
@@ -137,10 +136,41 @@ Read the documentation in this order:
 17. [Library usage policy](docs/16-library-usage-policy.md)
 18. [ADRs](docs/10-adr/README.md)
 
-## Before implementation
+## Codebase stats (tokei)
 
-Answer the decisions in [docs/11-open-decisions.md](docs/11-open-decisions.md). If unanswered, the recommended defaults apply and Phase 0 can start.
+Measured with [tokei](https://github.com/xampprocky/tokei) at the repo root. Build outputs stay out through `.gitignore`. Regenerate with `tokei .`.
 
-## Next step
-
-Phase 0: solution skeleton, SDK/package pinning, CI, ADRs, and the first failing domain tests. See [docs/05-gameplan.md](docs/05-gameplan.md).
+```text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Language              Files        Lines         Code     Comments       Blanks
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ C#                      323        39112        28092         6857         4163
+ CSS                       1         1603         1306           93          204
+ JSON                      8       394199       394199            0            0
+ MSBuild                  11          291          241           33           17
+ NuGet Config              1            7            7            0            0
+ Shell                     1           59           46            2           11
+ SVG                       1            4            4            0            0
+ TOML                      1           14            9            4            1
+ TSX                      25         6730         5806          555          369
+ TypeScript               20         1933         1597          130          206
+─────────────────────────────────────────────────────────────────────────────────
+ HTML                     19          831          809            8           14
+ |- CSS                    6           41           41            0            0
+ |- JavaScript             4          294          279           13            2
+ (Total)                             1166         1129           21           16
+─────────────────────────────────────────────────────────────────────────────────
+ Markdown                 48        14350            0        11179         3171
+ |- BASH                   5          261          161           59           41
+ |- CSS                    1           19           11            4            4
+ |- Dockerfile             1            8            4            4            0
+ |- JSON                   5          256          256            0            0
+ |- PowerShell             2           30           26            1            3
+ |- TOML                   1           21           15           4            2
+ |- XML                    3           95           93            0            2
+ |- YAML                   2           60           55            2            3
+ (Total)                            15100          621        11253         3226
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Total                   459       460218       433057        18948         8213
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
