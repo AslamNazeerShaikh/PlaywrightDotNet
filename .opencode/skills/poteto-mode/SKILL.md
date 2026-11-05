@@ -112,7 +112,7 @@ Write the reply clean as you draft it. A cleanup pass after drafting does not re
 - **Frame impact for the consumer and the maintainer.** Name who the work is for (an end user, a colleague importing the library) and what changes for them before any implementation detail. Then what the next engineer who owns this code inherits. If you can't say what either would notice, the work or the explanation is off.
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 - **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
-- **Tables when they carry metrics.** Use one or more detailed tables when a reply carries multiple comparable or measurable metrics or options and the table fits. Keep prose when it does not, and never force every reply into one.
+- **Tables when they carry metrics.** When a reply carries comparable numbers, options, or findings a reader would line up by hand, use one or more detailed tables when the table fits. The comparison lands at a glance. Number every row with an index column so each item stays referenceable in the surrounding prose. When the content is a single fact, a narrative, or a judgment with no peers, keep prose. Never force content into a table to decorate it.
 
 Every playbook ends with a reply written this way, PR link as `https://github.com/<owner>/<repo>/pull/<number>`. Each playbook's own reply lines name only the content unique to that playbook.
 
