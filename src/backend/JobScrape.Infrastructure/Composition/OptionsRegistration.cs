@@ -4,9 +4,10 @@ using JobScrape.Domain.Abstractions;
 using JobScrape.Domain.Access;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace JobScrape.Api.Composition
+namespace JobScrape.Infrastructure.Composition
 {
     /// <summary>
     /// Binds and validates every <c>JobScrape:*</c> section once, at startup

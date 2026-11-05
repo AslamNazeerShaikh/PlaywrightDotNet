@@ -1,15 +1,5 @@
-using JobScrape.Api.Composition;
 using JobScrape.Api.Http;
-using JobScrape.Api.Runs;
-using JobScrape.Application.Abstractions;
-using JobScrape.Application.Features.Health;
-using JobScrape.Application.Features.Runs;
-using JobScrape.Application.Features.Scraping;
-using JobScrape.Application.Features.SearchProfiles;
-using JobScrape.Application.Features.Sessions;
-using JobScrape.Application.Features.Sources;
-using JobScrape.Infrastructure.Configuration;
-using JobScrape.Infrastructure.Export;
+using JobScrape.Infrastructure.Composition;
 using JobScrape.Mcp.Tools;
 using Scalar.AspNetCore;
 using Serilog;
@@ -65,13 +55,9 @@ namespace JobScrape.Api
             );
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-            // System clock as the ambient time source; handlers take
-            // TimeProvider so tests can substitute a fake.
-            builder.Services.AddSingleton(TimeProvider.System);
-
-            // Loopback only and no auth in this repo, so every MCP call
-            // runs as the local operator.
-            builder.Services.AddScoped<ICallerContext>(_ => CallerContext.LocalOperator);
+            // One list, shared with the stdio host: clock, caller, handlers,
+            // export writers, and the background run coordinator.
+            builder.Services.AddJobScrapeUseCases();
 
             // Bound and validated once; bad caps or consent flags fail
             // startup instead of running unsafely.
@@ -81,42 +67,6 @@ namespace JobScrape.Api
             builder.Services.AddJobScrapeLogging(
                 builder.Configuration,
                 builder.Environment.ContentRootPath
-            );
-
-            // Explicit use-case handlers, registered one by one. No assembly
-            // scanning, no mediator: "Find usages" on a handler finds its
-            // callers.
-            builder.Services.AddTransient<GetHealthHandler>();
-            builder.Services.AddTransient<GetSearchProfileHandler>();
-            builder.Services.AddTransient<ListSearchProfilesHandler>();
-            builder.Services.AddTransient<CreateSearchProfileHandler>();
-            builder.Services.AddTransient<UpdateSearchProfileHandler>();
-            builder.Services.AddTransient<ListSourcesHandler>();
-            builder.Services.AddTransient<ListSessionsHandler>();
-            builder.Services.AddTransient<GetSessionHandler>();
-            builder.Services.AddTransient<CreateSessionHandler>();
-            builder.Services.AddTransient<UpdateSessionHandler>();
-            builder.Services.AddTransient<StartRunHandler>();
-            builder.Services.AddTransient<ListRunsHandler>();
-            builder.Services.AddTransient<GetRunHandler>();
-            builder.Services.AddTransient<CancelRunHandler>();
-            builder.Services.AddTransient<ListRunPostingsHandler>();
-            builder.Services.AddTransient<ExportRunPostingsHandler>();
-            builder.Services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
-            builder.Services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
-            // The scrape itself: scoped, because it holds the run's unit of
-            // work; the coordinator resolves it in a fresh scope per run.
-            builder.Services.AddScoped<RunScrapeHandler>();
-
-            // Runs outlive their request: one coordinator executes them in
-            // the background, cancels on shutdown, and fails runs a crash
-            // left mid-flight on the next start.
-            builder.Services.AddSingleton<RunCoordinator>();
-            builder.Services.AddSingleton<IRunLauncher>(provider =>
-                provider.GetRequiredService<RunCoordinator>()
-            );
-            builder.Services.AddHostedService(provider =>
-                provider.GetRequiredService<RunCoordinator>()
             );
 
             // Playwright, the session manager, wall artifacts, and adapters.
@@ -130,21 +80,9 @@ namespace JobScrape.Api
 
             // Raw SQLite explorer for the cockpit database page. Uses the same
             // database file as EF Core; table/column names are validated.
-            var storageOptions =
-                builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
-                ?? new StorageOptions();
-            var explorerPath = Path.GetFullPath(
-                storageOptions.DatabasePath,
+            builder.Services.AddJobScrapeDatabaseExplorer(
+                builder.Configuration,
                 builder.Environment.ContentRootPath
-            );
-            var explorerConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
-            {
-                DataSource = explorerPath,
-            }.ToString();
-            builder.Services.AddSingleton<IDatabaseExplorer>(
-                new JobScrape.Infrastructure.Persistence.SqliteDatabaseExplorer(
-                    explorerConnectionString
-                )
             );
 
             // MCP over Streamable HTTP. Stateless: no session affinity, no
