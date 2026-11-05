@@ -28,7 +28,9 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
             var assessment = ClassifyFixture("search-authwall.html");
 
             Assert.Equal(ChallengeKind.LoginRequired, assessment.Kind);
-            Assert.Empty(LinkedInSearchParser.Parse(Fixture("search-authwall.html"), PageUrl, Now).Jobs);
+            Assert.Empty(
+                LinkedInSearchParser.Parse(Fixture("search-authwall.html"), PageUrl, Now).Jobs
+            );
         }
 
         [Fact]
@@ -99,7 +101,14 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
         public async Task DetailsAreBlockedWithoutFetching()
         {
             await using var pool = new BrowserSessionPool(
-                new BrowserSessionSettings("profiles", "artifacts", false, TimeSpan.FromSeconds(5), null, null)
+                new BrowserSessionSettings(
+                    "profiles",
+                    "artifacts",
+                    false,
+                    TimeSpan.FromSeconds(5),
+                    null,
+                    null
+                )
             );
             var source = new LinkedInJobSource(
                 pool,

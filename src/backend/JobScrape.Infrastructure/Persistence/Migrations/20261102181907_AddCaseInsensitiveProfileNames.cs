@@ -17,7 +17,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 nullable: false,
                 collation: "NOCASE",
                 oldClrType: typeof(string),
-                oldType: "TEXT");
+                oldType: "TEXT"
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "name",
@@ -26,7 +27,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 nullable: false,
                 collation: "NOCASE",
                 oldClrType: typeof(string),
-                oldType: "TEXT");
+                oldType: "TEXT"
+            );
         }
 
         /// <inheritdoc />
@@ -39,7 +41,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldCollation: "NOCASE");
+                oldCollation: "NOCASE"
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "name",
@@ -48,7 +51,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldCollation: "NOCASE");
+                oldCollation: "NOCASE"
+            );
         }
     }
 }

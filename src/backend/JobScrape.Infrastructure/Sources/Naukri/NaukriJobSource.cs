@@ -107,7 +107,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 // mid-run. A transient stop beats a crash: the handler
                 // retries once, then ends the run with whatever it kept.
                 return SearchPageResult.Blocked(
-                    SearchPageDriver.Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                    SearchPageDriver.Transient(
+                        $"Browser page closed or crashed at page {request.PageNumber}."
+                    )
                 );
             }
 
@@ -138,17 +140,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     );
                     var landedUrl = page.Url;
                     LogLanded(_logger, context, request, landedUrl, first);
-                    if (
-                        first.Challenge.Kind == ChallengeKind.None && context.StartPage > 1
-                    )
+                    if (first.Challenge.Kind == ChallengeKind.None && context.StartPage > 1)
                     {
                         var size = NaukriResultRange.Parse(first.Fingerprint?.ResultRange);
                         if (size is not null && context.StartPage > size.MaxPage)
                         {
-                            throw new StartPageOutOfRangeException(
-                                context.StartPage,
-                                size.MaxPage
-                            );
+                            throw new StartPageOutOfRangeException(context.StartPage, size.MaxPage);
                         }
 
                         if (size is null && first.NextCursor is null)
@@ -174,12 +171,16 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page did not load."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page did not load.")
+                );
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page timed out."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page timed out.")
+                );
             }
         }
 
@@ -244,10 +245,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 return SearchPageResult.Blocked(challenge);
             }
 
-            var parsed = NaukriSearchParser.Parse(
-                await page.ContentAsync(),
-                _clock.GetUtcNow()
-            );
+            var parsed = NaukriSearchParser.Parse(await page.ContentAsync(), _clock.GetUtcNow());
             if (parsed.DroppedCards > 0)
             {
                 LogCardsDropped(
@@ -282,7 +280,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 return new JobDetailResult(
                     null,
-                    SearchPageDriver.Transient($"Browser page closed or crashed at detail {job.ExternalJobId.Value}.")
+                    SearchPageDriver.Transient(
+                        $"Browser page closed or crashed at detail {job.ExternalJobId.Value}."
+                    )
                 );
             }
 
@@ -319,12 +319,18 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page did not load."));
+                return new JobDetailResult(
+                    null,
+                    SearchPageDriver.Transient("Detail page did not load.")
+                );
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page timed out."));
+                return new JobDetailResult(
+                    null,
+                    SearchPageDriver.Transient("Detail page timed out.")
+                );
             }
         }
 
@@ -410,12 +416,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Level = LogLevel.Information,
             Message = "Naukri run {RunId} page {Page} navigates to {Url}"
         )]
-        private static partial void LogSearchUrl(
-            ILogger logger,
-            Guid runId,
-            int page,
-            string url
-        );
+        private static partial void LogSearchUrl(ILogger logger, Guid runId, int page, string url);
 
         [LoggerMessage(
             Level = LogLevel.Information,

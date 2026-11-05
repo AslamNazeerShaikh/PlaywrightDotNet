@@ -19,19 +19,19 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     pages_completed = table.Column<int>(type: "INTEGER", nullable: false),
                     next_cursor = table.Column<string>(type: "TEXT", nullable: true),
                     seen_external_ids = table.Column<string>(type: "TEXT", nullable: false),
-                    updated_at = table.Column<long>(type: "INTEGER", nullable: false)
+                    updated_at = table.Column<long>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_scrape_run_progress", x => x.id);
-                });
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "scrape_run_progress");
+            migrationBuilder.DropTable(name: "scrape_run_progress");
         }
     }
 }

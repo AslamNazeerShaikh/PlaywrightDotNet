@@ -21,8 +21,7 @@ namespace JobScrape.Infrastructure.Sources.Indeed
     /// </summary>
     public sealed partial class IndeedJobSource : IJobSource
     {
-        private const string CardSelector =
-            "div.job_seen_beacon, div[data-testid='slider_item']";
+        private const string CardSelector = "div.job_seen_beacon, div[data-testid='slider_item']";
 
         // Marks cards a person could not see (computed style, size, far
         // off-screen) so the HTML parser skips honeypots (§1.3).
@@ -93,15 +92,17 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             if (page is null)
             {
                 return SearchPageResult.Blocked(
-                    SearchPageDriver.Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                    SearchPageDriver.Transient(
+                        $"Browser page closed or crashed at page {request.PageNumber}."
+                    )
                 );
             }
 
             try
             {
                 var start = request.Cursor is null
-                ? (request.PageNumber - 1) * IndeedUrlBuilder.PageSize
-                : SearchPageDriver.CursorOffset(request.Cursor);
+                    ? (request.PageNumber - 1) * IndeedUrlBuilder.PageSize
+                    : SearchPageDriver.CursorOffset(request.Cursor);
                 return await SearchPageDriver.SearchOffsetPageAsync<IndeedSearchPage>(
                     page,
                     IndeedUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
@@ -113,18 +114,18 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                     static (html, url, now) => IndeedSearchParser.Parse(html, url, now),
                     static parsed => parsed.Jobs,
                     static parsed => parsed.DroppedCards,
-                    static parsed => parsed.FirstJobKey is null && parsed.ResultCount is null
-                        ? null
-                        : new PageFingerprint(parsed.FirstJobKey, parsed.ResultCount),
-                    static (parsed, offset) => parsed.HasNext
-                        ? (offset + IndeedUrlBuilder.PageSize).ToString(CultureInfo.InvariantCulture)
-                        : null,
-                    dropped => LogCardsDropped(
-                        _logger,
-                        context.RunId.Value,
-                        request.PageNumber,
-                        dropped
-                    ),
+                    static parsed =>
+                        parsed.FirstJobKey is null && parsed.ResultCount is null
+                            ? null
+                            : new PageFingerprint(parsed.FirstJobKey, parsed.ResultCount),
+                    static (parsed, offset) =>
+                        parsed.HasNext
+                            ? (offset + IndeedUrlBuilder.PageSize).ToString(
+                                CultureInfo.InvariantCulture
+                            )
+                            : null,
+                    dropped =>
+                        LogCardsDropped(_logger, context.RunId.Value, request.PageNumber, dropped),
                     _clock.GetUtcNow(),
                     cancellationToken
                 );
@@ -132,12 +133,16 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page did not load."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page did not load.")
+                );
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page timed out."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page timed out.")
+                );
             }
         }
 
@@ -155,7 +160,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             {
                 return new JobDetailResult(
                     null,
-                    SearchPageDriver.Transient($"Browser page closed or crashed at detail {job.ExternalJobId.Value}.")
+                    SearchPageDriver.Transient(
+                        $"Browser page closed or crashed at detail {job.ExternalJobId.Value}."
+                    )
                 );
             }
 
@@ -192,12 +199,18 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page did not load."));
+                return new JobDetailResult(
+                    null,
+                    SearchPageDriver.Transient("Detail page did not load.")
+                );
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page timed out."));
+                return new JobDetailResult(
+                    null,
+                    SearchPageDriver.Transient("Detail page timed out.")
+                );
             }
         }
 

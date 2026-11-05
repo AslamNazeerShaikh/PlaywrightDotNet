@@ -182,7 +182,11 @@ namespace JobScrape.Api.Controllers
                 cancellationToken
             );
             return result.IsSuccess
-                ? Results.File(result.Value.Content, result.Value.ContentType, result.Value.FileName)
+                ? Results.File(
+                    result.Value.Content,
+                    result.Value.ContentType,
+                    result.Value.FileName
+                )
                 : result.Error.ToProblem();
         }
     }

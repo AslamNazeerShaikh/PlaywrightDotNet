@@ -47,9 +47,7 @@ namespace JobScrape.Domain.Tests.Sourcing
         {
             var progress = ScrapeRunProgress.Start(ScrapeRunId.New(), Now);
 
-            Assert.Throws<ArgumentNullException>(() =>
-                progress.RecordPage(1, null, null!, Now)
-            );
+            Assert.Throws<ArgumentNullException>(() => progress.RecordPage(1, null, null!, Now));
         }
     }
 }

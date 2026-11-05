@@ -79,10 +79,7 @@ namespace JobScrape.Infrastructure.Configuration
                     );
                 }
 
-                if (
-                    source.MaxJobsCeiling is { } jobCeiling
-                    && jobCeiling < source.MaxJobsPerRun
-                )
+                if (source.MaxJobsCeiling is { } jobCeiling && jobCeiling < source.MaxJobsPerRun)
                 {
                     failures.Add(
                         $"Sources:{key}: MaxJobsCeiling={jobCeiling} is below MaxJobsPerRun={source.MaxJobsPerRun}."

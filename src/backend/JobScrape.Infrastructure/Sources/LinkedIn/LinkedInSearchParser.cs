@@ -188,8 +188,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             var postedRaw = LinkedInFields.Clean(
                 LinkedInHtml.TextOf(
                     LinkedInHtml.First(card, "time", "[class*='job-card-list__posted-date']")
-                )
-                ?? LinkedInHtml.First(card, "time")?.GetAttribute("datetime")
+                ) ?? LinkedInHtml.First(card, "time")?.GetAttribute("datetime")
             );
 
             return new JobSnapshot
@@ -203,7 +202,8 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
                     CompanyName.MaxLength
                 ),
                 CompanyUrl = LinkedInFields.CompanyPageUrl(
-                    company?.GetAttribute("href") ?? company?.QuerySelector("a")?.GetAttribute("href"),
+                    company?.GetAttribute("href")
+                        ?? company?.QuerySelector("a")?.GetAttribute("href"),
                     pageUrl
                 ),
                 Location = LinkedInFields.Location(location),
@@ -240,10 +240,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
         {
             return document
                 .QuerySelectorAll("a[href]")
-                .Any(link =>
-                    !LinkedInHtml.IsHidden(link)
-                    && IsNextLink(link.GetAttribute("href"))
-                );
+                .Any(link => !LinkedInHtml.IsHidden(link) && IsNextLink(link.GetAttribute("href")));
         }
 
         /// <summary>

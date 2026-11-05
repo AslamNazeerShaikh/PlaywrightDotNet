@@ -87,7 +87,9 @@ namespace JobScrape.Infrastructure.Persistence
                 ? null
                 : new RunPostingListResponse(
                     runId,
-                    postings.Items.Select(posting => ToResponse(posting, postings.RunStart)).ToArray(),
+                    postings
+                        .Items.Select(posting => ToResponse(posting, postings.RunStart))
+                        .ToArray(),
                     postings.Total
                 );
         }
@@ -259,6 +261,10 @@ namespace JobScrape.Infrastructure.Persistence
         /// <param name="RunStart">When the run started.</param>
         /// <param name="Items">The postings, most recently seen first.</param>
         /// <param name="Total">How many postings the window holds in total.</param>
-        private sealed record RunPostings(DateTimeOffset RunStart, IReadOnlyList<JobPosting> Items, int Total);
+        private sealed record RunPostings(
+            DateTimeOffset RunStart,
+            IReadOnlyList<JobPosting> Items,
+            int Total
+        );
     }
 }

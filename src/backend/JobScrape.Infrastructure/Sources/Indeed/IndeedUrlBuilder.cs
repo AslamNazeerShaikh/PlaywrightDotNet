@@ -39,9 +39,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             ArgumentNullException.ThrowIfNull(criteria);
             ArgumentOutOfRangeException.ThrowIfNegative(start);
 
-            var locations = criteria.Locations.Count > 0
-                ? string.Join(", ", criteria.Locations)
-                : string.Empty;
+            var locations =
+                criteria.Locations.Count > 0 ? string.Join(", ", criteria.Locations) : string.Empty;
             var query = new List<string> { QueryString.Pair("q", criteria.Keywords) };
             if (locations.Length > 0)
             {

@@ -20,9 +20,7 @@ namespace JobScrape.Domain.Tests.Sourcing
         [InlineData(".NET", ".net")]
         public void SingleOverlapMatchesIgnoringCase(string posted, string required)
         {
-            Assert.True(
-                SkillMatcher.Matches([JobSkill.Create(posted)], [required])
-            );
+            Assert.True(SkillMatcher.Matches([JobSkill.Create(posted)], [required]));
         }
 
         [Fact]
@@ -64,12 +62,8 @@ namespace JobScrape.Domain.Tests.Sourcing
         [Fact]
         public void BlankEntriesAreIgnoredOnBothSides()
         {
-            Assert.True(
-                SkillMatcher.Matches(["  ", null, "C#"], ["", "  ", null, "c#"])
-            );
-            Assert.False(
-                SkillMatcher.Matches(["  ", null], ["", "  ", null, "c#"])
-            );
+            Assert.True(SkillMatcher.Matches(["  ", null, "C#"], ["", "  ", null, "c#"]));
+            Assert.False(SkillMatcher.Matches(["  ", null], ["", "  ", null, "c#"]));
             Assert.True(SkillMatcher.Matches(["C#"], ["", "  "]));
         }
 

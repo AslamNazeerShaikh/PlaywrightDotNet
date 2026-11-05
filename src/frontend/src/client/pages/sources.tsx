@@ -134,12 +134,7 @@ export function Meter({
   // A zero run cap means that step is switched off, so the bar reads empty.
   const safeUsed = Number.isFinite(used) ? used : 0;
   const safeCap = Number.isFinite(cap) ? cap : 0;
-  const ratio =
-    safeCap <= 0
-      ? progress
-        ? 0
-        : 1
-      : Math.min(Math.max(safeUsed / safeCap, 0), 1);
+  const ratio = safeCap <= 0 ? (progress ? 0 : 1) : Math.min(Math.max(safeUsed / safeCap, 0), 1);
   const level = progress
     ? ratio >= 1
       ? "done"

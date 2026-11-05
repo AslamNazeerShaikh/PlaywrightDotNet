@@ -46,7 +46,8 @@ namespace JobScrape.Infrastructure.Export
                 posting.WorkMode,
                 posting.Experience ?? string.Empty,
                 posting.Salary ?? string.Empty,
-                posting.PostedAt?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty,
+                posting.PostedAt?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                    ?? string.Empty,
                 string.Join("; ", posting.Skills),
                 posting.Url,
                 posting.ApplyUrl ?? string.Empty,
@@ -66,7 +67,11 @@ namespace JobScrape.Infrastructure.Export
         /// <returns>The escaped field.</returns>
         public static string CsvField(string value)
         {
-            return value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r')
+            return
+                value.Contains(',')
+                || value.Contains('"')
+                || value.Contains('\n')
+                || value.Contains('\r')
                 ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
                 : value;
         }

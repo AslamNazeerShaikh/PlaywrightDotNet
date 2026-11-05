@@ -154,9 +154,7 @@ namespace JobScrape.Domain.Tests.Sourcing
         [InlineData(500, 502)]
         public void RejectsWindowPastTheCeiling(int startPage, int maxPages)
         {
-            Assert.Throws<DomainException>(() =>
-                Create(startPage: startPage, maxPages: maxPages)
-            );
+            Assert.Throws<DomainException>(() => Create(startPage: startPage, maxPages: maxPages));
         }
 
         [Fact]

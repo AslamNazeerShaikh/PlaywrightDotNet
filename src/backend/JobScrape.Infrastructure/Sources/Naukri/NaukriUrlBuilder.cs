@@ -113,7 +113,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
             if (criteria.ExperienceYears is { } years)
             {
-                query.Add(QueryString.Pair("experience", years.ToString(CultureInfo.InvariantCulture)));
+                query.Add(
+                    QueryString.Pair("experience", years.ToString(CultureInfo.InvariantCulture))
+                );
             }
 
             if (criteria.PostedWithinDays is { } days)

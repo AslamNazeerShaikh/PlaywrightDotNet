@@ -186,10 +186,7 @@ namespace JobScrape.Domain.Access
         /// <param name="engine">The engine.</param>
         /// <param name="channel">The channel.</param>
         /// <exception cref="DomainException">Thrown when the pair is invalid.</exception>
-        private static void EnsureValidEngineChannel(
-            BrowserEngine engine,
-            BrowserChannel channel
-        )
+        private static void EnsureValidEngineChannel(BrowserEngine engine, BrowserChannel channel)
         {
             if (!Enum.IsDefined(engine) || !Enum.IsDefined(channel))
             {

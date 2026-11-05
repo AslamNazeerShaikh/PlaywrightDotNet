@@ -110,10 +110,7 @@ namespace JobScrape.Application.Features.Runs
                 return Result.Fail<ExportFile>(Errors.RunNotFound(runId));
             }
 
-            var companySet = new HashSet<string>(
-                run.Companies,
-                StringComparer.OrdinalIgnoreCase
-            );
+            var companySet = new HashSet<string>(run.Companies, StringComparer.OrdinalIgnoreCase);
             var filtered = group switch
             {
                 CompanyExportGroup.Only => postings
@@ -126,11 +123,7 @@ namespace JobScrape.Application.Features.Runs
             };
 
             return Result.Ok(
-                await writer.WriteAsync(
-                    FileName(format, run, group),
-                    filtered,
-                    cancellationToken
-                )
+                await writer.WriteAsync(FileName(format, run, group), filtered, cancellationToken)
             );
         }
 

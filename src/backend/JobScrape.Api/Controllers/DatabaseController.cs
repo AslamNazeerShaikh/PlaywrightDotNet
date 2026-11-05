@@ -24,9 +24,7 @@ namespace JobScrape.Api.Controllers
 
         /// <summary>Lists tables.</summary>
         [HttpGet("tables")]
-        public async Task<IResult> ListTablesAsync(
-            CancellationToken cancellationToken
-        )
+        public async Task<IResult> ListTablesAsync(CancellationToken cancellationToken)
         {
             var tables = await _explorer.ListTablesAsync(cancellationToken);
             return Results.Ok(new { items = tables });
@@ -34,10 +32,7 @@ namespace JobScrape.Api.Controllers
 
         /// <summary>Gets schema.</summary>
         [HttpGet("tables/{table}/schema")]
-        public async Task<IResult> SchemaAsync(
-            string table,
-            CancellationToken cancellationToken
-        )
+        public async Task<IResult> SchemaAsync(string table, CancellationToken cancellationToken)
         {
             try
             {
@@ -206,5 +201,8 @@ namespace JobScrape.Api.Controllers
     }
 
     /// <summary>Request body for updating a row.</summary>
-    public sealed record UpdateRowRequest(string PrimaryKeyValue, Dictionary<string, System.Text.Json.JsonElement> Values);
+    public sealed record UpdateRowRequest(
+        string PrimaryKeyValue,
+        Dictionary<string, System.Text.Json.JsonElement> Values
+    );
 }

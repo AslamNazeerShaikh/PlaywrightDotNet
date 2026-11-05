@@ -115,11 +115,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
                 return false;
             }
 
-            if (
-                !Hosts.Contains(uri.IdnHost)
-                || uri.UserInfo.Length > 0
-                || !uri.IsDefaultPort
-            )
+            if (!Hosts.Contains(uri.IdnHost) || uri.UserInfo.Length > 0 || !uri.IsDefaultPort)
             {
                 return false;
             }
@@ -226,8 +222,10 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             }
 
             var mode = WorkModeOf(text);
-            var city = text
-                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            var city = text.Split(
+                    ',',
+                    StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+                )
                 .Select(place => Clean(ModeWords().Replace(place, " ")))
                 .FirstOrDefault(place =>
                     place is not null && WorkModeOf(place) == WorkMode.Unknown
