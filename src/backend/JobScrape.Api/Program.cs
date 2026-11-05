@@ -10,6 +10,7 @@ using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
+using JobScrape.Mcp.Tools;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -67,6 +68,10 @@ namespace JobScrape.Api
             // System clock as the ambient time source; handlers take
             // TimeProvider so tests can substitute a fake.
             builder.Services.AddSingleton(TimeProvider.System);
+
+            // Loopback only and no auth in this repo, so every MCP call
+            // runs as the local operator.
+            builder.Services.AddScoped<ICallerContext>(_ => CallerContext.LocalOperator);
 
             // Bound and validated once; bad caps or consent flags fail
             // startup instead of running unsafely.
@@ -142,6 +147,24 @@ namespace JobScrape.Api
                 )
             );
 
+            // MCP over Streamable HTTP. Stateless: no session affinity, no
+            // SSE endpoints, one server context per request. Tools are listed
+            // explicitly, one generic argument per class: no assembly
+            // scanning, so "Find usages" on a tool class finds this list.
+            builder
+                .Services.AddMcpServer()
+                .WithHttpTransport(static options =>
+                {
+                    options.Stateless = true;
+                })
+                .WithTools<HealthTools>()
+                .WithTools<SourcesTools>()
+                .WithTools<SessionsTools>()
+                .WithTools<SearchProfilesTools>()
+                .WithTools<SearchProfilesWriteTools>()
+                .WithTools<RunsTools>()
+                .WithTools<RunActionsTools>();
+
             var app = builder.Build();
 
             // Development-only document and reference endpoints; never
@@ -171,6 +194,10 @@ namespace JobScrape.Api
                 options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
             );
             app.MapControllers();
+
+            // MCP lives beside the controllers on /mcp; loopback only, like
+            // every other endpoint in this host.
+            app.MapMcp("/mcp");
 
             // Run disposes the host on every exit path; that disposes the
             // container-owned Serilog logger and flushes the async file sink

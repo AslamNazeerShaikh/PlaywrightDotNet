@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="Serilog.AspNetCore" />
@@ -27,5 +28,6 @@
     <ProjectReference Include="..\JobScrape.Domain\JobScrape.Domain.csproj" />
     <ProjectReference Include="..\JobScrape.Application\JobScrape.Application.csproj" />
     <ProjectReference Include="..\JobScrape.Infrastructure\JobScrape.Infrastructure.csproj" />
+    <ProjectReference Include="..\JobScrape.Mcp\JobScrape.Mcp.csproj" />
   </ItemGroup>
 </Project>

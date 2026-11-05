@@ -1,0 +1,53 @@
+### MCP over Streamable HTTP, stateless session mode.
+### Base address is the local API (loopback only, no auth in this repo).
+
+@base = https://localhost:5208/mcp
+
+### 1. Handshake. The server answers with its capabilities and the
+### negotiated protocol version. Stateless mode keeps no session, so no
+### session id comes back and every request stands alone.
+
+POST {{base}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {},
+    "clientInfo": { "name": "mcp-http-smoke", "version": "1.0.0" }
+  }
+}
+
+### 2. Tool list. Expect all 13 tools: get_health, list_sources,
+### list_sessions, get_session, list_profiles, get_profile,
+### create_profile, update_profile, list_runs, get_run,
+### list_run_postings, start_run, cancel_run.
+
+POST {{base}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+
+### 3. Liveness call. Read-only and infallible by contract; proves the
+### handler pipeline resolves behind the transport.
+
+POST {{base}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": { "name": "get_health", "arguments": {} }
+}

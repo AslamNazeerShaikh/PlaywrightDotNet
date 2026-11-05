@@ -59,12 +59,27 @@ namespace JobScrape.Api.Composition
         public static bool MigrateInDevelopment(WebApplication app)
         {
             ArgumentNullException.ThrowIfNull(app);
-            if (!app.Environment.IsDevelopment())
+            return MigrateInDevelopment((IHost)app);
+        }
+
+        /// <summary>
+        /// Applies pending migrations when running in Development. Lets
+        /// non-web hosts (for example the stdio MCP host) share the API's
+        /// migration policy without depending on <see cref="WebApplication"/>.
+        /// </summary>
+        /// <param name="host">The built host.</param>
+        /// <returns>True when migrations were applied.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="host"/> is null.</exception>
+        public static bool MigrateInDevelopment(IHost host)
+        {
+            ArgumentNullException.ThrowIfNull(host);
+            var environment = host.Services.GetRequiredService<IHostEnvironment>();
+            if (!environment.IsDevelopment())
             {
                 return false;
             }
 
-            using var scope = app.Services.CreateScope();
+            using var scope = host.Services.CreateScope();
             scope.ServiceProvider.GetRequiredService<JobScrapeDbContext>().Database.Migrate();
             return true;
         }
