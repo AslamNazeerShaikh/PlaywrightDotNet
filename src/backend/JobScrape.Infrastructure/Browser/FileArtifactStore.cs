@@ -23,9 +23,10 @@ namespace JobScrape.Infrastructure.Browser
         public const int MaxHtmlChars = 2_000_000;
 
         // All injected and never mutated.
-        private readonly BrowserSessionPool _pool;
+        private readonly IBrowserSessionPool _pool;
         private readonly BrowserSessionSettings _settings;
         private readonly TimeProvider _clock;
+        private readonly IFileSystem _files;
         private readonly ILogger<FileArtifactStore> _logger;
 
         /// <summary>
@@ -35,12 +36,14 @@ namespace JobScrape.Infrastructure.Browser
         /// <param name="settings">Provides the artifacts root.</param>
         /// <param name="clock">Stamps the capture directory.</param>
         /// <param name="logger">The logger.</param>
-        /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
+        /// <param name="fileSystem">The filesystem. Null uses the real one.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any argument but <paramref name="fileSystem"/> is null.</exception>
         public FileArtifactStore(
-            BrowserSessionPool pool,
+            IBrowserSessionPool pool,
             BrowserSessionSettings settings,
             TimeProvider clock,
-            ILogger<FileArtifactStore> logger
+            ILogger<FileArtifactStore> logger,
+            IFileSystem? fileSystem = null
         )
         {
             ArgumentNullException.ThrowIfNull(pool);
@@ -51,6 +54,7 @@ namespace JobScrape.Infrastructure.Browser
             _settings = settings;
             _clock = clock;
             _logger = logger;
+            _files = fileSystem ?? new PhysicalFileSystem();
         }
 
         /// <inheritdoc />
@@ -63,17 +67,17 @@ namespace JobScrape.Infrastructure.Browser
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(assessment);
 
-            var relative = Path.Combine(
+            var relative = _files.Combine(
                 "runs",
                 context.RunId.Value.ToString(),
                 $"{_clock.GetUtcNow().ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture)}-{assessment.Kind}"
             );
-            var directory = Path.Combine(_settings.ArtifactsRoot, relative);
-            Directory.CreateDirectory(directory);
+            var directory = _files.Combine(_settings.ArtifactsRoot, relative);
+            _files.CreateDirectory(directory);
 
             var page = _pool.Find(context.BrowserProfileId);
-            await File.WriteAllTextAsync(
-                Path.Combine(directory, "assessment.json"),
+            await _files.WriteAllTextAsync(
+                _files.Combine(directory, "assessment.json"),
                 JsonSerializer.Serialize(
                     new
                     {
@@ -94,13 +98,13 @@ namespace JobScrape.Infrastructure.Browser
                     await page.ScreenshotAsync(
                         new PageScreenshotOptions
                         {
-                            Path = Path.Combine(directory, "screenshot.png"),
+                            Path = _files.Combine(directory, "screenshot.png"),
                             FullPage = true,
                         }
                     );
                     var html = await page.ContentAsync();
-                    await File.WriteAllTextAsync(
-                        Path.Combine(directory, "page.html"),
+                    await _files.WriteAllTextAsync(
+                        _files.Combine(directory, "page.html"),
                         html.Length > MaxHtmlChars ? html[..MaxHtmlChars] : html,
                         Encoding.UTF8,
                         cancellationToken
@@ -112,7 +116,7 @@ namespace JobScrape.Infrastructure.Browser
                 }
             }
 
-            return relative.Replace(Path.DirectorySeparatorChar, '/');
+            return relative.Replace(_files.DirectorySeparatorChar, '/');
         }
 
         [LoggerMessage(

@@ -20,7 +20,7 @@ namespace JobScrape.Infrastructure.Browser
         // All injected and never mutated; scoped with the run's unit of work,
         // so a verified profile is saved with the run.
         private readonly IBrowserProfileRepository _profiles;
-        private readonly BrowserSessionPool _pool;
+        private readonly IBrowserSessionPool _pool;
         private readonly IDelay _delay;
         private readonly IRandomSource _random;
         private readonly TimeProvider _clock;
@@ -38,7 +38,7 @@ namespace JobScrape.Infrastructure.Browser
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public PlaywrightSessionManager(
             IBrowserProfileRepository profiles,
-            BrowserSessionPool pool,
+            IBrowserSessionPool pool,
             IDelay delay,
             IRandomSource random,
             TimeProvider clock,
