@@ -25,5 +25,13 @@ namespace JobScrape.Application.Abstractions
     /// <param name="ActorId">The caller's actor identifier.</param>
     /// <param name="Roles">The roles granted to the caller.</param>
     public sealed record CallerContext(string ActorId, IReadOnlyCollection<string> Roles)
-        : ICallerContext;
+        : ICallerContext
+    {
+        /// <summary>
+        /// Gets the local default: loopback hosts (stdio, loopback HTTP)
+        /// have no transport identity, so every call runs as this actor.
+        /// </summary>
+        public static CallerContext LocalOperator { get; } =
+            new("local-operator", Array.Empty<string>());
+    }
 }
