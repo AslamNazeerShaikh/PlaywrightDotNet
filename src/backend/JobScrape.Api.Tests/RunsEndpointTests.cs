@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using JobScrape.Api.Controllers;
-using JobScrape.Api.Runs;
+using JobScrape.Infrastructure.Runtime;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;

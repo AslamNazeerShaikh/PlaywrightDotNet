@@ -53,6 +53,26 @@ namespace JobScrape.Architecture.Tests
             Assert.True(mcpHost.IsSuccessful, Describe(mcpHost));
         }
 
+        [Fact]
+        public void McpDoesNotDependOnApi()
+        {
+            var mcp = Types.InAssembly(typeof(JobScrape.Mcp.Tools.HealthTools).Assembly);
+
+            var api = mcp.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+
+            Assert.True(api.IsSuccessful, Describe(api));
+        }
+
+        [Fact]
+        public void McpHostDoesNotDependOnApi()
+        {
+            var host = Types.InAssembly(typeof(JobScrape.Mcp.Host.Program).Assembly);
+
+            var api = host.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+
+            Assert.True(api.IsSuccessful, Describe(api));
+        }
+
         private static string Describe(NetArchTest.Rules.TestResult result)
         {
             return string.Join(

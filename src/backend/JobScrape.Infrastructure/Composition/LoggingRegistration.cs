@@ -1,11 +1,13 @@
 using JobScrape.Infrastructure.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Enrichers.Span;
 using Serilog.Exceptions;
 using Serilog.Formatting.Compact;
 
-namespace JobScrape.Api.Composition
+namespace JobScrape.Infrastructure.Composition
 {
     /// <summary>
     /// Serilog setup for the API (docs/15-runtime-hardening.md §2): the

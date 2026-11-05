@@ -1,12 +1,16 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace JobScrape.Api.Composition
+namespace JobScrape.Infrastructure.Composition
 {
     /// <summary>
-    /// Wires SQLite persistence for the API. The database path comes from
+    /// Wires SQLite persistence for the hosts. The database path comes from
     /// <c>JobScrape:Storage:DatabasePath</c>, resolved against the content
     /// root; its directory is created because SQLite does not create
     /// directories. Migrations are applied automatically only in
@@ -51,21 +55,8 @@ namespace JobScrape.Api.Composition
         }
 
         /// <summary>
-        /// Applies pending migrations when running in Development.
-        /// </summary>
-        /// <param name="app">The built application.</param>
-        /// <returns>True when migrations were applied.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="app"/> is null.</exception>
-        public static bool MigrateInDevelopment(WebApplication app)
-        {
-            ArgumentNullException.ThrowIfNull(app);
-            return MigrateInDevelopment((IHost)app);
-        }
-
-        /// <summary>
-        /// Applies pending migrations when running in Development. Lets
-        /// non-web hosts (for example the stdio MCP host) share the API's
-        /// migration policy without depending on <see cref="WebApplication"/>.
+        /// Applies pending migrations when running in Development. Takes the
+        /// built host, so web and generic hosts share one migration policy.
         /// </summary>
         /// <param name="host">The built host.</param>
         /// <returns>True when migrations were applied.</returns>
@@ -82,6 +73,36 @@ namespace JobScrape.Api.Composition
             using var scope = host.Services.CreateScope();
             scope.ServiceProvider.GetRequiredService<JobScrapeDbContext>().Database.Migrate();
             return true;
+        }
+
+        /// <summary>
+        /// Registers the raw SQLite explorer against the same database file
+        /// as Entity Framework Core. Only web hosts call this: the cockpit
+        /// database page needs it, and the stdio host has no such surface.
+        /// Table and column names stay validated at the edge.
+        /// </summary>
+        /// <param name="services">The service collection.</param>
+        /// <param name="configuration">The app configuration.</param>
+        /// <param name="contentRoot">Root for a relative database path.</param>
+        /// <returns>The same service collection.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when an argument is null.</exception>
+        public static IServiceCollection AddJobScrapeDatabaseExplorer(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            string contentRoot
+        )
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(contentRoot);
+
+            var storage =
+                configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+                ?? new StorageOptions();
+            var path = Path.GetFullPath(storage.DatabasePath, contentRoot);
+            var connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
+            services.AddSingleton<IDatabaseExplorer>(new SqliteDatabaseExplorer(connectionString));
+            return services;
         }
     }
 }
