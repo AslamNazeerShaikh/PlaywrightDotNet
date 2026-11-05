@@ -103,22 +103,24 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 _ => "jobs",
             };
 
-            var query = new List<string> { Pair("k", criteria.Keywords) };
+            var query = new List<string> { QueryString.Pair("k", criteria.Keywords) };
             if (criteria.Locations.Count > 0)
             {
-                query.Add(Pair("l", string.Join(", ", criteria.Locations)));
+                query.Add(QueryString.Pair("l", string.Join(", ", criteria.Locations)));
             }
 
-            query.Add(Pair("nignbevent_src", "jobsearchDeskGNB"));
+            query.Add(QueryString.Pair("nignbevent_src", "jobsearchDeskGNB"));
 
             if (criteria.ExperienceYears is { } years)
             {
-                query.Add(Pair("experience", years.ToString(CultureInfo.InvariantCulture)));
+                query.Add(
+                    QueryString.Pair("experience", years.ToString(CultureInfo.InvariantCulture))
+                );
             }
 
             if (criteria.PostedWithinDays is { } days)
             {
-                query.Add(Pair("jobAge", days.ToString(CultureInfo.InvariantCulture)));
+                query.Add(QueryString.Pair("jobAge", days.ToString(CultureInfo.InvariantCulture)));
             }
 
             return new Uri($"{Origin}{path}?{string.Join('&', query)}", UriKind.Absolute);
@@ -148,17 +150,6 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 builder.Append('-');
             }
-        }
-
-        /// <summary>
-        /// Formats one percent-encoded query pair.
-        /// </summary>
-        /// <param name="name">The parameter name.</param>
-        /// <param name="value">The raw value.</param>
-        /// <returns>The encoded <c>name=value</c> pair.</returns>
-        private static string Pair(string name, string value)
-        {
-            return $"{name}={Uri.EscapeDataString(value)}";
         }
     }
 }

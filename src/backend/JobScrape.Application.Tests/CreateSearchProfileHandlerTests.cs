@@ -106,7 +106,11 @@ namespace JobScrape.Application.Tests
             );
 
             var result = await handler.HandleAsync(
-                Valid() with { MaxPages = 500, MaxJobs = 10_000 },
+                Valid() with
+                {
+                    MaxPages = 500,
+                    MaxJobs = 10_000,
+                },
                 Ct
             );
 
@@ -138,7 +142,11 @@ namespace JobScrape.Application.Tests
             );
 
             var result = await handler.HandleAsync(
-                Valid() with { StartPage = 31, MaxPages = 30 },
+                Valid() with
+                {
+                    StartPage = 31,
+                    MaxPages = 30,
+                },
                 Ct
             );
 
@@ -175,7 +183,11 @@ namespace JobScrape.Application.Tests
             var (handler, _) = Create();
 
             var result = await handler.HandleAsync(
-                Valid() with { StartPage = 3, MaxPages = 2 },
+                Valid() with
+                {
+                    StartPage = 3,
+                    MaxPages = 2,
+                },
                 Ct
             );
             var errors = FieldErrors(result);

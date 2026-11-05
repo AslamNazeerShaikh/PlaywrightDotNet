@@ -22,10 +22,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
             builder
                 .Property(profile => profile.Id)
                 .HasConversion(DomainConverters.BrowserProfileId);
-            builder
-                .Property(profile => profile.Name)
-                .IsRequired()
-                .UseCollation("NOCASE");
+            builder.Property(profile => profile.Name).IsRequired().UseCollation("NOCASE");
             builder
                 .Property(profile => profile.Source)
                 .HasConversion(DomainConverters.SourceKey)

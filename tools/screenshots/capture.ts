@@ -1,0 +1,138 @@
+/**
+ * Full-page light plus dark captures of every ops-deck route over CDP.
+ *
+ * Run: `bun tools/screenshots/capture.ts` from the repo root.
+ * Env: `BFF_URL` (default `https://127.0.0.1:3000`),
+ * `SHOT_OUT` (default `docs/screenshots`), `CDP_PORT` (default `9222`).
+ *
+ * Needs headless Chrome with remote debugging first:
+ * macOS: /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --headless
+ *   --remote-debugging-port=9222 --ignore-certificate-errors
+ *   --user-data-dir=/tmp/chrome-shots about:blank
+ * Linux: google-chrome with the same flags.
+ *
+ * Theme uses the deck THEME toggle with a confirm poll. A fixed sleep raced
+ * React state and produced light files named dark, so the poll is load-bearing.
+ */
+const BFF = process.env["BFF_URL"] ?? "https://127.0.0.1:3000";
+const OUT = process.env["SHOT_OUT"] ?? "docs/screenshots";
+const CDP = process.env["CDP_PORT"] ?? "9222";
+const routes = [
+  ["01-overview", "overview"],
+  ["02-health", "health"],
+  ["03-profiles", "profiles"],
+  ["04-sources", "sources"],
+  ["05-sessions", "sessions"],
+  ["06-runs", "runs"],
+  ["07-topology", "topology"],
+  ["08-database", "database"],
+];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const created = await fetch(`http://127.0.0.1:${CDP}/json/new?about:blank`, {
+  method: "PUT",
+}).then((r) => r.json());
+const ws = new WebSocket(created.webSocketDebuggerUrl, {
+  maxPayload: 256 * 1024 * 1024,
+});
+await new Promise<void>((resolve) =>
+  ws.addEventListener("open", () => resolve(), { once: true }),
+);
+
+let id = 0;
+const pending = new Map<number, (v: any) => void>();
+ws.addEventListener("message", (e) => {
+  const msg = JSON.parse(String(e.data));
+  if (msg.id !== undefined && pending.has(msg.id)) {
+    pending.get(msg.id)!(msg);
+    pending.delete(msg.id);
+  }
+});
+function send(method: string, params: any = {}): Promise<any> {
+  const cur = ++id;
+  ws.send(JSON.stringify({ id: cur, method, params }));
+  return new Promise((resolve) => pending.set(cur, resolve));
+}
+const evalJs = async (expression: string) => {
+  const r = await send("Runtime.evaluate", { expression, returnByValue: true });
+  if (r.result?.exceptionDetails)
+    throw new Error("evaluate failed: " + expression);
+  return r.result.result.value;
+};
+async function ensureTheme(want: "LIGHT" | "DARK") {
+  for (let i = 0; i < 40; i++) {
+    const t = String(
+      await evalJs(
+        `document.querySelector('[title="Toggle color theme"]')?.textContent ?? "MISSING"`,
+      ),
+    );
+    if (t.includes(want)) return;
+    await evalJs(
+      `document.querySelector('[title="Toggle color theme"]')?.click()`,
+    );
+    await sleep(400);
+  }
+  throw new Error("theme never reached " + want);
+}
+async function shot(path: string) {
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 1920,
+    height: 6000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await sleep(800);
+  const bottom = await evalJs(
+    `(() => { const b = (s) => { const e = document.querySelector(s); if (!e) return 0; return e.getBoundingClientRect().bottom; }; return Math.ceil(Math.max(b('header'), b('main'), b('footer'), b('nav'))) + 48; })()`,
+  );
+  const h = Math.min(Math.max(bottom ?? 1080, 800), 6000);
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 1920,
+    height: h,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await sleep(600);
+  const res = await send("Page.captureScreenshot", { format: "png" });
+  await send("Emulation.clearDeviceMetricsOverride", {});
+  await Bun.write(path, Buffer.from(res.result.data, "base64"));
+  console.log("saved", path, `h=${h}`);
+}
+
+await send("Page.enable");
+await send("Runtime.enable");
+
+try {
+  for (const [slug, route] of routes) {
+    await send("Page.navigate", { url: `${BFF}/#/${route}` });
+    await sleep(3500);
+    await ensureTheme("LIGHT");
+    await shot(`${OUT}/${slug}-light.png`);
+    await ensureTheme("DARK");
+    await shot(`${OUT}/${slug}-dark.png`);
+  }
+} finally {
+  ws.close();
+  let cleaned = false;
+  for (let i = 0; i < 3 && !cleaned; i++) {
+    try {
+      await fetch(`http://127.0.0.1:${CDP}/json/close/${created.id}`, {
+        method: "PUT",
+      });
+    } catch {
+      // Tab already gone. Nothing to clean.
+    }
+    await sleep(500);
+    try {
+      const list = await fetch(`http://127.0.0.1:${CDP}/json/list`).then((r) =>
+        r.json(),
+      );
+      cleaned = !list.some((t: any) => t.id === created.id);
+    } catch {
+      cleaned = true;
+    }
+  }
+  if (!cleaned)
+    console.log("warning: capture tab still open, close it by hand");
+}
+console.log("done");

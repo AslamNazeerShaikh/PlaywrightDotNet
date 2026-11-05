@@ -27,10 +27,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
         {
             var url = IndeedUrlBuilder.SearchUrl(Criteria()).AbsoluteUri;
 
-            Assert.Equal(
-                "https://in.indeed.com/jobs?q=dotnet&l=Pune&fromage=7",
-                url
-            );
+            Assert.Equal("https://in.indeed.com/jobs?q=dotnet&l=Pune&fromage=7", url);
         }
 
         [Fact]
@@ -54,8 +51,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
         [Fact]
         public void NegativeStartIsRejected()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => IndeedUrlBuilder.SearchUrl(Criteria(), -10)
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                IndeedUrlBuilder.SearchUrl(Criteria(), -10)
             );
         }
 

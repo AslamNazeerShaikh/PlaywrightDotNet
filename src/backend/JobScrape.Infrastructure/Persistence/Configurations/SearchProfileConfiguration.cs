@@ -19,10 +19,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
             builder.ToTable("search_profiles");
             builder.HasKey(profile => profile.Id);
             builder.Property(profile => profile.Id).HasConversion(DomainConverters.SearchProfileId);
-            builder
-                .Property(profile => profile.Name)
-                .IsRequired()
-                .UseCollation("NOCASE");
+            builder.Property(profile => profile.Name).IsRequired().UseCollation("NOCASE");
             builder
                 .Property(profile => profile.Source)
                 .HasConversion(DomainConverters.SourceKey)

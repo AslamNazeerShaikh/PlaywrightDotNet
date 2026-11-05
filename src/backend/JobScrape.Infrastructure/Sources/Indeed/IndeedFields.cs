@@ -142,7 +142,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 return false;
             }
 
-            canonical = $"https://{IndeedUrlBuilder.Host}/viewjob?jk={Uri.EscapeDataString(jobKey)}";
+            canonical =
+                $"https://{IndeedUrlBuilder.Host}/viewjob?jk={Uri.EscapeDataString(jobKey)}";
             return canonical.Length <= CanonicalUrl.MaxLength;
         }
 
@@ -154,9 +155,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
         public static string? JobKey(string? value)
         {
             var trimmed = value?.Trim();
-            return trimmed is not null
-                    && trimmed.Length > 0
-                    && trimmed.All(char.IsAsciiLetterOrDigit)
+            return
+                trimmed is not null && trimmed.Length > 0 && trimmed.All(char.IsAsciiLetterOrDigit)
                 ? trimmed
                 : null;
         }
@@ -343,8 +343,10 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             }
 
             var mode = WorkModeOf(text);
-            var city = text
-                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            var city = text.Split(
+                    ',',
+                    StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+                )
                 .Select(place => Clean(ModeWords().Replace(place, " ")))
                 .FirstOrDefault(place =>
                     place is not null && WorkModeOf(place) == WorkMode.Unknown
@@ -406,7 +408,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
         /// <returns>The decoded value, or null.</returns>
         private static string? QueryValue(string query, string name)
         {
-            foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            foreach (
+                var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            )
             {
                 var equals = pair.IndexOf('=', StringComparison.Ordinal);
                 if (equals <= 0)

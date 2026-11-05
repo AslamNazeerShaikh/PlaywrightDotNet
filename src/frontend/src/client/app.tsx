@@ -526,7 +526,9 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         {route === "database" && <DatabasePage client={activeClient} />}
       </main>
 
-      <footer style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "var(--text-micro)" }}>
+      <footer
+        style={{ padding: "0 18px 24px", color: "var(--faint)", fontSize: "var(--text-micro)" }}
+      >
         <CodeTag code="STABLE-CODES" /> UI branches on codes, never prose · Bun + React, no Node ·
         IBM Plex Mono
       </footer>

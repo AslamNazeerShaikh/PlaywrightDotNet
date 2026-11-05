@@ -56,7 +56,9 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
                 : $"<span class=\"job-card-container__company-name\">{Encode(company)}</span>";
             var postedHtml = posted is null ? string.Empty : $"<time>{Encode(posted)}</time>";
             return $"""
-                <li class="jobs-search-results__list-item" data-job-id="{Encode(id)}"{wrapperAttributes}>
+                <li class="jobs-search-results__list-item" data-job-id="{Encode(
+                    id
+                )}"{wrapperAttributes}>
                 {titleHtml}{companyHtml}{locationHtml}{postedHtml}
                 </li>
                 """;

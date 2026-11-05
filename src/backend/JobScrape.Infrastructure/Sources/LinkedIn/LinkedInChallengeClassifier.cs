@@ -65,7 +65,11 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
 
             if (TitleWall().IsMatch(title))
             {
-                return new ChallengeAssessment(ChallengeKind.LoginRequired, 0.95, "title:'sign in'");
+                return new ChallengeAssessment(
+                    ChallengeKind.LoginRequired,
+                    0.95,
+                    "title:'sign in'"
+                );
             }
 
             if (!hasJobCards && BodyWall().IsMatch(bodyText))

@@ -16,9 +16,11 @@ namespace JobScrape.Application.Tests
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-        private static (UpdateSessionHandler Handler, ScrapeHarness.InMemoryStore Store, FakeWorkspace Workspace) Create(
-            string name = "before"
-        )
+        private static (
+            UpdateSessionHandler Handler,
+            ScrapeHarness.InMemoryStore Store,
+            FakeWorkspace Workspace
+        ) Create(string name = "before")
         {
             var store = new ScrapeHarness.InMemoryStore();
             var profile = BrowserProfile.Create(

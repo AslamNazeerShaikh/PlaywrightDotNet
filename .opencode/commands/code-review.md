@@ -63,6 +63,11 @@ Fix: [How to fix]
 - **MEDIUM issues**: Recommend fixes before merge
 - **LOW issues**: Optional improvements
 
+## Before commit and push
+
+- [ ] Format with the decided runners: `dotnet tool run csharpier format .` from `src/backend/`, `bun run format` from `src/frontend/`
+- [ ] Refresh the knowledge graph when present: if `graphify-out/` exists, run `graphify update .` from the repo root
+
 ---
 
 **IMPORTANT**: Never approve code with security vulnerabilities!

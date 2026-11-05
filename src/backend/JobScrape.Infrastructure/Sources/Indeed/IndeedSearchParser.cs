@@ -128,7 +128,9 @@ namespace JobScrape.Infrastructure.Sources.Indeed
 
             var jobKey = IndeedFields.JobKey(card.GetAttribute("data-jk")) ?? keyFromUrl;
             var title = IndeedFields.Clean(
-                IndeedHtml.TextOf(anchor) ?? anchor.GetAttribute("title") ?? anchor.GetAttribute("aria-label"),
+                IndeedHtml.TextOf(anchor)
+                    ?? anchor.GetAttribute("title")
+                    ?? anchor.GetAttribute("aria-label"),
                 JobTitle.MaxLength
             );
             if (jobKey is null || title is null)
@@ -224,7 +226,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                     CompanyName.MaxLength
                 ),
                 CompanyUrl = IndeedFields.CompanyPageUrl(
-                    company?.GetAttribute("href") ?? company?.QuerySelector("a")?.GetAttribute("href"),
+                    company?.GetAttribute("href")
+                        ?? company?.QuerySelector("a")?.GetAttribute("href"),
                     pageUrl
                 ),
                 Location = IndeedFields.Location(location),

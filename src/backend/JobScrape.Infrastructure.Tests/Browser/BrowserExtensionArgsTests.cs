@@ -24,9 +24,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
         [Fact]
         public void UnsetModeLaunchesWithoutExtensionArgs()
         {
-            var pool = new BrowserSessionPool(
-                Settings(headless: false, withDir: true, mode: null)
-            );
+            var pool = new BrowserSessionPool(Settings(headless: false, withDir: true, mode: null));
 
             Assert.Null(pool.ExtensionArgs(BrowserEngine.Chromium));
         }
@@ -55,10 +53,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
             var args = pool.ExtensionArgs(BrowserEngine.Chromium);
 
             Assert.Equal(
-                [
-                    $"--disable-extensions-except={Dir()}",
-                    $"--load-extension={Dir()}",
-                ],
+                [$"--disable-extensions-except={Dir()}", $"--load-extension={Dir()}"],
                 args ?? []
             );
         }

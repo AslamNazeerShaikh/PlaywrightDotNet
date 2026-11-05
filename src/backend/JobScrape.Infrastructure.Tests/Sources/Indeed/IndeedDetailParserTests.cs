@@ -11,11 +11,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
         [Fact]
         public void NormalDetailExtractsIdentityAndFields()
         {
-            var detail = IndeedDetailParser.Parse(
-                Fixture("detail-normal.html"),
-                DetailUrl,
-                Now
-            );
+            var detail = IndeedDetailParser.Parse(Fixture("detail-normal.html"), DetailUrl, Now);
 
             Assert.NotNull(detail);
             var posting = AssertAccepted(detail);

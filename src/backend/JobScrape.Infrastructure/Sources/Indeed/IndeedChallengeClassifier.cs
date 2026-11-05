@@ -59,7 +59,11 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             // title is a wall even if card markup somehow lingers.
             if (Cloudflare().IsMatch(title))
             {
-                return new ChallengeAssessment(ChallengeKind.AccessDenied, 0.9, "title:'cloudflare'");
+                return new ChallengeAssessment(
+                    ChallengeKind.AccessDenied,
+                    0.9,
+                    "title:'cloudflare'"
+                );
             }
 
             if (MatchPhrases(title, "title", 0.95, 0.95) is { } byTitle)
@@ -71,7 +75,11 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             {
                 if (Cloudflare().IsMatch(bodyText))
                 {
-                    return new ChallengeAssessment(ChallengeKind.AccessDenied, 0.9, "body:'cloudflare'");
+                    return new ChallengeAssessment(
+                        ChallengeKind.AccessDenied,
+                        0.9,
+                        "body:'cloudflare'"
+                    );
                 }
 
                 if (MatchPhrases(bodyText, "body", 0.85, 0.85) is { } byBody)
