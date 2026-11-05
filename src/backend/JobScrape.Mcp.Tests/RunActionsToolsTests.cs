@@ -57,8 +57,8 @@ namespace JobScrape.Mcp.Tests
         )
         {
             return new RunActionsTools(
-                new StartRunHandler(launcher, store, Consent),
-                new CancelRunHandler(launcher, runs, unitOfWork, store, new FixedClock(Now)),
+                new StartRunHandler(launcher, store, Consent, CallerContext.LocalOperator),
+                new CancelRunHandler(launcher, runs, unitOfWork, store, new FixedClock(Now), CallerContext.LocalOperator),
                 new FakeCaller()
             );
         }
@@ -261,13 +261,14 @@ namespace JobScrape.Mcp.Tests
         {
             var launcher = new FakeLauncher();
             var store = new FakeRunStore();
-            var start = new StartRunHandler(launcher, store, Consent);
+            var start = new StartRunHandler(launcher, store, Consent, CallerContext.LocalOperator);
             var cancel = new CancelRunHandler(
                 launcher,
                 new FakeRuns(),
                 new FakeUnitOfWork(),
                 store,
-                new FixedClock(Now)
+                new FixedClock(Now),
+                CallerContext.LocalOperator
             );
             var caller = new FakeCaller();
             Assert.Throws<ArgumentNullException>(() => new RunActionsTools(null!, cancel, caller));

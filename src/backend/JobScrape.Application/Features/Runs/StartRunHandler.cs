@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Access;
@@ -19,20 +20,34 @@ namespace JobScrape.Application.Features.Runs
         private readonly ComplianceConsent _consent;
 
         /// <summary>
+        /// Gets the calling actor. Stored for future authorization; the
+        /// single local user is always permitted, so starts are not gated.
+        /// </summary>
+        public ICallerContext Caller { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="StartRunHandler"/> class.
         /// </summary>
         /// <param name="launcher">Executes runs in the background.</param>
         /// <param name="store">Reads the recorded run back.</param>
         /// <param name="consent">The operator's configured compliance consent.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public StartRunHandler(IRunLauncher launcher, IRunStore store, ComplianceConsent consent)
+        public StartRunHandler(
+            IRunLauncher launcher,
+            IRunStore store,
+            ComplianceConsent consent,
+            ICallerContext caller
+        )
         {
             ArgumentNullException.ThrowIfNull(launcher);
             ArgumentNullException.ThrowIfNull(store);
             ArgumentNullException.ThrowIfNull(consent);
+            ArgumentNullException.ThrowIfNull(caller);
             _launcher = launcher;
             _store = store;
             _consent = consent;
+            Caller = caller;
         }
 
         /// <summary>

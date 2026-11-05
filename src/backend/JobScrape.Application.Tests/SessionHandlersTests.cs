@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Results;
 using JobScrape.Application.Tests.Scraping;
@@ -17,7 +18,7 @@ namespace JobScrape.Application.Tests
         private static (CreateSessionHandler Handler, ScrapeHarness.InMemoryStore Store) Create()
         {
             var store = new ScrapeHarness.InMemoryStore();
-            return (new CreateSessionHandler(store, store, new FakeTimeProvider(Now)), store);
+            return (new CreateSessionHandler(store, store, new FakeTimeProvider(Now), CallerContext.LocalOperator), store);
         }
 
         private static IReadOnlyDictionary<string, string[]> FieldErrors(
@@ -205,13 +206,16 @@ namespace JobScrape.Application.Tests
             var clock = new FakeTimeProvider();
 
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(null!, store, clock)
+                new CreateSessionHandler(null!, store, clock, CallerContext.LocalOperator)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, null!, clock)
+                new CreateSessionHandler(store, null!, clock, CallerContext.LocalOperator)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, store, null!)
+                new CreateSessionHandler(store, store, null!, CallerContext.LocalOperator)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new CreateSessionHandler(store, store, clock, null!)
             );
             Assert.Throws<ArgumentNullException>(() => new ListSessionsHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new GetSessionHandler(null!));
