@@ -56,8 +56,7 @@ namespace JobScrape.Mcp.Tools
             [Description("The browser profile identifier bound to the profile source.")]
                 string browserProfileId,
             [Description("Whether to visit detail pages after searching.")] bool enrich = true,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var profile = McpErrors.ParseIdOrThrow(profileId, "A profile id is required.");
@@ -83,8 +82,7 @@ namespace JobScrape.Mcp.Tools
         [Description("Cancels a run, idempotently; a terminal run is returned as it is.")]
         public async Task<RunResponse> CancelRunAsync(
             [Description("The run identifier.")] string id,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var runId = McpErrors.ParseIdOrThrow(id, "A run id is required.");

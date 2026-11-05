@@ -58,7 +58,14 @@ namespace JobScrape.Mcp.Tests
         {
             return new RunActionsTools(
                 new StartRunHandler(launcher, store, Consent, CallerContext.LocalOperator),
-                new CancelRunHandler(launcher, runs, unitOfWork, store, new FixedClock(Now), CallerContext.LocalOperator),
+                new CancelRunHandler(
+                    launcher,
+                    runs,
+                    unitOfWork,
+                    store,
+                    new FixedClock(Now),
+                    CallerContext.LocalOperator
+                ),
                 new FakeCaller()
             );
         }

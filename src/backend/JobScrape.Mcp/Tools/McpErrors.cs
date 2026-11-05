@@ -38,10 +38,10 @@ namespace JobScrape.Mcp.Tools
         /// the text is not a GUID. Empty GUIDs pass through: the handler owns
         /// the empty-id rule and reports it with the same code.
         /// </summary>
-        /// <param name="id">The raw id argument.</param>
+        /// <param name="id">The raw id argument. May be null.</param>
         /// <param name="requiredMessage">The field message when parsing fails.</param>
         /// <returns>The parsed identifier.</returns>
-        internal static Guid ParseIdOrThrow(string id, string requiredMessage)
+        internal static Guid ParseIdOrThrow(string? id, string requiredMessage)
         {
             if (Guid.TryParse(id, out var guid))
             {

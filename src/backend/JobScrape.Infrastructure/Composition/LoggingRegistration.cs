@@ -10,15 +10,16 @@ using Serilog.Formatting.Compact;
 namespace JobScrape.Infrastructure.Composition
 {
     /// <summary>
-    /// Serilog setup for the API (docs/15-runtime-hardening.md §2): the
-    /// <c>Serilog</c> section for levels, the standard enricher set, rendered
-    /// compact JSON on the console, and an async, rolling compact-JSON file
-    /// sink with retention from the validated <see cref="LoggingOptions"/>.
+    /// Serilog setup both hosts share (docs/15-runtime-hardening.md §2):
+    /// the <c>Serilog</c> section for levels, the standard enricher set,
+    /// rendered compact JSON on the console, and an async, rolling
+    /// compact-JSON file sink with retention from the validated
+    /// <see cref="LoggingOptions"/>.
     /// </summary>
     public static class LoggingRegistration
     {
         /// <summary>
-        /// The <c>Application</c> property stamped on every event.
+        /// The default <c>Application</c> property stamped on every event.
         /// </summary>
         public const string ApplicationName = "JobScrape.Api";
 
@@ -28,17 +29,35 @@ namespace JobScrape.Infrastructure.Composition
         /// <param name="services">The service collection.</param>
         /// <param name="configuration">The app configuration (levels and overrides).</param>
         /// <param name="contentRoot">Root for a relative log directory.</param>
+        /// <param name="consoleToStandardError">
+        /// When true, the console sink writes to standard error, keeping
+        /// standard output clean for protocols that own it (stdio MCP).
+        /// </param>
+        /// <param name="applicationName">
+        /// The <c>Application</c> property stamped on every event. Defaults
+        /// to <see cref="ApplicationName"/>.
+        /// </param>
+        /// <param name="logFilePrefix">
+        /// The rolling file name prefix (<c>{prefix}-.jsonl</c>). Defaults
+        /// to <c>jobscrape-api</c>.
+        /// </param>
         /// <returns>The same service collection.</returns>
         /// <exception cref="ArgumentNullException">Thrown when an argument is null.</exception>
         public static IServiceCollection AddJobScrapeLogging(
             this IServiceCollection services,
             IConfiguration configuration,
-            string contentRoot
+            string contentRoot,
+            bool consoleToStandardError = false,
+            string? applicationName = null,
+            string? logFilePrefix = null
         )
         {
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(configuration);
             ArgumentNullException.ThrowIfNull(contentRoot);
+
+            var application = applicationName ?? ApplicationName;
+            var prefix = logFilePrefix ?? "jobscrape-api";
 
             // Resolving the options here makes an invalid Logging section
             // fail startup like every other validated section. The static
@@ -63,15 +82,20 @@ namespace JobScrape.Infrastructure.Composition
                         .Enrich.WithAssemblyVersion()
                         .Enrich.WithExceptionDetails()
                         .Enrich.WithDemystifiedStackTraces()
-                        .Enrich.WithProperty("Application", ApplicationName)
-                        .WriteTo.Console(new RenderedCompactJsonFormatter())
+                        .Enrich.WithProperty("Application", application)
+                        .WriteTo.Console(
+                            new RenderedCompactJsonFormatter(),
+                            standardErrorFromLevel: consoleToStandardError
+                                ? Serilog.Events.LogEventLevel.Verbose
+                                : null
+                        )
                         .WriteTo.Async(
                             sink =>
                                 sink.File(
                                     new CompactJsonFormatter(),
                                     Path.Combine(
                                         Path.GetFullPath(options.Directory, contentRoot),
-                                        "jobscrape-api-.jsonl"
+                                        $"{prefix}-.jsonl"
                                     ),
                                     fileSizeLimitBytes: options.FileSizeLimitBytes,
                                     rollingInterval: RollingInterval.Day,

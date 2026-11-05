@@ -51,8 +51,20 @@ namespace JobScrape.Mcp.Tests
             ]);
             var clock = new FixedClock(Now);
             return new SearchProfilesWriteTools(
-                new CreateSearchProfileHandler(profiles, profiles, catalog, clock, CallerContext.LocalOperator),
-                new UpdateSearchProfileHandler(profiles, profiles, catalog, clock, CallerContext.LocalOperator),
+                new CreateSearchProfileHandler(
+                    profiles,
+                    profiles,
+                    catalog,
+                    clock,
+                    CallerContext.LocalOperator
+                ),
+                new UpdateSearchProfileHandler(
+                    profiles,
+                    profiles,
+                    catalog,
+                    clock,
+                    CallerContext.LocalOperator
+                ),
                 new FakeCaller()
             );
         }
@@ -269,8 +281,20 @@ namespace JobScrape.Mcp.Tests
             var profiles = new FakeProfiles();
             var catalog = new SourceSettingsCatalog([]);
             var clock = new FixedClock(Now);
-            var create = new CreateSearchProfileHandler(profiles, profiles, catalog, clock, CallerContext.LocalOperator);
-            var update = new UpdateSearchProfileHandler(profiles, profiles, catalog, clock, CallerContext.LocalOperator);
+            var create = new CreateSearchProfileHandler(
+                profiles,
+                profiles,
+                catalog,
+                clock,
+                CallerContext.LocalOperator
+            );
+            var update = new UpdateSearchProfileHandler(
+                profiles,
+                profiles,
+                catalog,
+                clock,
+                CallerContext.LocalOperator
+            );
             var caller = new FakeCaller();
             Assert.Throws<ArgumentNullException>(() =>
                 new SearchProfilesWriteTools(null!, update, caller)

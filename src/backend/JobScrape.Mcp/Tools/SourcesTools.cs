@@ -36,9 +36,7 @@ namespace JobScrape.Mcp.Tools
         /// <returns>The sources ordered by key.</returns>
         [McpServerTool(Name = "list_sources")]
         [Description("Returns every configured source with its policy, quota, and circuit state.")]
-        public Task<SourceListResponse> ListSourcesAsync(
-            [Description("Token to observe for cancellation.")] CancellationToken cancellationToken
-        )
+        public Task<SourceListResponse> ListSourcesAsync(CancellationToken cancellationToken)
         {
             return _sources.HandleAsync(cancellationToken);
         }
