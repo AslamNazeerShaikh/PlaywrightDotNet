@@ -42,34 +42,23 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             var locations = criteria.Locations.Count > 0
                 ? string.Join(", ", criteria.Locations)
                 : string.Empty;
-            var query = new List<string> { Pair("q", criteria.Keywords) };
+            var query = new List<string> { QueryString.Pair("q", criteria.Keywords) };
             if (locations.Length > 0)
             {
-                query.Add(Pair("l", locations));
+                query.Add(QueryString.Pair("l", locations));
             }
 
             if (criteria.PostedWithinDays is { } days)
             {
-                query.Add(Pair("fromage", days.ToString(CultureInfo.InvariantCulture)));
+                query.Add(QueryString.Pair("fromage", days.ToString(CultureInfo.InvariantCulture)));
             }
 
             if (start > 0)
             {
-                query.Add(Pair("start", start.ToString(CultureInfo.InvariantCulture)));
+                query.Add(QueryString.Pair("start", start.ToString(CultureInfo.InvariantCulture)));
             }
 
             return new Uri($"{Origin}jobs?{string.Join('&', query)}", UriKind.Absolute);
-        }
-
-        /// <summary>
-        /// Formats one percent-encoded query pair.
-        /// </summary>
-        /// <param name="name">The parameter name.</param>
-        /// <param name="value">The raw value.</param>
-        /// <returns>The encoded <c>name=value</c> pair.</returns>
-        private static string Pair(string name, string value)
-        {
-            return $"{name}={Uri.EscapeDataString(value)}";
         }
     }
 }
