@@ -1,4 +1,5 @@
 using System.Globalization;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
@@ -27,7 +28,7 @@ namespace JobScrape.Infrastructure.Sources
         /// <param name="pool">Provides the run's page.</param>
         /// <param name="profileId">The browser profile.</param>
         /// <returns>The open page, or null when there is none.</returns>
-        internal static IPage? FindPage(BrowserSessionPool pool, BrowserProfileId profileId)
+        internal static IPage? FindPage(IBrowserSessionPool pool, BrowserProfileId profileId)
         {
             try
             {

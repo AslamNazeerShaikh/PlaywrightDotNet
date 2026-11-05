@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
@@ -56,7 +57,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         private const int PageChangePolls = 40;
 
         // All injected and never mutated.
-        private readonly BrowserSessionPool _pool;
+        private readonly IBrowserSessionPool _pool;
         private readonly TimeProvider _clock;
         private readonly ILogger<NaukriJobSource> _logger;
 
@@ -68,7 +69,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <param name="logger">The logger.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public NaukriJobSource(
-            BrowserSessionPool pool,
+            IBrowserSessionPool pool,
             TimeProvider clock,
             ILogger<NaukriJobSource> logger
         )

@@ -1,4 +1,5 @@
 using System.Globalization;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
@@ -40,7 +41,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             """;
 
         // All injected and never mutated.
-        private readonly BrowserSessionPool _pool;
+        private readonly IBrowserSessionPool _pool;
         private readonly TimeProvider _clock;
         private readonly ILogger<LinkedInJobSource> _logger;
 
@@ -52,7 +53,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
         /// <param name="logger">The logger.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public LinkedInJobSource(
-            BrowserSessionPool pool,
+            IBrowserSessionPool pool,
             TimeProvider clock,
             ILogger<LinkedInJobSource> logger
         )

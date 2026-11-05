@@ -19,7 +19,7 @@ namespace JobScrape.Api.Runs
     {
         // All injected and never mutated; _active is guarded by _lock.
         private readonly IServiceScopeFactory _scopes;
-        private readonly BrowserSessionPool _pool;
+        private readonly IBrowserSessionPool _pool;
         private readonly TimeProvider _clock;
         private readonly ILogger<RunCoordinator> _logger;
         private readonly CancellationTokenSource _stopping = new();
@@ -37,7 +37,7 @@ namespace JobScrape.Api.Runs
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunCoordinator(
             IServiceScopeFactory scopes,
-            BrowserSessionPool pool,
+            IBrowserSessionPool pool,
             TimeProvider clock,
             ILogger<RunCoordinator> logger
         )
