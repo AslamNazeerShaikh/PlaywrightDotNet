@@ -91,6 +91,40 @@ namespace JobScrape.Infrastructure.Tests.Persistence
         }
 
         [Fact]
+        public void LimitsJsonWithoutStartPageReadsAsPageOne()
+        {
+            const string json =
+                """{"maxPages":30,"maxJobs":60,"maxDetails":0,"minDelay":"00:00:02.5000000","maxDelay":"00:00:06"}""";
+
+            var limits = Assert.IsType<RunLimits>(
+                DomainConverters.RunLimits.ConvertFromProvider(json)
+            );
+
+            Assert.Equal(1, limits.StartPage);
+            Assert.Equal(30, limits.MaxPages);
+        }
+
+        [Fact]
+        public void LimitsJsonRoundTripsTheStartPage()
+        {
+            var limits = new RunLimits(
+                30,
+                60,
+                0,
+                TimeSpan.FromSeconds(2.5),
+                TimeSpan.FromSeconds(6),
+                startPage: 31
+            );
+
+            var json = DomainConverters.RunLimits.ConvertToProvider(limits);
+            var reloaded = Assert.IsType<RunLimits>(
+                DomainConverters.RunLimits.ConvertFromProvider(json!)
+            );
+
+            Assert.Equal(limits, reloaded);
+        }
+
+        [Fact]
         public void CriteriaJsonWithoutCompaniesReadsAsEmpty()
         {
             const string json =

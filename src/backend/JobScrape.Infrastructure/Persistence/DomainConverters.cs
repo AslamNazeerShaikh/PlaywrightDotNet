@@ -221,7 +221,8 @@ namespace JobScrape.Infrastructure.Persistence
                         limits.MaxJobs,
                         limits.MaxDetails,
                         limits.MinDelay,
-                        limits.MaxDelay
+                        limits.MaxDelay,
+                        limits.StartPage
                     ),
                     Options
                 );
@@ -235,7 +236,16 @@ namespace JobScrape.Infrastructure.Persistence
                     dto.MaxJobs,
                     dto.MaxDetails,
                     dto.MinDelay,
-                    dto.MaxDelay
+                    dto.MaxDelay,
+                    // Rows written before the page window existed carry no
+                    // start page; they always began at page one. Anything
+                    // outside 1..ceiling never passed validation, so a
+                    // hand-edited row falls back instead of failing the read.
+                    dto.StartPage is int start
+                    && start >= 1
+                    && start <= global::JobScrape.Domain.Sourcing.RunLimits.MaxPagesCeiling
+                        ? start
+                        : 1
                 );
             }
 
@@ -349,7 +359,8 @@ namespace JobScrape.Infrastructure.Persistence
                 int MaxJobs,
                 int MaxDetails,
                 TimeSpan MinDelay,
-                TimeSpan MaxDelay
+                TimeSpan MaxDelay,
+                int? StartPage
             );
 
             private sealed record StatsJson(

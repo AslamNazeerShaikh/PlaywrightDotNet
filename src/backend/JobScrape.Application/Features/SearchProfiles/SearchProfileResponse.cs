@@ -17,6 +17,7 @@ namespace JobScrape.Application.Features.SearchProfiles
     /// <param name="RequiredSkills">Key skills; a posting is kept when any one matches. Empty means no filter.</param>
     /// <param name="Companies">Company names for the include and exclude exports. Empty means no split.</param>
     /// <param name="MaxPages">Result pages per run.</param>
+    /// <param name="StartPage">First page fetched in a run.</param>
     /// <param name="MaxJobs">Postings per run.</param>
     /// <param name="MaxDetails">Detail visits per run; 0 disables enrichment.</param>
     /// <param name="MinDelayMs">Shortest delay between requests.</param>
@@ -36,6 +37,7 @@ namespace JobScrape.Application.Features.SearchProfiles
         IReadOnlyList<string> RequiredSkills,
         IReadOnlyList<string> Companies,
         int MaxPages,
+        int StartPage,
         int MaxJobs,
         int MaxDetails,
         int MinDelayMs,
@@ -66,6 +68,7 @@ namespace JobScrape.Application.Features.SearchProfiles
                 profile.Criteria.RequiredSkills,
                 profile.Criteria.Companies,
                 profile.Limits.MaxPages,
+                profile.Limits.StartPage,
                 profile.Limits.MaxJobs,
                 profile.Limits.MaxDetails,
                 (int)profile.Limits.MinDelay.TotalMilliseconds,

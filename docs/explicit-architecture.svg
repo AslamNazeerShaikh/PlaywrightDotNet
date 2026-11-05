@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1248 928" width="1248" role="img">
+  <title>JobScrape architecture: control plane, application core, and driven adapters</title>
+  <style>
+    text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1248" height="928" fill="#ffffff"/>
+  <text x="624" y="36" font-size="16" fill="#1e293b" text-anchor="middle">JobScrape architecture: control plane, core, adapters</text>
+
+  <!-- Dashed groups. The 26px gaps match the 25px block rule plus the border strokes. -->
+  <rect x="24" y="60" width="1200" height="144" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="34" y="78" font-size="11" fill="#64748b">Control plane · driving adapters</text>
+  <rect x="24" y="230" width="1200" height="420" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="34" y="248" font-size="11" fill="#64748b">Application core</text>
+  <rect x="24" y="676" width="1200" height="168" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="34" y="694" font-size="11" fill="#64748b">Driven adapters · infrastructure</text>
+
+  <!-- Connectors, painted over the group fills and under the solid boxes. -->
+  <path d="M318.25,133 L327.25,133" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M616.5,133 L625.5,133" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M914.75,133 L923.75,133" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M1071.4,183 L1071.4,219" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M624,630 L624,665" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1087" y="216" font-size="10" fill="#64748b">commands</text>
+  <text x="638" y="660" font-size="10" fill="#64748b">adapters implement ports</text>
+
+  <!-- Control row: four 273.25px boxes at 25px gaps fill the 1168px inner width. -->
+  <rect x="40" y="88" width="273.25" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="176.625" y="113.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Operator</text>
+  <text x="176.625" y="128.75" font-size="10" fill="#1e40af" text-anchor="middle">headed browser tab</text>
+  <text x="176.625" y="143.75" font-size="10" fill="#1e40af" text-anchor="middle">manual login only</text>
+  <text x="176.625" y="158.75" font-size="10" fill="#1e40af" text-anchor="middle">loopback host</text>
+
+  <rect x="338.25" y="88" width="273.25" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="474.875" y="113.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">React ops deck</text>
+  <text x="474.875" y="128.75" font-size="10" fill="#1e40af" text-anchor="middle">8 hash routes</text>
+  <text x="474.875" y="143.75" font-size="10" fill="#1e40af" text-anchor="middle">light + dark · cozy + compact</text>
+  <text x="474.875" y="158.75" font-size="10" fill="#1e40af" text-anchor="middle">polls runs every 2 s</text>
+
+  <rect x="636.5" y="88" width="273.25" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="773.125" y="113.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Bun BFF :3000</text>
+  <text x="773.125" y="128.75" font-size="10" fill="#1e40af" text-anchor="middle">SPA static + /api/* proxy</text>
+  <text x="773.125" y="143.75" font-size="10" fill="#1e40af" text-anchor="middle">/healthz · loopback</text>
+  <text x="773.125" y="158.75" font-size="10" fill="#1e40af" text-anchor="middle">no auth yet</text>
+
+  <rect x="934.75" y="88" width="273.25" height="90" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="1071.375" y="113.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">ASP.NET Core API</text>
+  <text x="1071.375" y="128.75" font-size="10" fill="#1e40af" text-anchor="middle">6 controllers · 22 endpoints</text>
+  <text x="1071.375" y="143.75" font-size="10" fill="#1e40af" text-anchor="middle">HTTP :5207 · HTTPS :5208</text>
+  <text x="1071.375" y="158.75" font-size="10" fill="#1e40af" text-anchor="middle">RunCoordinator · one run</text>
+
+  <!-- Core columns. The 54px chips are the two-line house height: 12 × 3 + 18. -->
+  <rect x="40" y="260" width="372" height="240" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="52" y="277" font-size="12" font-weight="bold" fill="#1e293b">Contracts &amp; policies</text>
+
+  <rect x="52" y="284" width="161.5" height="90" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="132.75" y="317.25" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Results</text>
+  <text x="132.75" y="332.25" font-size="10" fill="#166534" text-anchor="middle">Result&lt;T&gt; · ErrorInfo</text>
+  <text x="132.75" y="347.25" font-size="10" fill="#166534" text-anchor="middle">expected failures · typed</text>
+
+  <rect x="238.5" y="284" width="161.5" height="90" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="319.25" y="317.25" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Options</text>
+  <text x="319.25" y="332.25" font-size="10" fill="#166534" text-anchor="middle">validated at startup</text>
+  <text x="319.25" y="347.25" font-size="10" fill="#166534" text-anchor="middle">IValidateOptions&lt;T&gt;</text>
+
+  <rect x="52" y="399" width="161.5" height="90" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="132.75" y="432.25" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">HTTP edge</text>
+  <text x="132.75" y="447.25" font-size="10" fill="#166534" text-anchor="middle">RFC 9457 Problem Details</text>
+  <text x="132.75" y="462.25" font-size="10" fill="#166534" text-anchor="middle">stable code · traceId</text>
+
+  <rect x="238.5" y="399" width="161.5" height="90" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="319.25" y="432.25" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Policies</text>
+  <text x="319.25" y="447.25" font-size="10" fill="#166534" text-anchor="middle">compliance · politeness</text>
+  <text x="319.25" y="462.25" font-size="10" fill="#166534" text-anchor="middle">retry · challenge · quota</text>
+
+  <rect x="438" y="260" width="372" height="240" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="450" y="277" font-size="12" font-weight="bold" fill="#1e293b">Domain model</text>
+
+  <rect x="450" y="284" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="530.75" y="306.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">SearchProfile</text>
+  <text x="530.75" y="321.75" font-size="10" fill="#6b21a8" text-anchor="middle">name · criteria · limits</text>
+
+  <rect x="636.5" y="284" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="717.25" y="306.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">ScrapeRun</text>
+  <text x="717.25" y="321.75" font-size="10" fill="#6b21a8" text-anchor="middle">stage · stats · pause</text>
+
+  <rect x="450" y="363" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="530.75" y="385.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">JobPosting</text>
+  <text x="530.75" y="400.75" font-size="10" fill="#6b21a8" text-anchor="middle">posting · skills · status</text>
+
+  <rect x="636.5" y="363" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="717.25" y="385.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">BrowserProfile</text>
+  <text x="717.25" y="400.75" font-size="10" fill="#6b21a8" text-anchor="middle">engine · state · cooldown</text>
+
+  <rect x="450" y="442" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="530.75" y="464.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">SourceQuota</text>
+  <text x="530.75" y="479.75" font-size="10" fill="#6b21a8" text-anchor="middle">pages · details · runs</text>
+
+  <rect x="636.5" y="442" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="717.25" y="464.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">SourceCircuitBreaker</text>
+  <text x="717.25" y="479.75" font-size="10" fill="#6b21a8" text-anchor="middle">failures · open until</text>
+
+  <rect x="836" y="260" width="372" height="240" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="848" y="277" font-size="12" font-weight="bold" fill="#1e293b">Use-case handlers · 17</text>
+
+  <rect x="848" y="284" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="928.75" y="306.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Health · 1</text>
+  <text x="928.75" y="321.75" font-size="10" fill="#b45309" text-anchor="middle">GET /health</text>
+
+  <rect x="1034.5" y="284" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="1115.25" y="306.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Profiles · 4</text>
+  <text x="1115.25" y="321.75" font-size="10" fill="#b45309" text-anchor="middle">list · get · create · edit</text>
+
+  <rect x="848" y="363" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="928.75" y="385.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Sources · 1</text>
+  <text x="928.75" y="400.75" font-size="10" fill="#b45309" text-anchor="middle">tier · quota · circuit</text>
+
+  <rect x="1034.5" y="363" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="1115.25" y="385.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Sessions · 4</text>
+  <text x="1115.25" y="400.75" font-size="10" fill="#b45309" text-anchor="middle">list · get · create · edit</text>
+
+  <rect x="848" y="442" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="928.75" y="464.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Runs · 6</text>
+  <text x="928.75" y="479.75" font-size="10" fill="#b45309" text-anchor="middle">start · cancel · postings</text>
+
+  <rect x="1034.5" y="442" width="161.5" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="1115.25" y="464.75" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">Scraping · 1</text>
+  <text x="1115.25" y="479.75" font-size="10" fill="#b45309" text-anchor="middle">RunScrape · background</text>
+
+  <!-- Ports band. Six 173.8px chips at a 198.8px pitch fill the 1168px panel. -->
+  <rect x="40" y="525" width="1168" height="100" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="52" y="543" font-size="12" font-weight="bold" fill="#1e293b">Ports · 19 interfaces</text>
+
+  <rect x="40" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="126.9" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Repositories · 6</text>
+  <text x="126.9" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">aggregate persistence ports</text>
+
+  <rect x="238.8" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="325.7" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Read stores · 4</text>
+  <text x="325.7" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">no-tracking projections</text>
+
+  <rect x="437.6" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="524.5" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Scraping · 2</text>
+  <text x="524.5" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">IJobSource · session manager</text>
+
+  <rect x="636.4" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="723.3" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Browser · 3</text>
+  <text x="723.3" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">profile · artifacts · wait</text>
+
+  <rect x="835.2" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="922.1" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Output · 2</text>
+  <text x="922.1" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">export writer · DB explorer</text>
+
+  <rect x="1034" y="555" width="173.8" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="1120.9" y="577.75" font-size="12" font-weight="bold" fill="#1e40af" text-anchor="middle">Control · 2</text>
+  <text x="1120.9" y="592.75" font-size="10" fill="#1e40af" text-anchor="middle">IRunLauncher · IUnitOfWork</text>
+
+  <!-- Adapters row. Box top is 30px below the group top so the 11px group title clears it. -->
+  <rect x="40" y="706" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="146.8" y="746.75" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">EF Core · SQLite</text>
+  <text x="146.8" y="761.75" font-size="10" fill="#166534" text-anchor="middle">7 repositories · 3 read stores</text>
+  <text x="146.8" y="776.75" font-size="10" fill="#166534" text-anchor="middle">7 tables · 4 migrations</text>
+  <text x="146.8" y="791.75" font-size="10" fill="#166534" text-anchor="middle">WAL · one writer</text>
+
+  <rect x="278.6" y="706" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="385.4" y="746.75" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Dapper explorer</text>
+  <text x="385.4" y="761.75" font-size="10" fill="#166534" text-anchor="middle">parameterized raw SQL</text>
+  <text x="385.4" y="776.75" font-size="10" fill="#166534" text-anchor="middle">7 tables · paged CRUD</text>
+  <text x="385.4" y="791.75" font-size="10" fill="#166534" text-anchor="middle">direct from API · 6 endpoints</text>
+
+  <rect x="517.2" y="706" width="213.6" height="120" rx="6" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="624" y="739.25" font-size="12" font-weight="bold" fill="#9d174d" text-anchor="middle">Playwright · 3 sources</text>
+  <text x="624" y="754.25" font-size="10" fill="#9d174d" text-anchor="middle">persistent profile pool · headed</text>
+  <text x="624" y="769.25" font-size="10" fill="#9d174d" text-anchor="middle">Naukri live · Indeed/LinkedIn off</text>
+  <text x="624" y="784.25" font-size="10" fill="#9d174d" text-anchor="middle">3 adapters · compliance tiers</text>
+  <text x="624" y="799.25" font-size="10" fill="#9d174d" text-anchor="middle">JSON-LD + DOM parsers</text>
+
+  <rect x="755.8" y="706" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="862.6" y="746.75" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Artifacts · exports</text>
+  <text x="862.6" y="761.75" font-size="10" fill="#166534" text-anchor="middle">screenshots · HTML · assessment</text>
+  <text x="862.6" y="776.75" font-size="10" fill="#166534" text-anchor="middle">CSV · hyperlinked XLSX</text>
+  <text x="862.6" y="791.75" font-size="10" fill="#166534" text-anchor="middle">20k rows · company groups</text>
+
+  <rect x="994.4" y="706" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="1101.2" y="746.75" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">Runtime · logs</text>
+  <text x="1101.2" y="761.75" font-size="10" fill="#166534" text-anchor="middle">Serilog JSON console + file</text>
+  <text x="1101.2" y="776.75" font-size="10" fill="#166534" text-anchor="middle">rolling · 90-day retention</text>
+  <text x="1101.2" y="791.75" font-size="10" fill="#166534" text-anchor="middle">TimeProvider · IRandomSource</text>
+
+  <!-- 870 + 34 / 2 + 10 × 0.35 = 890.5, the optical centre of the band. -->
+  <rect x="24" y="870" width="1200" height="34" rx="6" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="624" y="890.5" font-size="10" fill="#1e293b" text-anchor="middle">9 projects · 971 backend tests · 18 frontend test files · 17 handlers · 19 ports · 8 deck routes · 7 tables · 4 migrations · 18 ADRs</text>
+</svg>

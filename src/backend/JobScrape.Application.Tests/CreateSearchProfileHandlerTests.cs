@@ -116,6 +116,87 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task AcceptsAStartPagePastPageOne()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var settings = new SourceSettings(
+                SourceKey.Naukri,
+                true,
+                250,
+                600,
+                20,
+                1000,
+                20_000,
+                TimeSpan.FromMinutes(45),
+                NaukriPolicy
+            );
+            var handler = new CreateSearchProfileHandler(
+                store,
+                store,
+                new SourceSettingsCatalog([settings]),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                Valid() with { StartPage = 31, MaxPages = 30 },
+                Ct
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(31, result.Value.StartPage);
+            Assert.Equal(30, result.Value.MaxPages);
+        }
+
+        [Fact]
+        public async Task OmitsStartPageAsPageOne()
+        {
+            var (handler, _) = Create();
+
+            var result = await handler.HandleAsync(Valid(), Ct);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(1, result.Value.StartPage);
+        }
+
+        [Fact]
+        public async Task RejectsAStartPageOfZero()
+        {
+            var (handler, _) = Create();
+
+            var result = await handler.HandleAsync(Valid() with { StartPage = 0 }, Ct);
+            var errors = FieldErrors(result);
+
+            Assert.True(errors.ContainsKey("startPage"));
+        }
+
+        [Fact]
+        public async Task RejectsAWindowPastTheCeiling()
+        {
+            var (handler, _) = Create();
+
+            var result = await handler.HandleAsync(
+                Valid() with { StartPage = 3, MaxPages = 2 },
+                Ct
+            );
+            var errors = FieldErrors(result);
+
+            Assert.True(errors.ContainsKey("startPage"));
+        }
+
+        [Fact]
+        public async Task ChecksTheEffectiveWindowWhenMaxPagesIsOmitted()
+        {
+            var (handler, _) = Create();
+
+            // The default cap is 3 pages here, so starting at 3 already
+            // runs past the ceiling even with no explicit maxPages.
+            var result = await handler.HandleAsync(Valid() with { StartPage = 3 }, Ct);
+            var errors = FieldErrors(result);
+
+            Assert.True(errors.ContainsKey("startPage"));
+        }
+
+        [Fact]
         public async Task RejectsMoreThanTheCompanyLimit()
         {
             var (handler, _) = Create();

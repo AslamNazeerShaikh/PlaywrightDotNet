@@ -46,6 +46,13 @@
   --sig-line: rgba(52, 211, 153, 0.38);
   --amber: #fbbf24;
   --red: #f87171;
+  /* Diagram fills: the semantic wire colors at low alpha, theme-aware. */
+  --diagram-green-soft: rgba(52, 211, 153, 0.12);
+  --diagram-cyan-soft: rgba(34, 211, 227, 0.12);
+  --diagram-violet-soft: rgba(167, 139, 250, 0.14);
+  --diagram-amber-soft: rgba(251, 191, 36, 0.1);
+  --diagram-red-soft: rgba(248, 113, 113, 0.11);
+  --diagram-gray-soft: rgba(147, 167, 163, 0.07);
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --gap: 12px;
   --pad: 14px;
@@ -92,6 +99,13 @@
   --beam: rgba(11, 122, 85, 0.05);
   --amber: #96600a;
   --red: #c03232;
+  /* Diagram fills on paper surfaces: same hues, lower alpha. */
+  --diagram-green-soft: rgba(11, 122, 85, 0.09);
+  --diagram-cyan-soft: rgba(14, 116, 144, 0.09);
+  --diagram-violet-soft: rgba(109, 40, 217, 0.09);
+  --diagram-amber-soft: rgba(150, 96, 10, 0.09);
+  --diagram-red-soft: rgba(192, 50, 50, 0.08);
+  --diagram-gray-soft: rgba(71, 96, 90, 0.06);
   --shadow-sm: 0 1px 2px rgba(18, 33, 29, 0.1), 0 1px 1px rgba(18, 33, 29, 0.06);
   --shadow-md:
     0 1px 1px -0.5px rgba(18, 33, 29, 0.08), 0 3px 3px -1.5px rgba(18, 33, 29, 0.08),
@@ -578,12 +592,23 @@ a:hover {
   font-size: var(--text-body);
   font-weight: 600;
   letter-spacing: 0.04em;
+  line-height: 1.2;
   color: #04110b;
   background: var(--sig);
   border: 1px solid var(--sig);
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  padding: 4px 9px;
+  font-size: var(--text-micro);
+  letter-spacing: 0.03em;
 }
 
 .btn:hover:not(:disabled) {
@@ -605,6 +630,48 @@ a:hover {
    ".btn { color: #fff }" rule is more specific than ".btn-ghost" alone. */
 [data-theme="light"] .btn-ghost {
   color: var(--sig);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Explorer inventory: the map and the table list share one row, so neither leaves a hole. */
+.db-inventory {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .db-inventory {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cell-time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .field {
@@ -757,6 +824,39 @@ table.data th {
 
 table.data tr:last-child td {
   border-bottom: none;
+}
+
+/* The schema is five columns; let it size to content instead of stretching across the deck. */
+table.data.schema-table {
+  width: auto;
+  min-width: 34rem;
+}
+
+/* Wide data tables scroll sideways instead of wrapping every cell into a tall stack. */
+table.data.rows-table td {
+  white-space: nowrap;
+}
+
+table.data tr[aria-current="true"] td {
+  background: var(--sig-soft);
+}
+
+table.data tr[aria-current="true"] td:first-child {
+  box-shadow: inset 2px 0 0 var(--sig);
+}
+
+/* Row controls stay compact and reachable when the wide data table scrolls. */
+table.data th.actions-cell,
+table.data td.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  border-left: 1px solid var(--line);
+}
+
+table.data td.actions-cell {
+  position: sticky;
+  right: 0;
+  background: var(--panel);
 }
 
 /* ---- code + raw payloads ---- */
@@ -1059,6 +1159,20 @@ abbr.abbr {
 }
 .span-12 {
   grid-column: span 12;
+}
+
+/* Right rail for a tall diagram: stack the paired cards instead of stretching one. */
+.module-stack {
+  grid-column: span 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+@media (max-width: 1100px) {
+  .module-stack {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 1100px) {

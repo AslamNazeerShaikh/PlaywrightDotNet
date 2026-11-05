@@ -49,6 +49,7 @@ const savedProfile = {
   requiredSkills: ["C#"],
   companies: ["Infosys", "TCS"],
   maxPages: 3,
+  startPage: 1,
   maxJobs: 60,
   maxDetails: 60,
   minDelayMs: 2500,
@@ -372,7 +373,7 @@ describe("ops deck", () => {
 
     const detail = queries.getByRole("table", { name: "Profile detail" });
     expect(detail.textContent).toContain("Pune, Hyderabad");
-    expect(detail.textContent).toContain("3 pages · 60 jobs · 60 details");
+    expect(detail.textContent).toContain("pages 1–3 · 60 jobs · 60 details");
     expect(detail.textContent).toContain("2500–6000 ms");
   });
 
@@ -440,10 +441,19 @@ describe("ops deck", () => {
     fireEvent.change(queries.getByLabelText("Edit keywords"), {
       target: { value: "asp.net" },
     });
+    fireEvent.change(queries.getByLabelText("Edit start page"), {
+      target: { value: "31" },
+    });
+    fireEvent.change(queries.getByLabelText("Edit max pages"), {
+      target: { value: "30" },
+    });
     fireEvent.click(queries.getByRole("button", { name: "SAVE CHANGES" }));
 
     await waitFor(() => expect(queries.getByRole("button", { name: "backend-2" })).toBeDefined());
     expect(queries.getByRole("table", { name: "Profile detail" }).textContent).toContain("asp.net");
+    expect(queries.getByRole("table", { name: "Profile detail" }).textContent).toContain(
+      "pages 31–60",
+    );
     expect(queries.queryByRole("alert")).toBeNull();
   });
 

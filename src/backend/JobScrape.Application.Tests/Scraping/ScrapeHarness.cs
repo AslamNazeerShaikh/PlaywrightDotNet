@@ -29,7 +29,8 @@ namespace JobScrape.Application.Tests.Scraping
             int maxPages = 3,
             int maxJobs = 60,
             int maxDetails = 0,
-            string[]? requiredSkills = null
+            string[]? requiredSkills = null,
+            int startPage = 1
         )
         {
             var key = source ?? SourceKey.Naukri;
@@ -49,7 +50,8 @@ namespace JobScrape.Application.Tests.Scraping
                     maxJobs,
                     maxDetails,
                     TimeSpan.FromSeconds(2),
-                    TimeSpan.FromSeconds(6)
+                    TimeSpan.FromSeconds(6),
+                    startPage
                 ),
                 Start
             );

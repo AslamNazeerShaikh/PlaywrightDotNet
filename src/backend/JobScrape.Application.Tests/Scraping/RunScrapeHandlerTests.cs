@@ -103,6 +103,72 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task StartsAtTheConfiguredPageWithoutFetchingEarlierPages()
+        {
+            var harness = new ScrapeHarness(startPage: 2, maxPages: 2);
+            harness.Source.Then(
+                Page("p2", Job("skip")),
+                Page("p3", Job("a")),
+                Page(null, Job("b"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(2, summary.Stats.PagesFetched);
+            Assert.Equal(2, summary.Stats.PostingsNew);
+            Assert.Equal(
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(3, "p3"),
+                ],
+                harness.Source.Requests
+            );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "skip");
+            Assert.Equal(
+                ["a", "b"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
+        }
+
+        [Fact]
+        public async Task ClosedBrowserOnFirstPageEndsTheRunWithoutCrashing()
+        {
+            // A closed browser surfaces as a transient wall on the probe
+            // page: the run fails gracefully instead of crashing.
+            var harness = new ScrapeHarness();
+            harness.Source.Then(
+                Wall(ChallengeKind.TransientError),
+                Wall(ChallengeKind.TransientError)
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Failed, summary.Stage);
+            Assert.Equal(1, summary.Stats.Failures);
+            Assert.Equal(
+                [new SearchPageRequest(1, null), new SearchPageRequest(1, null)],
+                harness.Source.Requests
+            );
+        }
+
+        [Fact]
+        public async Task StartPagePastTheLastPageFailsTheRunGracefully()
+        {
+            var harness = new ScrapeHarness(startPage: 31, maxPages: 2);
+            harness.Source.ThenThrow(new StartPageOutOfRangeException(31, 30));
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Failed, summary.Stage);
+            Assert.Equal(1, summary.Stats.Failures);
+            Assert.Empty(harness.Store.Postings);
+            Assert.Contains("past the last page", summary.FailureReason, StringComparison.Ordinal);
+            Assert.Equal([new SearchPageRequest(1, null)], harness.Source.Requests);
+        }
+
+        [Fact]
         public async Task RepeatedPageStopsPagination()
         {
             var harness = new ScrapeHarness();
