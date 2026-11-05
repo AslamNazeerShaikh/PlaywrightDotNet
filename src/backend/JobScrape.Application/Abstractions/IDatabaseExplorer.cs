@@ -10,9 +10,7 @@ namespace JobScrape.Application.Abstractions
     public interface IDatabaseExplorer
     {
         /// <summary>Lists user tables with row counts.</summary>
-        Task<IReadOnlyList<DatabaseTableInfo>> ListTablesAsync(
-            CancellationToken cancellationToken
-        );
+        Task<IReadOnlyList<DatabaseTableInfo>> ListTablesAsync(CancellationToken cancellationToken);
 
         /// <summary>Gets column and foreign-key metadata for a table.</summary>
         Task<DatabaseTableSchema?> GetSchemaAsync(
@@ -55,6 +53,7 @@ namespace JobScrape.Application.Abstractions
     /// Summary of one database table.
     /// </summary>
     public sealed record DatabaseTableInfo(string Name, long RowCount);
+
     /// <summary>
     /// Column metadata for one table.
     /// </summary>

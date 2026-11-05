@@ -28,7 +28,9 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
             var assessment = ClassifyFixture("search-cloudflare.html", status);
 
             Assert.Equal(ChallengeKind.AccessDenied, assessment.Kind);
-            Assert.Empty(IndeedSearchParser.Parse(Fixture("search-cloudflare.html"), PageUrl, Now).Jobs);
+            Assert.Empty(
+                IndeedSearchParser.Parse(Fixture("search-cloudflare.html"), PageUrl, Now).Jobs
+            );
         }
 
         [Theory]

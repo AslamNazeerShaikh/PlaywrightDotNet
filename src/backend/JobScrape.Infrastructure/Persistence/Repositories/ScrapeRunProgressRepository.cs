@@ -22,10 +22,7 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         public async Task SaveAsync(ScrapeRunProgress progress, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(progress);
-            var existing = await db.ScrapeRunProgress.FindAsync(
-                [progress.Id],
-                cancellationToken
-            );
+            var existing = await db.ScrapeRunProgress.FindAsync([progress.Id], cancellationToken);
             if (existing is null)
             {
                 await db.ScrapeRunProgress.AddAsync(progress, cancellationToken);

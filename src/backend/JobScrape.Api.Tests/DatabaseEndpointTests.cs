@@ -56,7 +56,13 @@ namespace JobScrape.Api.Tests
             // insert
             var insert = await client.PostAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
-                new { source_key = "testsrc", state = "Closed", consecutive_failures = 0, recent_failures = "[]" },
+                new
+                {
+                    source_key = "testsrc",
+                    state = "Closed",
+                    consecutive_failures = 0,
+                    recent_failures = "[]",
+                },
                 TestContext.Current.CancellationToken
             );
             Assert.Equal(HttpStatusCode.NoContent, insert.StatusCode);
@@ -71,11 +77,7 @@ namespace JobScrape.Api.Tests
             // update
             var update = await client.PutAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
-                new
-                {
-                    primaryKeyValue = "testsrc",
-                    values = new { consecutive_failures = 3 },
-                },
+                new { primaryKeyValue = "testsrc", values = new { consecutive_failures = 3 } },
                 TestContext.Current.CancellationToken
             );
             Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
@@ -83,11 +85,7 @@ namespace JobScrape.Api.Tests
             // unknown key reports not found
             var missing = await client.PutAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
-                new
-                {
-                    primaryKeyValue = "no-such-row",
-                    values = new { consecutive_failures = 3 },
-                },
+                new { primaryKeyValue = "no-such-row", values = new { consecutive_failures = 3 } },
                 TestContext.Current.CancellationToken
             );
             Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
@@ -248,10 +246,7 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal("INVALID_INPUT", body.GetProperty("code").GetString());
             Assert.Equal("Invalid input.", body.GetProperty("title").GetString());
-            Assert.Equal(
-                "PrimaryKeyValue is required.",
-                body.GetProperty("detail").GetString()
-            );
+            Assert.Equal("PrimaryKeyValue is required.", body.GetProperty("detail").GetString());
         }
 
         [Fact]
@@ -266,11 +261,13 @@ namespace JobScrape.Api.Tests
                 consecutive_failures = 0,
                 recent_failures = "[]",
             };
-            using (var first = await client.PostAsJsonAsync(
-                "api/v1/db/tables/source_circuit_breakers/rows",
-                row,
-                ct
-            ))
+            using (
+                var first = await client.PostAsJsonAsync(
+                    "api/v1/db/tables/source_circuit_breakers/rows",
+                    row,
+                    ct
+                )
+            )
             {
                 Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
             }
@@ -302,6 +299,7 @@ namespace JobScrape.Api.Tests
         }
 
         private sealed record TablesResponse(List<TableInfo> Items);
+
         private sealed record TableInfo(string Name, long RowCount);
     }
 }

@@ -136,7 +136,12 @@ namespace JobScrape.Api.Tests
 
             using var patched = await client.PatchAsJsonAsync(
                 $"api/v1/sessions/{session!.Id}",
-                new { name = "after", engine = "Chromium", channel = "Bundled" },
+                new
+                {
+                    name = "after",
+                    engine = "Chromium",
+                    channel = "Bundled",
+                },
                 Ct
             );
 
@@ -146,9 +151,7 @@ namespace JobScrape.Api.Tests
             Assert.Equal("naukri/after", updated.UserDataDirectory);
             Assert.False(Directory.Exists(oldDirectory));
             Assert.True(
-                File.Exists(
-                    Path.Combine(factory.ProfilesRoot, "naukri", "after", "marker.txt")
-                )
+                File.Exists(Path.Combine(factory.ProfilesRoot, "naukri", "after", "marker.txt"))
             );
         }
 
@@ -172,7 +175,12 @@ namespace JobScrape.Api.Tests
 
             using var patched = await client.PatchAsJsonAsync(
                 $"api/v1/sessions/{session!.Id}",
-                new { name = "taken", engine = "Chromium", channel = "Bundled" },
+                new
+                {
+                    name = "taken",
+                    engine = "Chromium",
+                    channel = "Bundled",
+                },
                 Ct
             );
 
@@ -202,7 +210,12 @@ namespace JobScrape.Api.Tests
 
             using var patched = await client.PatchAsJsonAsync(
                 $"api/v1/sessions/{session!.Id}",
-                new { name = "after", engine = "Chromium", channel = "Bundled" },
+                new
+                {
+                    name = "after",
+                    engine = "Chromium",
+                    channel = "Bundled",
+                },
                 Ct
             );
 
@@ -228,7 +241,12 @@ namespace JobScrape.Api.Tests
 
             using var invalid = await client.PatchAsJsonAsync(
                 $"api/v1/sessions/{session!.Id}",
-                new { name = "../escape", engine = "Firefox", channel = "Chrome" },
+                new
+                {
+                    name = "../escape",
+                    engine = "Firefox",
+                    channel = "Chrome",
+                },
                 Ct
             );
             Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
@@ -236,7 +254,12 @@ namespace JobScrape.Api.Tests
 
             using var missing = await client.PatchAsJsonAsync(
                 $"api/v1/sessions/{Guid.NewGuid()}",
-                new { name = "missing", engine = "Chromium", channel = "Bundled" },
+                new
+                {
+                    name = "missing",
+                    engine = "Chromium",
+                    channel = "Bundled",
+                },
                 Ct
             );
             Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);

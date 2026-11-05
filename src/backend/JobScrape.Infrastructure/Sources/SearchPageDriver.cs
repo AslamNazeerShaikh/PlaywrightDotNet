@@ -47,16 +47,16 @@ namespace JobScrape.Infrastructure.Sources
         /// <returns>The result offset.</returns>
         internal static int CursorOffset(string? cursor)
         {
-            return cursor is null
-                ? 0
+            return cursor is null ? 0
                 : int.TryParse(
                     cursor,
                     NumberStyles.None,
                     CultureInfo.InvariantCulture,
                     out var start
-                ) && start >= 0
+                )
+                && start >= 0
                     ? start
-                    : 0;
+                : 0;
         }
 
         /// <summary>

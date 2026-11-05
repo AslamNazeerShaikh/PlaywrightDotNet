@@ -22,10 +22,7 @@ namespace JobScrape.Domain.Sourcing
             IReadOnlyList<string?>? requiredSkills
         )
         {
-            return Matches(
-                postingSkills?.Select(skill => skill.Name),
-                requiredSkills
-            );
+            return Matches(postingSkills?.Select(skill => skill.Name), requiredSkills);
         }
 
         /// <summary>

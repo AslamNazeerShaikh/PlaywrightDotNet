@@ -107,9 +107,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
             Assert.Equal(ProfileDirectoryRename.Moved, outcome);
             Assert.True(Directory.Exists(DirectoryFor("Before")));
             Assert.False(
-                Directory.Exists(
-                    DirectoryFor($"Before.{_profile.Id.Value:N}.rename-tmp")
-                )
+                Directory.Exists(DirectoryFor($"Before.{_profile.Id.Value:N}.rename-tmp"))
             );
         }
 

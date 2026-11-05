@@ -225,10 +225,7 @@ namespace JobScrape.Application.Features.SearchProfiles
                     input.MaxPages is null
                     || (input.MaxPages >= 1 && input.MaxPages <= settings.MaxPagesCeiling);
                 var effectiveMax = input.MaxPages ?? defaults.MaxPages;
-                if (
-                    maxPagesValid
-                    && startPage + effectiveMax - 1 > settings.MaxPagesCeiling
-                )
+                if (maxPagesValid && startPage + effectiveMax - 1 > settings.MaxPagesCeiling)
                 {
                     errors["startPage"] =
                     [

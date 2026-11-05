@@ -1,4 +1,11 @@
-import { CodeTag, codeTone, constantCase, Field, Module, RefreshButton } from "../components/modules.tsx";
+import {
+  CodeTag,
+  codeTone,
+  constantCase,
+  Field,
+  Module,
+  RefreshButton,
+} from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type {
   ApiProblem,

@@ -85,15 +85,17 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             if (page is null)
             {
                 return SearchPageResult.Blocked(
-                    SearchPageDriver.Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                    SearchPageDriver.Transient(
+                        $"Browser page closed or crashed at page {request.PageNumber}."
+                    )
                 );
             }
 
             try
             {
                 var start = request.Cursor is null
-                ? (request.PageNumber - 1) * LinkedInUrlBuilder.PageSize
-                : SearchPageDriver.CursorOffset(request.Cursor);
+                    ? (request.PageNumber - 1) * LinkedInUrlBuilder.PageSize
+                    : SearchPageDriver.CursorOffset(request.Cursor);
                 return await SearchPageDriver.SearchOffsetPageAsync<LinkedInSearchPage>(
                     page,
                     LinkedInUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
@@ -105,18 +107,18 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
                     static (html, url, now) => LinkedInSearchParser.Parse(html, url, now),
                     static parsed => parsed.Jobs,
                     static parsed => parsed.DroppedCards,
-                    static parsed => parsed.FirstJobId is null && parsed.ResultCount is null
-                        ? null
-                        : new PageFingerprint(parsed.FirstJobId, parsed.ResultCount),
-                    static (parsed, offset) => parsed.HasNext
-                        ? (offset + LinkedInUrlBuilder.PageSize).ToString(CultureInfo.InvariantCulture)
-                        : null,
-                    dropped => LogCardsDropped(
-                        _logger,
-                        context.RunId.Value,
-                        request.PageNumber,
-                        dropped
-                    ),
+                    static parsed =>
+                        parsed.FirstJobId is null && parsed.ResultCount is null
+                            ? null
+                            : new PageFingerprint(parsed.FirstJobId, parsed.ResultCount),
+                    static (parsed, offset) =>
+                        parsed.HasNext
+                            ? (offset + LinkedInUrlBuilder.PageSize).ToString(
+                                CultureInfo.InvariantCulture
+                            )
+                            : null,
+                    dropped =>
+                        LogCardsDropped(_logger, context.RunId.Value, request.PageNumber, dropped),
                     _clock.GetUtcNow(),
                     cancellationToken
                 );
@@ -124,12 +126,16 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page did not load."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page did not load.")
+                );
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page timed out."));
+                return SearchPageResult.Blocked(
+                    SearchPageDriver.Transient("Search page timed out.")
+                );
             }
         }
 

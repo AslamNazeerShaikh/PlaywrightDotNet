@@ -111,6 +111,5 @@ namespace JobScrape.Application.Features.Sessions
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok(SessionResponse.From(profile, _clock.GetUtcNow()));
         }
-
     }
 }

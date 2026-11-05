@@ -48,7 +48,10 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
                 Now
             );
 
-            Assert.Equal(new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero), page.Jobs[0].PostedAt);
+            Assert.Equal(
+                new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero),
+                page.Jobs[0].PostedAt
+            );
         }
 
         [Fact]
@@ -80,7 +83,10 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
                 Page(
                     Card(key: "visiblecard0001"),
                     Card(key: "hiddencard0002", wrapperAttributes: " style=\"display:none\""),
-                    Card(key: "offhostcard0003", href: "https://evil.example/viewjob?jk=offhostcard0003"),
+                    Card(
+                        key: "offhostcard0003",
+                        href: "https://evil.example/viewjob?jk=offhostcard0003"
+                    ),
                     Card(key: "jslinkcard0004", href: "javascript:void(0)")
                 ),
                 PageUrl,

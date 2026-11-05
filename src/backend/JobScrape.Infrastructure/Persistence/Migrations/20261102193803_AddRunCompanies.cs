@@ -15,15 +15,14 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 table: "scrape_runs",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: "[]");
+                defaultValue: "[]"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "companies",
-                table: "scrape_runs");
+            migrationBuilder.DropColumn(name: "companies", table: "scrape_runs");
         }
     }
 }

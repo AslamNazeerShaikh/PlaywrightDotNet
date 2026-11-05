@@ -57,7 +57,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Csv), new FakeWriter(ExportFormat.Xlsx)]
             );
 
-            var result = await handler.HandleAsync(run.Id, ExportFormat.Csv, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                run.Id,
+                ExportFormat.Csv,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.True(result.IsSuccess);
             var shortId = run.Id.ToString("N")[..8];
@@ -78,7 +83,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Xlsx)]
             );
 
-            var result = await handler.HandleAsync(run.Id, ExportFormat.Xlsx, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                run.Id,
+                ExportFormat.Xlsx,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.True(result.IsSuccess);
             var shortId = run.Id.ToString("N")[..8];
@@ -97,7 +107,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
-            var result = await handler.HandleAsync(seeded.Id, ExportFormat.Csv, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                seeded.Id,
+                ExportFormat.Csv,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.True(result.IsSuccess);
             var shortId = seeded.Id.ToString("N")[..8];
@@ -112,10 +127,7 @@ namespace JobScrape.Application.Tests
         {
             var run = Run() with { Companies = ["Contoso"] };
             var handler = new ExportRunPostingsHandler(
-                new FakeExportStore(
-                    run,
-                    [Posting("101", "Contoso"), Posting("102", "Fabrikam")]
-                ),
+                new FakeExportStore(run, [Posting("101", "Contoso"), Posting("102", "Fabrikam")]),
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
@@ -138,10 +150,7 @@ namespace JobScrape.Application.Tests
         {
             var run = Run() with { Companies = ["Contoso"] };
             var handler = new ExportRunPostingsHandler(
-                new FakeExportStore(
-                    run,
-                    [Posting("101", "Contoso"), Posting("102", "Fabrikam")]
-                ),
+                new FakeExportStore(run, [Posting("101", "Contoso"), Posting("102", "Fabrikam")]),
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
@@ -153,7 +162,11 @@ namespace JobScrape.Application.Tests
             );
 
             Assert.True(result.IsSuccess);
-            Assert.EndsWith("-exclude-companies.csv", result.Value.FileName, StringComparison.Ordinal);
+            Assert.EndsWith(
+                "-exclude-companies.csv",
+                result.Value.FileName,
+                StringComparison.Ordinal
+            );
             var text = System.Text.Encoding.UTF8.GetString(result.Value.Content);
             Assert.DoesNotContain("101", text, StringComparison.Ordinal);
             Assert.Contains("102", text, StringComparison.Ordinal);
@@ -198,7 +211,12 @@ namespace JobScrape.Application.Tests
             var store = new FakeExportStore(null, []);
             var handler = new ExportRunPostingsHandler(store, [new FakeWriter(ExportFormat.Csv)]);
 
-            var result = await handler.HandleAsync(Guid.Empty, ExportFormat.Csv, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                Guid.Empty,
+                ExportFormat.Csv,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.False(result.IsSuccess);
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
@@ -213,7 +231,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
-            var result = await handler.HandleAsync(Guid.NewGuid(), ExportFormat.Csv, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                Guid.NewGuid(),
+                ExportFormat.Csv,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.False(result.IsSuccess);
             Assert.Equal("RUN_NOT_FOUND", result.Error.Code);
@@ -228,7 +251,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
-            var result = await handler.HandleAsync(run.Id, ExportFormat.Csv, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                run.Id,
+                ExportFormat.Csv,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.False(result.IsSuccess);
             Assert.Equal("RUN_NOT_FOUND", result.Error.Code);
@@ -243,7 +271,12 @@ namespace JobScrape.Application.Tests
                 [new FakeWriter(ExportFormat.Csv)]
             );
 
-            var result = await handler.HandleAsync(run.Id, ExportFormat.Xlsx, CompanyExportGroup.All, Ct);
+            var result = await handler.HandleAsync(
+                run.Id,
+                ExportFormat.Xlsx,
+                CompanyExportGroup.All,
+                Ct
+            );
 
             Assert.False(result.IsSuccess);
             Assert.Equal("EXPORT_FORMAT_UNSUPPORTED", result.Error.Code);

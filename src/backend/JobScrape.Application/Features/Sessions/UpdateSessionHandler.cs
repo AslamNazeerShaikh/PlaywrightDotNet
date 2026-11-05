@@ -126,8 +126,7 @@ namespace JobScrape.Application.Features.Sessions
 
             var renamed = !string.Equals(name, profile.Name, StringComparison.Ordinal);
             var caseOnly =
-                renamed
-                && string.Equals(name, profile.Name, StringComparison.OrdinalIgnoreCase);
+                renamed && string.Equals(name, profile.Name, StringComparison.OrdinalIgnoreCase);
             if (renamed && !caseOnly && await _profiles.NameExistsAsync(name, cancellationToken))
             {
                 return Result.Fail<SessionResponse>(Errors.SessionNameTaken(name));
@@ -170,8 +169,8 @@ namespace JobScrape.Application.Features.Sessions
 
                 moved =
                     outcome
-                    is ProfileDirectoryRename.Moved
-                        or ProfileDirectoryRename.AlreadyRenamed;
+                        is ProfileDirectoryRename.Moved
+                            or ProfileDirectoryRename.AlreadyRenamed;
             }
 
             profile.Rename(name);

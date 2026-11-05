@@ -79,7 +79,10 @@ namespace JobScrape.Infrastructure.Tests.Sources
                 Context(SourceKey.Naukri),
                 new JobReference(
                     ExternalJobId.Create("101"),
-                    CanonicalUrl.Create("https://www.naukri.com/job-listings-x-101", SourceKey.Naukri)
+                    CanonicalUrl.Create(
+                        "https://www.naukri.com/job-listings-x-101",
+                        SourceKey.Naukri
+                    )
                 ),
                 Ct
             );
@@ -120,7 +123,10 @@ namespace JobScrape.Infrastructure.Tests.Sources
                 Context(SourceKey.Indeed),
                 new JobReference(
                     ExternalJobId.Create("101"),
-                    CanonicalUrl.Create("https://in.indeed.com/job-listings-x-101", SourceKey.Indeed)
+                    CanonicalUrl.Create(
+                        "https://in.indeed.com/job-listings-x-101",
+                        SourceKey.Indeed
+                    )
                 ),
                 Ct
             );

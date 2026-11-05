@@ -61,7 +61,9 @@ namespace JobScrape.Api.Composition
             services.AddSingleton<IPlaywrightFactory, SystemPlaywrightFactory>();
             services.AddSingleton<IFileSystem, PhysicalFileSystem>();
             services.AddSingleton<BrowserSessionPool>();
-            services.AddSingleton<IBrowserSessionPool>(sp => sp.GetRequiredService<BrowserSessionPool>());
+            services.AddSingleton<IBrowserSessionPool>(sp =>
+                sp.GetRequiredService<BrowserSessionPool>()
+            );
             services.AddSingleton<IBrowserProfileWorkspace, BrowserProfileWorkspace>();
             services.AddScoped<ISessionManager, PlaywrightSessionManager>();
             services.AddSingleton<IArtifactStore, FileArtifactStore>();

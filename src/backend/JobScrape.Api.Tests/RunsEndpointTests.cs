@@ -583,7 +583,8 @@ namespace JobScrape.Api.Tests
                 JobSnapshot[] jobs = Skilled
                     ? ResightMismatch
                         ? [Snapshot("101", ["Java"], now.AddHours(-3))]
-                        : [
+                        :
+                        [
                             Snapshot("101", ["C#", "ASP.NET Core"], now.AddHours(-2)),
                             Snapshot("102", ["Java"], now.AddHours(-3)),
                             Snapshot("103", ["C#"], now.AddDays(-5)),

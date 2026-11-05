@@ -13,7 +13,10 @@ namespace JobScrape.Infrastructure.Browser
     /// runs. A run opens its profile's context, adapters drive its page, and
     /// the run's host releases it when the run ends. Thread-safe.
     /// </summary>
-    public sealed partial class BrowserSessionPool : IAsyncDisposable, IBrowserProfileWorkspace, IBrowserSessionPool
+    public sealed partial class BrowserSessionPool
+        : IAsyncDisposable,
+            IBrowserProfileWorkspace,
+            IBrowserSessionPool
     {
         // Settings injected and never mutated. _gate serializes launches
         // (and Playwright's creation); lookups read the map lock-free.
@@ -158,7 +161,10 @@ namespace JobScrape.Infrastructure.Browser
             ArgumentNullException.ThrowIfNull(profile);
             if (!BrowserProfile.IsValidName(newName))
             {
-                throw new ArgumentException("The new profile name is not a safe path segment.", nameof(newName));
+                throw new ArgumentException(
+                    "The new profile name is not a safe path segment.",
+                    nameof(newName)
+                );
             }
 
             await _gate.WaitAsync(cancellationToken);
@@ -172,10 +178,7 @@ namespace JobScrape.Infrastructure.Browser
                 var root = _files.Combine(_settings.ProfilesRoot, profile.Source.Value);
                 var oldDirectory = _files.Combine(root, profile.Name);
                 var newDirectory = _files.Combine(root, newName);
-                var temporary = _files.Combine(
-                    root,
-                    $"{newName}.{profile.Id.Value:N}.rename-tmp"
-                );
+                var temporary = _files.Combine(root, $"{newName}.{profile.Id.Value:N}.rename-tmp");
                 var oldExists = _files.DirectoryExists(oldDirectory);
                 var newExists = _files.DirectoryExists(newDirectory);
                 if (!oldExists && _files.DirectoryExists(temporary))
@@ -381,9 +384,6 @@ namespace JobScrape.Infrastructure.Browser
             Level = LogLevel.Warning,
             Message = "Adblock extension directory {ExtensionDir} is missing; launching without the blocker. Run vendor/download-ubol.sh to fetch it."
         )]
-        private static partial void LogExtensionDirMissing(
-            ILogger logger,
-            string? extensionDir
-        );
+        private static partial void LogExtensionDirMissing(ILogger logger, string? extensionDir);
     }
 }

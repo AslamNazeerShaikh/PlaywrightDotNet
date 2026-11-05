@@ -225,11 +225,7 @@ namespace JobScrape.Domain.Tests.Sourcing
         [Fact]
         public void EqualCriteriaIgnoreSkillAndLocationCase()
         {
-            var first = Create(
-                locations: ["Pune"],
-                requiredSkills: ["C#"],
-                companies: ["Infosys"]
-            );
+            var first = Create(locations: ["Pune"], requiredSkills: ["C#"], companies: ["Infosys"]);
             var second = Create(
                 locations: ["pune"],
                 requiredSkills: ["c#"],
