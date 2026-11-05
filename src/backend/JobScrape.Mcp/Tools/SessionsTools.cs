@@ -41,9 +41,7 @@ namespace JobScrape.Mcp.Tools
         /// <returns>The profile list.</returns>
         [McpServerTool(Name = "list_sessions")]
         [Description("Returns every browser profile ordered by name.")]
-        public Task<SessionListResponse> ListSessionsAsync(
-            [Description("Token to observe for cancellation.")] CancellationToken cancellationToken
-        )
+        public Task<SessionListResponse> ListSessionsAsync(CancellationToken cancellationToken)
         {
             return _list.HandleAsync(cancellationToken);
         }
@@ -58,8 +56,7 @@ namespace JobScrape.Mcp.Tools
         [Description("Returns one browser profile by its identifier.")]
         public async Task<SessionResponse> GetSessionAsync(
             [Description("The profile identifier.")] string id,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var sessionId = McpErrors.ParseIdOrThrow(id, "A session id is required.");

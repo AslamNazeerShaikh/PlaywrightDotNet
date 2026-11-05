@@ -36,9 +36,7 @@ namespace JobScrape.Mcp.Tools
         /// <returns>The health payload.</returns>
         [McpServerTool(Name = "get_health")]
         [Description("Returns the current service liveness payload.")]
-        public Task<GetHealthResponse> GetHealthAsync(
-            [Description("Token to observe for cancellation.")] CancellationToken cancellationToken
-        )
+        public Task<GetHealthResponse> GetHealthAsync(CancellationToken cancellationToken)
         {
             return _health.HandleAsync(cancellationToken);
         }

@@ -86,22 +86,13 @@ namespace JobScrape.Api
             );
 
             // MCP over Streamable HTTP. Stateless: no session affinity, no
-            // SSE endpoints, one server context per request. Tools are listed
-            // explicitly, one generic argument per class: no assembly
-            // scanning, so "Find usages" on a tool class finds this list.
+            // SSE endpoints, one server context per request. Tools come
+            // from the shared McpTools.All list: a fixed type list, no
+            // assembly scanning.
             builder
                 .Services.AddMcpServer()
-                .WithHttpTransport(static options =>
-                {
-                    options.Stateless = true;
-                })
-                .WithTools<HealthTools>()
-                .WithTools<SourcesTools>()
-                .WithTools<SessionsTools>()
-                .WithTools<SearchProfilesTools>()
-                .WithTools<SearchProfilesWriteTools>()
-                .WithTools<RunsTools>()
-                .WithTools<RunActionsTools>();
+                .WithHttpTransport(McpHttpTransport.ConfigureStateless)
+                .WithTools(McpTools.All);
 
             var app = builder.Build();
 

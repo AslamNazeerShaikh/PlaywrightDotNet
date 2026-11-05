@@ -23,20 +23,19 @@ namespace JobScrape.Mcp.Host
         /// <returns>A task that completes when the host shuts down.</returns>
         public static async Task Main(string[] args)
         {
-            // Stdout is the JSON-RPC channel; everything log-shaped goes to
-            // stderr so framing on stdout stays intact.
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .WriteTo.Console(
-                    formatProvider: System.Globalization.CultureInfo.InvariantCulture,
-                    standardErrorFromLevel: Serilog.Events.LogEventLevel.Verbose
-                )
-                .CreateLogger();
-
             try
             {
                 var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
-                builder.Services.AddSerilog();
+
+                // Stdout is the JSON-RPC channel: the console sink writes
+                // to stderr so framing on stdout stays intact.
+                builder.Services.AddJobScrapeLogging(
+                    builder.Configuration,
+                    builder.Environment.ContentRootPath,
+                    consoleToStandardError: true,
+                    applicationName: "JobScrape.Mcp.Host",
+                    logFilePrefix: "jobscrape-mcp-host"
+                );
 
                 // One list, shared with the API host: clock, caller,
                 // handlers, and the background run coordinator.
@@ -55,16 +54,7 @@ namespace JobScrape.Mcp.Host
                     builder.Environment.ContentRootPath
                 );
 
-                builder
-                    .Services.AddMcpServer()
-                    .WithStdioServerTransport()
-                    .WithTools<HealthTools>()
-                    .WithTools<SourcesTools>()
-                    .WithTools<SessionsTools>()
-                    .WithTools<SearchProfilesTools>()
-                    .WithTools<SearchProfilesWriteTools>()
-                    .WithTools<RunsTools>()
-                    .WithTools<RunActionsTools>();
+                builder.Services.AddMcpServer().WithStdioServerTransport().WithTools(McpTools.All);
 
                 var host = builder.Build();
 

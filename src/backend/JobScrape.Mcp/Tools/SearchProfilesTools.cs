@@ -46,7 +46,7 @@ namespace JobScrape.Mcp.Tools
         [McpServerTool(Name = "list_profiles")]
         [Description("Returns every saved search profile ordered by name.")]
         public Task<SearchProfileListResponse> ListProfilesAsync(
-            [Description("Token to observe for cancellation.")] CancellationToken cancellationToken
+            CancellationToken cancellationToken
         )
         {
             return _list.HandleAsync(cancellationToken);
@@ -62,8 +62,7 @@ namespace JobScrape.Mcp.Tools
         [Description("Returns one saved search profile by its identifier.")]
         public async Task<SearchProfileResponse> GetProfileAsync(
             [Description("The profile identifier.")] string id,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var profileId = McpErrors.ParseIdOrThrow(id, "A profile id is required.");

@@ -67,9 +67,7 @@ namespace JobScrape.Infrastructure.Composition
             services.AddSingleton<IRunLauncher>(provider =>
                 provider.GetRequiredService<RunCoordinator>()
             );
-            services.AddHostedService(provider =>
-                provider.GetRequiredService<RunCoordinator>()
-            );
+            services.AddHostedService(provider => provider.GetRequiredService<RunCoordinator>());
             return services;
         }
     }

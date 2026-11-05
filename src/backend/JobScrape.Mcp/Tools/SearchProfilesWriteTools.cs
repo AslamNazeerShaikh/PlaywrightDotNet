@@ -83,8 +83,7 @@ namespace JobScrape.Mcp.Tools
                 string[]? requiredSkills = null,
             [Description("Optional company names for the include and exclude exports.")]
                 string[]? companies = null,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             return McpErrors.OrThrow(
@@ -158,8 +157,7 @@ namespace JobScrape.Mcp.Tools
                 string[]? requiredSkills = null,
             [Description("Optional company names for the include and exclude exports.")]
                 string[]? companies = null,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var profileId = McpErrors.ParseIdOrThrow(id, "A profile id is required.");

@@ -100,7 +100,10 @@ namespace JobScrape.Infrastructure.Composition
                 configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
                 ?? new StorageOptions();
             var path = Path.GetFullPath(storage.DatabasePath, contentRoot);
-            var connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = path,
+            }.ToString();
             services.AddSingleton<IDatabaseExplorer>(new SqliteDatabaseExplorer(connectionString));
             return services;
         }

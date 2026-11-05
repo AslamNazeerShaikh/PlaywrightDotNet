@@ -55,8 +55,7 @@ namespace JobScrape.Mcp.Tools
         public Task<RunListResponse> ListRunsAsync(
             [Description("How many newest runs to skip.")] int offset = 0,
             [Description("How many runs to return, 1 to 500.")] int limit = 50,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             return _list.HandleAsync(offset, limit, cancellationToken);
@@ -72,8 +71,7 @@ namespace JobScrape.Mcp.Tools
         [Description("Gets one run by its identifier.")]
         public async Task<RunResponse> GetRunAsync(
             [Description("The run identifier.")] string id,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var runId = McpErrors.ParseIdOrThrow(id, "A run id is required.");
@@ -94,8 +92,7 @@ namespace JobScrape.Mcp.Tools
             [Description("The run identifier.")] string runId,
             [Description("How many postings to skip.")] int offset = 0,
             [Description("How many postings to return, 1 to 500.")] int limit = 200,
-            [Description("Token to observe for cancellation.")]
-                CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default
         )
         {
             var id = McpErrors.ParseIdOrThrow(runId, "A run id is required.");
