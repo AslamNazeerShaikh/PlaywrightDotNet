@@ -41,7 +41,9 @@ namespace JobScrape.Mcp.Tools
         /// <returns>The profile list.</returns>
         [McpServerTool(Name = "list_sessions")]
         [Description("Returns every browser profile ordered by name.")]
-        public Task<SessionListResponse> ListSessionsAsync(CancellationToken cancellationToken)
+        public Task<SessionListResponse> ListSessionsAsync(
+            CancellationToken cancellationToken = default
+        )
         {
             return _list.HandleAsync(cancellationToken);
         }

@@ -46,7 +46,7 @@ namespace JobScrape.Mcp.Tools
         [McpServerTool(Name = "list_profiles")]
         [Description("Returns every saved search profile ordered by name.")]
         public Task<SearchProfileListResponse> ListProfilesAsync(
-            CancellationToken cancellationToken
+            CancellationToken cancellationToken = default
         )
         {
             return _list.HandleAsync(cancellationToken);

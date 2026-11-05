@@ -45,8 +45,8 @@ whatever identity the transport supplies. Both loopback hosts register
 ### Positive
 
 - One handler implementation serves the API, stdio, and HTTP edges.
-- The tool list is explicit (`WithTools<T>` per class); adding a tool is a
-  visible diff, not assembly scanning.
+- The tool list is explicit (one fixed `.WithTools(McpTools.All)` list shared
+  by both hosts); adding a tool is a visible diff, not assembly scanning.
 - Write tools reuse handler validation, so agent input fails with the same
   codes as the cockpit.
 

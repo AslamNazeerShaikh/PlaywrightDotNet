@@ -584,8 +584,8 @@ Result<T> ──► Ok → 200 + DTO
 - One sealed class per area, marked `[McpServerToolType]` (`HealthTools`,
   `SourcesTools`, `SessionsTools`, `SearchProfilesTools`,
   `SearchProfilesWriteTools`, `RunsTools`, `RunActionsTools`).
-- Tools are listed explicitly (`WithTools<T>` per class in both composition
-  roots). No assembly scanning; adding a tool is a visible diff.
+- Tools are listed explicitly (one fixed `.WithTools(McpTools.All)` list in
+  both composition roots). No assembly scanning; adding a tool is a visible diff.
 - Handlers are constructor-injected and called directly. No mediator, per §2.
 - Expected handler failures throw `McpException` carrying the stable code
   plus operator-safe detail (`McpErrors.OrThrow`); the installed SDK's
