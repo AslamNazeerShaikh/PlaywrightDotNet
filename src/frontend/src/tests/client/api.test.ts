@@ -70,7 +70,10 @@ describe("api client", () => {
         status: 200,
         json: async () => ({}),
         blob: async () => blob,
-        headers: { get: (name: string) => (name === "content-disposition" ? 'attachment; filename="custom.csv"' : null) },
+        headers: {
+          get: (name: string) =>
+            name === "content-disposition" ? 'attachment; filename="custom.csv"' : null,
+        },
       };
     };
 

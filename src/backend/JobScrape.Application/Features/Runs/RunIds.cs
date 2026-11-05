@@ -18,5 +18,17 @@ namespace JobScrape.Application.Features.Runs
                 new Dictionary<string, string[]> { ["id"] = ["A run id is required."] }
             );
         }
+
+        /// <summary>
+        /// The shared shape for invalid run write inputs: one
+        /// <c>VALIDATION_FAILED</c> carrying every offending field.
+        /// </summary>
+        /// <param name="errors">Field errors keyed by JSON request field name. Must not be null.</param>
+        /// <returns>A <c>VALIDATION_FAILED</c> error.</returns>
+        public static ErrorInfo InvalidFields(IReadOnlyDictionary<string, string[]> errors)
+        {
+            ArgumentNullException.ThrowIfNull(errors);
+            return Errors.ValidationFailed("The request contains invalid fields.", errors);
+        }
     }
 }

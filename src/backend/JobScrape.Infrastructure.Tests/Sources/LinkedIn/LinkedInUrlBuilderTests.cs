@@ -52,8 +52,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
         [Fact]
         public void NegativeStartIsRejected()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => LinkedInUrlBuilder.SearchUrl(Criteria(), -25)
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                LinkedInUrlBuilder.SearchUrl(Criteria(), -25)
             );
         }
     }

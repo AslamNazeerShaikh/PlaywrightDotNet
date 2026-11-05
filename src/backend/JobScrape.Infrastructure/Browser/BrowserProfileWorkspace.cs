@@ -8,8 +8,7 @@ namespace JobScrape.Infrastructure.Browser
     /// The pool owns the launch gate and the open contexts; this adapter
     /// holds no resources and is not disposable, so the pool is disposed once.
     /// </summary>
-    public sealed class BrowserProfileWorkspace(BrowserSessionPool pool)
-        : IBrowserProfileWorkspace
+    public sealed class BrowserProfileWorkspace(BrowserSessionPool pool) : IBrowserProfileWorkspace
     {
         /// <summary>
         /// Moves the profile's user-data directory through the pool's gate.

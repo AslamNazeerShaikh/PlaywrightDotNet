@@ -22,7 +22,9 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
             builder.Property(progress => progress.Id).HasConversion(DomainConverters.ScrapeRunId);
             builder.Property(progress => progress.PagesCompleted);
             builder.Property(progress => progress.NextCursor);
-            builder.Property(progress => progress.SeenExternalIds).HasConversion(DomainConverters.StringList);
+            builder
+                .Property(progress => progress.SeenExternalIds)
+                .HasConversion(DomainConverters.StringList);
             builder.Property(progress => progress.UpdatedAt);
         }
     }

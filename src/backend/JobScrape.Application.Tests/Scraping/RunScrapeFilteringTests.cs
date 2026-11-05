@@ -52,10 +52,19 @@ namespace JobScrape.Application.Tests.Scraping
             harness.Source.Then(
                 Page(
                     null,
-                    Job("1") with { PostedAt = Now.AddHours(-2) },
-                    Job("2") with { PostedAt = Now.AddDays(-2) },
+                    Job("1") with
+                    {
+                        PostedAt = Now.AddHours(-2),
+                    },
+                    Job("2") with
+                    {
+                        PostedAt = Now.AddDays(-2),
+                    },
                     Job("3"),
-                    Job("4") with { PostedAt = Now.AddDays(-1) }
+                    Job("4") with
+                    {
+                        PostedAt = Now.AddDays(-1),
+                    }
                 )
             );
 
@@ -63,7 +72,10 @@ namespace JobScrape.Application.Tests.Scraping
 
             var run = Assert.Single(harness.Store.Runs);
             Assert.Equal(3, run.Stats.PostingsFound);
-            Assert.Equal(["1", "3", "4"], harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order());
+            Assert.Equal(
+                ["1", "3", "4"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
             var drop = Assert.Single(
                 harness.Logger.Entries,
                 e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
@@ -78,8 +90,14 @@ namespace JobScrape.Application.Tests.Scraping
             harness.Source.Then(
                 Page(
                     null,
-                    Job("1") with { Skills = ["C#"] },
-                    Job("2") with { Skills = ["Java"] },
+                    Job("1") with
+                    {
+                        Skills = ["C#"],
+                    },
+                    Job("2") with
+                    {
+                        Skills = ["Java"],
+                    },
                     Job("3")
                 )
             );
@@ -89,7 +107,10 @@ namespace JobScrape.Application.Tests.Scraping
             var run = Assert.Single(harness.Store.Runs);
             Assert.Equal(2, run.Stats.PostingsFound);
             Assert.Equal(2, run.Stats.PostingsNew);
-            Assert.Equal(["1", "3"], harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order());
+            Assert.Equal(
+                ["1", "3"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
             var drop = Assert.Single(
                 harness.Logger.Entries,
                 e => e.Message.Contains("skill mismatch", StringComparison.Ordinal)
@@ -121,8 +142,8 @@ namespace JobScrape.Application.Tests.Scraping
         public async Task PostedDateMismatchIsLoggedCountedAndDetailWins()
         {
             var harness = new ScrapeHarness(maxDetails: 1);
-            harness.Source
-                .Then(Page(null, Job("1") with { PostedAt = Now.AddHours(-1) }))
+            harness
+                .Source.Then(Page(null, Job("1") with { PostedAt = Now.AddHours(-1) }))
                 .ThenDetails(DatedDetail("1", Now.AddHours(-5)));
 
             await RunOkAsync(harness);
@@ -141,8 +162,8 @@ namespace JobScrape.Application.Tests.Scraping
         public async Task AgreeingPostedDatesAreNotCounted()
         {
             var harness = new ScrapeHarness(maxDetails: 1);
-            harness.Source
-                .Then(Page(null, Job("1") with { PostedAt = Now.AddHours(-1) }))
+            harness
+                .Source.Then(Page(null, Job("1") with { PostedAt = Now.AddHours(-1) }))
                 .ThenDetails(DatedDetail("1", Now.AddHours(-1)));
 
             await RunOkAsync(harness);

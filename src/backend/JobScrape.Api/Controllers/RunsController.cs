@@ -68,8 +68,6 @@ namespace JobScrape.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            offset = Math.Max(0, offset);
-            limit = limit <= 0 ? ListRunsHandler.Limit : Math.Clamp(limit, 1, 500);
             return Ok(await _list.HandleAsync(offset, limit, cancellationToken));
         }
 
@@ -133,8 +131,6 @@ namespace JobScrape.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            offset = Math.Max(0, offset);
-            limit = limit <= 0 ? ListRunPostingsHandler.Limit : Math.Clamp(limit, 1, 500);
             var result = await _postings.HandleAsync(id, offset, limit, cancellationToken);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         }
@@ -186,7 +182,11 @@ namespace JobScrape.Api.Controllers
                 cancellationToken
             );
             return result.IsSuccess
-                ? Results.File(result.Value.Content, result.Value.ContentType, result.Value.FileName)
+                ? Results.File(
+                    result.Value.Content,
+                    result.Value.ContentType,
+                    result.Value.FileName
+                )
                 : result.Error.ToProblem();
         }
     }

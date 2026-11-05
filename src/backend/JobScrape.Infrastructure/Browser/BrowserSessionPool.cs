@@ -13,30 +13,42 @@ namespace JobScrape.Infrastructure.Browser
     /// runs. A run opens its profile's context, adapters drive its page, and
     /// the run's host releases it when the run ends. Thread-safe.
     /// </summary>
-    public sealed partial class BrowserSessionPool : IAsyncDisposable, IBrowserProfileWorkspace
+    public sealed partial class BrowserSessionPool
+        : IAsyncDisposable,
+            IBrowserProfileWorkspace,
+            IBrowserSessionPool
     {
         // Settings injected and never mutated. _gate serializes launches
         // (and Playwright's creation); lookups read the map lock-free.
         private readonly BrowserSessionSettings _settings;
         private readonly ILogger<BrowserSessionPool>? _logger;
+        private readonly IPlaywrightFactory _playwrightFactory;
+        private readonly IFileSystem _files;
         private readonly SemaphoreSlim _gate = new(1, 1);
         private readonly ConcurrentDictionary<BrowserProfileId, IBrowserContext> _contexts = [];
         private IPlaywright? _playwright;
+        private int _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BrowserSessionPool"/> class.
         /// </summary>
         /// <param name="settings">The resolved browser settings.</param>
         /// <param name="logger">Sink for the missing-extension-dir warning. Null skips logging.</param>
+        /// <param name="playwrightFactory">Creates the Playwright driver. Null uses the real one.</param>
+        /// <param name="fileSystem">The filesystem. Null uses the real one.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is null.</exception>
         public BrowserSessionPool(
             BrowserSessionSettings settings,
-            ILogger<BrowserSessionPool>? logger = null
+            ILogger<BrowserSessionPool>? logger = null,
+            IPlaywrightFactory? playwrightFactory = null,
+            IFileSystem? fileSystem = null
         )
         {
             ArgumentNullException.ThrowIfNull(settings);
             _settings = settings;
             _logger = logger;
+            _playwrightFactory = playwrightFactory ?? new SystemPlaywrightFactory();
+            _files = fileSystem ?? new PhysicalFileSystem();
         }
 
         /// <summary>
@@ -60,14 +72,14 @@ namespace JobScrape.Infrastructure.Browser
             {
                 if (!_contexts.TryGetValue(profile.Id, out var context))
                 {
-                    _playwright ??= await Playwright.CreateAsync();
+                    _playwright ??= await _playwrightFactory.CreateAsync();
                     // The name is a safe path segment (BrowserProfile.IsValidName),
                     // so the directory stays inside the profiles root.
-                    var directory = Path.Combine(
+                    var directory = _files.Combine(
                         _settings.ProfilesRoot,
-                        profile.UserDataDirectory.Replace('/', Path.DirectorySeparatorChar)
+                        profile.UserDataDirectory.Replace('/', _files.DirectorySeparatorChar)
                     );
-                    Directory.CreateDirectory(directory);
+                    _files.CreateDirectory(directory);
                     context = await Engine(_playwright, profile.Engine)
                         .LaunchPersistentContextAsync(
                             directory,
@@ -149,7 +161,10 @@ namespace JobScrape.Infrastructure.Browser
             ArgumentNullException.ThrowIfNull(profile);
             if (!BrowserProfile.IsValidName(newName))
             {
-                throw new ArgumentException("The new profile name is not a safe path segment.", nameof(newName));
+                throw new ArgumentException(
+                    "The new profile name is not a safe path segment.",
+                    nameof(newName)
+                );
             }
 
             await _gate.WaitAsync(cancellationToken);
@@ -160,20 +175,17 @@ namespace JobScrape.Infrastructure.Browser
                     return ProfileDirectoryRename.ProfileInUse;
                 }
 
-                var root = Path.Combine(_settings.ProfilesRoot, profile.Source.Value);
-                var oldDirectory = Path.Combine(root, profile.Name);
-                var newDirectory = Path.Combine(root, newName);
-                var temporary = Path.Combine(
-                    root,
-                    $"{newName}.{profile.Id.Value:N}.rename-tmp"
-                );
-                var oldExists = Directory.Exists(oldDirectory);
-                var newExists = Directory.Exists(newDirectory);
-                if (!oldExists && Directory.Exists(temporary))
+                var root = _files.Combine(_settings.ProfilesRoot, profile.Source.Value);
+                var oldDirectory = _files.Combine(root, profile.Name);
+                var newDirectory = _files.Combine(root, newName);
+                var temporary = _files.Combine(root, $"{newName}.{profile.Id.Value:N}.rename-tmp");
+                var oldExists = _files.DirectoryExists(oldDirectory);
+                var newExists = _files.DirectoryExists(newDirectory);
+                if (!oldExists && _files.DirectoryExists(temporary))
                 {
                     try
                     {
-                        Directory.Move(temporary, newDirectory);
+                        _files.MoveDirectory(temporary, newDirectory);
                         return ProfileDirectoryRename.Moved;
                     }
                     catch (IOException)
@@ -211,12 +223,12 @@ namespace JobScrape.Infrastructure.Browser
                         // Case-only rename on a case-insensitive filesystem:
                         // both names resolve to the same directory, so move
                         // through a deterministic temporary name.
-                        Directory.Move(oldDirectory, temporary);
-                        Directory.Move(temporary, newDirectory);
+                        _files.MoveDirectory(oldDirectory, temporary);
+                        _files.MoveDirectory(temporary, newDirectory);
                     }
                     else
                     {
-                        Directory.Move(oldDirectory, newDirectory);
+                        _files.MoveDirectory(oldDirectory, newDirectory);
                     }
                 }
                 catch (IOException)
@@ -244,16 +256,16 @@ namespace JobScrape.Infrastructure.Browser
         /// </summary>
         /// <param name="oldDirectory">The original directory.</param>
         /// <param name="temporary">The deterministic temporary directory.</param>
-        private static void RestoreTemporary(string oldDirectory, string temporary)
+        private void RestoreTemporary(string oldDirectory, string temporary)
         {
-            if (!Directory.Exists(temporary) || Directory.Exists(oldDirectory))
+            if (!_files.DirectoryExists(temporary) || _files.DirectoryExists(oldDirectory))
             {
                 return;
             }
 
             try
             {
-                Directory.Move(temporary, oldDirectory);
+                _files.MoveDirectory(temporary, oldDirectory);
             }
             catch (IOException)
             {
@@ -267,11 +279,18 @@ namespace JobScrape.Infrastructure.Browser
         }
 
         /// <summary>
-        /// Closes every context and stops Playwright.
+        /// Closes every context and stops Playwright. Idempotent:
+        /// safe if the container or tests dispose the shared singleton
+        /// more than once.
         /// </summary>
         /// <returns>A task that completes when everything is closed.</returns>
         public async ValueTask DisposeAsync()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+
             await _gate.WaitAsync(CancellationToken.None);
             try
             {
@@ -344,7 +363,7 @@ namespace JobScrape.Infrastructure.Browser
                 return null;
             }
 
-            if (!Directory.Exists(_settings.ExtensionDir))
+            if (!_files.DirectoryExists(_settings.ExtensionDir))
             {
                 if (_logger is not null)
                 {
@@ -365,9 +384,6 @@ namespace JobScrape.Infrastructure.Browser
             Level = LogLevel.Warning,
             Message = "Adblock extension directory {ExtensionDir} is missing; launching without the blocker. Run vendor/download-ubol.sh to fetch it."
         )]
-        private static partial void LogExtensionDirMissing(
-            ILogger logger,
-            string? extensionDir
-        );
+        private static partial void LogExtensionDirMissing(ILogger logger, string? extensionDir);
     }
 }

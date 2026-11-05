@@ -241,7 +241,8 @@ namespace JobScrape.Infrastructure.Persistence
                     // start page; they always began at page one. Anything
                     // outside 1..ceiling never passed validation, so a
                     // hand-edited row falls back instead of failing the read.
-                    dto.StartPage is int start
+                    dto.StartPage
+                        is int start
                     && start >= 1
                     && start <= global::JobScrape.Domain.Sourcing.RunLimits.MaxPagesCeiling
                         ? start

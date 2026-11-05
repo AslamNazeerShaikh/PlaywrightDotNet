@@ -162,18 +162,24 @@ namespace JobScrape.Application.Tests
 
             var postings = new ListRunPostingsHandler(store);
             var listed = Assert.Single(
-                (await postings.HandleAsync(run.Id, 0, ListRunPostingsHandler.Limit, Ct)).Value.Items
+                (await postings.HandleAsync(run.Id, 0, ListRunPostingsHandler.Limit, Ct))
+                    .Value
+                    .Items
             );
             Assert.Equal("Developer", listed.Title);
             Assert.Equal(ListRunPostingsHandler.Limit, store.LastLimit);
             Assert.Equal(0, store.LastOffset);
             Assert.Equal(
                 "RUN_NOT_FOUND",
-                (await postings.HandleAsync(Guid.NewGuid(), 0, ListRunPostingsHandler.Limit, Ct)).Error.Code
+                (await postings.HandleAsync(Guid.NewGuid(), 0, ListRunPostingsHandler.Limit, Ct))
+                    .Error
+                    .Code
             );
             Assert.Equal(
                 "VALIDATION_FAILED",
-                (await postings.HandleAsync(Guid.Empty, 0, ListRunPostingsHandler.Limit, Ct)).Error.Code
+                (await postings.HandleAsync(Guid.Empty, 0, ListRunPostingsHandler.Limit, Ct))
+                    .Error
+                    .Code
             );
         }
 
@@ -216,12 +222,7 @@ namespace JobScrape.Application.Tests
             await new ListRunsHandler(store).HandleAsync(0, 9999, Ct);
             Assert.Equal((0, 500), (store.LastOffset, store.LastLimit));
 
-            var postings = await new ListRunPostingsHandler(store).HandleAsync(
-                run.Id,
-                -3,
-                0,
-                Ct
-            );
+            var postings = await new ListRunPostingsHandler(store).HandleAsync(run.Id, -3, 0, Ct);
             Assert.True(postings.IsSuccess);
             Assert.Equal((0, ListRunPostingsHandler.Limit), (store.LastOffset, store.LastLimit));
 

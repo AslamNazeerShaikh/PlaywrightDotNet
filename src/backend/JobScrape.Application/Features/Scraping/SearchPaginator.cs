@@ -1,0 +1,345 @@
+using JobScrape.Application.Abstractions;
+using JobScrape.Application.Results;
+using JobScrape.Domain;
+using JobScrape.Domain.Abstractions;
+using JobScrape.Domain.Access;
+using JobScrape.Domain.Common;
+using JobScrape.Domain.Sourcing;
+using Microsoft.Extensions.Logging;
+
+namespace JobScrape.Application.Features.Scraping
+{
+    public sealed partial class RunScrapeHandler
+    {
+        /// <summary>
+        /// Fetches pages until a cap, the last page, a repeated page, an
+        /// exhausted quota, or a wall.
+        /// </summary>
+        /// <param name="scope">The running run.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>True when a wall or changed page ended the run; false when searching simply finished.</returns>
+        private async Task<bool> SearchAsync(RunScope scope, CancellationToken cancellationToken)
+        {
+            var run = scope.Run;
+            var politeness = new PolitenessPolicy(run.Limits, _random);
+            var seenPages = new HashSet<PageFingerprint>();
+            string? cursor = null;
+
+            // A saved position is normally absent: each run gets a fresh id.
+            // When present (an interrupted run picked back up), pagination
+            // continues after the last completed page without recounting.
+            var progress =
+                await _stores.Progress.GetAsync(run.Id, cancellationToken)
+                ?? ScrapeRunProgress.Start(run.Id, _clock.GetUtcNow());
+            var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
+            cursor = progress.NextCursor;
+
+            // A cold load of a -N slug URL redirects to page 1, so
+            // pre-window pages are visited, not kept (Naukri: Next
+            // clicks; Indeed/LinkedIn: direct offsets).
+            var firstPage = run.Limits.StartPage;
+            var lastPage = firstPage + run.Limits.MaxPages - 1;
+
+            // A fresh run starts at page one and walks forward; a resumed
+            // run restarts at the window page its kept count points at.
+            var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            if (absolute < firstPage)
+            {
+                LogAdvancingToStartPage(_logger, run.Id.Value, firstPage);
+            }
+            for (; absolute <= lastPage; absolute++)
+            {
+                if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
+                {
+                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached");
+                    break;
+                }
+
+                var pageQuota = scope.Quota.TryConsumePage(
+                    scope.Settings.DailyPageCap,
+                    _clock.GetUtcNow()
+                );
+                if (!pageQuota.IsAllowed)
+                {
+                    LogPaginationStopped(
+                        _logger,
+                        run.Id.Value,
+                        absolute,
+                        "daily page quota exhausted"
+                    );
+                    break;
+                }
+
+                if (progress.PagesCompleted > 0 || absolute > 1)
+                {
+                    await _delay.WaitAsync(politeness.NextDelay(), cancellationToken);
+                }
+
+                var page = absolute;
+                var request = new SearchPageRequest(page, cursor);
+                SearchPageResult result;
+                try
+                {
+                    result = await FetchWithRetryAsync(
+                        scope,
+                        $"page {page}",
+                        token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
+                        fetched => fetched.Challenge,
+                        cancellationToken
+                    );
+                }
+                catch (StartPageOutOfRangeException ex)
+                {
+                    // Fail with the precise reason instead of the generic
+                    // zero-page fail below. The run is non-terminal here
+                    // (searching just began), so Fail cannot throw.
+                    var outOfRange =
+                        $"start page {ex.StartPage} is past the last page {ex.MaxPage}";
+                    LogPaginationStopped(_logger, run.Id.Value, page, outOfRange);
+                    run.RecordFailure();
+                    run.Fail(ex.Message, _clock.GetUtcNow());
+                    await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                    return true;
+                }
+                var decision = ChallengePolicy.Decide(
+                    result.Challenge,
+                    scope.Browser.ConsecutiveChallenges,
+                    scope.Settings.ChallengeCooldown
+                );
+                if (decision.Action == ChallengeAction.Retry)
+                {
+                    // Retries are exhausted: skip the page and stop paginating.
+                    run.RecordFailure();
+                    await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                    LogPaginationStopped(_logger, run.Id.Value, page, "transient errors");
+                    break;
+                }
+
+                if (decision.Action != ChallengeAction.Continue)
+                {
+                    await StopOnWallAsync(scope, result.Challenge, decision, cancellationToken);
+                    return true;
+                }
+
+                if (result.Fingerprint is not null && !seenPages.Add(result.Fingerprint))
+                {
+                    LogPaginationStopped(_logger, run.Id.Value, page, "repeated page");
+                    break;
+                }
+
+                if (page < firstPage)
+                {
+                    // Before the window: advance the cursor, keep nothing.
+                    cursor = result.NextCursor;
+                    if (cursor is null)
+                    {
+                        LogPaginationStopped(
+                            _logger,
+                            run.Id.Value,
+                            page,
+                            "no further pages before the window"
+                        );
+                        break;
+                    }
+
+                    continue;
+                }
+
+                var now = _clock.GetUtcNow();
+                var stats = await UpsertAsync(
+                    scope,
+                    result.Jobs,
+                    run.Limits.MaxJobs - run.Stats.PostingsFound,
+                    seenJobs,
+                    now,
+                    cancellationToken
+                );
+                run.RecordPage(stats, now);
+                var nextCursor = result.NextCursor;
+                progress.RecordPage(run.Stats.PagesFetched, nextCursor, seenJobs, now);
+                await _stores.Progress.SaveAsync(progress, cancellationToken);
+                await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                LogPageRecorded(
+                    _logger,
+                    run.Id.Value,
+                    page,
+                    stats.PostingsFound,
+                    stats.PostingsNew,
+                    stats.PostingsUpdated
+                );
+
+                cursor = nextCursor;
+                if (cursor is null)
+                {
+                    break;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Creates or refreshes the page's postings, up to the remaining job
+        /// cap. Two profile gates run before anything is stored: cards older
+        /// than the posted-within window are stale, and cards whose observed
+        /// skills definitively miss the required list are out of scope.
+        /// Postings with no observed skills stay candidates for enrichment.
+        /// The gate reads the snapshot alone: a merge replaces stored skills
+        /// with observed ones, so a passing snapshot leaves matching skills.
+        /// A posting is counted once per run; a card that fails domain
+        /// validation is dropped with a warning (docs/02-architecture.md §12.1).
+        /// </summary>
+        /// <param name="scope">The running run.</param>
+        /// <param name="jobs">The page's snapshots.</param>
+        /// <param name="remaining">Postings still allowed by the job cap.</param>
+        /// <param name="seenJobs">External ids already counted in this run.</param>
+        /// <param name="now">The sighting time.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The page's posting counts.</returns>
+        private async Task<PageStats> UpsertAsync(
+            RunScope scope,
+            IReadOnlyList<JobSnapshot> jobs,
+            int remaining,
+            HashSet<string> seenJobs,
+            DateTimeOffset now,
+            CancellationToken cancellationToken
+        )
+        {
+            var source = scope.Context.Source;
+            var criteria = scope.Context.Criteria;
+            int found = 0,
+                added = 0,
+                updated = 0;
+
+            foreach (var snapshot in jobs)
+            {
+                if (found >= remaining)
+                {
+                    break;
+                }
+
+                if (snapshot.Source != source)
+                {
+                    LogCardDropped(
+                        _logger,
+                        scope.Run.Id.Value,
+                        snapshot.ExternalJobId,
+                        "foreign source"
+                    );
+                    continue;
+                }
+
+                if (IsStale(criteria, snapshot, now))
+                {
+                    LogCardDropped(
+                        _logger,
+                        scope.Run.Id.Value,
+                        snapshot.ExternalJobId,
+                        "stale posted date"
+                    );
+                    continue;
+                }
+
+                try
+                {
+                    var id = ExternalJobId.Create(snapshot.ExternalJobId);
+                    if (!seenJobs.Add(id.Value))
+                    {
+                        continue;
+                    }
+
+                    var existing = await _stores.Postings.FindAsync(source, id, cancellationToken);
+                    if (IsSkillMismatch(criteria, snapshot.Skills))
+                    {
+                        LogCardDropped(
+                            _logger,
+                            scope.Run.Id.Value,
+                            snapshot.ExternalJobId,
+                            "skill mismatch"
+                        );
+                        continue;
+                    }
+
+                    ContentHash? before = null;
+                    var posting = existing;
+                    if (posting is null)
+                    {
+                        posting = JobPosting.Create(snapshot, now);
+                        await _stores.Postings.AddAsync(posting, cancellationToken);
+                    }
+                    else
+                    {
+                        before = posting.ContentHash;
+                        posting.Refresh(snapshot, now);
+                    }
+
+                    if (before is null)
+                    {
+                        added++;
+                    }
+                    else
+                    {
+                        updated += posting.ContentHash == before ? 0 : 1;
+                    }
+
+                    scope.Touched.Add(posting);
+                    found++;
+                }
+                catch (DomainException ex)
+                {
+                    // Scraped input, not a programmer error: drop the card,
+                    // keep the run, and leave a named reason in the log.
+                    LogCardDropped(_logger, scope.Run.Id.Value, snapshot.ExternalJobId, ex.Message);
+                }
+            }
+
+            return new PageStats(found, added, updated);
+        }
+
+        /// <summary>
+        /// Tests a card against the profile's recency window.
+        /// </summary>
+        /// <param name="criteria">The profile's search criteria.</param>
+        /// <param name="snapshot">The card snapshot.</param>
+        /// <param name="now">The sighting time.</param>
+        /// <returns>True when the card is older than the window allows.</returns>
+        private static bool IsStale(
+            SearchCriteria criteria,
+            JobSnapshot snapshot,
+            DateTimeOffset now
+        )
+        {
+            if (criteria.PostedWithinDays is not { } days)
+            {
+                return false;
+            }
+
+            // An unknown posted date passes: card parsers often lack one
+            // and detail enrichment fills it in.
+            if (snapshot.PostedAt is not { } postedAt)
+            {
+                return false;
+            }
+
+            return postedAt < now.AddDays(-days);
+        }
+
+        /// <summary>
+        /// Tests observed skill names against the profile's required list.
+        /// Postings with no observed skills pass as enrichment candidates;
+        /// only a definitive non-overlap drops the card.
+        /// </summary>
+        /// <param name="criteria">The profile's search criteria.</param>
+        /// <param name="skillNames">The observed skill names.</param>
+        /// <returns>True when skills were observed and none is required.</returns>
+        private static bool IsSkillMismatch(
+            SearchCriteria criteria,
+            IEnumerable<string?> skillNames
+        )
+        {
+            return criteria.RequiredSkills.Count > 0
+                && skillNames.Any(name => !string.IsNullOrWhiteSpace(name))
+                && !SkillMatcher.Matches(skillNames, criteria.RequiredSkills);
+        }
+    }
+}

@@ -120,7 +120,9 @@ namespace JobScrape.Domain.Sourcing
                 .ToArray();
             if (normalizedSkills.Length > MaxRequiredSkills)
             {
-                throw new DomainException($"At most {MaxRequiredSkills} required skills are allowed.");
+                throw new DomainException(
+                    $"At most {MaxRequiredSkills} required skills are allowed."
+                );
             }
 
             var normalizedCompanies = (companies ?? [])
@@ -201,7 +203,10 @@ namespace JobScrape.Domain.Sourcing
                 && PostedWithinDays == other.PostedWithinDays
                 && RemoteOnly == other.RemoteOnly
                 && Locations.SequenceEqual(other.Locations, StringComparer.OrdinalIgnoreCase)
-                && RequiredSkills.SequenceEqual(other.RequiredSkills, StringComparer.OrdinalIgnoreCase)
+                && RequiredSkills.SequenceEqual(
+                    other.RequiredSkills,
+                    StringComparer.OrdinalIgnoreCase
+                )
                 && Companies.SequenceEqual(other.Companies, StringComparer.OrdinalIgnoreCase);
         }
 

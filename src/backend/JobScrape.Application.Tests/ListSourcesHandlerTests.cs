@@ -81,7 +81,10 @@ namespace JobScrape.Application.Tests
             var handler = Create(
                 store,
                 ComplianceConsent.None,
-                Settings(SourceKey.Naukri) with { DailyRunCap = null }
+                Settings(SourceKey.Naukri) with
+                {
+                    DailyRunCap = null,
+                }
             );
 
             var naukri = Assert.Single((await handler.HandleAsync(Ct)).Items);

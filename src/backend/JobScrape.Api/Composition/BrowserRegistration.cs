@@ -56,8 +56,14 @@ namespace JobScrape.Api.Composition
                 );
             });
             // Singleton: the container disposes it on shutdown, closing every
-            // browser and flushing profile cookies.
+            // browser and flushing profile cookies. The pool also serves its
+            // port, so consumers depend on the abstraction, not the class.
+            services.AddSingleton<IPlaywrightFactory, SystemPlaywrightFactory>();
+            services.AddSingleton<IFileSystem, PhysicalFileSystem>();
             services.AddSingleton<BrowserSessionPool>();
+            services.AddSingleton<IBrowserSessionPool>(sp =>
+                sp.GetRequiredService<BrowserSessionPool>()
+            );
             services.AddSingleton<IBrowserProfileWorkspace, BrowserProfileWorkspace>();
             services.AddScoped<ISessionManager, PlaywrightSessionManager>();
             services.AddSingleton<IArtifactStore, FileArtifactStore>();

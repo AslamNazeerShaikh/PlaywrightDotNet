@@ -63,9 +63,7 @@ namespace JobScrape.Application.Features.Runs
 
             if (errors.Count > 0)
             {
-                return Result.Fail<RunResponse>(
-                    Errors.ValidationFailed("The request contains invalid fields.", errors)
-                );
+                return Result.Fail<RunResponse>(RunIds.InvalidFields(errors));
             }
 
             var started = await _launcher.StartAsync(

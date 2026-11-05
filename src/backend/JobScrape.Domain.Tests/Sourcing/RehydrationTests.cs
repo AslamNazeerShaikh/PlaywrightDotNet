@@ -63,7 +63,16 @@ namespace JobScrape.Domain.Tests.Sourcing
         )
         {
             Assert.Throws<DomainException>(() =>
-                RunStats.Restore(pages, found, added, updated, details, challenges, failures, mismatches)
+                RunStats.Restore(
+                    pages,
+                    found,
+                    added,
+                    updated,
+                    details,
+                    challenges,
+                    failures,
+                    mismatches
+                )
             );
         }
     }

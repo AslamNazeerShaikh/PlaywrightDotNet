@@ -70,13 +70,18 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.Single((await store.ListAsync(0, 1, Ct)).Items);
             Assert.Single((await store.ListAsync(1, 1, Ct)).Items);
             Assert.Equal(older.Id.Value, (await store.ListAsync(1, 1, Ct)).Items[0].Id);
-            Assert.Equal([older.Id.Value], (await store.ListAsync(1, 2, Ct)).Items.Select(r => r.Id));
+            Assert.Equal(
+                [older.Id.Value],
+                (await store.ListAsync(1, 2, Ct)).Items.Select(r => r.Id)
+            );
             Assert.Empty((await store.ListAsync(5, 10, Ct)).Items);
             Assert.Equal("Pending", (await store.GetAsync(older.Id.Value, Ct))!.Stage);
             Assert.Null(await store.GetAsync(Guid.NewGuid(), Ct));
             Assert.Null(await store.GetAsync(Guid.Empty, Ct));
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(0, 0, Ct));
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(-1, 10, Ct));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                store.ListAsync(-1, 10, Ct)
+            );
             Assert.Empty(reload.Db.ChangeTracker.Entries());
         }
 
