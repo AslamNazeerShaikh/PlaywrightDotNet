@@ -19,10 +19,12 @@ namespace JobScrape.Architecture.Tests
                 .HaveDependencyOn("JobScrape.Infrastructure")
                 .GetResult();
             var api = domain.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+            var mcp = domain.ShouldNot().HaveDependencyOn("JobScrape.Mcp").GetResult();
 
             Assert.True(application.IsSuccessful, Describe(application));
             Assert.True(infrastructure.IsSuccessful, Describe(infrastructure));
             Assert.True(api.IsSuccessful, Describe(api));
+            Assert.True(mcp.IsSuccessful, Describe(mcp));
         }
 
         [Fact]
@@ -37,9 +39,11 @@ namespace JobScrape.Architecture.Tests
                 .HaveDependencyOn("JobScrape.Infrastructure")
                 .GetResult();
             var api = application.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+            var mcp = application.ShouldNot().HaveDependencyOn("JobScrape.Mcp").GetResult();
 
             Assert.True(infrastructure.IsSuccessful, Describe(infrastructure));
             Assert.True(api.IsSuccessful, Describe(api));
+            Assert.True(mcp.IsSuccessful, Describe(mcp));
         }
 
         private static string Describe(NetArchTest.Rules.TestResult result)
