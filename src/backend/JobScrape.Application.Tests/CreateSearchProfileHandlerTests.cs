@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Results;
@@ -54,7 +55,7 @@ namespace JobScrape.Application.Tests
                 ),
             ]);
             return (
-                new CreateSearchProfileHandler(store, store, catalog, new FakeTimeProvider(Now)),
+                new CreateSearchProfileHandler(store, store, catalog, new FakeTimeProvider(Now), CallerContext.LocalOperator),
                 store
             );
         }
@@ -102,7 +103,8 @@ namespace JobScrape.Application.Tests
                 store,
                 store,
                 new SourceSettingsCatalog([settings]),
-                new FakeTimeProvider(Now)
+                new FakeTimeProvider(Now),
+                CallerContext.LocalOperator
             );
 
             var result = await handler.HandleAsync(
@@ -138,7 +140,8 @@ namespace JobScrape.Application.Tests
                 store,
                 store,
                 new SourceSettingsCatalog([settings]),
-                new FakeTimeProvider(Now)
+                new FakeTimeProvider(Now),
+                CallerContext.LocalOperator
             );
 
             var result = await handler.HandleAsync(
@@ -498,16 +501,19 @@ namespace JobScrape.Application.Tests
             var clock = new FakeTimeProvider();
 
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSearchProfileHandler(null!, store, catalog, clock)
+                new CreateSearchProfileHandler(null!, store, catalog, clock, CallerContext.LocalOperator)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSearchProfileHandler(store, null!, catalog, clock)
+                new CreateSearchProfileHandler(store, null!, catalog, clock, CallerContext.LocalOperator)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSearchProfileHandler(store, store, null!, clock)
+                new CreateSearchProfileHandler(store, store, null!, clock, CallerContext.LocalOperator)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSearchProfileHandler(store, store, catalog, null!)
+                new CreateSearchProfileHandler(store, store, catalog, null!, CallerContext.LocalOperator)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new CreateSearchProfileHandler(store, store, catalog, clock, null!)
             );
             await Assert.ThrowsAsync<ArgumentNullException>(() =>
                 Create().Handler.HandleAsync(null!, Ct)

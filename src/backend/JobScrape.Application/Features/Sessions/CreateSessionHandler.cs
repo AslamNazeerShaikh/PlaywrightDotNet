@@ -20,24 +20,34 @@ namespace JobScrape.Application.Features.Sessions
         private readonly TimeProvider _clock;
 
         /// <summary>
+        /// Gets the calling actor. Stored for future authorization; the
+        /// single local user is always permitted, so creates are not gated.
+        /// </summary>
+        public ICallerContext Caller { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="CreateSessionHandler"/> class.
         /// </summary>
         /// <param name="profiles">The browser profile repository.</param>
         /// <param name="unitOfWork">Commits the new profile.</param>
         /// <param name="clock">The time source.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public CreateSessionHandler(
             IBrowserProfileRepository profiles,
             IUnitOfWork unitOfWork,
-            TimeProvider clock
+            TimeProvider clock,
+            ICallerContext caller
         )
         {
             ArgumentNullException.ThrowIfNull(profiles);
             ArgumentNullException.ThrowIfNull(unitOfWork);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(caller);
             _profiles = profiles;
             _unitOfWork = unitOfWork;
             _clock = clock;
+            Caller = caller;
         }
 
         /// <summary>
