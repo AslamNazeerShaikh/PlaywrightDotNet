@@ -99,14 +99,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(request);
-            var page = ClosedPage(context.BrowserProfileId);
+            var page = SearchPageDriver.FindPage(_pool, context.BrowserProfileId);
             if (page is null)
             {
                 // The operator closed the browser, or its renderer died,
                 // mid-run. A transient stop beats a crash: the handler
                 // retries once, then ends the run with whatever it kept.
                 return SearchPageResult.Blocked(
-                    Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                    SearchPageDriver.Transient($"Browser page closed or crashed at page {request.PageNumber}.")
                 );
             }
 
@@ -173,12 +173,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(Transient("Search page did not load."));
+                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page did not load."));
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(Transient("Search page timed out."));
+                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page timed out."));
             }
         }
 
@@ -227,8 +227,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var hasCards = await WaitForCardsAsync(page);
-            await ScrollAsync(page, cancellationToken);
+            var hasCards = await SearchPageDriver.WaitForCardsAsync(page, CardSelector);
+            await SearchPageDriver.ScrollAsync(page, cancellationToken);
             await page.EvaluateAsync(MarkHiddenScript);
 
             var challenge = NaukriChallengeClassifier.Classify(
@@ -276,12 +276,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(job);
-            var page = ClosedPage(context.BrowserProfileId);
+            var page = SearchPageDriver.FindPage(_pool, context.BrowserProfileId);
             if (page is null)
             {
                 return new JobDetailResult(
                     null,
-                    Transient($"Browser page closed or crashed at detail {job.ExternalJobId.Value}.")
+                    SearchPageDriver.Transient($"Browser page closed or crashed at detail {job.ExternalJobId.Value}.")
                 );
             }
 
@@ -318,32 +318,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, Transient("Detail page did not load."));
+                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page did not load."));
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, job.ExternalJobId.Value);
-                return new JobDetailResult(null, Transient("Detail page timed out."));
-            }
-        }
-
-        /// <summary>
-        /// Gets the run's open page, or null when the browser was closed or
-        /// its renderer died. A disposed context throws on property access,
-        /// so that reads as gone too. Callers report a transient wall instead
-        /// of throwing, so the run stops gracefully instead of crashing.
-        /// </summary>
-        /// <param name="profileId">The browser profile.</param>
-        /// <returns>The open page, or null when there is none.</returns>
-        private IPage? ClosedPage(BrowserProfileId profileId)
-        {
-            try
-            {
-                return _pool.Find(profileId);
-            }
-            catch (ObjectDisposedException)
-            {
-                return null;
+                return new JobDetailResult(null, SearchPageDriver.Transient("Detail page timed out."));
             }
         }
 
@@ -384,27 +364,6 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Waits for result cards; a wall or an empty result never shows them.
-        /// </summary>
-        /// <param name="page">The page.</param>
-        /// <returns>True when cards appeared.</returns>
-        private static async Task<bool> WaitForCardsAsync(IPage page)
-        {
-            try
-            {
-                await page.WaitForSelectorAsync(
-                    CardSelector,
-                    new PageWaitForSelectorOptions { Timeout = 15_000 }
-                );
-                return true;
-            }
-            catch (TimeoutException)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
         /// Waits for the detail's JSON-LD or description; the parser decides
         /// what is usable.
         /// </summary>
@@ -427,32 +386,6 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 // Classified and parsed as-is below.
             }
-        }
-
-        /// <summary>
-        /// Scrolls through the result list like a reader, so lazy cards load.
-        /// </summary>
-        /// <param name="page">The page.</param>
-        /// <param name="cancellationToken">Token to observe between scrolls.</param>
-        /// <returns>A task that completes after the scroll.</returns>
-        private static async Task ScrollAsync(IPage page, CancellationToken cancellationToken)
-        {
-            for (var step = 0; step < 4; step++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await page.Mouse.WheelAsync(0, 900);
-                await page.WaitForTimeoutAsync(400);
-            }
-        }
-
-        /// <summary>
-        /// A navigation failure the handler may retry with backoff.
-        /// </summary>
-        /// <param name="evidence">What failed.</param>
-        /// <returns>A transient-error assessment.</returns>
-        private static ChallengeAssessment Transient(string evidence)
-        {
-            return new ChallengeAssessment(ChallengeKind.TransientError, 0.5, evidence);
         }
 
         [LoggerMessage(

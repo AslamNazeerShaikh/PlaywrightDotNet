@@ -80,83 +80,55 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(request);
-            var page = ClosedPage(context.BrowserProfileId);
+            var page = SearchPageDriver.FindPage(_pool, context.BrowserProfileId);
             if (page is null)
             {
                 return SearchPageResult.Blocked(
-                    Transient($"Browser page closed or crashed at page {request.PageNumber}.")
+                    SearchPageDriver.Transient($"Browser page closed or crashed at page {request.PageNumber}.")
                 );
             }
 
-            int? status = null;
             try
             {
                 var start = request.Cursor is null
                 ? (request.PageNumber - 1) * LinkedInUrlBuilder.PageSize
-                : CursorOffset(request.Cursor);
-                var response = await page.GotoAsync(
+                : SearchPageDriver.CursorOffset(request.Cursor);
+                return await SearchPageDriver.SearchOffsetPageAsync<LinkedInSearchPage>(
+                    page,
                     LinkedInUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
-                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
-                );
-                status = response?.Status;
-
-                cancellationToken.ThrowIfCancellationRequested();
-                var hasCards = await WaitForCardsAsync(page);
-                await ScrollAsync(page, cancellationToken);
-                await page.EvaluateAsync(MarkHiddenScript);
-
-                var challenge = LinkedInChallengeClassifier.Classify(
-                    new Uri(page.Url),
-                    status,
-                    await page.TitleAsync(),
-                    await PageText.BodyAsync(page),
-                    hasCards
-                );
-                if (challenge.Kind != ChallengeKind.None)
-                {
-                    return SearchPageResult.Blocked(challenge);
-                }
-
-                var parsed = LinkedInSearchParser.Parse(
-                    await page.ContentAsync(),
-                    page.Url,
-                    _clock.GetUtcNow()
-                );
-                if (parsed.DroppedCards > 0)
-                {
-                    LogCardsDropped(
+                    CardSelector,
+                    MarkHiddenScript,
+                    start,
+                    static (url, status, title, body, hasCards) =>
+                        LinkedInChallengeClassifier.Classify(url, status, title, body, hasCards),
+                    static (html, url, now) => LinkedInSearchParser.Parse(html, url, now),
+                    static parsed => parsed.Jobs,
+                    static parsed => parsed.DroppedCards,
+                    static parsed => parsed.FirstJobId is null && parsed.ResultCount is null
+                        ? null
+                        : new PageFingerprint(parsed.FirstJobId, parsed.ResultCount),
+                    static (parsed, offset) => parsed.HasNext
+                        ? (offset + LinkedInUrlBuilder.PageSize).ToString(CultureInfo.InvariantCulture)
+                        : null,
+                    dropped => LogCardsDropped(
                         _logger,
                         context.RunId.Value,
                         request.PageNumber,
-                        parsed.DroppedCards
-                    );
-                }
-
-                string? next = null;
-                if (parsed.HasNext)
-                {
-                    var following = start + LinkedInUrlBuilder.PageSize;
-                    next = following.ToString(CultureInfo.InvariantCulture);
-                }
-
-                return new SearchPageResult(
-                    parsed.Jobs,
-                    next,
-                    parsed.FirstJobId is null && parsed.ResultCount is null
-                        ? null
-                        : new PageFingerprint(parsed.FirstJobId, parsed.ResultCount),
-                    ChallengeAssessment.Clear
+                        dropped
+                    ),
+                    _clock.GetUtcNow(),
+                    cancellationToken
                 );
             }
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(Transient("Search page did not load."));
+                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page did not load."));
             }
             catch (TimeoutException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 LogNavigationFailed(_logger, ex, context.RunId.Value, $"page {request.PageNumber}");
-                return SearchPageResult.Blocked(Transient("Search page timed out."));
+                return SearchPageResult.Blocked(SearchPageDriver.Transient("Search page timed out."));
             }
         }
 
@@ -177,92 +149,6 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
                 new ChallengeAssessment(ChallengeKind.LoginRequired, 1, "details:unsupported")
             );
             return Task.FromResult(blocked);
-        }
-
-        /// <summary>
-        /// Reads the <c>start</c> offset from the previous page's cursor.
-        /// </summary>
-        /// <param name="cursor">The opaque cursor; null for the first page.</param>
-        /// <returns>The result offset.</returns>
-        private static int CursorOffset(string? cursor)
-        {
-            return cursor is null
-                ? 0
-                : int.TryParse(
-                    cursor,
-                    NumberStyles.None,
-                    CultureInfo.InvariantCulture,
-                    out var start
-                ) && start >= 0
-                    ? start
-                    : 0;
-        }
-
-        /// <summary>
-        /// Gets the run's open page, or null when the browser was closed or
-        /// its renderer died. A disposed context throws on property access,
-        /// so that reads as gone too. Callers report a transient wall instead
-        /// of throwing, so the run stops gracefully instead of crashing.
-        /// </summary>
-        /// <param name="profileId">The browser profile.</param>
-        /// <returns>The open page, or null when there is none.</returns>
-        private IPage? ClosedPage(BrowserProfileId profileId)
-        {
-            try
-            {
-                return _pool.Find(profileId);
-            }
-            catch (ObjectDisposedException)
-            {
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Waits for result cards; a wall or an empty result never shows them.
-        /// </summary>
-        /// <param name="page">The page.</param>
-        /// <returns>True when cards appeared.</returns>
-        private static async Task<bool> WaitForCardsAsync(IPage page)
-        {
-            try
-            {
-                await page.WaitForSelectorAsync(
-                    CardSelector,
-                    new PageWaitForSelectorOptions { Timeout = 15_000 }
-                );
-                return true;
-            }
-            catch (TimeoutException)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Scrolls through the result list like a reader, so lazy cards load.
-        /// </summary>
-        /// <param name="page">The page.</param>
-        /// <param name="cancellationToken">Token to observe between scrolls.</param>
-        /// <returns>A task that completes after the scroll.</returns>
-        private static async Task ScrollAsync(IPage page, CancellationToken cancellationToken)
-        {
-            for (var step = 0; step < 4; step++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await page.Mouse.WheelAsync(0, 900);
-                await page.WaitForTimeoutAsync(400);
-            }
-        }
-
-        /// <summary>
-        /// A navigation failure the handler may retry with backoff.
-        /// </summary>
-        /// <param name="evidence">What failed.</param>
-        /// <returns>A transient-error assessment.</returns>
-        private static ChallengeAssessment Transient(string evidence)
-        {
-            return new ChallengeAssessment(ChallengeKind.TransientError, 0.5, evidence);
         }
 
         [LoggerMessage(

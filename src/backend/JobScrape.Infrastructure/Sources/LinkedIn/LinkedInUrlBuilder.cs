@@ -43,34 +43,23 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
             var locations = criteria.Locations.Count > 0
                 ? string.Join(", ", criteria.Locations)
                 : string.Empty;
-            var query = new List<string> { Pair("keywords", criteria.Keywords) };
+            var query = new List<string> { QueryString.Pair("keywords", criteria.Keywords) };
             if (locations.Length > 0)
             {
-                query.Add(Pair("location", locations));
+                query.Add(QueryString.Pair("location", locations));
             }
 
             if (criteria.PostedWithinDays is { } days)
             {
-                query.Add(Pair("f_TPR", $"r{days * 24 * 3600}"));
+                query.Add(QueryString.Pair("f_TPR", $"r{days * 24 * 3600}"));
             }
 
             if (start > 0)
             {
-                query.Add(Pair("start", start.ToString(CultureInfo.InvariantCulture)));
+                query.Add(QueryString.Pair("start", start.ToString(CultureInfo.InvariantCulture)));
             }
 
             return new Uri($"{Origin}jobs/search?{string.Join('&', query)}", UriKind.Absolute);
-        }
-
-        /// <summary>
-        /// Formats one percent-encoded query pair.
-        /// </summary>
-        /// <param name="name">The parameter name.</param>
-        /// <param name="value">The raw value.</param>
-        /// <returns>The encoded <c>name=value</c> pair.</returns>
-        private static string Pair(string name, string value)
-        {
-            return $"{name}={Uri.EscapeDataString(value)}";
         }
     }
 }
