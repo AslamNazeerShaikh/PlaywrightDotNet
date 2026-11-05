@@ -385,11 +385,15 @@ namespace JobScrape.Infrastructure.Tests.Browser
         }
 
         [Fact]
-        public async Task AdapterNeedsTheSessionsBrowser()
+        public async Task AdapterWithoutTheSessionsBrowserReportsTransient()
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                Source().SearchPageAsync(Context(), new SearchPageRequest(1, null), Ct)
+            var result = await Source().SearchPageAsync(
+                Context(),
+                new SearchPageRequest(1, null),
+                Ct
             );
+
+            Assert.Equal(ChallengeKind.TransientError, result.Challenge.Kind);
         }
 
         [Fact]

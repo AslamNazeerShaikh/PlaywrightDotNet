@@ -223,7 +223,7 @@ export function ProfilesPage({
                     </td>
                     <td>{p.keywords}</td>
                     <td>{p.remoteOnly ? "remote" : p.locations.join(", ")}</td>
-                    <td>{`${p.maxPages}p · ${p.maxJobs}j · ${p.maxDetails}d`}</td>
+                    <td>{`${p.startPage ?? 1}–${(p.startPage ?? 1) + p.maxPages - 1}p · ${p.maxJobs}j · ${p.maxDetails}d`}</td>
                     <td>
                       <CodeTag
                         code={p.enabled ? "ENABLED" : "DISABLED"}
@@ -277,7 +277,7 @@ export function ProfilesPage({
                   />
                   <DetailRow
                     label="Caps"
-                    value={`${plural(selected.maxPages, "page")} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
+                    value={`pages ${selected.startPage ?? 1}–${(selected.startPage ?? 1) + selected.maxPages - 1} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
                   <DetailRow
                     label="Delay window"
@@ -376,6 +376,15 @@ export function ProfilesPage({
                 </Field>
               </div>
               <div className="field-pair">
+                <Field label="START PAGE" name="startPage" errors={updateFieldErrors}>
+                  <input
+                    className="input"
+                    name="startPage"
+                    aria-label="Edit start page"
+                    inputMode="numeric"
+                    defaultValue={selected.startPage}
+                  />
+                </Field>
                 <Field label="MAX PAGES" name="maxPages" errors={updateFieldErrors}>
                   <input
                     className="input"
@@ -385,6 +394,8 @@ export function ProfilesPage({
                     defaultValue={selected.maxPages}
                   />
                 </Field>
+              </div>
+              <div className="field-pair">
                 <Field label="MAX JOBS" name="maxJobs" errors={updateFieldErrors}>
                   <input
                     className="input"
@@ -394,8 +405,6 @@ export function ProfilesPage({
                     defaultValue={selected.maxJobs}
                   />
                 </Field>
-              </div>
-              <div className="field-pair">
                 <Field label="MAX DETAILS" name="maxDetails" errors={updateFieldErrors}>
                   <input
                     className="input"
@@ -405,6 +414,8 @@ export function ProfilesPage({
                     defaultValue={selected.maxDetails}
                   />
                 </Field>
+              </div>
+              <div className="field-pair">
                 <Field label="MIN DELAY (MS)" name="minDelayMs" errors={updateFieldErrors}>
                   <input
                     className="input"
@@ -414,8 +425,6 @@ export function ProfilesPage({
                     defaultValue={selected.minDelayMs}
                   />
                 </Field>
-              </div>
-              <div className="field-pair">
                 <Field label="MAX DELAY (MS)" name="maxDelayMs" errors={updateFieldErrors}>
                   <input
                     className="input"
@@ -521,6 +530,7 @@ export function readUpdateForm(data: FormData): UpdateProfileInput {
     requiredSkills: readList(data, "requiredSkills"),
     companies: readList(data, "companies"),
     maxPages: readNumber(data, "maxPages"),
+    startPage: readNumber(data, "startPage"),
     maxJobs: readNumber(data, "maxJobs"),
     maxDetails: readNumber(data, "maxDetails"),
     minDelayMs: readNumber(data, "minDelayMs"),

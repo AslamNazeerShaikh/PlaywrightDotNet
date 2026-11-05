@@ -15,6 +15,7 @@ const profile = {
   requiredSkills: ["C#", "ASP.NET Core"],
   companies: ["Infosys", "TCS"],
   maxPages: 3,
+  startPage: 1,
   maxJobs: 60,
   maxDetails: 60,
   minDelayMs: 2500,
@@ -80,6 +81,7 @@ describe("profiles api", () => {
       requiredSkills: ["C#"],
       companies: ["Infosys", "TCS"],
       maxPages: 2,
+      startPage: 1,
       maxJobs: 20,
       maxDetails: 10,
       minDelayMs: 3000,
@@ -190,6 +192,7 @@ describe("profile form", () => {
     data.set("experienceYears", "6");
     data.set("postedWithinDays", "");
     data.set("maxPages", "2");
+    data.set("startPage", "31");
     data.set("maxJobs", "20");
     data.set("maxDetails", "10");
     data.set("minDelayMs", "3000");
@@ -207,6 +210,7 @@ describe("profile form", () => {
       requiredSkills: ["C#", "ASP.NET Core"],
       companies: ["Infosys", "TCS"],
       maxPages: 2,
+      startPage: 31,
       maxJobs: 20,
       maxDetails: 10,
       minDelayMs: 3000,

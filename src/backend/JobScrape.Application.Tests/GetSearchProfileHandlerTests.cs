@@ -22,6 +22,7 @@ namespace JobScrape.Application.Tests
                 [],
                 [],
                 3,
+                1,
                 60,
                 60,
                 2500,

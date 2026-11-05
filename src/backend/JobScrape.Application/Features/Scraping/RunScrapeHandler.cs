@@ -307,7 +307,13 @@ namespace JobScrape.Application.Features.Scraping
             await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
             LogStarted(_logger, run.Id.Value, source.Value, profile.Id.Value);
 
-            var context = new SourceRunContext(run.Id, source, browser.Id, profile.Criteria);
+            var context = new SourceRunContext(
+                run.Id,
+                source,
+                browser.Id,
+                profile.Criteria,
+                profile.Limits.StartPage
+            );
             return Result.Ok(
                 new RunScope(
                     run,
@@ -462,11 +468,24 @@ namespace JobScrape.Application.Features.Scraping
             var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
             cursor = progress.NextCursor;
 
-            for (var page = progress.PagesCompleted + 1; page <= run.Limits.MaxPages; page++)
+            // A cold load of a -N slug URL redirects to page 1, so
+            // pre-window pages are visited, not kept (Naukri: Next
+            // clicks; Indeed/LinkedIn: direct offsets).
+            var firstPage = run.Limits.StartPage;
+            var lastPage = firstPage + run.Limits.MaxPages - 1;
+
+            // A fresh run starts at page one and walks forward; a resumed
+            // run restarts at the window page its kept count points at.
+            var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            if (absolute < firstPage)
+            {
+                LogAdvancingToStartPage(_logger, run.Id.Value, firstPage);
+            }
+            for (; absolute <= lastPage; absolute++)
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, page, "job cap reached");
+                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached");
                     break;
                 }
 
@@ -476,23 +495,46 @@ namespace JobScrape.Application.Features.Scraping
                 );
                 if (!pageQuota.IsAllowed)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, page, "daily page quota exhausted");
+                    LogPaginationStopped(
+                        _logger,
+                        run.Id.Value,
+                        absolute,
+                        "daily page quota exhausted"
+                    );
                     break;
                 }
 
-                if (page > 1)
+                if (progress.PagesCompleted > 0 || absolute > 1)
                 {
                     await _delay.WaitAsync(politeness.NextDelay(), cancellationToken);
                 }
 
+                var page = absolute;
                 var request = new SearchPageRequest(page, cursor);
-                var result = await FetchWithRetryAsync(
-                    scope,
-                    $"page {page}",
-                    token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
-                    page => page.Challenge,
-                    cancellationToken
-                );
+                SearchPageResult result;
+                try
+                {
+                    result = await FetchWithRetryAsync(
+                        scope,
+                        $"page {page}",
+                        token => scope.Adapter.SearchPageAsync(scope.Context, request, token),
+                        fetched => fetched.Challenge,
+                        cancellationToken
+                    );
+                }
+                catch (StartPageOutOfRangeException ex)
+                {
+                    // Fail with the precise reason instead of the generic
+                    // zero-page fail below. The run is non-terminal here
+                    // (searching just began), so Fail cannot throw.
+                    var outOfRange =
+                        $"start page {ex.StartPage} is past the last page {ex.MaxPage}";
+                    LogPaginationStopped(_logger, run.Id.Value, page, outOfRange);
+                    run.RecordFailure();
+                    run.Fail(ex.Message, _clock.GetUtcNow());
+                    await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                    return true;
+                }
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
                     scope.Browser.ConsecutiveChallenges,
@@ -517,6 +559,24 @@ namespace JobScrape.Application.Features.Scraping
                 {
                     LogPaginationStopped(_logger, run.Id.Value, page, "repeated page");
                     break;
+                }
+
+                if (page < firstPage)
+                {
+                    // Before the window: advance the cursor, keep nothing.
+                    cursor = result.NextCursor;
+                    if (cursor is null)
+                    {
+                        LogPaginationStopped(
+                            _logger,
+                            run.Id.Value,
+                            page,
+                            "no further pages before the window"
+                        );
+                        break;
+                    }
+
+                    continue;
                 }
 
                 var now = _clock.GetUtcNow();
@@ -1060,6 +1120,16 @@ namespace JobScrape.Application.Features.Scraping
             Message = "Scrape request for profile {ProfileId} refused with {ErrorCode}"
         )]
         private static partial void LogRefused(ILogger logger, Guid profileId, string errorCode);
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Run {RunId} advancing to start page {StartPage}: earlier pages are visited, not kept"
+        )]
+        private static partial void LogAdvancingToStartPage(
+            ILogger logger,
+            Guid runId,
+            int startPage
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,

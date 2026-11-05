@@ -3,7 +3,7 @@ namespace JobScrape.Application.Features.Scraping
     /// <summary>
     /// Which result page to fetch.
     /// </summary>
-    /// <param name="PageNumber">One-based page number within the run.</param>
+    /// <param name="PageNumber">Absolute one-based page number on the site.</param>
     /// <param name="Cursor">
     /// The opaque continuation from the previous page's
     /// <see cref="SearchPageResult.NextCursor"/>; null for the first page.

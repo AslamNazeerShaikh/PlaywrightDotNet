@@ -73,6 +73,7 @@ namespace JobScrape.Application.Features.SearchProfiles
                     request.PostedWithinDays,
                     request.RemoteOnly,
                     request.MaxPages,
+                    request.StartPage,
                     request.MaxJobs,
                     request.MaxDetails,
                     request.MinDelayMs,

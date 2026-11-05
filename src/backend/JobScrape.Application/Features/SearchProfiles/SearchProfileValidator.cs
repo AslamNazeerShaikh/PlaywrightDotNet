@@ -91,7 +91,8 @@ namespace JobScrape.Application.Features.SearchProfiles
                         : defaults.MinDelay,
                     input.MaxDelayMs is { } max
                         ? TimeSpan.FromMilliseconds(max)
-                        : defaults.MaxDelay
+                        : defaults.MaxDelay,
+                    input.StartPage ?? 1
                 )
             );
         }
@@ -204,6 +205,36 @@ namespace JobScrape.Application.Features.SearchProfiles
                 [
                     $"Must be between 1 and {settings.MaxPagesCeiling} ({policy}).",
                 ];
+            }
+
+            var startPage = input.StartPage ?? 1;
+            if (input.StartPage is < 1 || input.StartPage > settings.MaxPagesCeiling)
+            {
+                errors["startPage"] =
+                [
+                    $"Must be between 1 and {settings.MaxPagesCeiling} ({policy}).",
+                ];
+            }
+            else
+            {
+                // A missing cap still fills from the source default, so the
+                // check runs against the effective window, never raw input.
+                // An invalid maxPages already owns its error; it gets no
+                // second one here.
+                var maxPagesValid =
+                    input.MaxPages is null
+                    || (input.MaxPages >= 1 && input.MaxPages <= settings.MaxPagesCeiling);
+                var effectiveMax = input.MaxPages ?? defaults.MaxPages;
+                if (
+                    maxPagesValid
+                    && startPage + effectiveMax - 1 > settings.MaxPagesCeiling
+                )
+                {
+                    errors["startPage"] =
+                    [
+                        $"Pages {startPage}..{startPage + effectiveMax - 1} exceed the ceiling of {settings.MaxPagesCeiling} ({policy}).",
+                    ];
+                }
             }
 
             if (input.MaxJobs is < 1 || input.MaxJobs > settings.MaxJobsCeiling)

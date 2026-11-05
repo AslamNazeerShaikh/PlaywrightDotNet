@@ -200,6 +200,7 @@ classDiagram
 - At least one location **or** `RemoteOnly = true`.
 - `experience` 0–50; `postedWithinDays` 1–30.
 - `maxPages` 1–1000; `maxJobs` 1–20 000; `maxDetails` 0–1000.
+- `startPage` 1–1000, default 1; the window ends at `startPage + maxPages - 1`, never past 1000. Consecutive runs split a listing into groups (1–30, then 31–60).
 - `minDelay` 1–60s; `maxDelay` ≥ `minDelay`; `maxDelay` ≤ 120s.
 - A profile cannot be enabled if its source is `HighRisk` and consent is not acknowledged (`Enable(highRiskConsentAcknowledged, now)`).
 
@@ -376,15 +377,19 @@ public sealed record RunLimits
         int maxJobs,
         int maxDetails,
         TimeSpan minDelay,
-        TimeSpan maxDelay)
+        TimeSpan maxDelay,
+        int startPage = 1)
     {
+        if (startPage is < 1 or > 1000) throw new DomainException("startPage must be 1..1000.");
         if (maxPages is < 1 or > 1000) throw new DomainException("maxPages must be 1..1000.");
+        if (startPage + maxPages - 1 > 1000) throw new DomainException("window must end by page 1000.");
         if (maxJobs is < 1 or > 20000) throw new DomainException("maxJobs must be 1..20000.");
         if (maxDetails is < 0 or > 1000) throw new DomainException("maxDetails must be 0..1000.");
         if (minDelay < TimeSpan.FromSeconds(1)) throw new DomainException("minDelay >= 1s.");
         if (maxDelay < minDelay) throw new DomainException("maxDelay >= minDelay.");
         if (maxDelay > TimeSpan.FromMinutes(2)) throw new DomainException("maxDelay <= 2m.");
 
+        StartPage = startPage;
         MaxPages = maxPages;
         MaxJobs = maxJobs;
         MaxDetails = maxDetails;
@@ -392,6 +397,7 @@ public sealed record RunLimits
         MaxDelay = maxDelay;
     }
 
+    public int StartPage { get; }
     public int MaxPages { get; }
     public int MaxJobs { get; }
     public int MaxDetails { get; }

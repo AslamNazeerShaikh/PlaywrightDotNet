@@ -39,7 +39,7 @@ Rules the API enforces:
 
 - One run at a time: a second start returns `409 RUN_IN_PROGRESS` until the first ends or is cancelled.
 - If the API stops mid-run, the run is cancelled; a run still in an executing stage at the next start (e.g. after a crash) is marked `Failed` with `Interrupted: the API stopped while the run was executing.`
-- Walls are never retried. A challenge pauses the run, a rate limit waits out its window, a changed page or a wall at session start fails it. Challenge and changed-page evidence is written to `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` (`assessment.json`, `screenshot.png`, `page.html`); a challenged session cools down (a login wall marks it expired). There is no resume, login, or probe endpoint yet: cancel the paused run, wait out the cooldown, and start a new one.
+- Walls are never retried. A challenge pauses the run, a rate limit waits out its window, a changed page or a wall at session start fails it. Challenge and changed-page evidence is written to `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` (`assessment.json`, `screenshot.png`, `page.html`); a challenged session cools down (a login wall marks it expired). There is no resume, login, or probe endpoint yet: cancel the paused run and start a new one.
 - Relative `JobScrape:Storage` paths (`artifacts/...`) resolve against the API's content root (the project directory under `dotnet run --project`).
 
 Verified live on 2026-11-01: headed Chromium (`Bundled`), profile "dot net developer" in Pune, caps 2 pages / 40 jobs / 3 details → `Completed` in ~30 s with 40 new postings, 3 details enriched, 0 walls, session `Healthy`.

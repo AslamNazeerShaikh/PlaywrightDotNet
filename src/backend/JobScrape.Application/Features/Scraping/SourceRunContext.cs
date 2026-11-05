@@ -10,10 +10,12 @@ namespace JobScrape.Application.Features.Scraping
     /// <param name="Source">The source being searched.</param>
     /// <param name="BrowserProfileId">The browser session to use.</param>
     /// <param name="Criteria">The search criteria.</param>
+    /// <param name="StartPage">The window's first page, for the page 1 probe guard.</param>
     public sealed record SourceRunContext(
         ScrapeRunId RunId,
         SourceKey Source,
         BrowserProfileId BrowserProfileId,
-        SearchCriteria Criteria
+        SearchCriteria Criteria,
+        int StartPage = 1
     );
 }
