@@ -50,7 +50,7 @@ namespace JobScrape.Mcp.Tools
 
             throw From(
                 Errors.ValidationFailed(
-                    "The request contains invalid fields.",
+                    $"The request contains invalid fields. {requiredMessage}",
                     new Dictionary<string, string[]> { ["id"] = [requiredMessage] }
                 )
             );
