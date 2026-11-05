@@ -16,11 +16,11 @@
 | **Options** | Composition root (`JobScrape.Api`) | Strongly typed, validated configuration | Per-request data or secrets storage |
 | **Problem Details** | API edge (`JobScrape.Api`) | One HTTP error contract for the cockpit | Anything but HTTP errors |
 
-The intended flow (as implemented — two endpoints, two handlers, one mapper):
+The intended flow (as implemented — six controllers, one mapper):
 
 ```mermaid
 flowchart LR
-    A["API endpoint<br/>HealthController · SearchProfilesController"] --> B["Use-case handler<br/>GetHealth · GetSearchProfile"]
+    A["API endpoint<br/>controller (Health, SearchProfiles,<br/>Runs, Sessions, Sources, Database)"] --> B["Use-case handler<br/>GetHealth · GetSearchProfile · StartRun · RunScrape"]
     B --> C{"Result"}
     C -->|Success| D["DTO / resource<br/>200 + JSON"]
     C -->|Failure| F["Problem Details<br/>application/problem+json<br/>code + traceId"]
@@ -53,7 +53,7 @@ public sealed class GetSearchProfileHandler
 
 `GetSearchProfileHandler` is not an `IRequestHandler<,>`. It is resolved by constructor injection and called directly by the API controller (`SearchProfilesController.GetAsync`), which maps success to 200 and failure through `ErrorMapper.ToProblem`.
 
-**Scope note:** the scrape slice (`RunScrapeHandler` + its ten ports) is implemented but unregistered and uninvoked; the two live verticals are health and profile lookup.
+**Scope note:** the scrape slice (`RunScrapeHandler` + its ten ports, split across gate/paginator/enricher/retry partials) is registered (`AddScoped`) and invoked from `RunCoordinator`; `SearchPageDriver` in `Infrastructure.Sources` holds the shared pagination mechanics. Start validation lives in `StartRunHandler` with route-id checks shared through `RunIds`. See [Design Pattern Decisions](20-design-pattern-decisions.md) for the kept/rejected pattern verdicts.
 
 ### 2.2 Banned
 
