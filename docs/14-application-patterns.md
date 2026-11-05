@@ -574,7 +574,30 @@ Result<T> ──► Ok → 200 + DTO
 
 ---
 
-## 9. References
+## 9. MCP tool conventions
+
+> MCP tools are a second edge over the same handlers. The API maps them at
+> `/mcp` (stateless Streamable HTTP); `JobScrape.Mcp.Host` serves them over
+> stdio. Both hosts run every call as `CallerContext.LocalOperator` until a
+> transport carries an identity. See [ADR-0019](10-adr/0019-mcp-transports-and-tools.md).
+
+- One sealed class per area, marked `[McpServerToolType]` (`HealthTools`,
+  `SourcesTools`, `SessionsTools`, `SearchProfilesTools`,
+  `SearchProfilesWriteTools`, `RunsTools`, `RunActionsTools`).
+- Tools are listed explicitly (`WithTools<T>` per class in both composition
+  roots). No assembly scanning; adding a tool is a visible diff.
+- Handlers are constructor-injected and called directly. No mediator, per §2.
+- Expected handler failures throw `McpException` carrying the stable code
+  plus operator-safe detail (`McpErrors.OrThrow`); the installed SDK's
+  `McpException` carries only a message, so the code travels inside it.
+- Every tool passes the `CancellationToken` through to the handler.
+- Runs are start-then-poll: `start_run` returns the recorded run at once, the
+  agent polls `get_run`. No tool wraps `RunScrapeHandler`, and no tool
+  exposes `IDatabaseExplorer`.
+
+---
+
+## 10. References
 
 - [Microsoft: Options pattern in .NET](https://learn.microsoft.com/dotnet/core/extensions/options)
 - [Microsoft: Options validation](https://learn.microsoft.com/dotnet/core/extensions/options#options-validation)
