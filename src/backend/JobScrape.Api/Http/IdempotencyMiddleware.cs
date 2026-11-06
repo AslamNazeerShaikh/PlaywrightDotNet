@@ -20,6 +20,8 @@ namespace JobScrape.Api.Http
     /// A reservation abandoned by a crashed host is not taken over by another
     /// instance: recovery is best-effort and the row expires after the 24-hour
     /// retention window, after which the client may retry with the same key.
+    /// A contender waits up to the completion timeout and then receives 503;
+    /// locks are in-process only.
     /// </summary>
     public sealed class IdempotencyMiddleware
     {
@@ -69,8 +71,7 @@ namespace JobScrape.Api.Http
         {
             ArgumentNullException.ThrowIfNull(next);
             _next = next;
-            _completionWaitTimeout =
-                options?.Value.CompletionWaitTimeout ?? CompletionWaitTimeout;
+            _completionWaitTimeout = options?.Value.CompletionWaitTimeout ?? CompletionWaitTimeout;
         }
 
         /// <summary>
@@ -387,6 +388,4 @@ namespace JobScrape.Api.Http
         public TimeSpan CompletionWaitTimeout { get; set; } =
             IdempotencyMiddleware.CompletionWaitTimeout;
     }
-
-
 }

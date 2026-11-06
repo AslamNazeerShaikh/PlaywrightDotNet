@@ -1,10 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
-using System.IdentityModel.Tokens.Jwt;
 using JobScrape.Api.Http;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
@@ -279,25 +279,33 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
             var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("IDEMPOTENCY_IN_PROGRESS", problem.GetProperty("code").GetString());
+            Assert.Equal(
+                "The request is already in progress.",
+                problem.GetProperty("title").GetString()
+            );
+            Assert.Equal(
+                "A previous attempt reserved this idempotency key and did not complete. Retry with a new key or wait for the reservation to expire.",
+                problem.GetProperty("detail").GetString()
+            );
         }
 
         [Fact]
         public async Task SecondContenderFailsSemaphoreWaitReturns503()
         {
-            RequestDelegate next = async context =>
-            {
-                await Task.Delay(TimeSpan.FromSeconds(2), context.RequestAborted);
-            };
+            var entered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            var release = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            RequestDelegate next = _ => Task.CompletedTask;
             var middleware = new IdempotencyMiddleware(
                 next,
                 Options.Create(
-                    new IdempotencyOptions
-                    {
-                        CompletionWaitTimeout = TimeSpan.FromMilliseconds(50),
-                    }
+                    new IdempotencyOptions { CompletionWaitTimeout = TimeSpan.FromMilliseconds(50) }
                 )
             );
-            var store = new FakeIdempotencyStore();
+            var store = new BlockingStore(entered, release);
             var clock = TimeProvider.System;
 
             var services = new ServiceCollection();
@@ -307,42 +315,87 @@ namespace JobScrape.Api.Tests
 
             var ctx1 = new DefaultHttpContext();
             ctx1.User = new ClaimsPrincipal(
-                new ClaimsIdentity(
-                    [new Claim(IdentityClaimTypes.Subject, "sub")],
-                    "Bearer"
-                )
+                new ClaimsIdentity([new Claim(IdentityClaimTypes.Subject, "sub")], "Bearer")
             );
             ctx1.Request.Method = "POST";
             ctx1.Request.Path = "/api/v1/users";
             ctx1.Request.Headers.Append("Idempotency-Key", "same-key");
-            ctx1.Request.Body = new MemoryStream();
+            ctx1.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("not-empty"));
+            ctx1.Request.Body.Position = 0;
             ctx1.Response.Body = new MemoryStream();
 
             var ctx2 = new DefaultHttpContext();
             ctx2.User = new ClaimsPrincipal(
-                new ClaimsIdentity(
-                    [new Claim(IdentityClaimTypes.Subject, "sub")],
-                    "Bearer"
-                )
+                new ClaimsIdentity([new Claim(IdentityClaimTypes.Subject, "sub")], "Bearer")
             );
             ctx2.Request.Method = "POST";
             ctx2.Request.Path = "/api/v1/users";
             ctx2.Request.Headers["Idempotency-Key"] = "same-key";
-            ctx2.Request.Body = new MemoryStream();
+            ctx2.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("not-empty"));
+            ctx2.Request.Body.Position = 0;
             ctx2.Response.Body = new MemoryStream();
 
             ctx1.RequestServices = serviceProvider;
             ctx2.RequestServices = serviceProvider;
 
-            var first = middleware.InvokeAsync(ctx1, store, clock);
-            await Task.Delay(TimeSpan.FromMilliseconds(50), Ct);
-            var second = middleware.InvokeAsync(ctx2, store, clock);
+            try
+            {
+                var first = middleware.InvokeAsync(ctx1, store, clock);
+                await entered.Task;
+                var second = middleware.InvokeAsync(ctx2, store, clock);
 
-            var finished = await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(2), Ct));
-            Assert.Same(second, finished);
+                var finished = await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(2), Ct));
+                Assert.Same(second, finished);
 
-            await first;
-            Assert.Equal(StatusCodes.Status503ServiceUnavailable, ctx2.Response.StatusCode);
+                Assert.Equal(StatusCodes.Status503ServiceUnavailable, ctx2.Response.StatusCode);
+
+                release.TrySetResult();
+                await first;
+                Assert.Equal(StatusCodes.Status200OK, ctx1.Response.StatusCode);
+            }
+            finally
+            {
+                release.TrySetResult();
+            }
+        }
+
+        private sealed class BlockingStore : IIdempotencyStore
+        {
+            private readonly TaskCompletionSource _entered;
+            private readonly TaskCompletionSource _release;
+
+            public BlockingStore(TaskCompletionSource entered, TaskCompletionSource release)
+            {
+                _entered = entered;
+                _release = release;
+            }
+
+            public Task<IdempotencyEntry?> GetAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<IdempotencyEntry?>(null);
+
+            public Task SaveAsync(IdempotencyEntry entry, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
+
+            public async Task<bool> TryReserveAsync(
+                IdempotencyEntry entry,
+                CancellationToken cancellationToken
+            )
+            {
+                _entered.TrySetResult();
+                await _release.Task;
+                return true;
+            }
+
+            public Task RemoveAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            ) => Task.CompletedTask;
         }
 
         private sealed class FakeIdempotencyStore : IIdempotencyStore

@@ -185,10 +185,7 @@ namespace JobScrape.Api.Controllers
                 return Errors.RoleNotFound(name).ToProblem();
             }
 
-            if (
-                role == RoleName.Admin
-                && !User.IsInRole(RoleName.Admin.ToString())
-            )
+            if (role == RoleName.Admin && !User.IsInRole(RoleName.Admin.ToString()))
             {
                 return Errors.AccessDenied().ToProblem();
             }
@@ -217,10 +214,7 @@ namespace JobScrape.Api.Controllers
                 return Errors.RoleNotFound(name).ToProblem();
             }
 
-            if (
-                role == RoleName.Admin
-                && !User.IsInRole(RoleName.Admin.ToString())
-            )
+            if (role == RoleName.Admin && !User.IsInRole(RoleName.Admin.ToString()))
             {
                 return Errors.AccessDenied().ToProblem();
             }

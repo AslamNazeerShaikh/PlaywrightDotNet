@@ -81,7 +81,9 @@ namespace JobScrape.Application.Features.Identity
 
             if (
                 roleName == RoleName.Admin
-                && !_caller.Roles.Any(role => string.Equals(role, RoleName.Admin.ToString(), StringComparison.Ordinal))
+                && !_caller.Roles.Any(role =>
+                    string.Equals(role, RoleName.Admin.ToString(), StringComparison.Ordinal)
+                )
             )
             {
                 return Result.Fail(Errors.AccessDenied());

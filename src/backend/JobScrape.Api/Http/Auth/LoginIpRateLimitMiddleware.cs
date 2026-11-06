@@ -49,7 +49,11 @@ namespace JobScrape.Api.Http.Auth
                 HttpMethods.IsPost(context.Request.Method)
                 && (
                     string.Equals(path, "/api/v1/auth/login", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(path, "/api/v1/auth/setup-password", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(
+                        path,
+                        "/api/v1/auth/setup-password",
+                        StringComparison.OrdinalIgnoreCase
+                    )
                 );
 
             if (isAuthSurface)

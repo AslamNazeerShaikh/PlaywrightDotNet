@@ -16,9 +16,7 @@ namespace JobScrape.Api.Http.Auth
         /// <summary>
         /// Initializes a new instance of the <see cref="PermissionAuthorizationHandler"/> class.
         /// </summary>
-        public PermissionAuthorizationHandler()
-        {
-        }
+        public PermissionAuthorizationHandler() { }
 
         /// <summary>
         /// Succeeds when the token carries the required permission claim and

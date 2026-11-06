@@ -482,7 +482,7 @@ namespace JobScrape.Application.Results
             return new ErrorInfo(
                 "IDEMPOTENCY_IN_PROGRESS",
                 "The request is already in progress.",
-                "The request is already in progress.",
+                "A previous attempt reserved this idempotency key and did not complete. Retry with a new key or wait for the reservation to expire.",
                 ErrorKind.Unavailable,
                 new Dictionary<string, object?>()
             );

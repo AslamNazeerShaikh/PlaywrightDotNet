@@ -910,7 +910,11 @@ namespace JobScrape.Application.Tests
             first.AssignRole(admin.Id);
             second.AssignRole(admin.Id);
             var unitOfWork = new FakeUnitOfWork();
-            var caller = new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>());
+            var caller = new CallerContext(
+                "admin",
+                new List<string> { "Admin" },
+                Array.Empty<string>()
+            );
             var firstHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
             var secondHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
             var ct = TestContext.Current.CancellationToken;

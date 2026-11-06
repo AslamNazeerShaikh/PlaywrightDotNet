@@ -12,13 +12,14 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
     /// cannot grow without bound.
     /// </summary>
     internal sealed partial class IdempotencyStore(
-    JobScrapeDbContext db,
-    TimeProvider clock,
-    ILogger<IdempotencyStore>? logger = null
-) : IIdempotencyStore
-{
-    private readonly ILogger<IdempotencyStore> _logger =
-        logger ?? NullLogger<IdempotencyStore>.Instance;
+        JobScrapeDbContext db,
+        TimeProvider clock,
+        ILogger<IdempotencyStore>? logger = null
+    ) : IIdempotencyStore
+    {
+        private readonly ILogger<IdempotencyStore> _logger =
+            logger ?? NullLogger<IdempotencyStore>.Instance;
+
         /// <summary>
         /// How long a stored response replays, in hours.
         /// </summary>
@@ -45,8 +46,8 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             // A reservation may be tracked in this unit of work; drop it so
             // the read reflects committed state from other scopes.
             db.ChangeTracker.Clear();
-            var record = await db.IdempotencyRecords
-                .AsNoTracking()
+            var record = await db
+                .IdempotencyRecords.AsNoTracking()
                 .FirstOrDefaultAsync(
                     stored =>
                         stored.OwnerKey == ownerKey
@@ -266,23 +267,21 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         {
             return exception.InnerException is SqliteException sqlite
                 && (
-                    sqlite.SqliteExtendedErrorCode
-                        == SqliteUniqueConstraintExtendedCode
-                    || sqlite.SqliteExtendedErrorCode
-                        == SqlitePrimaryKeyConstraintExtendedCode
+                    sqlite.SqliteExtendedErrorCode == SqliteUniqueConstraintExtendedCode
+                    || sqlite.SqliteExtendedErrorCode == SqlitePrimaryKeyConstraintExtendedCode
                 );
         }
 
-    [LoggerMessage(
-        Level = LogLevel.Warning,
-        Message = "Idempotency cleanup failed for {OwnerKey}/{Endpoint}/{Key}"
-    )]
-    private static partial void LogRemoveFailed(
-        ILogger logger,
-        Exception exception,
-        string ownerKey,
-        string endpoint,
-        string key
-    );
-}
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Idempotency cleanup failed for {OwnerKey}/{Endpoint}/{Key}"
+        )]
+        private static partial void LogRemoveFailed(
+            ILogger logger,
+            Exception exception,
+            string ownerKey,
+            string endpoint,
+            string key
+        );
+    }
 }
