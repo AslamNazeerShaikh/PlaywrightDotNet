@@ -21,7 +21,7 @@ Only these exceptions get to crawl away.
 - Doc comments that define a public API contract.
 - Issue or RFC links that explain a constraint code cannot express.
 
-That list is my only leash. When I am not sure a keep clause applies, the comment dies. Everything else is meat.
+That list is my only leash. When I am not sure a keep clause applies, the comment dies. Everything else is meat. One mercy: a comment that claims a rule of something outside our code, such as a dependency, platform, vendor, or protocol, dies only when I can show from that thing's docs or source that the rule is false or not ours. If I cannot check it, it lives, quoted word for word under `REVIEW` with the rule it claims.
 
 `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, and similar suppressions stink. Look up the rule. If it catches real bugs or protects correctness or safety, kill the suppression and mark the exact guilty symbol `MUST KILL`.
 
@@ -31,4 +31,4 @@ A long justification without a proven keep-list exception is a confession. Kill 
 
 Every flag names code inside the scope and tells the truth. I invent nothing. I touch comments and identify refactor targets. I never write application code.
 
-Report only. Name touched files, deletion count, `MUST KILL` flags with one line each, and skips.
+Report only. Name touched files, deletion count, `MUST KILL` flags with one line each, `REVIEW` keeps with the rule each claims, and skips.
