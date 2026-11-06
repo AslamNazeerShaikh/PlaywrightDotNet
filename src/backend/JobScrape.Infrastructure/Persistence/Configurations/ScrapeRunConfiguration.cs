@@ -6,8 +6,10 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
 {
     /// <summary>
     /// Maps <see cref="ScrapeRun"/>, including the private resume stage so a
-    /// paused run resumes where it stopped after a restart. The profile is
-    /// referenced by id with a real foreign key but no navigation property.
+    /// paused run resumes where it stopped after a restart, and the fetch
+    /// position as an owned part of the run: one aggregate, one table pair,
+    /// no progress port. The profile is referenced by id with a real foreign
+    /// key but no navigation property.
     /// </summary>
     public sealed class ScrapeRunConfiguration : IEntityTypeConfiguration<ScrapeRun>
     {
@@ -47,6 +49,20 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(run => run.ProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
+            var progress = builder.OwnsOne(run => run.Progress!);
+            progress.ToTable("scrape_run_progress");
+            progress.Property(position => position.Id).HasConversion(
+                DomainConverters.ScrapeRunId);
+            progress.Property(position => position.PagesCompleted);
+            progress.Property(position => position.NextCursor);
+            progress
+                .Property(position => position.SeenExternalIds)
+                .HasConversion(DomainConverters.StringList);
+            progress.Property(position => position.UpdatedAt);
+            // Owned navigations delete with their owner by convention
+            // (Cascade); the migration pins it, and the model snapshot
+            // guards rescaffolds. OwnershipBuilder exposes no OnDelete.
+            progress.WithOwner().HasForeignKey(position => position.Id);
             builder.HasIndex(run => run.CreatedAt);
         }
     }

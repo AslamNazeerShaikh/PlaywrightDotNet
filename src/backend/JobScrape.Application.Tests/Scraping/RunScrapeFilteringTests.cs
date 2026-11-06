@@ -184,7 +184,8 @@ namespace JobScrape.Application.Tests.Scraping
             await RunOkAsync(harness);
 
             var run = Assert.Single(harness.Store.Runs);
-            var progress = Assert.Single(harness.Store.Progress);
+            var progress = run.Progress;
+            Assert.NotNull(progress);
             Assert.Equal(run.Id, progress.Id);
             Assert.Equal(2, progress.PagesCompleted);
             Assert.Null(progress.NextCursor);
@@ -200,7 +201,9 @@ namespace JobScrape.Application.Tests.Scraping
 
             await RunOkAsync(harness);
 
-            var progress = Assert.Single(harness.Store.Progress);
+            var run = Assert.Single(harness.Store.Runs);
+            var progress = run.Progress;
+            Assert.NotNull(progress);
             Assert.Equal(2, progress.PagesCompleted);
             Assert.Equal(["1", "2"], progress.SeenExternalIds.Order());
             Assert.Equal(2, Assert.Single(harness.Store.Runs).Stats.PostingsFound);

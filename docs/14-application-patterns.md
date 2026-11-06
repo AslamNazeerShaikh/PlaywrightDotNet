@@ -579,8 +579,9 @@ Result<T> ──► Ok → 200 + DTO
 > MCP tools are a second edge over the same handlers, served web-only by
 > the API. `JobScrape.Mcp.Host` (stdio) is removed; `JobScrape.Api` is the
 > single composition root. The API maps them at `/mcp` (stateless
-> Streamable HTTP) behind the same JWT bearer chain as the REST
-> controllers, so every call carries the caller's identity. See [ADR-0019](10-adr/0019-mcp-transports-and-tools.md).
+> Streamable HTTP). Every call runs as `CallerContext.LocalOperator` until
+> JWT wiring lands; then `/mcp` enforces the same bearer chain as the
+> REST controllers. See [ADR-0019](10-adr/0019-mcp-transports-and-tools.md).
 
 - One sealed class per area, marked `[McpServerToolType]` (`HealthTools`,
   `SourcesTools`, `SessionsTools`, `SearchProfilesTools`,

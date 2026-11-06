@@ -55,7 +55,7 @@ namespace JobScrape.Api
             );
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-            // One list, shared with the stdio host: clock, caller, handlers,
+            // One list for the single host: clock, caller, handlers,
             // export writers, and the background run coordinator.
             builder.Services.AddJobScrapeUseCases();
 

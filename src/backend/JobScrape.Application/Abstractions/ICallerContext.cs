@@ -28,8 +28,8 @@ namespace JobScrape.Application.Abstractions
         : ICallerContext
     {
         /// <summary>
-        /// Gets the local default: loopback hosts (stdio, loopback HTTP)
-        /// have no transport identity, so every call runs as this actor.
+        /// Gets the local default: loopback callers with no transport
+        /// identity run as this actor until JWT wiring lands.
         /// </summary>
         public static CallerContext LocalOperator { get; } =
             new("local-operator", Array.Empty<string>());

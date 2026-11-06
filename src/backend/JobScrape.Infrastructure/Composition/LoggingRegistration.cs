@@ -29,10 +29,6 @@ namespace JobScrape.Infrastructure.Composition
         /// <param name="services">The service collection.</param>
         /// <param name="configuration">The app configuration (levels and overrides).</param>
         /// <param name="contentRoot">Root for a relative log directory.</param>
-        /// <param name="consoleToStandardError">
-        /// When true, the console sink writes to standard error, keeping
-        /// standard output clean for protocols that own it (stdio MCP).
-        /// </param>
         /// <param name="applicationName">
         /// The <c>Application</c> property stamped on every event. Defaults
         /// to <see cref="ApplicationName"/>.
@@ -47,7 +43,6 @@ namespace JobScrape.Infrastructure.Composition
             this IServiceCollection services,
             IConfiguration configuration,
             string contentRoot,
-            bool consoleToStandardError = false,
             string? applicationName = null,
             string? logFilePrefix = null
         )
@@ -83,12 +78,7 @@ namespace JobScrape.Infrastructure.Composition
                         .Enrich.WithExceptionDetails()
                         .Enrich.WithDemystifiedStackTraces()
                         .Enrich.WithProperty("Application", application)
-                        .WriteTo.Console(
-                            new RenderedCompactJsonFormatter(),
-                            standardErrorFromLevel: consoleToStandardError
-                                ? Serilog.Events.LogEventLevel.Verbose
-                                : null
-                        )
+                        .WriteTo.Console(new RenderedCompactJsonFormatter())
                         .WriteTo.Async(
                             sink =>
                                 sink.File(

@@ -28,11 +28,15 @@ namespace JobScrape.Application.Features.Scraping
             // A saved position is normally absent: each run gets a fresh id.
             // When present (an interrupted run picked back up), pagination
             // continues after the last completed page without recounting.
-            var progress =
-                await _stores.Progress.GetAsync(run.Id, cancellationToken)
-                ?? ScrapeRunProgress.Start(run.Id, _clock.GetUtcNow());
-            var seenJobs = new HashSet<string>(progress.SeenExternalIds, StringComparer.Ordinal);
-            cursor = progress.NextCursor;
+            // The position is part of the run aggregate, read here without
+            // mutating: a fresh run stays rowless until its first kept page.
+            var saved = run.Progress;
+            var seenJobs = new HashSet<string>(
+                saved?.SeenExternalIds ?? [],
+                StringComparer.Ordinal
+            );
+            var completed = saved?.PagesCompleted ?? 0;
+            cursor = saved?.NextCursor;
 
             // A cold load of a -N slug URL redirects to page 1, so
             // pre-window pages are visited, not kept (Naukri: Next
@@ -42,7 +46,7 @@ namespace JobScrape.Application.Features.Scraping
 
             // A fresh run starts at page one and walks forward; a resumed
             // run restarts at the window page its kept count points at.
-            var absolute = progress.PagesCompleted == 0 ? 1 : firstPage + progress.PagesCompleted;
+            var absolute = completed == 0 ? 1 : firstPage + completed;
             if (absolute < firstPage)
             {
                 LogAdvancingToStartPage(_logger, run.Id.Value, firstPage);
@@ -70,7 +74,7 @@ namespace JobScrape.Application.Features.Scraping
                     break;
                 }
 
-                if (progress.PagesCompleted > 0 || absolute > 1)
+                if (completed > 0 || absolute > 1)
                 {
                     await _delay.WaitAsync(politeness.NextDelay(), cancellationToken);
                 }
@@ -156,8 +160,10 @@ namespace JobScrape.Application.Features.Scraping
                 );
                 run.RecordPage(stats, now);
                 var nextCursor = result.NextCursor;
-                progress.RecordPage(run.Stats.PagesFetched, nextCursor, seenJobs, now);
-                await _stores.Progress.SaveAsync(progress, cancellationToken);
+                // First mutation of the position happens here, on the first
+                // kept page: nothing is written for a run that keeps nothing.
+                run.ResumeProgress(now)
+                    .RecordPage(run.Stats.PagesFetched, nextCursor, seenJobs, now);
                 await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
                 LogPageRecorded(
                     _logger,

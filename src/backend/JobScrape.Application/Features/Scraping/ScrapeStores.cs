@@ -13,7 +13,6 @@ namespace JobScrape.Application.Features.Scraping
     /// <param name="BrowserProfiles">Browser profiles.</param>
     /// <param name="Quotas">Per-source daily quotas.</param>
     /// <param name="Circuits">Per-source circuit breakers.</param>
-    /// <param name="Progress">Per-run scrape positions for resume.</param>
     /// <param name="UnitOfWork">Commits all staged changes.</param>
     public sealed record ScrapeStores(
         ISearchProfileRepository Profiles,
@@ -22,7 +21,6 @@ namespace JobScrape.Application.Features.Scraping
         IBrowserProfileRepository BrowserProfiles,
         ISourceQuotaRepository Quotas,
         ISourceCircuitBreakerRepository Circuits,
-        IScrapeRunProgressRepository Progress,
         IUnitOfWork UnitOfWork
     );
 }

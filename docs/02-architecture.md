@@ -101,7 +101,7 @@ flowchart TB
 
     subgraph APP["JobScrape.Application"]
         UC["Use-case handlers<br/>health · profiles (list/get/create/update)<br/>sources · sessions (list/get/create/update)<br/>Start/List/Get/Cancel run · run postings · export<br/>RunScrape"]
-        PORTS["Ports (19)<br/>6 repositories · progress · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer"]
+        PORTS["Ports (18)<br/>6 repositories · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer"]
         DTO["DTOs<br/>GetHealthResponse · SearchProfileResponse<br/>RunResponse · RunPostingResponse<br/>SearchPageResult · JobSnapshot · ScrapeRunSummary"]
         RES["Results<br/>Result / Result<T> · ErrorInfo · ErrorKind"]
     end
@@ -268,7 +268,7 @@ flowchart LR
 | Runs | `POST /api/v1/runs` (`{ profileId, browserProfileId, enrich = true }`), `GET /api/v1/runs`, `GET /api/v1/runs/{id:guid}`, `POST /api/v1/runs/{id:guid}/cancel`, `GET /api/v1/runs/{id:guid}/postings` | `StartRunHandler(IRunLauncher, IRunStore, ComplianceConsent)`, `ListRunsHandler(IRunStore)`, `GetRunHandler(IRunStore)`, `CancelRunHandler(IRunLauncher, IScrapeRunRepository, IUnitOfWork, IRunStore, TimeProvider)`, `ListRunPostingsHandler(IRunStore)` | `RunReadStore` (EF no-tracking). Start → `202` + `Location` with the recorded run, or the gate's problem; `409 RUN_IN_PROGRESS` while another run executes; `503 RUN_NOT_STARTED` when the host stops before the run is recorded. List: newest 50 (`ListRunsHandler.Limit`). Cancel is idempotent: an executing run is signalled, a paused run that is not executing is cancelled directly, a terminal run is returned unchanged. Postings: the run's source postings whose `LastSeenAt` falls in `[StartedAt, FinishedAt ?? now]`, max 200 — valid because runs execute one at a time. `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Export postings | `GET /api/v1/runs/{id:guid}/postings/export?format=csv\|xlsx&group=all\|only\|exclude` | `ExportRunPostingsHandler(IRunStore, IEnumerable<IPostingExportWriter>)` | `RunReadStore.ListExportPostingsAsync` (max 20,000), then `CsvPostingWriter` or `ExcelPostingWriter`; company groups filter against the run's captured `companies`; `400 EXPORT_FORMAT_UNSUPPORTED` / `EXPORT_GROUP_UNSUPPORTED` / `EXPORT_COMPANIES_MISSING`, `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Database explorer | `GET /api/v1/db/tables`, `GET /api/v1/db/tables/{table}/schema`, `GET/POST/PUT /api/v1/db/tables/{table}/rows`, `DELETE /api/v1/db/tables/{table}/rows/{primaryKeyValue}` | none — `DatabaseController` calls `IDatabaseExplorer` directly | `SqliteDatabaseExplorer` (Dapper) over the same SQLite file; identifiers validated against the live schema and quoted, values parameterized; `400 INVALID_TABLE` / `INVALID_INPUT` / `DB_ERROR`, `404 TABLE_NOT_FOUND` / `ROW_NOT_FOUND`, `204` on writes | Live, tested; cockpit `#/database` |
-| Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 domain repositories, the progress repository, and `IUnitOfWork` via `ScrapeStores`; `PlaywrightSessionManager`, `FileArtifactStore`, and the adapter `JobSourceRegistry` returns. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
+| Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 domain repositories and `IUnitOfWork` via `ScrapeStores`; `PlaywrightSessionManager`, `FileArtifactStore`, and the adapter `JobSourceRegistry` returns. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
 
 ---
 
@@ -292,7 +292,7 @@ PlaywrightDotNet/
 │   │   │   ├── Access/                 (BrowserProfile, quotas, circuit breaker, policies)
 │   │   │   └── Abstractions/           (DomainEvent, AggregateRoot, IRandomSource)
 │   │   ├── JobScrape.Application/
-│   │   │   ├── Abstractions/           (driven ports: 6 repositories, progress, UoW, browser workspace, artifacts, delay, explorer)
+│   │   │   ├── Abstractions/           (driven ports: 6 repositories, UoW, browser workspace, artifacts, delay, explorer)
 │   │   │   ├── Features/Health/        (GetHealthHandler, GetHealthResponse)
 │   │   │   ├── Features/SearchProfiles/ (Get/List/Create/Update handlers, store port, request/response DTOs)
 │   │   │   ├── Features/Sources/       (ListSourcesHandler, source status read model)
@@ -302,7 +302,7 @@ PlaywrightDotNet/
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
 │   │   │   ├── Configuration/          (Storage/Run/Compliance/Logging/Browser/Sources options)
-│   │   │   ├── Persistence/            (DbContext, 7 configurations, 6 repositories, progress repository, 3 read stores, SqliteDatabaseExplorer, 4 migrations)
+│   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, 3 read stores, SqliteDatabaseExplorer, 5 migrations)
 │   │   │   ├── Export/                 (CsvPostingWriter, ExcelPostingWriter, ExportColumns)
 │   │   │   ├── Browser/                (BrowserSessionPool, BrowserProfileWorkspace, PlaywrightSessionManager, FileArtifactStore, PageText)
 │   │   │   ├── Sources/Naukri/         (NaukriJobSource, URL builder, search/detail parsers, challenge classifier)
@@ -330,10 +330,11 @@ PlaywrightDotNet/
 > and `artifacts/`. None of `JobLens.Cli`, `JobLens.TestKit`,
 > `JobLens.E2E.Tests`, or `JobLens.Cli.Tests` exist in the tree above.
 
-Persistence ships four migrations: `20261101074339_InitialCreate`,
+Persistence ships five migrations: `20261101074339_InitialCreate`,
 `20261102135052_AddScrapeRunProgress`,
-`20261102181907_AddCaseInsensitiveProfileNames`, and
-`20261102193803_AddRunCompanies` (current).
+`20261102181907_AddCaseInsensitiveProfileNames`,
+`20261102193803_AddRunCompanies`, and
+`20261106150345_FoldProgressIntoRun` (current).
 
 ---
 
@@ -574,8 +575,7 @@ All 19 ports, grouped (they live beside their features: `Abstractions/` for
 driven ports, the feature folder for read/run/export contracts).
 Implementations are Infrastructure unless noted.
 
-- **Repositories (6)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`) — EF Core repositories.
-- **Progress (1)** — `IScrapeRunProgressRepository` (`GetAsync`, `SaveAsync`) — EF Core.
+- **Repositories (6)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`) — EF Core repositories. The run's resume position is an owned part of `ScrapeRun`, not a port.
 - **Unit of work (1)** — `IUnitOfWork.SaveChangesAsync` — `JobScrapeDbContext`.
 - **Read stores (3)** — `ISearchProfileStore` (`GetAsync`, `ListAsync`) → `SearchProfileReadStore`; `ISessionStore` (`GetAsync`, `ListAsync`) → `SessionReadStore`; `IRunStore` (`GetAsync`, `ListAsync`, `ListPostingsAsync`, `ListExportPostingsAsync`) → `RunReadStore`. All EF no-tracking reads.
 - **Browser/artifacts (3)** — `IBrowserProfileWorkspace` (`RenameAsync`) → `BrowserProfileWorkspace` (pool-backed); `IArtifactStore.CaptureAsync` → `FileArtifactStore` (see §12.5); `IDelay.WaitAsync` → `TimeProviderDelay`.
@@ -591,7 +591,7 @@ Deliberately absent (no such types exist): `IJobReadModel`, `ISkillDemandReadMod
 
 `RunScrapeHandler` is the application-level orchestrator (registered scoped, executed by `RunCoordinator` — see §7.1). It coordinates, but does not replace, the domain policies and infrastructure ports:
 
-- `SearchProfile`, `ScrapeRun`, and `ScrapeRunProgress` (domain state) via `ScrapeStores` (6 domain repositories + progress repository + `IUnitOfWork`, grouped so the 10-parameter constructor stays readable)
+- `SearchProfile`, `ScrapeRun` (with its owned resume position), and `JobPosting` (domain state) via `ScrapeStores` (6 domain repositories + `IUnitOfWork`, grouped so the 8-parameter constructor stays readable)
 - `SourceSettingsCatalog` and `JobSourceRegistry` (settings/adapters by source; holds `NaukriJobSource`, `IndeedJobSource`, and `LinkedInJobSource`)
 - `ISessionManager` (`PlaywrightSessionManager`) and the `IJobSource` the registry returns for the run's source (one of three adapters)
 - `IArtifactStore.CaptureAsync` (`FileArtifactStore`)
@@ -773,9 +773,10 @@ SQLite is the source of truth. CSV/Excel/JSON files are disposable snapshots.
 > classes (seven tables), and migration `20261102193803_AddRunCompanies`.
 > Tables and columns
 > are snake_case; every `DateTimeOffset` is stored as UTC ticks
-> (`UtcTicksConverter`). The **only enforced foreign key** is
-> `scrape_runs → search_profiles`; cross-aggregate links (quota, circuit
-> breaker, browser profile, run progress) are by convention, not constraint.
+> (`UtcTicksConverter`). Foreign keys are enforced for
+> `scrape_runs → search_profiles` (restrict) and
+> `scrape_run_progress → scrape_runs` (cascade); cross-aggregate links (quota, circuit
+> breaker, browser profile) are by convention, not constraint.
 
 ```mermaid
 erDiagram
