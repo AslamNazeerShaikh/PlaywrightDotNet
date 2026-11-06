@@ -15,9 +15,7 @@ namespace JobScrape.Api.Http.Auth
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminAuthorizationHandler"/> class.
         /// </summary>
-        public AdminAuthorizationHandler()
-        {
-        }
+        public AdminAuthorizationHandler() { }
 
         /// <summary>
         /// Succeeds when the token carries the admin role and first login is

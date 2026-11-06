@@ -126,12 +126,14 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             var services = new ServiceCollection();
             services.AddJobScrapePersistence(database.ConnectionString);
 
-            foreach (var descriptor in services
-                .Where(descriptor =>
-                    descriptor.ServiceType == typeof(JobScrapeDbContext)
-                    || descriptor.ServiceType == typeof(DbContextOptions<JobScrapeDbContext>)
-                )
-                .ToList())
+            foreach (
+                var descriptor in services
+                    .Where(descriptor =>
+                        descriptor.ServiceType == typeof(JobScrapeDbContext)
+                        || descriptor.ServiceType == typeof(DbContextOptions<JobScrapeDbContext>)
+                    )
+                    .ToList()
+            )
             {
                 services.Remove(descriptor);
             }
@@ -164,7 +166,12 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
                 await store.RemoveAsync("owner", "POST /api/v1/users", "wrapped-busy-key", Ct);
 
-                var reloaded = await store.GetAsync("owner", "POST /api/v1/users", "wrapped-busy-key", Ct);
+                var reloaded = await store.GetAsync(
+                    "owner",
+                    "POST /api/v1/users",
+                    "wrapped-busy-key",
+                    Ct
+                );
                 Assert.Null(reloaded);
             }
             finally

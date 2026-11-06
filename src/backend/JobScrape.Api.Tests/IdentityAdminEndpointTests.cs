@@ -385,8 +385,7 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.True(
-                grant.StatusCode == HttpStatusCode.OK
-                    || grant.StatusCode == HttpStatusCode.Conflict
+                grant.StatusCode == HttpStatusCode.OK || grant.StatusCode == HttpStatusCode.Conflict
             );
 
             var callerEmail = $"caller-{Guid.NewGuid():N}@example.com";
