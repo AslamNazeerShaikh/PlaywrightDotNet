@@ -19,10 +19,14 @@ namespace JobScrape.Architecture.Tests
                 .HaveDependencyOn("JobScrape.Infrastructure")
                 .GetResult();
             var api = domain.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+            var mcp = domain.ShouldNot().HaveDependencyOn("JobScrape.Mcp").GetResult();
+            var mcpHost = domain.ShouldNot().HaveDependencyOn("JobScrape.Mcp.Host").GetResult();
 
             Assert.True(application.IsSuccessful, Describe(application));
             Assert.True(infrastructure.IsSuccessful, Describe(infrastructure));
             Assert.True(api.IsSuccessful, Describe(api));
+            Assert.True(mcp.IsSuccessful, Describe(mcp));
+            Assert.True(mcpHost.IsSuccessful, Describe(mcpHost));
         }
 
         [Fact]
@@ -37,8 +41,35 @@ namespace JobScrape.Architecture.Tests
                 .HaveDependencyOn("JobScrape.Infrastructure")
                 .GetResult();
             var api = application.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+            var mcp = application.ShouldNot().HaveDependencyOn("JobScrape.Mcp").GetResult();
+            var mcpHost = application
+                .ShouldNot()
+                .HaveDependencyOn("JobScrape.Mcp.Host")
+                .GetResult();
 
             Assert.True(infrastructure.IsSuccessful, Describe(infrastructure));
+            Assert.True(api.IsSuccessful, Describe(api));
+            Assert.True(mcp.IsSuccessful, Describe(mcp));
+            Assert.True(mcpHost.IsSuccessful, Describe(mcpHost));
+        }
+
+        [Fact]
+        public void McpDoesNotDependOnApi()
+        {
+            var mcp = Types.InAssembly(typeof(JobScrape.Mcp.Tools.HealthTools).Assembly);
+
+            var api = mcp.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+
+            Assert.True(api.IsSuccessful, Describe(api));
+        }
+
+        [Fact]
+        public void McpHostDoesNotDependOnApi()
+        {
+            var host = Types.InAssembly(typeof(JobScrape.Mcp.Host.Program).Assembly);
+
+            var api = host.ShouldNot().HaveDependencyOn("JobScrape.Api").GetResult();
+
             Assert.True(api.IsSuccessful, Describe(api));
         }
 

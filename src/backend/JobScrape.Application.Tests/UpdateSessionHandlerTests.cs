@@ -37,7 +37,8 @@ namespace JobScrape.Application.Tests
                     workspace,
                     store,
                     new FakeTimeProvider(Now),
-                    NullLogger<UpdateSessionHandler>.Instance
+                    NullLogger<UpdateSessionHandler>.Instance,
+                    CallerContext.LocalOperator
                 ),
                 store,
                 workspace

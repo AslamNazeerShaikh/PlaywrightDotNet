@@ -4,8 +4,11 @@ using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Common;
 using JobScrape.Infrastructure.Browser;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace JobScrape.Api.Runs
+namespace JobScrape.Infrastructure.Runtime
 {
     /// <summary>
     /// Executes runs in the background, one at a time, each in its own DI

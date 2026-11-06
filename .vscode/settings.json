@@ -1,0 +1,34 @@
+{
+  // Repo-scoped VS Code settings. JSONC: VS Code allows // and /* */ comments here.
+  // Strict-JSON parsers (python json, jq without -c) reject comments; use a JSONC parser.
+
+  // Which solution DevKit opens. The repo holds a single solution file,
+  // src/backend/JobScrape.slnx (no legacy .sln), so pin it explicitly.
+  // Without this, DevKit scans the whole workspace (including src/frontend)
+  // and the Solution Explorer stays empty. Path is relative to the
+  // workspace root; open the repo root, not src/backend, for it to resolve.
+  "dotnet.defaultSolution": "src/backend/JobScrape.slnx",
+
+  // Intentionally no dotnetAcquisitionExtension.existingDotnetPath here.
+  // That setting points at a per-machine SDK install, so it belongs in
+  // User settings, not the repo. It must reference a Microsoft-signed SDK:
+  // the Homebrew build is adhoc-signed and the hardened VS Code host
+  // refuses to load its libhostfxr, killing the DevKit server (exit 130)
+  // and leaving every Solution Build Action stuck forever.
+  // Per-machine setup (version must match src/backend/global.json):
+  //   INST=$(mktemp /tmp/dotnet-install.XXXXXX.sh)
+  //   curl -sSL https://dot.net/v1/dotnet-install.sh -o "$INST" && chmod +x "$INST"
+  //   "$INST" --version 10.0.403 --install-dir ~/.dotnet; rm -f "$INST"
+  // then in User settings.json:
+  //   "dotnetAcquisitionExtension.existingDotnetPath": [
+  //     { "extensionId": "ms-dotnettools.csharp", "path": "<HOME>/.dotnet/dotnet" },
+  //     { "extensionId": "ms-dotnettools.csdevkit", "path": "<HOME>/.dotnet/dotnet" }
+  //   ]
+  // (Replace <HOME> with the absolute home path; the acquisition
+  // extension uses the path literally and does not expand ${env:HOME}.)
+
+  // Shared formatter for C# files.
+  "[csharp]": {
+    "editor.defaultFormatter": "csharpier.csharpier-vscode"
+  }
+}

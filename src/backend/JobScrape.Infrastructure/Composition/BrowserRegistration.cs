@@ -5,9 +5,10 @@ using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Sources.Indeed;
 using JobScrape.Infrastructure.Sources.LinkedIn;
 using JobScrape.Infrastructure.Sources.Naukri;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace JobScrape.Api.Composition
+namespace JobScrape.Infrastructure.Composition
 {
     /// <summary>
     /// Registers the browser layer and the source adapters: one Playwright

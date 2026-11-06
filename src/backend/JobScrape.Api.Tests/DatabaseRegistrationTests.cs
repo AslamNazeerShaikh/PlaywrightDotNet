@@ -1,4 +1,4 @@
-using JobScrape.Api.Composition;
+using JobScrape.Infrastructure.Composition;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

@@ -186,6 +186,26 @@
     "skill-create": {
       "description": "Generate skills from git history",
       "template": "{file:commands/skill-create.md}\n\n$ARGUMENTS"
+    },
+    "harness-audit": {
+      "description": "Run a deterministic repository harness audit and return a prioritized scorecard.",
+      "template": "{file:commands/harness-audit.md}\n\n$ARGUMENTS"
+    },
+    "model-route": {
+      "description": "Recommend the best model tier for the current task by complexity and budget.",
+      "template": "{file:commands/model-route.md}\n\n$ARGUMENTS"
+    },
+    "quality-gate": {
+      "description": "Run the ECC quality pipeline on demand for a file or project scope.",
+      "template": "{file:commands/quality-gate.md}\n\n$ARGUMENTS"
+    },
+    "loop-start": {
+      "description": "Start a managed autonomous loop pattern with safety defaults.",
+      "template": "{file:commands/loop-start.md}\n\n$ARGUMENTS"
+    },
+    "loop-status": {
+      "description": "Inspect active loop state, progress, and failure signals.",
+      "template": "{file:commands/loop-status.md}\n\n$ARGUMENTS"
     }
   }
 }

@@ -22,6 +22,7 @@
 | [0016](0016-csharp-style-csharpier.md) | C# style guides (ktaranov + Google) and csharpier formatting | Accepted |
 | [0017](0017-xml-documentation-rule.md) | XML documentation as a global build rule | Accepted |
 | [0018](0018-dapper-sqlite-explorer.md) | Dapper for the raw SQLite explorer | Accepted |
+| [0019](0019-mcp-transports-and-tools.md) | MCP server transports and tool surface | Accepted |
 
 ## Conventions
 
