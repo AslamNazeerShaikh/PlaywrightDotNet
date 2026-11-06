@@ -97,10 +97,14 @@ namespace JobScrape.Api.Http.Auth
                             Errors.AccessDenied().ToProblem().ExecuteAsync(context.HttpContext),
                         OnTokenValidated = async context =>
                         {
-                            var users = context.HttpContext.RequestServices
-                                .GetRequiredService<IUserRepository>();
-                            var sub = context.Principal?.FindFirst(IdentityClaimTypes.Subject)?.Value;
-                            var version = context.Principal?.FindFirst(IdentityClaimTypes.TokenVersion)?.Value;
+                            var users =
+                                context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+                            var sub = context
+                                .Principal?.FindFirst(IdentityClaimTypes.Subject)
+                                ?.Value;
+                            var version = context
+                                .Principal?.FindFirst(IdentityClaimTypes.TokenVersion)
+                                ?.Value;
                             if (!Guid.TryParse(sub, out var userId) || version is null)
                             {
                                 context.Fail("The token is missing its identity.");
@@ -123,11 +127,14 @@ namespace JobScrape.Api.Http.Auth
 
                             if (
                                 user is null
-                                || !user.TokenVersion.ToString(CultureInfo.InvariantCulture)
+                                || !user
+                                    .TokenVersion.ToString(CultureInfo.InvariantCulture)
                                     .Equals(version, StringComparison.Ordinal)
                             )
                             {
-                                context.Fail("The token was revoked by a password change or lockout.");
+                                context.Fail(
+                                    "The token was revoked by a password change or lockout."
+                                );
                             }
                         },
                     };

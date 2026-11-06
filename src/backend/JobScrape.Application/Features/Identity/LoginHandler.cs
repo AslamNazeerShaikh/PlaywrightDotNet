@@ -68,10 +68,9 @@ namespace JobScrape.Application.Features.Identity
             CancellationToken cancellationToken
         )
         {
-            var user =
-                string.IsNullOrWhiteSpace(email)
-                    ? null
-                    : await _users.GetByEmailAsync(email, cancellationToken);
+            var user = string.IsNullOrWhiteSpace(email)
+                ? null
+                : await _users.GetByEmailAsync(email, cancellationToken);
             if (user is null)
             {
                 return Result.Fail<LoginResponse>(Errors.InvalidCredentials());
@@ -82,16 +81,19 @@ namespace JobScrape.Application.Features.Identity
             {
                 user.Authenticate(password, now, _policy.MaxFailedAttempts, _policy.Lockout);
             }
-            catch (DomainException ex) when (ex.Message.StartsWith("PASSWORD_RESET_REQUIRED", StringComparison.Ordinal))
+            catch (DomainException ex)
+                when (ex.Message.StartsWith("PASSWORD_RESET_REQUIRED", StringComparison.Ordinal))
             {
                 return Result.Fail<LoginResponse>(Errors.PasswordResetRequired());
             }
-            catch (DomainException ex) when (ex.Message.StartsWith("ACCOUNT_LOCKED", StringComparison.Ordinal))
+            catch (DomainException ex)
+                when (ex.Message.StartsWith("ACCOUNT_LOCKED", StringComparison.Ordinal))
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return Result.Fail<LoginResponse>(Errors.AccountLocked(user.LockedUntilUtc));
             }
-            catch (DomainException ex) when (ex.Message.StartsWith("INVALID_CREDENTIALS", StringComparison.Ordinal))
+            catch (DomainException ex)
+                when (ex.Message.StartsWith("INVALID_CREDENTIALS", StringComparison.Ordinal))
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return Result.Fail<LoginResponse>(Errors.InvalidCredentials());
@@ -107,10 +109,7 @@ namespace JobScrape.Application.Features.Identity
                 }
             }
 
-            var permissions = roles
-                .SelectMany(role => role.PermissionKeys)
-                .Distinct()
-                .ToList();
+            var permissions = roles.SelectMany(role => role.PermissionKeys).Distinct().ToList();
             var token = _tokens.CreateToken(user, roles, permissions, now);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok(new LoginResponse(token, user.MustChangePassword));

@@ -56,13 +56,11 @@ namespace JobScrape.Infrastructure.Composition
                     user.FindFirst(IdentityClaimTypes.Subject)?.Value
                     ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
                     ?? CallerContext.LocalOperator.ActorId;
-                var roles = user
-                    .FindAll(IdentityClaimTypes.Role)
+                var roles = user.FindAll(IdentityClaimTypes.Role)
                     .Select(claim => claim.Value)
                     .Distinct(StringComparer.Ordinal)
                     .ToArray();
-                var permissions = user
-                    .FindAll(IdentityClaimTypes.Permission)
+                var permissions = user.FindAll(IdentityClaimTypes.Permission)
                     .Select(claim => claim.Value)
                     .Distinct(StringComparer.Ordinal)
                     .ToArray();

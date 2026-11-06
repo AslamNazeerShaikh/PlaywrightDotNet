@@ -59,8 +59,12 @@ namespace JobScrape.Domain.Tests.Identity
         {
             var good = PasswordHash.Create(Good);
 
-            Assert.Throws<DomainException>(() => PasswordHash.Restore(new byte[8], good.Hash, good.Iterations));
-            Assert.Throws<DomainException>(() => PasswordHash.Restore(good.Salt, new byte[8], good.Iterations));
+            Assert.Throws<DomainException>(() =>
+                PasswordHash.Restore(new byte[8], good.Hash, good.Iterations)
+            );
+            Assert.Throws<DomainException>(() =>
+                PasswordHash.Restore(good.Salt, new byte[8], good.Iterations)
+            );
             Assert.Throws<DomainException>(() => PasswordHash.Restore(good.Salt, good.Hash, 0));
         }
 

@@ -296,9 +296,7 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.False(IsValid(new JwtOptions()));
             Assert.False(IsValid(new JwtOptions { Secret = "too-short" }));
             Assert.True(
-                IsValid(
-                    new JwtOptions { Secret = "a-demo-secret-of-at-least-32-characters" }
-                )
+                IsValid(new JwtOptions { Secret = "a-demo-secret-of-at-least-32-characters" })
             );
             Assert.False(
                 IsValid(

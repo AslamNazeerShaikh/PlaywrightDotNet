@@ -53,7 +53,10 @@ namespace JobScrape.Infrastructure.Tests.Security
             var jwt = Read(token);
 
             Assert.Equal(user.Id.Value.ToString(), jwt.Subject);
-            Assert.Equal("op@example.com", jwt.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value);
+            Assert.Equal(
+                "op@example.com",
+                jwt.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value
+            );
             Assert.Contains(jwt.Claims, c => c.Type == "role" && c.Value == "Admin");
             Assert.Contains(jwt.Claims, c => c.Type == "perm" && c.Value == "runs.read");
             Assert.Equal("1", jwt.Claims.First(c => c.Type == "ver").Value);
@@ -106,7 +109,9 @@ namespace JobScrape.Infrastructure.Tests.Security
         [Fact]
         public void ValidatesAgainstTheConfiguredSecretAndRejectsOthers()
         {
-            var service = new JwtTokenService(Microsoft.Extensions.Options.Options.Create(TestOptions()));
+            var service = new JwtTokenService(
+                Microsoft.Extensions.Options.Options.Create(TestOptions())
+            );
             var (user, role) = ActiveAdmin();
             var issuedAt = DateTimeOffset.UtcNow;
             var token = service.CreateToken(user, [role], [.. role.PermissionKeys], issuedAt);
@@ -130,7 +135,10 @@ namespace JobScrape.Infrastructure.Tests.Security
                 Parameters(Secret),
                 out _
             );
-            Assert.Equal(user.Id.Value.ToString(), principal.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            Assert.Equal(
+                user.Id.Value.ToString(),
+                principal.FindFirst(ClaimTypes.NameIdentifier)!.Value
+            );
 
             Assert.ThrowsAny<SecurityTokenException>(() =>
                 new JwtSecurityTokenHandler().ValidateToken(

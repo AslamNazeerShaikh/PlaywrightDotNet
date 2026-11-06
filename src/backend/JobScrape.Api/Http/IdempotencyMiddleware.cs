@@ -80,8 +80,7 @@ namespace JobScrape.Api.Http
             context.Request.EnableBuffering();
             var requestHash = await HashBodyAsync(context.Request);
             var endpoint = Scope(context.Request);
-            var owner =
-                context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
+            var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
             var stored = await store.GetAsync(owner, endpoint, key, context.RequestAborted);
             if (stored is not null)
             {
@@ -195,12 +194,16 @@ namespace JobScrape.Api.Http
         /// <returns>True when the response may be stored.</returns>
         private static bool IsStorable(int statusCode)
         {
-            return (statusCode >= StatusCodes.Status200OK && statusCode < StatusCodes.Status300MultipleChoices)
-                || statusCode is StatusCodes.Status400BadRequest
-                    or StatusCodes.Status404NotFound
-                    or StatusCodes.Status409Conflict
-                    or StatusCodes.Status422UnprocessableEntity
-                    or StatusCodes.Status423Locked;
+            return (
+                    statusCode >= StatusCodes.Status200OK
+                    && statusCode < StatusCodes.Status300MultipleChoices
+                )
+                || statusCode
+                    is StatusCodes.Status400BadRequest
+                        or StatusCodes.Status404NotFound
+                        or StatusCodes.Status409Conflict
+                        or StatusCodes.Status422UnprocessableEntity
+                        or StatusCodes.Status423Locked;
         }
     }
 }

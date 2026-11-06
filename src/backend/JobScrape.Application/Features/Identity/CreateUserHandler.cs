@@ -22,11 +22,7 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="unitOfWork">Commits the new user. Must not be null.</param>
         /// <param name="clock">The time source. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public CreateUserHandler(
-            IUserRepository users,
-            IUnitOfWork unitOfWork,
-            TimeProvider clock
-        )
+        public CreateUserHandler(IUserRepository users, IUnitOfWork unitOfWork, TimeProvider clock)
         {
             ArgumentNullException.ThrowIfNull(users);
             ArgumentNullException.ThrowIfNull(unitOfWork);

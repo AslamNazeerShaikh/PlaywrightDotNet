@@ -42,15 +42,10 @@ namespace JobScrape.Api.Http.Auth
             ArgumentNullException.ThrowIfNull(requirement);
 
             var path = _accessor.HttpContext?.Request.Path.Value ?? string.Empty;
-            var mustChange = context.User.HasClaim(
-                claim =>
-                    claim.Type == IdentityClaimTypes.MustChangePassword
-                    && claim.Value == "true"
+            var mustChange = context.User.HasClaim(claim =>
+                claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
             );
-            if (
-                mustChange
-                && !path.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
-            )
+            if (mustChange && !path.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase))
             {
                 return Task.CompletedTask;
             }

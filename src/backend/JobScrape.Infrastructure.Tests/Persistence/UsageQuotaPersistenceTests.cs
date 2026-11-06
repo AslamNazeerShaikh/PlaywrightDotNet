@@ -15,10 +15,15 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var database = await TestDatabase.CreateAsync(Ct);
             await using (var scope = database.Scope())
             {
-                await scope.Get<IUsageQuotaRepository>()
+                await scope
+                    .Get<IUsageQuotaRepository>()
                     .AddAsync(UsageQuota.Create(QuotaScope.Api, 10000, TimeSpan.FromHours(24)), Ct);
-                await scope.Get<IUsageQuotaRepository>()
-                    .AddAsync(UsageQuota.Create(QuotaScope.Mcp, 1000, TimeSpan.FromMinutes(30)), Ct);
+                await scope
+                    .Get<IUsageQuotaRepository>()
+                    .AddAsync(
+                        UsageQuota.Create(QuotaScope.Mcp, 1000, TimeSpan.FromMinutes(30)),
+                        Ct
+                    );
                 await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
             }
 

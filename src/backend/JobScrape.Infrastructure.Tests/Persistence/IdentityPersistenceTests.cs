@@ -82,7 +82,9 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
             await using (var scope = database.Scope())
             {
-                var loadedRole = await scope.Get<IRoleRepository>().GetByNameAsync(RoleName.Viewer, Ct);
+                var loadedRole = await scope
+                    .Get<IRoleRepository>()
+                    .GetByNameAsync(RoleName.Viewer, Ct);
                 Assert.NotNull(loadedRole);
                 Assert.Equal([PermissionKey.From("runs.read")], loadedRole.PermissionKeys);
                 loadedRole.Grant(PermissionKey.From("profiles.read"));
@@ -96,7 +98,9 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.NotNull(reloaded);
             Assert.Equal([PermissionKey.From("profiles.read")], reloaded.PermissionKeys);
             Assert.Null(await reload.Get<IRoleRepository>().GetByNameAsync(RoleName.Admin, Ct));
-            Assert.Null(await reload.Get<IUserRepository>().GetByEmailAsync("missing@example.com", Ct));
+            Assert.Null(
+                await reload.Get<IUserRepository>().GetByEmailAsync("missing@example.com", Ct)
+            );
         }
 
         [Fact]
@@ -136,7 +140,11 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                 await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
             }
 
-            await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(database.ConnectionString))
+            await using (
+                var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+                    database.ConnectionString
+                )
+            )
             {
                 await connection.OpenAsync(Ct);
                 await using var command = connection.CreateCommand();

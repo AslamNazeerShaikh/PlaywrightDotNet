@@ -268,7 +268,13 @@ namespace JobScrape.Mcp.Tests
         public async Task StartRunWithoutWritePermissionIsDenied()
         {
             var viewer = new FakeCaller { Permissions = ["runs.read"] };
-            var tools = Tools(new FakeLauncher(), new FakeRunStore(), new FakeRuns(), new FakeUnitOfWork(), viewer);
+            var tools = Tools(
+                new FakeLauncher(),
+                new FakeRunStore(),
+                new FakeRuns(),
+                new FakeUnitOfWork(),
+                viewer
+            );
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 tools.StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)

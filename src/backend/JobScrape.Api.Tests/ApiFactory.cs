@@ -37,10 +37,7 @@ namespace JobScrape.Api.Tests
             builder.UseEnvironment("Development");
             // The shipped secret is a demo placeholder the startup
             // validator refuses; tests run with a disposable signing key.
-            builder.UseSetting(
-                "JobScrape:Jwt:Secret",
-                AuthTestHelper.TestJwtSecret
-            );
+            builder.UseSetting("JobScrape:Jwt:Secret", AuthTestHelper.TestJwtSecret);
             builder.UseSetting("JobScrape:Logging:Directory", LogDirectory);
             builder.UseSetting("JobScrape:Storage:DatabasePath", DatabasePath);
             builder.UseSetting("JobScrape:Storage:ArtifactsRoot", Path.Combine(_root, "data"));

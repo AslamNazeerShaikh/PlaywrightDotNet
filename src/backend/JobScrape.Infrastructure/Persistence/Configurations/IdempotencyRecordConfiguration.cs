@@ -8,7 +8,8 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
     /// triple (owner, endpoint, key) is the primary key, so a repeated store
     /// replaces the previous response for the same triple.
     /// </summary>
-    internal sealed class IdempotencyRecordConfiguration : IEntityTypeConfiguration<IdempotencyRecord>
+    internal sealed class IdempotencyRecordConfiguration
+        : IEntityTypeConfiguration<IdempotencyRecord>
     {
         /// <summary>
         /// Configures the table and composite key.

@@ -38,11 +38,7 @@ namespace JobScrape.Api.Http
         /// <param name="cache">The counter and definition cache. Must not be null.</param>
         /// <param name="clock">The time source. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public UsageQuotaMiddleware(
-            RequestDelegate next,
-            IMemoryCache cache,
-            TimeProvider clock
-        )
+        public UsageQuotaMiddleware(RequestDelegate next, IMemoryCache cache, TimeProvider clock)
         {
             ArgumentNullException.ThrowIfNull(next);
             ArgumentNullException.ThrowIfNull(cache);
@@ -97,8 +93,10 @@ namespace JobScrape.Api.Http
 
             if (overLimit)
             {
-                context.Response.Headers.RetryAfter = Math
-                    .Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds))
+                context.Response.Headers.RetryAfter = Math.Max(
+                        1,
+                        (int)Math.Ceiling(retryAfter.TotalSeconds)
+                    )
                     .ToString(CultureInfo.InvariantCulture);
                 await Errors
                     .UsageQuotaExceeded(scope.Value, definition.Limit, definition.Window)
@@ -199,8 +197,8 @@ namespace JobScrape.Api.Http
             }
             catch (DbUpdateException)
             {
-                context.RequestServices
-                    .GetRequiredService<JobScrape.Infrastructure.Persistence.JobScrapeDbContext>()
+                context
+                    .RequestServices.GetRequiredService<JobScrape.Infrastructure.Persistence.JobScrapeDbContext>()
                     .ChangeTracker.Clear();
             }
 
@@ -223,11 +221,14 @@ namespace JobScrape.Api.Http
             DateTimeOffset now
         )
         {
-            return _cache.GetOrCreate(CounterKey(actor, scope), entry =>
-            {
-                entry.AbsoluteExpiration = now + definition.Window;
-                return new Counter { Start = now };
-            })!;
+            return _cache.GetOrCreate(
+                CounterKey(actor, scope),
+                entry =>
+                {
+                    entry.AbsoluteExpiration = now + definition.Window;
+                    return new Counter { Start = now };
+                }
+            )!;
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using JobScrape.Application.Abstractions;
 using JobScrape.Api.Http;
 using JobScrape.Api.Http.Auth;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Results;
 using Microsoft.AspNetCore.Authorization;
@@ -69,7 +69,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -111,7 +114,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -161,7 +167,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -196,13 +205,11 @@ namespace JobScrape.Api.Controllers
         public ActionResult<MeResponse> Me()
         {
             var email = User.FindFirst(IdentityClaimTypes.Email)?.Value ?? string.Empty;
-            var roles = User
-                .FindAll(IdentityClaimTypes.Role)
+            var roles = User.FindAll(IdentityClaimTypes.Role)
                 .Select(claim => claim.Value)
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
-            var permissions = User
-                .FindAll(IdentityClaimTypes.Permission)
+            var permissions = User.FindAll(IdentityClaimTypes.Permission)
                 .Select(claim => claim.Value)
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
@@ -224,8 +231,7 @@ namespace JobScrape.Api.Controllers
                 .Where(pair => pair.Value?.Errors.Count > 0)
                 .ToDictionary(
                     pair => pair.Key,
-                    pair =>
-                        pair.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
+                    pair => pair.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
                     StringComparer.Ordinal
                 );
             return Errors

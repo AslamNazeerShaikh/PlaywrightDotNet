@@ -22,47 +22,65 @@ namespace JobScrape.Api.Tests
         {
             using var admin = await factory.CreateAdminClientAsync(cancellationToken);
             var email = $"viewer-{Guid.NewGuid():N}@example.com";
-            using (var createdRole = await admin.PostAsJsonAsync(
-                "api/v1/roles",
-                new { name = "Viewer" },
-                cancellationToken
-            ))
+            using (
+                var createdRole = await admin.PostAsJsonAsync(
+                    "api/v1/roles",
+                    new { name = "Viewer" },
+                    cancellationToken
+                )
+            )
             {
                 createdRole.EnsureSuccessStatusCode();
             }
 
             Guid userId;
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                cancellationToken
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    cancellationToken
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
                 var body = await created.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
                 userId = body.GetProperty("id").GetGuid();
             }
 
-            using (var assigned = await admin.PostAsJsonAsync(
-                $"api/v1/users/{userId}/roles",
-                new { role = "Viewer" },
-                cancellationToken
-            ))
+            using (
+                var assigned = await admin.PostAsJsonAsync(
+                    $"api/v1/users/{userId}/roles",
+                    new { role = "Viewer" },
+                    cancellationToken
+                )
+            )
             {
                 assigned.EnsureSuccessStatusCode();
             }
 
             using var setupClient = factory.CreateClient();
-            using (var setup = await setupClient.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                cancellationToken
-            ))
+            using (
+                var setup = await setupClient.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    cancellationToken
+                )
+            )
             {
                 setup.EnsureSuccessStatusCode();
             }
 
-            return await AuthTestHelper.LoginAsync(factory, email, "Final-Password2@@", cancellationToken);
+            return await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
+                cancellationToken
+            );
         }
 
         [Fact]
@@ -79,7 +97,10 @@ namespace JobScrape.Api.Tests
             Assert.Equal(2, quotas.Count);
             var api = quotas.Single(quota => quota.GetProperty("scope").GetString() == "Api");
             Assert.Equal(10000, api.GetProperty("limit").GetInt32());
-            Assert.Equal(TimeSpan.FromHours(24), TimeSpan.Parse(api.GetProperty("window").GetString()!, CultureInfo.InvariantCulture));
+            Assert.Equal(
+                TimeSpan.FromHours(24),
+                TimeSpan.Parse(api.GetProperty("window").GetString()!, CultureInfo.InvariantCulture)
+            );
             var mcp = quotas.Single(quota => quota.GetProperty("scope").GetString() == "Mcp");
             Assert.Equal(1000, mcp.GetProperty("limit").GetInt32());
         }
@@ -114,11 +135,13 @@ namespace JobScrape.Api.Tests
         {
             await using var factory = new ApiFactory();
             using var admin = await factory.CreateAdminClientAsync(Ct);
-            using (var updated = await admin.PutAsJsonAsync(
-                "api/v1/quotas/Api",
-                new { limit = 1, window = "00:01:00" },
-                Ct
-            ))
+            using (
+                var updated = await admin.PutAsJsonAsync(
+                    "api/v1/quotas/Api",
+                    new { limit = 1, window = "00:01:00" },
+                    Ct
+                )
+            )
             {
                 Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
             }

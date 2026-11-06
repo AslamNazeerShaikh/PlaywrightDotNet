@@ -39,11 +39,7 @@ namespace JobScrape.Application.Features.Identity
     /// <param name="Id">The role identifier.</param>
     /// <param name="Name">The role name.</param>
     /// <param name="Permissions">The granted permission keys.</param>
-    public sealed record RoleResponse(
-        Guid Id,
-        string Name,
-        IReadOnlyList<string> Permissions
-    );
+    public sealed record RoleResponse(Guid Id, string Name, IReadOnlyList<string> Permissions);
 
     /// <summary>
     /// The user list payload.

@@ -48,8 +48,10 @@ namespace JobScrape.Application.Features.Quotas
             CancellationToken cancellationToken
         )
         {
-            if (!Enum.TryParse<QuotaScope>(scope, ignoreCase: true, out var parsed)
-                || !Enum.IsDefined(parsed))
+            if (
+                !Enum.TryParse<QuotaScope>(scope, ignoreCase: true, out var parsed)
+                || !Enum.IsDefined(parsed)
+            )
             {
                 return Result.Fail<QuotaResponse>(Errors.UnknownQuotaScope(scope));
             }
@@ -74,7 +76,9 @@ namespace JobScrape.Application.Features.Quotas
 
                 await _quotas.AddAsync(created, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-                return Result.Ok(new QuotaResponse(parsed.ToString(), created.Limit, created.Window));
+                return Result.Ok(
+                    new QuotaResponse(parsed.ToString(), created.Limit, created.Window)
+                );
             }
 
             try

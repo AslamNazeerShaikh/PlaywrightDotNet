@@ -48,7 +48,12 @@ namespace JobScrape.Api.Tests
 
             using var response = await anonymous.PostAsJsonAsync(
                 "api/v1/auth/setup-password",
-                new { email, currentSecret = temporary, newPassword = "short" },
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "short",
+                },
                 Ct
             );
 

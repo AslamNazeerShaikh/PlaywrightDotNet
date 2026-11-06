@@ -81,7 +81,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -97,7 +100,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         $"Window '{request.Window}' is not a valid time span.",
-                        new Dictionary<string, string[]> { ["window"] = [$"Window '{request.Window}' is not a valid time span."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["window"] = [$"Window '{request.Window}' is not a valid time span."],
+                        }
                     )
                     .ToProblem();
             }
