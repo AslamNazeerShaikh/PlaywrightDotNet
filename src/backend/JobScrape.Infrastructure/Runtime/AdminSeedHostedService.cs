@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Domain;
+using JobScrape.Domain.Access;
 using JobScrape.Domain.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,13 +43,15 @@ namespace JobScrape.Infrastructure.Runtime
         }
 
         /// <summary>
-        /// Seeds the admin when no users exist yet.
+        /// Seeds the admin when no users exist yet, and the usage quota
+        /// starting budgets when no definitions exist yet.
         /// </summary>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>A task that completes when seeding is done or skipped.</returns>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await using var scope = _scopes.CreateAsyncScope();
+            await SeedUsageQuotasAsync(scope.ServiceProvider, cancellationToken);
             var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
             if ((await users.ListAsync(cancellationToken)).Count != 0)
             {
@@ -106,6 +109,33 @@ namespace JobScrape.Infrastructure.Runtime
             await users.AddAsync(user, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             LogSeeded(_logger);
+        }
+
+        /// <summary>
+        /// Seeds the usage quota starting budgets when no definitions
+        /// exist yet. A table with rows is a no-op: admins own the values
+        /// from there and a restart never overwrites them.
+        /// </summary>
+        /// <param name="provider">The seeding scope's services.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>A task that completes when seeding is done or skipped.</returns>
+        private static async Task SeedUsageQuotasAsync(
+            IServiceProvider provider,
+            CancellationToken cancellationToken
+        )
+        {
+            var quotas = provider.GetRequiredService<IUsageQuotaRepository>();
+            if ((await quotas.ListAsync(cancellationToken)).Count != 0)
+            {
+                return;
+            }
+
+            foreach (var quota in UsageQuotaDefaults.All())
+            {
+                await quotas.AddAsync(quota, cancellationToken);
+            }
+
+            await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
         }
 
         /// <summary>

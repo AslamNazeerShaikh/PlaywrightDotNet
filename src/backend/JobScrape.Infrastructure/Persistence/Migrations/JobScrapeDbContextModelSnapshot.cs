@@ -137,6 +137,25 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.ToTable("source_quotas", (string)null);
                 });
 
+            modelBuilder.Entity("JobScrape.Domain.Access.UsageQuota", b =>
+                {
+                    b.Property<string>("Scope")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("scope");
+
+                    b.Property<int>("Limit")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("limit");
+
+                    b.Property<long>("Window")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("window_ticks");
+
+                    b.HasKey("Scope");
+
+                    b.ToTable("usage_quotas", (string)null);
+                });
+
             modelBuilder.Entity("JobScrape.Domain.Identity.Role", b =>
                 {
                     b.Property<Guid>("Id")

@@ -43,6 +43,11 @@ namespace JobScrape.Infrastructure.Persistence
         public DbSet<BrowserProfile> BrowserProfiles => Set<BrowserProfile>();
 
         /// <summary>
+        /// Gets the usage quota definitions.
+        /// </summary>
+        public DbSet<UsageQuota> UsageQuotas => Set<UsageQuota>();
+
+        /// <summary>
         /// Gets the daily source quotas.
         /// </summary>
         public DbSet<SourceQuota> SourceQuotas => Set<SourceQuota>();
@@ -90,6 +95,7 @@ namespace JobScrape.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new JobPostingConfiguration());
             modelBuilder.ApplyConfiguration(new BrowserProfileConfiguration());
             modelBuilder.ApplyConfiguration(new SourceQuotaConfiguration());
+            modelBuilder.ApplyConfiguration(new UsageQuotaConfiguration());
             modelBuilder.ApplyConfiguration(new SourceCircuitBreakerConfiguration());
             modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new RoleConfiguration());

@@ -50,6 +50,7 @@ namespace JobScrape.Infrastructure.Persistence
             services.AddScoped<IJobPostingRepository, JobPostingRepository>();
             services.AddScoped<IBrowserProfileRepository, BrowserProfileRepository>();
             services.AddScoped<ISourceQuotaRepository, SourceQuotaRepository>();
+            services.AddScoped<IUsageQuotaRepository, UsageQuotaRepository>();
             services.AddScoped<ISourceCircuitBreakerRepository, SourceCircuitBreakerRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();

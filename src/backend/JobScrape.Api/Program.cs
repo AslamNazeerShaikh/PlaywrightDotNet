@@ -65,6 +65,7 @@ namespace JobScrape.Api
 
             // One list for the single host: clock, caller, handlers,
             // export writers, and the background run coordinator.
+            builder.Services.AddMemoryCache();
             builder.Services.AddJobScrapeUseCases();
 
             // Bound and validated once; bad caps or consent flags fail
@@ -139,6 +140,7 @@ namespace JobScrape.Api
             app.UseSerilogRequestLogging(options =>
                 options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
             );
+            app.UseMiddleware<UsageQuotaMiddleware>();
             app.UseMiddleware<IdempotencyMiddleware>();
             app.MapControllers();
 

@@ -166,7 +166,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var count = scope.Db.Database.GetDbConnection().CreateCommand();
             count.CommandText =
                 "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite%';";
-            Assert.Equal(10L, await count.ExecuteScalarAsync(Ct));
+            Assert.Equal(11L, await count.ExecuteScalarAsync(Ct));
 
             await scope
                 .Db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>()
