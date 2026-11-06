@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain;
@@ -14,6 +16,15 @@ namespace JobScrape.Application.Features.Identity
     {
         private readonly IUserRepository _users;
         private readonly IUnitOfWork _unitOfWork;
+
+        // Fixed hash used to make the unknown-email path pay one PBKDF2
+        // verification, so it cannot be distinguished from a known account
+        // with a wrong secret by timing.
+        private static readonly PasswordHash DummyHash = PasswordHash.Restore(
+            new byte[16],
+            new byte[32],
+            210_000
+        );
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChangePasswordHandler"/> class.
@@ -51,9 +62,33 @@ namespace JobScrape.Application.Features.Identity
             var user = string.IsNullOrWhiteSpace(email)
                 ? null
                 : await _users.GetByEmailAsync(email, cancellationToken);
-            if (user is null || !user.PasswordHash.Verify(currentPassword))
+            if (user is null)
+            {
+                // Cost one verification so the unknown-email path is not
+                // cheaper than a known account with a wrong secret.
+                DummyHash.Verify(currentPassword);
+                return Result.Fail(Errors.InvalidCredentials());
+            }
+
+            if (!user.PasswordHash.Verify(currentPassword))
             {
                 return Result.Fail(Errors.InvalidCredentials());
+            }
+
+            if (SecretsEqual(currentPassword, newPassword))
+            {
+                return Result.Fail(
+                    Errors.ValidationFailed(
+                        "The new password must differ from the current password.",
+                        new Dictionary<string, string[]>
+                        {
+                            ["newPassword"] =
+                            [
+                                "The new password must differ from the current password.",
+                            ],
+                        }
+                    )
+                );
             }
 
             PasswordHash hash;
@@ -74,6 +109,23 @@ namespace JobScrape.Application.Features.Identity
             user.ChangePassword(hash);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok();
+        }
+
+        private static bool SecretsEqual(string? left, string? right)
+        {
+            if (left is null || right is null)
+            {
+                return left is null && right is null;
+            }
+
+            var leftBytes = Encoding.UTF8.GetBytes(left);
+            var rightBytes = Encoding.UTF8.GetBytes(right);
+            if (leftBytes.Length != rightBytes.Length)
+            {
+                return false;
+            }
+
+            return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
         }
     }
 }

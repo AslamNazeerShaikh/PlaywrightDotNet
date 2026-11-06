@@ -45,11 +45,13 @@ export function LoginPage({
   busy,
   problem,
   onLogin,
+  onFirstLogin,
 }: {
   initialEmail: string;
   busy: boolean;
   problem: ApiProblem | null;
   onLogin: (input: { email: string; password: string }) => Promise<boolean>;
+  onFirstLogin?: () => void;
 }) {
   useRenderLog("LoginPage");
 
@@ -113,14 +115,16 @@ export function LoginPage({
 
       <Module
         code="AUTH-02"
-        title="First login?"
+        title="First login / setup password"
         span="span-4"
         note="Seeded accounts finish at setup-password before they can sign in."
       >
         <p className="status-line">
-          A 403 <CodeTag code="PASSWORD_RESET_REQUIRED" tone="warn" /> answer means the account
-          still needs its operator password.
+          Pending accounts trade their seeded secret for an operator password here.
         </p>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onFirstLogin?.()}>
+          First login / setup password
+        </button>
       </Module>
     </>
   );

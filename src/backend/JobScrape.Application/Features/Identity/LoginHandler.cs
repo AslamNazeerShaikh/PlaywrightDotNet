@@ -1,6 +1,7 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain;
+using JobScrape.Domain.Identity;
 
 namespace JobScrape.Application.Features.Identity
 {
@@ -17,6 +18,15 @@ namespace JobScrape.Application.Features.Identity
         private readonly IUnitOfWork _unitOfWork;
         private readonly LoginPolicy _policy;
         private readonly TimeProvider _clock;
+
+        // Fixed hash used to make the unknown-email path pay one PBKDF2
+        // verification, so it cannot be distinguished from a known account
+        // by timing.
+        private static readonly PasswordHash DummyHash = PasswordHash.Restore(
+            new byte[16],
+            new byte[32],
+            210_000
+        );
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LoginHandler"/> class.
@@ -59,8 +69,8 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>
         /// Success with the token; <c>INVALID_CREDENTIALS</c> for an
-        /// unknown email or wrong password, <c>PASSWORD_RESET_REQUIRED</c>
-        /// before first login, or <c>ACCOUNT_LOCKED</c> while locked out.
+        /// unknown email, a pending first login, or a wrong password, or
+        /// <c>ACCOUNT_LOCKED</c> while locked out.
         /// </returns>
         public async Task<Result<LoginResponse>> HandleAsync(
             string? email,
@@ -73,6 +83,9 @@ namespace JobScrape.Application.Features.Identity
                 : await _users.GetByEmailAsync(email, cancellationToken);
             if (user is null)
             {
+                // Cost one verification so the unknown-email path is not
+                // cheaper than a known account with a wrong password.
+                DummyHash.Verify(password);
                 return Result.Fail<LoginResponse>(Errors.InvalidCredentials());
             }
 
@@ -80,11 +93,6 @@ namespace JobScrape.Application.Features.Identity
             try
             {
                 user.Authenticate(password, now, _policy.MaxFailedAttempts, _policy.Lockout);
-            }
-            catch (DomainException ex)
-                when (ex.Message.StartsWith("PASSWORD_RESET_REQUIRED", StringComparison.Ordinal))
-            {
-                return Result.Fail<LoginResponse>(Errors.PasswordResetRequired());
             }
             catch (DomainException ex)
                 when (ex.Message.StartsWith("ACCOUNT_LOCKED", StringComparison.Ordinal))

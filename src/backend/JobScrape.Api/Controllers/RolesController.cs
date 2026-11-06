@@ -16,7 +16,6 @@ namespace JobScrape.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/v1/roles")]
-    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public sealed class RolesController : ControllerBase
     {
         // Constructor-injected handlers, never mutated.
@@ -61,6 +60,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the roles.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.RolesRead)]
         public async Task<ActionResult<RoleListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
@@ -75,6 +75,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the role; 404 <c>ROLE_NOT_FOUND</c>.</returns>
         [HttpGet("{name}")]
+        [Authorize(Policy = AuthPolicies.RolesRead)]
         public async Task<IResult> GetAsync(string name, CancellationToken cancellationToken)
         {
             if (!TryParseRole(name, out var role))
@@ -96,6 +97,7 @@ namespace JobScrape.Api.Controllers
         /// <c>ROLE_NAME_TAKEN</c> when it exists.
         /// </returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> CreateAsync(
             [FromBody] CreateRoleRequest? request,
             CancellationToken cancellationToken
@@ -151,6 +153,7 @@ namespace JobScrape.Api.Controllers
         /// <c>PERMISSION_ALREADY_GRANTED</c>.
         /// </returns>
         [HttpPost("{name}/permissions")]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> GrantPermissionAsync(
             string name,
             [FromBody] PermissionGrantRequest? request,
@@ -193,6 +196,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 on success; 404 <c>ROLE_NOT_FOUND</c>.</returns>
         [HttpDelete("{name}/permissions/{key}")]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> RevokePermissionAsync(
             string name,
             string key,

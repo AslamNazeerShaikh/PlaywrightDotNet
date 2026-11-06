@@ -118,7 +118,7 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
 
-            using var response = await admin.GetAsync("api/v1/quotas", Ct);
+            using var response = await admin.GetAsync("api/v1/users", Ct);
 
             Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
             Assert.Equal(
@@ -146,7 +146,7 @@ namespace JobScrape.Api.Tests
                 Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
             }
 
-            using (var exhausted = await admin.GetAsync("api/v1/quotas", Ct))
+            using (var exhausted = await admin.GetAsync("api/v1/users", Ct))
             {
                 Assert.Equal(HttpStatusCode.TooManyRequests, exhausted.StatusCode);
             }

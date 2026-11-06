@@ -52,20 +52,7 @@ export function hasAnyPermission(me: MeResponse | null, ...keys: string[]): bool
   return keys.some((key) => me.permissions.includes(key));
 }
 
-/** Users nav and user CRUD: needs user visibility. */
-export function canSeeUsers(me: MeResponse | null): boolean {
-  return hasAnyPermission(me, "users.read", "users.write");
-}
-
-/** Roles and quota nav: needs role visibility (quotas are admin-only server-side). */
-export function canSeeRoles(me: MeResponse | null): boolean {
-  return hasAnyPermission(me, "roles.read", "roles.write");
-}
-
 /** Whether a 401 means the token died (redirect to login) as opposed to a bad login attempt. */
 export function isTokenFailure(problem: { status: number; code: string }): boolean {
-  return (
-    problem.status === 401 &&
-    (problem.code === "UNAUTHENTICATED" || problem.code === "INVALID_CREDENTIALS")
-  );
+  return problem.status === 401 && problem.code === "UNAUTHENTICATED";
 }

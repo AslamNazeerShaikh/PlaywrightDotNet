@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using JobScrape.Application.Abstractions;
+using JobScrape.Domain.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace JobScrape.Api.Tests
@@ -127,6 +130,17 @@ namespace JobScrape.Api.Tests
         {
             await using var factory = new ApiFactory();
             using var anonymous = factory.CreateClient();
+            var pendingEmail = $"pending-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await (
+                await AuthTestHelper.CreateAdminClientAsync(factory, Ct)
+            ).PostAsJsonAsync(
+                "api/v1/users",
+                new { email = pendingEmail, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+
             using var unknown = await anonymous.PostAsJsonAsync(
                 "api/v1/auth/setup-password",
                 new
@@ -137,10 +151,260 @@ namespace JobScrape.Api.Tests
                 },
                 Ct
             );
-            var unknownBody = await unknown.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            using var wrongSecret = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email = pendingEmail,
+                    currentSecret = "wrong-secret",
+                    newPassword = "New-Password3##",
+                },
+                Ct
+            );
 
-            Assert.Equal(HttpStatusCode.Conflict, unknown.StatusCode);
-            Assert.Equal("PASSWORD_SETUP_COMPLETE", unknownBody.GetProperty("code").GetString());
+            var unknownBody = await unknown.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var wrongBody = await wrongSecret.Content.ReadFromJsonAsync<JsonElement>(Ct);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
+            Assert.Equal(unknown.StatusCode, wrongSecret.StatusCode);
+            Assert.Equal("INVALID_CREDENTIALS", unknownBody.GetProperty("code").GetString());
+            Assert.Equal(
+                unknownBody.GetProperty("code").GetString(),
+                wrongBody.GetProperty("code").GetString()
+            );
+            Assert.Equal(
+                unknownBody.GetProperty("title").GetString(),
+                wrongBody.GetProperty("title").GetString()
+            );
+            Assert.True(unknownBody.TryGetProperty("traceId", out _));
+            Assert.True(wrongBody.TryGetProperty("traceId", out _));
+        }
+
+        [Fact]
+        public async Task SetupPasswordWithSameSecretIs400()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"same-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            using var anonymous = factory.CreateClient();
+
+            using var response = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = temporary,
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task ChangePasswordWithSameNewPasswordIs400()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            using var response = await admin.PostAsJsonAsync(
+                "api/v1/auth/change-password",
+                new { currentPassword = "Final-Password2@@", newPassword = "Final-Password2@@" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task SetupPasswordOnLockedAccountWithCorrectSecretIs403()
+        {
+            await using var factory = new ApiFactory();
+            var email = $"locked-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using (var scope = factory.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+                var clock = provider.GetRequiredService<TimeProvider>();
+                var users = provider.GetRequiredService<IUserRepository>();
+                var user = User.Create(email, PasswordHash.Create(temporary), clock.GetUtcNow());
+                user.RecordFailedLogin(clock.GetUtcNow(), 1, TimeSpan.FromMinutes(15));
+                await users.AddAsync(user, Ct);
+                await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+            using var anonymous = factory.CreateClient();
+
+            using var response = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "New-Password3##",
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("ACCOUNT_LOCKED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task AssignRoleToSelfIs403()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"self-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var userId = createdBody.GetProperty("id").GetGuid();
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "Self-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            using var assigned = await admin.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            assigned.EnsureSuccessStatusCode();
+            using var self = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Self-Password2@@",
+                Ct
+            );
+
+            using var response = await self.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("ACCESS_DENIED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task RevokeRoleFromSelfIs403()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"selfrevoke-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var userId = createdBody.GetProperty("id").GetGuid();
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "Self-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            using var assigned = await admin.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            assigned.EnsureSuccessStatusCode();
+            using var self = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Self-Password2@@",
+                Ct
+            );
+
+            using var response = await self.DeleteAsync($"api/v1/users/{userId:D}/roles/Admin", Ct);
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("ACCESS_DENIED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task OldTokenIsUnauthorizedAfterRoleGrant()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"stale-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var userId = createdBody.GetProperty("id").GetGuid();
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "Stale-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            var setupBody = await setup.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var oldToken = setupBody.GetProperty("token").GetString()!;
+            using var oldClient = factory.CreateClient();
+            oldClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", oldToken);
+
+            using var granted = await admin.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            granted.EnsureSuccessStatusCode();
+
+            using var response = await oldClient.GetAsync("api/v1/auth/me", Ct);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
         }
 
         [Fact]

@@ -14,7 +14,7 @@ describe("sessions", () => {
         json: async () => ({ items: [], total: 0 }),
       };
     };
-    const client = createApiClient(fetchImpl);
+    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
 
     await client.listSessions();
     await client.createSession({
@@ -24,8 +24,15 @@ describe("sessions", () => {
       channel: "Bundled",
     });
 
-    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: { method: "GET" } });
+    expect(calls[0]).toEqual({
+      url: "/api/v1/sessions",
+      init: { method: "GET", headers: { authorization: "Bearer tok-1" } },
+    });
     expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.headers).toEqual({
+      "content-type": "application/json",
+      authorization: "Bearer tok-1",
+    });
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       name: "main",
       sourceKey: "naukri",
@@ -58,15 +65,21 @@ describe("sessions", () => {
       };
     };
 
-    const { result } = await createApiClient(fetchImpl).updateSession("s1", {
-      name: "after",
-      engine: "Chromium",
-      channel: "Bundled",
-    });
+    const { result } = await createApiClient(fetchImpl, { getToken: () => "tok-1" }).updateSession(
+      "s1",
+      {
+        name: "after",
+        engine: "Chromium",
+        channel: "Bundled",
+      },
+    );
 
     expect(result.ok).toBe(true);
     expect(seen?.method).toBe("PATCH");
-    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(seen?.headers).toEqual({
+      "content-type": "application/json",
+      authorization: "Bearer tok-1",
+    });
     expect(JSON.parse(String(seen?.body))).toEqual({
       name: "after",
       engine: "Chromium",

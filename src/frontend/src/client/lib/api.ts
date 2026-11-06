@@ -428,67 +428,59 @@ export function createApiClient(
     listQuotas: () => timed(() => authed<QuotaListResponse>("GET", "/api/v1/quotas")),
     updateQuota: (scope: string, input: UpdateQuotaInput) =>
       timed(() => authed<QuotaResponse>("PUT", `/api/v1/quotas/${scope}`, input)),
-    listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
-    listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
-    listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
+    listProfiles: () => timed(() => authed<SearchProfileList>("GET", "/api/v1/search-profiles")),
+    listSources: () => timed(() => authed<SourceList>("GET", "/api/v1/sources")),
+    listSessions: () => timed(() => authed<SessionList>("GET", "/api/v1/sessions")),
     createSession: (input: CreateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
+      timed(() => authed<SessionPayload>("POST", "/api/v1/sessions", input)),
     updateSession: (id: string, input: UpdateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "PATCH", `/api/v1/sessions/${id}`, input)),
+      timed(() => authed<SessionPayload>("PATCH", `/api/v1/sessions/${id}`, input)),
     createProfile: (input: CreateProfileInput) =>
-      timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
+      timed(() => authed<SearchProfilePayload>("POST", "/api/v1/search-profiles", input)),
     updateProfile: (id: string, input: UpdateProfileInput) =>
-      timed(() =>
-        send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
-      ),
+      timed(() => authed<SearchProfilePayload>("PUT", `/api/v1/search-profiles/${id}`, input)),
     listRuns: (offset = 0, limit = 50) =>
-      timed(() => get<RunList>(fetchImpl, `/api/v1/runs?offset=${offset}&limit=${limit}`)),
-    getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
+      timed(() => authed<RunList>("GET", `/api/v1/runs?offset=${offset}&limit=${limit}`)),
+    getRun: (id: string) => timed(() => authed<RunPayload>("GET", `/api/v1/runs/${id}`)),
     listRunPostings: (id: string, offset = 0, limit = 200) =>
       timed(() =>
-        get<RunPostingList>(
-          fetchImpl,
+        authed<RunPostingList>(
+          "GET",
           `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
         ),
       ),
     downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
-      timed(() => downloadExport(fetchImpl, id, format, group)),
+      timed(() => downloadExport(fetchImpl, id, format, group, getToken?.() ?? null)),
     startRun: (input: StartRunInput) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
+      timed(() => authed<RunPayload>("POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
-    listDbTables: () => timed(() => get<{ items: DbTableInfo[] }>(fetchImpl, "/api/v1/db/tables")),
+      timed(() => authed<RunPayload>("POST", `/api/v1/runs/${id}/cancel`, {})),
+    listDbTables: () => timed(() => authed<{ items: DbTableInfo[] }>("GET", "/api/v1/db/tables")),
     getDbSchema: (table: string) =>
       timed(() =>
-        get<DbTableSchema>(fetchImpl, `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
+        authed<DbTableSchema>("GET", `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
       ),
     listDbRows: (table: string, offset: number, limit: number) =>
       timed(() =>
-        get<DbRowsResult>(
-          fetchImpl,
+        authed<DbRowsResult>(
+          "GET",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows?offset=${offset}&limit=${limit}`,
         ),
       ),
     insertDbRow: (table: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
-          "POST",
-          `/api/v1/db/tables/${encodeURIComponent(table)}/rows`,
-          values,
-        ),
+        authed<null>("POST", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, values),
       ),
     updateDbRow: (table: string, pk: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(fetchImpl, "PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
+        authed<null>("PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
           primaryKeyValue: pk,
           values,
         }),
       ),
     deleteDbRow: (table: string, pk: string) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
+        authed<null>(
           "DELETE",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows/${encodeURIComponent(pk)}`,
         ),
@@ -518,12 +510,17 @@ async function downloadExport(
   id: string,
   format: ExportFormat,
   group: ExportGroup,
+  token?: string | null,
 ): Promise<ApiResult<{ blob: Blob; filename: string }>> {
   const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
   const path = `/api/v1/runs/${id}/postings/export?${query}`;
+  const headers: Record<string, string> = {};
+  if (token) headers["authorization"] = `Bearer ${token}`;
+  const init: RequestInit = { method: "GET" };
+  if (Object.keys(headers).length > 0) init.headers = headers;
   let res: Awaited<ReturnType<FetchImpl>>;
   try {
-    res = await fetchImpl(path, { method: "GET" });
+    res = await fetchImpl(path, init);
   } catch {
     return {
       ok: false,

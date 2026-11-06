@@ -21,6 +21,11 @@ namespace JobScrape.Application.Abstractions
         /// Gets the permission keys granted to the caller.
         /// </summary>
         IReadOnlyCollection<string> Permissions { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether first login is still pending.
+        /// </summary>
+        bool MustChangePassword { get; }
     }
 
     /// <summary>
@@ -42,5 +47,10 @@ namespace JobScrape.Application.Abstractions
         /// </summary>
         public static CallerContext LocalOperator { get; } =
             new("local-operator", Array.Empty<string>(), Array.Empty<string>());
+
+        /// <summary>
+        /// Gets a value indicating whether first login is still pending.
+        /// </summary>
+        public bool MustChangePassword { get; init; }
     }
 }

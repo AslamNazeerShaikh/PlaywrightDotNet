@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using JobScrape.Api.Http;
 using JobScrape.Application.Abstractions;
@@ -9,6 +10,8 @@ using JobScrape.Domain.Identity;
 using JobScrape.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace JobScrape.Api.Http.Auth
@@ -58,87 +61,88 @@ namespace JobScrape.Api.Http.Auth
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(configuration);
 
-            var jwt =
-                configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
-                ?? new JwtOptions();
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
             services
-                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    // Keep the JWT claim names as issued (sub, email, perm):
-                    // the default inbound mapping would rename them and the
-                    // edge reads the issued names everywhere.
-                    options.MapInboundClaims = false;
-                    options.TokenValidationParameters = new TokenValidationParameters
+                .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<IOptions<JwtOptions>>(
+                    (options, jwtOptions) =>
                     {
-                        ValidateIssuer = true,
-                        ValidIssuer = jwt.Issuer,
-                        ValidateAudience = true,
-                        ValidAudience = jwt.Audience,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(
-                            Encoding.UTF8.GetBytes(jwt.Secret)
-                        ),
-                        ClockSkew = TimeSpan.Zero,
-                        RoleClaimType = IdentityClaimTypes.Role,
-                    };
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnChallenge = context =>
+                        var jwt = jwtOptions.Value;
+                        // Keep the JWT claim names as issued (sub, email, perm):
+                        // the default inbound mapping would rename them and the
+                        // edge reads the issued names everywhere.
+                        options.MapInboundClaims = false;
+                        options.TokenValidationParameters = new TokenValidationParameters
                         {
-                            context.HandleResponse();
-                            return Errors
-                                .Unauthenticated()
-                                .ToProblem()
-                                .ExecuteAsync(context.HttpContext);
-                        },
-                        OnForbidden = context =>
-                            Errors.AccessDenied().ToProblem().ExecuteAsync(context.HttpContext),
-                        OnTokenValidated = async context =>
+                            ValidateIssuer = true,
+                            ValidIssuer = jwt.Issuer,
+                            ValidateAudience = true,
+                            ValidAudience = jwt.Audience,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
+                            IssuerSigningKey = new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(jwt.Secret)
+                            ),
+                            ClockSkew = TimeSpan.Zero,
+                            RoleClaimType = IdentityClaimTypes.Role,
+                        };
+                        options.Events = new JwtBearerEvents
                         {
-                            var users =
-                                context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
-                            var sub = context
-                                .Principal?.FindFirst(IdentityClaimTypes.Subject)
-                                ?.Value;
-                            var version = context
-                                .Principal?.FindFirst(IdentityClaimTypes.TokenVersion)
-                                ?.Value;
-                            if (!Guid.TryParse(sub, out var userId) || version is null)
+                            OnChallenge = context =>
                             {
-                                context.Fail("The token is missing its identity.");
-                                return;
-                            }
+                                context.HandleResponse();
+                                return Errors
+                                    .Unauthenticated()
+                                    .ToProblem()
+                                    .ExecuteAsync(context.HttpContext);
+                            },
+                            OnForbidden = context =>
+                                Errors.AccessDenied().ToProblem().ExecuteAsync(context.HttpContext),
+                            OnTokenValidated = async context =>
+                            {
+                                var users =
+                                    context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+                                var sub = context
+                                    .Principal?.FindFirst(IdentityClaimTypes.Subject)
+                                    ?.Value;
+                                var version = context
+                                    .Principal?.FindFirst(IdentityClaimTypes.TokenVersion)
+                                    ?.Value;
+                                if (!Guid.TryParse(sub, out var userId) || version is null)
+                                {
+                                    context.Fail("The token is missing its identity.");
+                                    return;
+                                }
 
-                            User? user;
-                            try
-                            {
-                                user = await users.GetAsync(
-                                    UserId.From(userId),
-                                    context.HttpContext.RequestAborted
-                                );
-                            }
-                            catch (DomainException)
-                            {
-                                context.Fail("The token subject is invalid.");
-                                return;
-                            }
+                                User? user;
+                                try
+                                {
+                                    user = await users.GetAsync(
+                                        UserId.From(userId),
+                                        context.HttpContext.RequestAborted
+                                    );
+                                }
+                                catch (DomainException)
+                                {
+                                    context.Fail("The token subject is invalid.");
+                                    return;
+                                }
 
-                            if (
-                                user is null
-                                || !user
-                                    .TokenVersion.ToString(CultureInfo.InvariantCulture)
-                                    .Equals(version, StringComparison.Ordinal)
-                            )
-                            {
-                                context.Fail(
-                                    "The token was revoked by a password change or lockout."
-                                );
-                            }
-                        },
-                    };
-                });
+                                if (
+                                    user is null
+                                    || !user
+                                        .TokenVersion.ToString(CultureInfo.InvariantCulture)
+                                        .Equals(version, StringComparison.Ordinal)
+                                )
+                                {
+                                    context.Fail(
+                                        "The token was revoked by a password change or lockout."
+                                    );
+                                }
+                            },
+                        };
+                    }
+                );
 
             var authorization = services.AddAuthorizationBuilder();
             authorization.SetFallbackPolicy(
@@ -199,12 +203,17 @@ namespace JobScrape.Api.Http.Auth
                             }
                         )
                 );
+                // Partition key is the account identifier (email) from the
+                // request body when present, otherwise the client IP. This
+                // keeps one account's failed attempts from exhausting another
+                // account's budget on a shared host, and keeps the anonymous
+                // login/setup budget (this policy) separate from the
+                // authenticated /me polling budget (the global limiter).
                 options.AddPolicy(
                     RateLimitPolicies.Login,
                     context =>
                         RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: context.Connection.RemoteIpAddress?.ToString()
-                                ?? "unknown",
+                            partitionKey: GetLoginPartitionKey(context),
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 PermitLimit = LoginPermitLimit,
@@ -217,6 +226,60 @@ namespace JobScrape.Api.Http.Auth
                 );
             });
             return services;
+        }
+
+        /// <summary>
+        /// Builds the login-limiter partition key: the account identifier
+        /// (email) parsed from the request body when present, otherwise the
+        /// client IP.
+        /// </summary>
+        private static string GetLoginPartitionKey(HttpContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            context.Request.EnableBuffering();
+            var bodyControl = context.Features.Get<IHttpBodyControlFeature>();
+            if (bodyControl is not null)
+            {
+                bodyControl.AllowSynchronousIO = true;
+            }
+
+            string? email = null;
+            if (context.Request.Body.CanSeek)
+            {
+                context.Request.Body.Position = 0;
+                using var reader = new StreamReader(
+                    context.Request.Body,
+                    Encoding.UTF8,
+                    detectEncodingFromByteOrderMarks: false,
+                    bufferSize: 1024,
+                    leaveOpen: true
+                );
+                var body = reader.ReadToEnd();
+                context.Request.Body.Position = 0;
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    try
+                    {
+                        using var document = JsonDocument.Parse(body);
+                        if (
+                            document.RootElement.ValueKind == JsonValueKind.Object
+                            && document.RootElement.TryGetProperty("email", out var property)
+                            && property.ValueKind == JsonValueKind.String
+                        )
+                        {
+                            email = property.GetString();
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // Not JSON or no email field: fall back to IP.
+                    }
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(email)
+                ? $"ip:{context.Connection.RemoteIpAddress}"
+                : $"account:{email}";
         }
     }
 }

@@ -540,22 +540,6 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
-        /// Creates a forbidden failure for a login that must set a new
-        /// password first.
-        /// </summary>
-        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
-        public static ErrorInfo PasswordResetRequired()
-        {
-            return new ErrorInfo(
-                "PASSWORD_RESET_REQUIRED",
-                "A password change is required.",
-                "Set a new password before signing in.",
-                ErrorKind.Forbidden,
-                new Dictionary<string, object?>()
-            );
-        }
-
-        /// <summary>
         /// Creates a forbidden failure for a login while the account is locked.
         /// </summary>
         /// <param name="lockedUntil">When the lockout ends, if known.</param>

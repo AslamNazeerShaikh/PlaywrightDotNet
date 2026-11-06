@@ -11,8 +11,6 @@ import {
   PERMISSION_CATALOG,
 } from "../../client/lib/api.ts";
 import {
-  canSeeRoles,
-  canSeeUsers,
   clearToken,
   hasAnyPermission,
   isTokenFailure,
@@ -208,18 +206,17 @@ describe("auth store", () => {
   });
 
   test("nav visibility follows users and roles permissions", () => {
-    expect(canSeeUsers(adminMe)).toBe(true);
-    expect(canSeeRoles(adminMe)).toBe(true);
+    expect(hasAnyPermission(adminMe, "users.read", "users.write")).toBe(true);
+    expect(hasAnyPermission(adminMe, "roles.read", "roles.write")).toBe(true);
     const viewer: MeResponse = { email: "v", roles: ["Viewer"], permissions: ["profiles.read"] };
-    expect(canSeeUsers(viewer)).toBe(false);
-    expect(canSeeRoles(viewer)).toBe(false);
+    expect(hasAnyPermission(viewer, "users.read", "users.write")).toBe(false);
+    expect(hasAnyPermission(viewer, "roles.read", "roles.write")).toBe(false);
     expect(hasAnyPermission(viewer, "profiles.read", "users.read")).toBe(true);
   });
 
   test("only 401 token codes count as a dead token", () => {
     expect(isTokenFailure({ status: 401, code: "UNAUTHENTICATED" })).toBe(true);
-    expect(isTokenFailure({ status: 401, code: "INVALID_CREDENTIALS" })).toBe(true);
-    expect(isTokenFailure({ status: 403, code: "PASSWORD_RESET_REQUIRED" })).toBe(false);
+    expect(isTokenFailure({ status: 401, code: "INVALID_CREDENTIALS" })).toBe(false);
     expect(isTokenFailure({ status: 403, code: "ACCESS_DENIED" })).toBe(false);
   });
 
@@ -242,14 +239,6 @@ function authBackend() {
     }
     if (url === "/api/v1/auth/login" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { email: string; password: string };
-      if (body.email === "seed@example.com") {
-        return reply(403, {
-          status: 403,
-          title: "Password reset required.",
-          detail: "",
-          code: "PASSWORD_RESET_REQUIRED",
-        });
-      }
       if (body.password !== "right") {
         return reply(401, {
           status: 401,
@@ -262,6 +251,18 @@ function authBackend() {
     }
     if (url === "/api/v1/auth/setup-password") {
       return reply(200, { token: "tok-2", mustChangePassword: false });
+    }
+    if (url === "/api/v1/auth/change-password" && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { currentPassword: string };
+      if (body.currentPassword !== "right") {
+        return reply(401, {
+          status: 401,
+          title: "Invalid credentials.",
+          detail: "",
+          code: "INVALID_CREDENTIALS",
+        });
+      }
+      return reply(204, {});
     }
     if (url === "/api/v1/auth/me") {
       const auth = (init?.headers as Record<string, string> | undefined)?.["authorization"];
@@ -324,13 +325,19 @@ describe("auth flow", () => {
     expect(loadToken()).toBe("tok-1");
   });
 
-  test("seeded accounts land on setup-password and finish signed in", async () => {
+  test("wrong password then setup-password finishes signed in", async () => {
     const queries = render(<App client={authBackend()} initialRoute="overview" />);
     await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
 
     fireEvent.change(queries.getByLabelText("Email"), { target: { value: "seed@example.com" } });
     fireEvent.change(queries.getByLabelText("Password"), { target: { value: "temp" } });
     fireEvent.click(queries.getByRole("button", { name: "SIGN IN" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("INVALID_CREDENTIALS"),
+    );
+
+    fireEvent.click(queries.getByRole("button", { name: "First login / setup password" }));
 
     await waitFor(() => expect(queries.getByRole("form", { name: "Set password" })).toBeDefined());
 
@@ -389,5 +396,27 @@ describe("auth flow", () => {
     const table = queries.getByRole("table", { name: "Usage quotas" });
     expect(table.textContent).toContain("Api");
     expect(table.textContent).toContain("00:01:00");
+  });
+
+  test("wrong current password on change-password keeps the session", async () => {
+    saveToken("tok-1");
+    const queries = render(
+      <App client={authBackend()} initialRoute="users" initialSession={{ me: adminMe }} />,
+    );
+
+    await waitFor(() =>
+      expect(queries.getByRole("form", { name: "Change my password" })).toBeDefined(),
+    );
+
+    fireEvent.change(queries.getByLabelText("Current password"), { target: { value: "wrong" } });
+    fireEvent.change(queries.getByLabelText("New password"), { target: { value: "New-1!!" } });
+    fireEvent.click(queries.getByRole("button", { name: "CHANGE PASSWORD" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("INVALID_CREDENTIALS"),
+    );
+    expect(queries.container.textContent).toContain("admin@example.com");
+    expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined();
+    expect(loadToken()).toBe("tok-1");
   });
 });
