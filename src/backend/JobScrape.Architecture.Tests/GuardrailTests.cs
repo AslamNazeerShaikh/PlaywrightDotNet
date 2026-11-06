@@ -13,14 +13,11 @@ namespace JobScrape.Architecture.Tests
 
         private static readonly Assembly Mcp = Assembly.Load("JobScrape.Mcp");
 
-        private static readonly Assembly McpHost = Assembly.Load("JobScrape.Mcp.Host");
-
         private static readonly Assembly[] Production =
         [
             Domain,
             Application,
             Mcp,
-            McpHost,
             typeof(JobScrape.Infrastructure.Persistence.JobScrapeDbContext).Assembly,
             typeof(JobScrape.Api.Program).Assembly,
         ];

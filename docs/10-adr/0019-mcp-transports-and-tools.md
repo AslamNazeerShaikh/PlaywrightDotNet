@@ -1,8 +1,12 @@
 # ADR-0019: MCP server transports and tool surface
 
-- **Status:** Accepted
+- **Status:** Superseded (2026-11-06)
 - **Date:** 2026-11-05
 - **Deciders:** Project owner
+
+> Superseded: the stdio host (`JobScrape.Mcp.Host`) is removed. MCP is
+> web-only through `MapMcp("/mcp")` in `JobScrape.Api`, the single
+> composition root. The history below stays for context.
 
 ## Context
 
