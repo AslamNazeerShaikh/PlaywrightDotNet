@@ -13,6 +13,11 @@ namespace JobScrape.Application.Results
         Validation,
 
         /// <summary>
+        /// Authentication failed or is missing. Maps to HTTP 401.
+        /// </summary>
+        Unauthorized,
+
+        /// <summary>
         /// A referenced profile, run, or posting does not exist. Maps to HTTP 404.
         /// </summary>
         NotFound,

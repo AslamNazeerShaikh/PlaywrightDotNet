@@ -56,6 +56,7 @@ namespace JobScrape.Infrastructure.Tests.Security
             Assert.Equal("op@example.com", jwt.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value);
             Assert.Contains(jwt.Claims, c => c.Type == "role" && c.Value == "Admin");
             Assert.Contains(jwt.Claims, c => c.Type == "perm" && c.Value == "runs.read");
+            Assert.Equal("1", jwt.Claims.First(c => c.Type == "ver").Value);
             Assert.False(string.IsNullOrWhiteSpace(jwt.Id));
             Assert.DoesNotContain(jwt.Claims, c => c.Type == "must_change_password");
             Assert.Equal(Now.AddMinutes(60), jwt.ValidTo);
@@ -70,7 +71,36 @@ namespace JobScrape.Infrastructure.Tests.Security
 
             var token = service.CreateToken(user, [], [], Now);
 
-            Assert.Contains(Read(token).Claims, c => c.Type == "must_change_password" && c.Value == "true");
+            var jwt = Read(token);
+            Assert.Contains(jwt.Claims, c => c.Type == "must_change_password" && c.Value == "true");
+            Assert.Equal("0", jwt.Claims.First(c => c.Type == "ver").Value);
+        }
+
+        [Fact]
+        public void TokenVersionFollowsPasswordChangesAndLockouts()
+        {
+            var service = new JwtTokenService(Options.Create(TestOptions()));
+            var user = User.Create("op@example.com", PasswordHash.Create("Seed-Secret1!!"), Now);
+            user.CompleteFirstLogin(PasswordHash.Create("Final-Password2@@"), Now);
+            Assert.Equal(1, user.TokenVersion);
+
+            user.ChangePassword(PasswordHash.Create("Newer-Password3##"));
+
+            Assert.Equal(2, user.TokenVersion);
+            var changed = Read(service.CreateToken(user, [], [], Now));
+            Assert.Equal("2", changed.Claims.First(c => c.Type == "ver").Value);
+
+            for (var attempt = 0; attempt < 4; attempt++)
+            {
+                user.RecordFailedLogin(Now.AddMinutes(attempt), 5, TimeSpan.FromMinutes(15));
+            }
+
+            Assert.Equal(2, user.TokenVersion);
+            user.RecordFailedLogin(Now.AddMinutes(5), 5, TimeSpan.FromMinutes(15));
+
+            Assert.Equal(3, user.TokenVersion);
+            var locked = Read(service.CreateToken(user, [], [], Now));
+            Assert.Equal("3", locked.Claims.First(c => c.Type == "ver").Value);
         }
 
         [Fact]

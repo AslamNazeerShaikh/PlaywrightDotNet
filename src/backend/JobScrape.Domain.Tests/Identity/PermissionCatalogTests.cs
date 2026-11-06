@@ -15,6 +15,9 @@ namespace JobScrape.Domain.Tests.Identity
             "users.write",
             "roles.read",
             "roles.write",
+            "sessions.read",
+            "sessions.write",
+            "sources.read",
         ];
 
         [Fact]

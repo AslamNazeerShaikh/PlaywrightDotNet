@@ -1,4 +1,5 @@
 using JobScrape.Application.Features.Health;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -33,6 +34,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Token to observe for client disconnect.</param>
         /// <returns>HTTP 200 with the current <see cref="GetHealthResponse"/>.</returns>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<GetHealthResponse>> GetAsync(
             CancellationToken cancellationToken
         )

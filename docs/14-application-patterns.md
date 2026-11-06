@@ -209,6 +209,7 @@ Codes use uppercase snake case and are stable across releases. The cockpit maps 
 | `ErrorKind` | Actual `Code`(s) | HTTP status (API) |
 |---|---|---|
 | `Validation` | `VALIDATION_FAILED` | `400` |
+| `Unauthorized` | `INVALID_CREDENTIALS`, `UNAUTHENTICATED` | `401` |
 | `NotFound` | `PROFILE_NOT_FOUND`, `BROWSER_PROFILE_NOT_FOUND` | `404` |
 | `Conflict` | `PROFILE_DISABLED`, `SOURCE_DISABLED` | `409` |
 | `Forbidden` | `COMPLIANCE_BLOCKED` | `403` |
@@ -222,6 +223,11 @@ Codes use uppercase snake case and are stable across releases. The cockpit maps 
 | `Unexpected` | `INTERNAL_ERROR` | `500` |
 
 (All `SESSION_*` codes surface as `CoolingDown`/`423`, including resets — see `Errors.SessionUnavailable`.)
+
+Bad credentials are `401 INVALID_CREDENTIALS`, never `400`: a wrong email
+or password is an authentication failure, not a validation error. The login
+and password-setup handlers return `Unauthorized` for unknown emails and
+mismatched secrets alike, so the two are indistinguishable on the wire.
 
 `ErrorKind` is an application concept, not an HTTP status. Only the API edge performs the mapping; there is no CLI mapping today.
 

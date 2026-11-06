@@ -189,7 +189,7 @@ namespace JobScrape.Application.Tests
             var result = await handler.HandleAsync("nobody@example.com", "whatever", TestContext.Current.CancellationToken);
 
             Assert.True(result.IsFailure);
-            Assert.Equal(ErrorKind.Validation, result.Error.Kind);
+            Assert.Equal(ErrorKind.Unauthorized, result.Error.Kind);
             Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
         }
 
@@ -498,6 +498,27 @@ namespace JobScrape.Application.Tests
             Assert.True(revoked.IsSuccess);
             Assert.True(absent.IsSuccess);
             Assert.Empty(role.PermissionKeys);
+        }
+
+        [Fact]
+        public async Task RevokePermissionFromAdminIsRefused()
+        {
+            var roles = new FakeRoles();
+            var admin = Role.Create(RoleId.New(), RoleName.Admin);
+            admin.Grant(PermissionKey.From("runs.read"));
+            roles.Seed(admin);
+            var handler = new RevokePermissionHandler(roles, new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync(
+                RoleName.Admin,
+                "runs.read",
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
+            Assert.Equal("ROLE_PROTECTED", result.Error.Code);
+            Assert.Contains(PermissionKey.From("runs.read"), admin.PermissionKeys);
         }
 
         [Fact]

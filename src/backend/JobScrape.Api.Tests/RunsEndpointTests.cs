@@ -107,7 +107,7 @@ namespace JobScrape.Api.Tests
         public async Task StartFollowAndReadPostingsThroughSqlite()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
 
             using var started = await client.PostAsJsonAsync(
@@ -258,7 +258,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Skilled = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var profile = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -322,7 +322,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Skilled = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var profile = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -397,7 +397,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Blocked = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
             var body = new { profileId = profile, browserProfileId = session };
 
@@ -440,7 +440,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Throws = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
             var body = new { profileId = profile, browserProfileId = session };
 
@@ -475,7 +475,7 @@ namespace JobScrape.Api.Tests
         public async Task GateRefusalsAndUnknownRunsAreProblems()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var empty = await client.PostAsJsonAsync(
                 "api/v1/runs",
@@ -519,7 +519,7 @@ namespace JobScrape.Api.Tests
         public async Task StartupFailsRunsAStopLeftExecuting()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profileId, _) = await SeedAsync(client);
 
             Guid staleId;

@@ -115,6 +115,16 @@ namespace JobScrape.Mcp.Tests
             public string ActorId => "tests";
 
             public IReadOnlyCollection<string> Roles => [];
+
+            public IReadOnlyCollection<string> Permissions { get; init; } =
+            [
+                "profiles.read",
+                "profiles.write",
+                "runs.read",
+                "runs.write",
+                "sessions.read",
+                "sources.read",
+            ];
         }
 
         private sealed class StubStore(IReadOnlyList<SearchProfileResponse> profiles)

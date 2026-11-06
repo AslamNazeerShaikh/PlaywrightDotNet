@@ -46,6 +46,8 @@ namespace JobScrape.Api.Tests
         [InlineData("JobScrape:Storage:MinimumFreeDiskBytes", "0")]
         [InlineData("JobScrape:Run:RetryMaxAttempts", "9")]
         [InlineData("JobScrape:Logging:RetentionDays", "0")]
+        [InlineData("JobScrape:Jwt:Secret", "too-short")]
+        [InlineData("JobScrape:Jwt:Secret", "CHANGE-ME-TO-A-SECRET-OF-AT-LEAST-32-CHARS")]
         public void UnsafeConfigurationFailsStartup(string key, string value)
         {
             using var factory = _factory.WithWebHostBuilder(builder =>

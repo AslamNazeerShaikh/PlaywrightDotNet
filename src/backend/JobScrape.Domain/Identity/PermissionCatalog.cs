@@ -69,6 +69,21 @@ namespace JobScrape.Domain.Identity
                 Key = PermissionKey.From("roles.write"),
                 Description = "Create roles and change their permission grants.",
             },
+            new PermissionDefinition
+            {
+                Key = PermissionKey.From("sessions.read"),
+                Description = "View browser profiles and their session state.",
+            },
+            new PermissionDefinition
+            {
+                Key = PermissionKey.From("sessions.write"),
+                Description = "Create and edit browser profiles.",
+            },
+            new PermissionDefinition
+            {
+                Key = PermissionKey.From("sources.read"),
+                Description = "View configured sources and their status.",
+            },
         ];
 
         /// <summary>

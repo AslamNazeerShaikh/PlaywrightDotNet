@@ -27,6 +27,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
                 .HasConversion(DomainConverters.PasswordHash)
                 .HasColumnName("password_hash");
             builder.Property(user => user.MustChangePassword).HasColumnName("must_change_password");
+            builder.Property(user => user.TokenVersion).HasColumnName("token_version");
             builder.Property(user => user.FailedAttempts).HasColumnName("failed_attempts");
             builder.Property(user => user.LockedUntilUtc).HasColumnName("locked_until_utc");
             builder.Property(user => user.CreatedAt).HasColumnName("created_at");

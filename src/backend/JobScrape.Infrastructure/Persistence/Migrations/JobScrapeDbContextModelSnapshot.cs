@@ -194,6 +194,10 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("password_hash");
 
+                    b.Property<int>("TokenVersion")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("token_version");
+
                     b.Property<string>("_roles")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -443,6 +447,48 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("search_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("JobScrape.Infrastructure.Persistence.IdempotencyRecord", b =>
+                {
+                    b.Property<string>("OwnerKey")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("owner_key");
+
+                    b.Property<string>("Endpoint")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("endpoint");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("key");
+
+                    b.Property<byte[]>("Body")
+                        .IsRequired()
+                        .HasColumnType("BLOB")
+                        .HasColumnName("body");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_type");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("request_hash");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("status_code");
+
+                    b.HasKey("OwnerKey", "Endpoint", "Key");
+
+                    b.ToTable("idempotency_keys", (string)null);
                 });
 
             modelBuilder.Entity("JobScrape.Domain.Sourcing.ScrapeRun", b =>

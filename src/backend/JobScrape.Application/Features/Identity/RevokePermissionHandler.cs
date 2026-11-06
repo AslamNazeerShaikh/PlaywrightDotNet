@@ -36,8 +36,9 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>
         /// Success; <c>VALIDATION_FAILED</c> for a malformed key,
-        /// <c>UNKNOWN_PERMISSION</c> outside the catalog, or
-        /// <c>ROLE_NOT_FOUND</c>.
+        /// <c>UNKNOWN_PERMISSION</c> outside the catalog,
+        /// <c>ROLE_NOT_FOUND</c>, or <c>ROLE_PROTECTED</c> when the role is
+        /// the admin role.
         /// </returns>
         public async Task<Result> HandleAsync(
             RoleName name,
@@ -69,6 +70,15 @@ namespace JobScrape.Application.Features.Identity
             if (role is null)
             {
                 return Result.Fail(Errors.RoleNotFound(name.ToString()));
+            }
+
+            if (role.Name == RoleName.Admin)
+            {
+                // The admin role keeps the full catalog by definition.
+                // Concurrent double-revoke of the last admin assignment is
+                // accepted risk: SQLite is a single writer, so the check and
+                // the write serialize without a distributed lock.
+                return Result.Fail(Errors.RoleProtected());
             }
 
             role.Revoke(key);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,8 +13,9 @@ namespace JobScrape.Infrastructure.Security
     /// <summary>
     /// Issues HS256 bearer tokens. Claims carry the user id (<c>sub</c>),
     /// email, role names, one <c>perm</c> claim per granted permission, a
-    /// token id (<c>jti</c>), and <c>must_change_password</c> while first
-    /// login is pending. Expiry comes from <see cref="JwtOptions"/>.
+    /// token id (<c>jti</c>), the token version (<c>ver</c>), and
+    /// <c>must_change_password</c> while first login is pending. Expiry comes
+    /// from <see cref="JwtOptions"/>.
     /// </summary>
     public sealed class JwtTokenService : ITokenService
     {
@@ -49,20 +51,21 @@ namespace JobScrape.Infrastructure.Security
                 new(JwtRegisteredClaimNames.Sub, user.Id.Value.ToString()),
                 new(JwtRegisteredClaimNames.Email, user.Email),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("D")),
+                new(IdentityClaimTypes.TokenVersion, user.TokenVersion.ToString(CultureInfo.InvariantCulture)),
             };
             foreach (var role in roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role.Name.ToString()));
+                claims.Add(new Claim(IdentityClaimTypes.Role, role.Name.ToString()));
             }
 
             foreach (var permission in permissions)
             {
-                claims.Add(new Claim("perm", permission.Value));
+                claims.Add(new Claim(IdentityClaimTypes.Permission, permission.Value));
             }
 
             if (user.MustChangePassword)
             {
-                claims.Add(new Claim("must_change_password", "true"));
+                claims.Add(new Claim(IdentityClaimTypes.MustChangePassword, "true"));
             }
 
             var descriptor = new SecurityTokenDescriptor

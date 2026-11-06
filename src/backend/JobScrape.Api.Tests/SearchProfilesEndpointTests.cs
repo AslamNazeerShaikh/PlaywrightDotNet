@@ -44,7 +44,7 @@ namespace JobScrape.Api.Tests
         public async Task CreateThenGetAndListRoundTripThroughSqlite()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var empty = await client.GetAsync("api/v1/search-profiles", Ct);
             var none = await empty.Content.ReadFromJsonAsync<SearchProfileListResponse>(Ct);
@@ -90,7 +90,7 @@ namespace JobScrape.Api.Tests
         public async Task ListIsOrderedByName()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             foreach (var name in new[] { "zeta", "alpha", "mid" })
             {
                 using var response = await client.PostAsJsonAsync(
@@ -114,7 +114,7 @@ namespace JobScrape.Api.Tests
         public async Task InvalidFieldsReturnValidationProblemKeyedByJsonName()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var response = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -143,7 +143,7 @@ namespace JobScrape.Api.Tests
         public async Task CapsAboveThePolicyAreRejected()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var response = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -171,7 +171,7 @@ namespace JobScrape.Api.Tests
         public async Task DuplicateNameIsAConflict()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var first = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
                 Valid("dup"),
@@ -196,7 +196,7 @@ namespace JobScrape.Api.Tests
         public async Task HighRiskSourceProfileStartsDisabled()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var response = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -220,7 +220,7 @@ namespace JobScrape.Api.Tests
         public async Task CaseVariantOfAnotherProfilesNameIsAConflict()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var first = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
                 Valid("taken"),
@@ -264,7 +264,7 @@ namespace JobScrape.Api.Tests
         public async Task PutUpdatesEditableFieldsAndKeepsTheSource()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var created = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -322,7 +322,7 @@ namespace JobScrape.Api.Tests
         public async Task PutToItsOwnNameSucceeds()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var created = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
                 Valid("same"),
@@ -355,7 +355,7 @@ namespace JobScrape.Api.Tests
         public async Task PutToAnotherProfilesNameIsAConflict()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var first = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
                 Valid("taken"),
@@ -399,7 +399,7 @@ namespace JobScrape.Api.Tests
         public async Task PutRejectsInvalidCapsAndMissingProfiles()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var created = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
                 Valid("caps"),
@@ -451,7 +451,7 @@ namespace JobScrape.Api.Tests
         public async Task UnknownIdIsNotFoundAndEmptyIdIsInvalid()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var missing = await client.GetAsync(
                 $"api/v1/search-profiles/{Guid.NewGuid()}",

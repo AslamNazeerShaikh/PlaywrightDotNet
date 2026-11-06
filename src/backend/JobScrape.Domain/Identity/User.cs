@@ -84,6 +84,13 @@ namespace JobScrape.Domain.Identity
         public DateTimeOffset? LockedUntilUtc { get; private set; }
 
         /// <summary>
+        /// Gets the token version. Every password change and lockout bumps
+        /// it; bearer tokens carry the version at issuance, so a mismatch
+        /// revokes outstanding tokens.
+        /// </summary>
+        public int TokenVersion { get; private set; }
+
+        /// <summary>
         /// Gets when the account was created.
         /// </summary>
         public DateTimeOffset CreatedAt { get; private set; }
@@ -144,6 +151,23 @@ namespace JobScrape.Domain.Identity
             MustChangePassword = false;
             FailedAttempts = 0;
             LockedUntilUtc = null;
+            TokenVersion++;
+        }
+
+        /// <summary>
+        /// Replaces the password outside first login, clearing failures and
+        /// any lockout. The caller verifies the current secret first.
+        /// </summary>
+        /// <param name="newHash">The operator-chosen password hash.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="newHash"/> is null.</exception>
+        public void ChangePassword(PasswordHash newHash)
+        {
+            ArgumentNullException.ThrowIfNull(newHash);
+            PasswordHash = newHash;
+            MustChangePassword = false;
+            FailedAttempts = 0;
+            LockedUntilUtc = null;
+            TokenVersion++;
         }
 
         /// <summary>
@@ -206,6 +230,7 @@ namespace JobScrape.Domain.Identity
             if (FailedAttempts >= maxAttempts)
             {
                 LockedUntilUtc = now + lockout;
+                TokenVersion++;
             }
         }
 
