@@ -46,10 +46,11 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="newPassword">The operator-chosen password.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>
-        /// Success; <c>INVALID_CREDENTIALS</c> for an unknown email or wrong
-        /// secret, <c>PASSWORD_SETUP_COMPLETE</c> when first login already
-        /// finished, or <c>VALIDATION_FAILED</c> when the new password misses
-        /// the criteria.
+        /// Success; <c>PASSWORD_SETUP_COMPLETE</c> when first login already
+        /// finished or the email is unknown (one code closes the account
+        /// enumeration oracle; pending accounts stay rate-limited),
+        /// <c>INVALID_CREDENTIALS</c> for a wrong secret, or
+        /// <c>VALIDATION_FAILED</c> when the new password misses criteria.
         /// </returns>
         public async Task<Result> HandleAsync(
             string? email,
@@ -63,7 +64,7 @@ namespace JobScrape.Application.Features.Identity
                 : await _users.GetByEmailAsync(email, cancellationToken);
             if (user is null)
             {
-                return Result.Fail(Errors.InvalidCredentials());
+                return Result.Fail(Errors.PasswordSetupComplete());
             }
 
             if (!user.MustChangePassword)

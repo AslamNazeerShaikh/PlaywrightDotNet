@@ -327,6 +327,27 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task SetupPasswordWithUnknownEmailMatchesCompletedCode()
+        {
+            var handler = new SetupPasswordHandler(
+                new FakeUsers(),
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                "ghost@example.com",
+                "whatever",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
+            Assert.Equal("PASSWORD_SETUP_COMPLETE", result.Error.Code);
+        }
+
+        [Fact]
         public async Task SetupPasswordWithWeakPasswordFailsValidation()
         {
             var users = new FakeUsers();
@@ -561,7 +582,7 @@ namespace JobScrape.Application.Tests
         {
             var roles = new FakeRoles();
             roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
-            var handler = new GrantPermissionHandler(roles, new FakeUnitOfWork());
+            var handler = new GrantPermissionHandler(roles, new FakeUsers(), new FakeUnitOfWork());
             var ct = TestContext.Current.CancellationToken;
 
             var granted = await handler.HandleAsync(RoleName.Viewer, "runs.read", ct);
@@ -576,7 +597,7 @@ namespace JobScrape.Application.Tests
         {
             var roles = new FakeRoles();
             roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
-            var handler = new GrantPermissionHandler(roles, new FakeUnitOfWork());
+            var handler = new GrantPermissionHandler(roles, new FakeUsers(), new FakeUnitOfWork());
 
             var result = await handler.HandleAsync(
                 RoleName.Viewer,
@@ -593,7 +614,7 @@ namespace JobScrape.Application.Tests
         {
             var roles = new FakeRoles();
             roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
-            var handler = new GrantPermissionHandler(roles, new FakeUnitOfWork());
+            var handler = new GrantPermissionHandler(roles, new FakeUsers(), new FakeUnitOfWork());
 
             var result = await handler.HandleAsync(
                 RoleName.Viewer,
@@ -611,7 +632,7 @@ namespace JobScrape.Application.Tests
             var role = Role.Create(RoleId.New(), RoleName.Viewer);
             role.Grant(PermissionKey.From("runs.read"));
             roles.Seed(role);
-            var handler = new RevokePermissionHandler(roles, new FakeUnitOfWork());
+            var handler = new RevokePermissionHandler(roles, new FakeUsers(), new FakeUnitOfWork());
             var ct = TestContext.Current.CancellationToken;
 
             var revoked = await handler.HandleAsync(RoleName.Viewer, "runs.read", ct);
@@ -629,7 +650,7 @@ namespace JobScrape.Application.Tests
             var admin = Role.Create(RoleId.New(), RoleName.Admin);
             admin.Grant(PermissionKey.From("runs.read"));
             roles.Seed(admin);
-            var handler = new RevokePermissionHandler(roles, new FakeUnitOfWork());
+            var handler = new RevokePermissionHandler(roles, new FakeUsers(), new FakeUnitOfWork());
 
             var result = await handler.HandleAsync(
                 RoleName.Admin,
@@ -662,9 +683,20 @@ namespace JobScrape.Application.Tests
             Assert.Throws<ArgumentNullException>(() => new AssignRoleHandler(users, roles, null!));
             Assert.Throws<ArgumentNullException>(() => new RevokeRoleHandler(users, roles, null!));
             Assert.Throws<ArgumentNullException>(() => new CreateRoleHandler(null!, unitOfWork));
-            Assert.Throws<ArgumentNullException>(() => new GrantPermissionHandler(roles, null!));
             Assert.Throws<ArgumentNullException>(() =>
-                new RevokePermissionHandler(null!, unitOfWork)
+                new GrantPermissionHandler(roles, new FakeUsers(), null!)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new GrantPermissionHandler(roles, null!, new FakeUnitOfWork())
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new RevokePermissionHandler(roles, new FakeUsers(), null!)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new RevokePermissionHandler(roles, null!, new FakeUnitOfWork())
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new RevokePermissionHandler(null!, new FakeUsers(), unitOfWork)
             );
         }
     }

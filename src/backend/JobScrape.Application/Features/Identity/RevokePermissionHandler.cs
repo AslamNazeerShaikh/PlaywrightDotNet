@@ -12,19 +12,27 @@ namespace JobScrape.Application.Features.Identity
     public sealed class RevokePermissionHandler
     {
         private readonly IRoleRepository _roles;
+        private readonly IUserRepository _users;
         private readonly IUnitOfWork _unitOfWork;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RevokePermissionHandler"/> class.
         /// </summary>
         /// <param name="roles">The role port. Must not be null.</param>
+        /// <param name="users">The user port for token invalidation. Must not be null.</param>
         /// <param name="unitOfWork">Commits the revocation. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public RevokePermissionHandler(IRoleRepository roles, IUnitOfWork unitOfWork)
+        public RevokePermissionHandler(
+            IRoleRepository roles,
+            IUserRepository users,
+            IUnitOfWork unitOfWork
+        )
         {
             ArgumentNullException.ThrowIfNull(roles);
+            ArgumentNullException.ThrowIfNull(users);
             ArgumentNullException.ThrowIfNull(unitOfWork);
             _roles = roles;
+            _users = users;
             _unitOfWork = unitOfWork;
         }
 
@@ -82,6 +90,15 @@ namespace JobScrape.Application.Features.Identity
             }
 
             role.Revoke(key);
+
+            // Permission claims ride inside issued tokens: bump every
+            // holder so stale grants die at once.
+            var holders = await _users.ListAsync(cancellationToken);
+            foreach (var holder in holders.Where(user => user.Roles.Contains(role.Id)))
+            {
+                holder.BumpTokenVersion();
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok();
         }

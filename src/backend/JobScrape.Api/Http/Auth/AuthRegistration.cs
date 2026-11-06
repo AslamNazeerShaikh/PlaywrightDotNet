@@ -146,7 +146,7 @@ namespace JobScrape.Api.Http.Auth
             );
             authorization.AddPolicy(
                 AuthPolicies.RequireAdmin,
-                policy => policy.RequireRole(RoleName.Admin.ToString())
+                policy => policy.AddRequirements(new AdminRequirement())
             );
             foreach (var permission in PermissionCatalog.Keys)
             {
@@ -157,6 +157,7 @@ namespace JobScrape.Api.Http.Auth
             }
 
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationHandler, AdminAuthorizationHandler>();
             return services;
         }
 

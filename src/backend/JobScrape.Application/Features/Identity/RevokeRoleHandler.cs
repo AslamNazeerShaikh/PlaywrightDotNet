@@ -93,6 +93,7 @@ namespace JobScrape.Application.Features.Identity
             }
 
             user.RevokeRole(role.Id);
+            user.BumpTokenVersion();
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok();
         }
