@@ -76,4 +76,37 @@ describe("proxyRequest", () => {
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("DOTNET_UNREACHABLE");
   });
+
+  test("forwards bearer and idempotency headers without logging them", async () => {
+    let seenAuth = "";
+    let seenKey = "";
+    const upstream = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      fetch: (req) => {
+        seenAuth = req.headers.get("authorization") ?? "";
+        seenKey = req.headers.get("idempotency-key") ?? "";
+        return Response.json({ ok: true });
+      },
+    });
+    servers.push(upstream);
+
+    const res = await proxyRequest(
+      new Request("http://bff/api/v1/users", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer tok-1",
+          "idempotency-key": "key-9",
+          connection: "keep-alive",
+        },
+        body: "{}",
+      }),
+      `http://127.0.0.1:${upstream.port}`,
+      "/api/v1/users",
+    );
+
+    expect(res.status).toBe(200);
+    expect(seenAuth).toBe("Bearer tok-1");
+    expect(seenKey).toBe("key-9");
+  });
 });

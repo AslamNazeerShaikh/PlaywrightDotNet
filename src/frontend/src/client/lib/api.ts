@@ -217,15 +217,118 @@ export type ExportFormat = "csv" | "xlsx";
 /** Which postings an export covers: everything, only the profile companies, or all but them. */
 export type ExportGroup = "all" | "only" | "exclude";
 
+/** A successful sign-in: the bearer token plus whether first login is still pending. */
+export interface LoginResponse {
+  token: string;
+  mustChangePassword: boolean;
+}
+
+/** The signed-in caller as the token describes them. */
+export interface MeResponse {
+  email: string;
+  roles: string[];
+  permissions: string[];
+}
+
+/** One user for the admin surface: identity plus assigned role names. */
+export interface UserResponse {
+  id: string;
+  email: string;
+  mustChangePassword: boolean;
+  roles: string[];
+}
+
+export interface UserListResponse {
+  users: UserResponse[];
+}
+
+/** One role for the admin surface: name plus granted permission keys. */
+export interface RoleResponse {
+  id: string;
+  name: string;
+  permissions: string[];
+}
+
+export interface RoleListResponse {
+  roles: RoleResponse[];
+}
+
+/** One usage quota definition: the governed scope plus limit and window. */
+export interface QuotaResponse {
+  scope: string;
+  limit: number;
+  /** Fixed window as the API renders it, e.g. "00:01:00". */
+  window: string;
+}
+
+export interface QuotaListResponse {
+  quotas: QuotaResponse[];
+}
+
+/** The stable v1 permission set, in catalog order (see PermissionCatalog). */
+export const PERMISSION_CATALOG = [
+  "profiles.read",
+  "profiles.write",
+  "runs.read",
+  "runs.write",
+  "users.read",
+  "users.write",
+  "roles.read",
+  "roles.write",
+  "sessions.read",
+  "sessions.write",
+  "sources.read",
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_CATALOG)[number];
+
+/** Body of POST /api/v1/auth/login. */
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+/** Body of POST /api/v1/auth/setup-password. */
+export interface SetupPasswordInput {
+  email: string;
+  currentSecret: string;
+  newPassword: string;
+}
+
+/** Body of POST /api/v1/auth/change-password. */
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** Body of POST /api/v1/users. */
+export interface CreateUserInput {
+  email: string;
+  temporaryPassword: string;
+}
+
+/** Body of POST /api/v1/roles. */
+export interface CreateRoleInput {
+  name: string;
+}
+
+/** Body of PUT /api/v1/quotas/{scope}. */
+export interface UpdateQuotaInput {
+  limit: number;
+  window: string;
+}
+
 import { renderDebugEnabled } from "./debug.ts";
 
-/** RFC 9457 problem body plus the stable `code` and optional field `errors` extensions. */
+/** RFC 9457 problem body plus the stable `code`, optional field `errors`, and 429 backoff. */
 export interface ApiProblem {
   status: number;
   title: string;
   detail: string;
   code: string;
   errors?: Record<string, string[]>;
+  /** Seconds from the upstream `Retry-After` header on 429 answers, else null. */
+  retryAfter?: number | null;
 }
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
@@ -280,10 +383,51 @@ export type FetchImpl = (
   headers?: { get(name: string): string | null };
 }>;
 
-export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
+export function createApiClient(
+  fetchImpl: FetchImpl = fetch as unknown as FetchImpl,
+  options?: { getToken?: () => string | null },
+) {
+  const getToken = options?.getToken;
+  // The bearer token travels in exactly one place: this sender. It is never
+  // logged, never rendered, never stored outside the auth store.
+  const authed = <T>(
+    method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
+    path: string,
+    body?: unknown,
+    idempotencyKey?: string,
+  ): Promise<ApiResult<T>> => {
+    const token = getToken?.() ?? null;
+    return send<T>(fetchImpl, method, path, body, token, idempotencyKey);
+  };
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
+    login: (input: LoginInput) =>
+      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/login", input)),
+    setupPassword: (input: SetupPasswordInput) =>
+      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/setup-password", input)),
+    changePassword: (input: ChangePasswordInput) =>
+      timed(() => authed<void>("POST", "/api/v1/auth/change-password", input)),
+    fetchMe: () => timed(() => authed<MeResponse>("GET", "/api/v1/auth/me")),
+    listUsers: () => timed(() => authed<UserListResponse>("GET", "/api/v1/users")),
+    getUser: (id: string) => timed(() => authed<UserResponse>("GET", `/api/v1/users/${id}`)),
+    createUser: (input: CreateUserInput, idempotencyKey?: string) =>
+      timed(() => authed<{ id: string }>("POST", "/api/v1/users", input, idempotencyKey)),
+    assignRole: (id: string, role: string) =>
+      timed(() => authed<void>("POST", `/api/v1/users/${id}/roles`, { role })),
+    revokeRole: (id: string, role: string) =>
+      timed(() => authed<void>("DELETE", `/api/v1/users/${id}/roles/${role}`)),
+    listRoles: () => timed(() => authed<RoleListResponse>("GET", "/api/v1/roles")),
+    getRole: (name: string) => timed(() => authed<RoleResponse>("GET", `/api/v1/roles/${name}`)),
+    createRole: (input: CreateRoleInput, idempotencyKey?: string) =>
+      timed(() => authed<{ id: string }>("POST", "/api/v1/roles", input, idempotencyKey)),
+    grantPermission: (name: string, key: string) =>
+      timed(() => authed<void>("POST", `/api/v1/roles/${name}/permissions`, { key })),
+    revokePermission: (name: string, key: string) =>
+      timed(() => authed<void>("DELETE", `/api/v1/roles/${name}/permissions/${key}`)),
+    listQuotas: () => timed(() => authed<QuotaListResponse>("GET", "/api/v1/quotas")),
+    updateQuota: (scope: string, input: UpdateQuotaInput) =>
+      timed(() => authed<QuotaResponse>("PUT", `/api/v1/quotas/${scope}`, input)),
     listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
     listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
     listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
@@ -451,22 +595,42 @@ async function send<T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
+  token?: string | null,
+  idempotencyKey?: string,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
+    // Method and path only: bodies can carry secrets, tokens never appear here.
     console.debug(`[fetch] ${method} ${path}`);
   }
-  let res: { ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> };
+  let res: {
+    ok: boolean;
+    status: number;
+    json(): Promise<unknown>;
+    text?(): Promise<string>;
+    headers?: { get(name: string): string | null };
+  };
   try {
     // The method always travels, even without a body. A bare
     // `fetchImpl(path)` would silently downgrade DELETE to GET.
+    const headers: Record<string, string> = {};
+    if (body !== undefined) {
+      headers["content-type"] = "application/json";
+    }
+    if (token !== undefined && token !== null && token !== "") {
+      headers["authorization"] = `Bearer ${token}`;
+    }
+    if (idempotencyKey !== undefined && idempotencyKey !== "") {
+      headers["idempotency-key"] = idempotencyKey;
+    }
+    // No headers on anonymous reads: the wire keeps its old shape exactly.
+    const init: RequestInit = { method };
+    if (Object.keys(headers).length > 0) {
+      init.headers = headers;
+    }
     res =
       body === undefined
-        ? await fetchImpl(path, { method })
-        : await fetchImpl(path, {
-            method,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
-          });
+        ? await fetchImpl(path, init)
+        : await fetchImpl(path, { ...init, body: JSON.stringify(body) });
   } catch {
     return {
       ok: false,
@@ -527,13 +691,19 @@ async function send<T>(
   return { ok: false, problem: await toProblem(res) };
 }
 
-async function toProblem(res: { status: number; json(): Promise<unknown> }): Promise<ApiProblem> {
+async function toProblem(res: {
+  status: number;
+  json(): Promise<unknown>;
+  headers?: { get(name: string): string | null };
+}): Promise<ApiProblem> {
   const fallback: ApiProblem = {
     status: res.status,
     title: "Request failed",
     detail: `The server answered with status ${res.status}.`,
     code: "UNKNOWN",
   };
+  // 429 answers carry Retry-After; the page renders the backoff from this number.
+  const retryAfter = parseRetryAfter(res.headers?.get("retry-after") ?? null);
   try {
     const body = (await res.json()) as Record<string, unknown>;
     return {
@@ -542,10 +712,20 @@ async function toProblem(res: { status: number; json(): Promise<unknown> }): Pro
       detail: typeof body["detail"] === "string" ? body["detail"] : fallback.detail,
       code: typeof body["code"] === "string" ? body["code"] : "UNKNOWN",
       ...(isFieldErrors(body["errors"]) ? { errors: body["errors"] } : {}),
+      ...(retryAfter !== null ? { retryAfter } : {}),
     };
   } catch {
-    return fallback;
+    return retryAfter !== null ? { ...fallback, retryAfter } : fallback;
   }
+}
+
+/** Parses a Retry-After header value (delta seconds) to a number, else null. */
+function parseRetryAfter(raw: string | null): number | null {
+  if (raw === null) {
+    return null;
+  }
+  const seconds = Number(raw.trim());
+  return Number.isInteger(seconds) && seconds >= 0 ? seconds : null;
 }
 
 /** Field errors are a map of JSON field name to messages; anything else is ignored. */

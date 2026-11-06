@@ -10,15 +10,26 @@ import {
   type CreateProfileInput,
   type CreateSessionInput,
   type HealthPayload,
+  type LoginInput,
+  type MeResponse,
   type SearchProfilePayload,
   type SessionPayload,
+  type SetupPasswordInput,
   type SourceList,
   type UpdateProfileInput,
   type UpdateSessionInput,
 } from "./lib/api.ts";
+import {
+  canSeeRoles,
+  canSeeUsers,
+  clearToken,
+  hasAnyPermission,
+  loadToken,
+  saveToken,
+} from "./lib/auth.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { formatClock } from "./lib/format.ts";
-import { type DeckRoute, parseRoute, ROUTES } from "./lib/router.ts";
+import { type DeckRoute, parseRoute } from "./lib/router.ts";
 import {
   latencyStats,
   type LogEvent,
@@ -28,19 +39,35 @@ import {
 } from "./lib/telemetry.ts";
 import { DatabasePage } from "./pages/database.tsx";
 import { HealthPage } from "./pages/health.tsx";
+import { LoginPage, SetupPasswordPage } from "./pages/login.tsx";
 import { OverviewPage } from "./pages/overview.tsx";
 import { ProfilesPage } from "./pages/profiles.tsx";
+import { QuotasPage } from "./pages/quotas.tsx";
+import { RolesPage } from "./pages/roles.tsx";
 import { RunsPage } from "./pages/runs.tsx";
 import { SessionsPage } from "./pages/sessions.tsx";
 import { SourcesPage } from "./pages/sources.tsx";
 import { TopologyPage } from "./pages/topology.tsx";
+import { UsersPage } from "./pages/users.tsx";
 
 /**
  * Ops-deck shell: command bar (brand, UTC clock, upstream pill, density switch), tab rail with one
  * tab per feature, and the routed page. Telemetry (samples, event log, lookup history) lives here
  * so every page reads the same flight recorder.
  */
-export function App({ client, initialRoute }: { client?: ApiClient; initialRoute?: DeckRoute }) {
+export function App({
+  client,
+  initialRoute,
+  initialSession,
+}: {
+  client?: ApiClient;
+  initialRoute?: DeckRoute;
+  /**
+   * Signed-in caller for tests and embeds. When provided, the shell skips the token restore and
+   * renders signed-in (or signed-out for null) without touching storage.
+   */
+  initialSession?: { me: MeResponse } | null;
+}) {
   useRenderLog("App");
   const [route, setRoute] = useState<DeckRoute>(initialRoute ?? readHash());
   const [density, setDensity] = useState<"compact" | "cozy">("cozy");
@@ -74,6 +101,17 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const [updateProfileProblem, setUpdateProfileProblem] = useState<ApiProblem | null>(null);
   const [updatingSession, setUpdatingSession] = useState(false);
   const [updateSessionProblem, setUpdateSessionProblem] = useState<ApiProblem | null>(null);
+  // Auth: the signed-in caller, restored from the tab token on mount. `initialSession` (tests)
+  // bypasses storage entirely; `restoring` covers the one me-fetch so the login page never
+  // flashes for a signed-in operator.
+  const [session, setSession] = useState<{ me: MeResponse } | null>(() => initialSession ?? null);
+  const [restoring, setRestoring] = useState(
+    () => initialSession === undefined && loadToken() !== null,
+  );
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authProblem, setAuthProblem] = useState<ApiProblem | null>(null);
+  const [pendingSetupEmail, setPendingSetupEmail] = useState<string | null>(null);
+  const [lastEmail, setLastEmail] = useState("");
   const probeBusy = useRef(false);
   const lastProbeAt = useRef(0);
   const probeRef = useRef<() => void>(() => undefined);
@@ -82,8 +120,12 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
   const tickets = useRef({ profiles: 0, sources: 0, sessions: 0 });
   const linkLogged = useRef(false);
   // Default client must be identity-stable: a fresh object per render would
-  // refire every [client] effect below and spiral into a fetch loop.
-  const fallbackClient = useMemo(createApiClient, []);
+  // refire every [client] effect below and spiral into a fetch loop. The bearer
+  // token is read live from storage per request, so sign-in needs no rebuild.
+  const fallbackClient = useMemo(
+    () => createApiClient(undefined, { getToken: () => loadToken() }),
+    [],
+  );
   const activeClient = client ?? fallbackClient;
   // Stable sink for pages that log to the killfeed from their own effects.
   const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
@@ -381,6 +423,105 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
     return true;
   }
 
+  // Auth handlers. The token lives in tab storage; the shell only holds the caller snapshot.
+  function signOut() {
+    clearToken();
+    setSession(null);
+    setPendingSetupEmail(null);
+    setAuthProblem(null);
+  }
+
+  async function refreshMe(): Promise<boolean> {
+    const { result } = await activeClient.fetchMe();
+    if (result.ok) {
+      setSession({ me: result.value });
+      return true;
+    }
+    if (result.problem.status === 401) {
+      signOut();
+      return false;
+    }
+    setAuthProblem(result.problem);
+    return false;
+  }
+
+  async function handleLogin(input: LoginInput): Promise<boolean> {
+    setAuthBusy(true);
+    setLastEmail(input.email);
+    try {
+      const { result } = await activeClient.login(input);
+      if (!result.ok) {
+        // Seeded accounts cannot sign in yet: the 403 carries them to setup-password.
+        if (result.problem.code === "PASSWORD_RESET_REQUIRED") {
+          setPendingSetupEmail(input.email);
+          setAuthProblem(null);
+          return false;
+        }
+        setAuthProblem(result.problem);
+        return false;
+      }
+      if (result.value.mustChangePassword) {
+        setPendingSetupEmail(input.email);
+        setAuthProblem(null);
+        return false;
+      }
+      saveToken(result.value.token);
+      setAuthProblem(null);
+      setPendingSetupEmail(null);
+      await refreshMe();
+      return true;
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleSetup(input: SetupPasswordInput): Promise<boolean> {
+    setAuthBusy(true);
+    setLastEmail(input.email);
+    try {
+      const { result } = await activeClient.setupPassword(input);
+      if (!result.ok) {
+        // Setup already ran: fall back to sign-in instead of stranding the operator.
+        if (result.problem.code === "PASSWORD_SETUP_COMPLETE") {
+          setPendingSetupEmail(null);
+        }
+        setAuthProblem(result.problem);
+        return false;
+      }
+      saveToken(result.value.token);
+      setAuthProblem(null);
+      setPendingSetupEmail(null);
+      await refreshMe();
+      return true;
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  // Token restore: one me-fetch on mount when storage holds a token. Skipped for the
+  // `initialSession` test seam and when already signed in.
+  const restoreRef = useRef(refreshMe);
+  restoreRef.current = refreshMe;
+  const restoringRef = useRef(restoring);
+  restoringRef.current = restoring;
+  useEffect(() => {
+    if (initialSession !== undefined || !restoringRef.current) {
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      await restoreRef.current();
+      if (alive) {
+        setRestoring(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // Active client is identity-stable; run once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const loadersRef = useRef({ loadProfiles, loadSources, loadSessions });
   loadersRef.current = { loadProfiles, loadSources, loadSessions };
 
@@ -397,6 +538,33 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
       void loadersRef.current.loadSessions();
     }
   }, [route]);
+
+  // Me-driven navigation: the admin stops appear only with the matching visibility. The
+  // order follows ROUTES, so users/roles/quotas land at the rail's end.
+  const me = session?.me ?? null;
+  const visibleRoutes = useMemo(() => {
+    const base: DeckRoute[] = [
+      "overview",
+      "health",
+      "profiles",
+      "sources",
+      "sessions",
+      "runs",
+      "topology",
+      "database",
+    ];
+    if (me !== null) {
+      if (canSeeUsers(me)) {
+        base.push("users");
+      }
+      if (canSeeRoles(me)) {
+        base.push("roles", "quotas");
+      }
+    }
+    return new Set(base);
+  }, [me]);
+  // A deep link to a hidden admin stop explains itself instead of bouncing home.
+  const routeDenied = me !== null && !visibleRoutes.has(route);
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
@@ -424,6 +592,16 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             />{" "}
             API {apiState.toUpperCase()} · {upstream}
           </span>
+          {me !== null && (
+            <span className="pill" title="Signed-in operator">
+              <span className="dot live" /> {me.email}
+            </span>
+          )}
+          {me !== null && (
+            <button type="button" className="density-btn" onClick={signOut} title="Sign out">
+              SIGN OUT
+            </button>
+          )}
           <button
             type="button"
             className="density-btn"
@@ -443,19 +621,77 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
         </div>
       </header>
 
-      <RulerTabs
-        route={route}
-        onSelect={
-          initialRoute === undefined
-            ? (next) => {
-                setRoute(next);
-              }
-            : undefined
-        }
-      />
+      {me !== null && (
+        <RulerTabs
+          route={visibleRoutes.has(route) ? route : "overview"}
+          visible={visibleRoutes}
+          onSelect={
+            initialRoute === undefined
+              ? (next) => {
+                  setRoute(next);
+                }
+              : undefined
+          }
+        />
+      )}
 
       <main className="deck" key={route}>
-        {route === "overview" && (
+        {restoring && (
+          <p className="status-line" role="status">
+            Restoring session…
+          </p>
+        )}
+        {!restoring && me === null && pendingSetupEmail === null && (
+          <LoginPage
+            initialEmail={lastEmail}
+            busy={authBusy}
+            problem={authProblem}
+            onLogin={handleLogin}
+          />
+        )}
+        {!restoring && me === null && pendingSetupEmail !== null && (
+          <>
+            <SetupPasswordPage
+              initialEmail={pendingSetupEmail}
+              busy={authBusy}
+              problem={authProblem}
+              onSetup={handleSetup}
+            />
+            <p className="status-line">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setPendingSetupEmail(null);
+                  setAuthProblem(null);
+                }}
+              >
+                BACK TO SIGN IN
+              </button>
+            </p>
+          </>
+        )}
+        {me !== null && routeDenied && (
+          <>
+            <div className="page-head">
+              <h1>
+                <Scramble text="OPS-DECK // ACCESS DENIED" />
+              </h1>
+              <p>This stop needs a permission the token does not carry.</p>
+            </div>
+            <section className="module span-4" aria-label="Access denied">
+              <div className="module-head">
+                <span className="module-code">AUTH-09</span>
+                <h2 className="module-title">Access denied</h2>
+              </div>
+              <p className="alert" role="alert">
+                <CodeTag code="ACCESS_DENIED" tone="bad" /> The {route} stop needs{" "}
+                {route === "users" ? "users.read or users.write" : "roles.read or roles.write"}.
+              </p>
+            </section>
+          </>
+        )}
+        {me !== null && !routeDenied && route === "overview" && (
           <OverviewPage
             health={health}
             healthMs={stats?.last ?? null}
@@ -465,7 +701,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             apiState={apiState}
           />
         )}
-        {route === "health" && (
+        {me !== null && !routeDenied && route === "health" && (
           <HealthPage
             health={health}
             problem={problem}
@@ -475,7 +711,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             onCheck={checkHealth}
           />
         )}
-        {route === "profiles" && (
+        {me !== null && !routeDenied && route === "profiles" && (
           <ProfilesPage
             profiles={profiles}
             listProblem={profilesProblem}
@@ -494,7 +730,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             updateProblem={updateProfileProblem}
           />
         )}
-        {route === "sources" && (
+        {me !== null && !routeDenied && route === "sources" && (
           <SourcesPage
             sources={sources}
             problem={sourcesProblem}
@@ -502,7 +738,7 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             onRefresh={() => void loadSources()}
           />
         )}
-        {route === "sessions" && (
+        {me !== null && !routeDenied && route === "sessions" && (
           <SessionsPage
             sessions={sessions}
             listProblem={sessionsProblem}
@@ -521,9 +757,32 @@ export function App({ client, initialRoute }: { client?: ApiClient; initialRoute
             updateProblem={updateSessionProblem}
           />
         )}
-        {route === "runs" && <RunsPage client={activeClient} onEvent={logEvent} />}
-        {route === "topology" && <TopologyPage upstream={upstream} />}
-        {route === "database" && <DatabasePage client={activeClient} />}
+        {me !== null && !routeDenied && route === "runs" && (
+          <RunsPage client={activeClient} onEvent={logEvent} />
+        )}
+        {me !== null && !routeDenied && route === "topology" && (
+          <TopologyPage upstream={upstream} />
+        )}
+        {me !== null && !routeDenied && route === "database" && (
+          <DatabasePage client={activeClient} />
+        )}
+        {me !== null && !routeDenied && route === "users" && (
+          <UsersPage client={activeClient} me={me} onUnauthorized={signOut} />
+        )}
+        {me !== null && !routeDenied && route === "roles" && (
+          <RolesPage
+            client={activeClient}
+            canWrite={hasAnyPermission(me, "roles.write")}
+            onUnauthorized={signOut}
+          />
+        )}
+        {me !== null && !routeDenied && route === "quotas" && (
+          <QuotasPage
+            client={activeClient}
+            canWrite={hasAnyPermission(me, "roles.write")}
+            onUnauthorized={signOut}
+          />
+        )}
       </main>
 
       <footer

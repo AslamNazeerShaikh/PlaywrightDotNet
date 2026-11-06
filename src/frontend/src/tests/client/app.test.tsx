@@ -4,7 +4,12 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import { App } from "../../client/app.tsx";
-import { createApiClient, type FetchImpl, type SessionPayload } from "../../client/lib/api.ts";
+import {
+  createApiClient,
+  type FetchImpl,
+  type MeResponse,
+  type SessionPayload,
+} from "../../client/lib/api.ts";
 import type { DeckRoute } from "../../client/lib/router.ts";
 
 // happy-dom replaces globals (Response, Request, fetch) that the BFF server
@@ -324,11 +329,13 @@ describe("ops deck", () => {
       return { ok: true, status: 200, json: async () => ({ status: "ok", upstream: "x" }) };
     };
     const client = createApiClient(counting);
-    const queries = render(<App client={client} initialRoute="overview" />);
+    const queries = render(
+      <App client={client} initialRoute="overview" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
     const afterMount = metaCalls;
-    queries.rerender(<App client={client} initialRoute="overview" />);
-    queries.rerender(<App client={client} initialRoute="overview" />);
+    queries.rerender(<App client={client} initialRoute="overview" initialSession={adminSession} />);
+    queries.rerender(<App client={client} initialRoute="overview" initialSession={adminSession} />);
     expect(metaCalls).toBe(afterMount);
   });
 
@@ -345,7 +352,27 @@ describe("ops deck", () => {
       "06RUNS",
       "07TOPOLOGY",
       "08DATABASE",
+      "09USERS",
+      "10ROLES",
+      "11QUOTAS",
     ]);
+  });
+
+  test("tab rail hides admin stops without the matching visibility", async () => {
+    const viewer = render(
+      <App
+        client={stubClient(healthyHandler)}
+        initialRoute="overview"
+        initialSession={{
+          me: { email: "v@example.com", roles: ["Viewer"], permissions: ["profiles.read"] },
+        }}
+      />,
+    );
+    await waitFor(() => expect(viewer.container.textContent).toContain("BFF LIVE"));
+
+    const tabs = viewer.getAllByRole("link");
+    expect(tabs.map((t) => t.textContent)).not.toContain("09USERS");
+    expect(tabs.map((t) => t.textContent)).not.toContain("10ROLES");
   });
 
   test("health check renders the healthy payload and logs the event", async () => {
@@ -378,7 +405,9 @@ describe("ops deck", () => {
   });
 
   test("creating a profile adds it to the list and selects it", async () => {
-    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    const queries = render(
+      <App client={profilesBackend()} initialRoute="profiles" initialSession={adminSession} />,
+    );
     await waitFor(() =>
       expect(queries.getByText("No profiles yet. Create one to get started.")).toBeDefined(),
     );
@@ -396,7 +425,9 @@ describe("ops deck", () => {
   });
 
   test("server field errors render inline under their inputs", async () => {
-    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    const queries = render(
+      <App client={profilesBackend()} initialRoute="profiles" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
 
     fireEvent.click(queries.getByRole("button", { name: "CREATE PROFILE" }));
@@ -410,7 +441,9 @@ describe("ops deck", () => {
   });
 
   test("a duplicate name shows the conflict code", async () => {
-    const queries = render(<App client={profilesBackend()} initialRoute="profiles" />);
+    const queries = render(
+      <App client={profilesBackend()} initialRoute="profiles" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
     const create = () => {
       fireEvent.change(queries.getByLabelText("Name"), { target: { value: "dup" } });
@@ -430,7 +463,11 @@ describe("ops deck", () => {
 
   test("editing a profile updates the list and the detail", async () => {
     const queries = render(
-      <App client={profilesBackend([savedProfile])} initialRoute="profiles" />,
+      <App
+        client={profilesBackend([savedProfile])}
+        initialRoute="profiles"
+        initialSession={adminSession}
+      />,
     );
     await waitFor(() => expect(queries.getByRole("button", { name: "backend" })).toBeDefined());
 
@@ -462,6 +499,7 @@ describe("ops deck", () => {
       <App
         client={profilesBackend([savedProfile, { ...savedProfile, id: "p2", name: "other" }])}
         initialRoute="profiles"
+        initialSession={adminSession}
       />,
     );
     await waitFor(() => expect(queries.getByRole("button", { name: "backend" })).toBeDefined());
@@ -499,7 +537,9 @@ describe("ops deck", () => {
   });
 
   test("sessions page creates a profile, shows field errors, and flags blocked launches", async () => {
-    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    const queries = render(
+      <App client={sessionsBackend()} initialRoute="sessions" initialSession={adminSession} />,
+    );
     await waitFor(() =>
       expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
         "COOLING_DOWN",
@@ -530,7 +570,9 @@ describe("ops deck", () => {
   });
 
   test("editing a browser profile moves its directory", async () => {
-    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    const queries = render(
+      <App client={sessionsBackend()} initialRoute="sessions" initialSession={adminSession} />,
+    );
     await waitFor(() =>
       expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
         "cooling",
@@ -552,7 +594,9 @@ describe("ops deck", () => {
   });
 
   test("editing a browser profile to a taken name shows the conflict", async () => {
-    const queries = render(<App client={sessionsBackend()} initialRoute="sessions" />);
+    const queries = render(
+      <App client={sessionsBackend()} initialRoute="sessions" initialSession={adminSession} />,
+    );
     await waitFor(() =>
       expect(queries.getByRole("table", { name: "Browser profiles" }).textContent).toContain(
         "cooling",
@@ -628,10 +672,34 @@ describe("ops deck", () => {
 
 /**
  * Renders the deck and waits for the BFF self-check to settle, so the async /healthz state update
- * lands inside the test (act) instead of leaking into the next test's scheduler queue.
+ * lands inside the test (act) instead of leaking into the next test's scheduler queue. Tests sign
+ * in as an admin through the `initialSession` seam: the auth flow itself is covered in
+ * auth-admin.test.tsx.
  */
+const adminSession = {
+  me: {
+    email: "admin@example.com",
+    roles: ["Admin"],
+    permissions: [
+      "profiles.read",
+      "profiles.write",
+      "runs.read",
+      "runs.write",
+      "users.read",
+      "users.write",
+      "roles.read",
+      "roles.write",
+      "sessions.read",
+      "sessions.write",
+      "sources.read",
+    ],
+  } satisfies MeResponse,
+};
+
 async function renderDeck(route: DeckRoute) {
-  const queries = render(<App client={stubClient(healthyHandler)} initialRoute={route} />);
+  const queries = render(
+    <App client={stubClient(healthyHandler)} initialRoute={route} initialSession={adminSession} />,
+  );
   await waitFor(() => expect(queries.container.textContent).toContain("BFF LIVE"));
   return queries;
 }

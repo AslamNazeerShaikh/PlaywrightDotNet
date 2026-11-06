@@ -4,6 +4,7 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 import { App, PROBE_INTERVAL_MS, shouldProbe } from "../../client/app.tsx";
+import type { MeResponse } from "../../client/lib/api.ts";
 import {
   type ApiClient,
   createApiClient,
@@ -33,6 +34,14 @@ afterEach(() => {
 });
 
 const health = { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" };
+
+const adminSession = {
+  me: {
+    email: "admin@example.com",
+    roles: ["Admin"],
+    permissions: ["profiles.read", "users.read", "roles.read"],
+  } satisfies MeResponse,
+};
 
 function profile(id: string, name: string): SearchProfilePayload {
   return {
@@ -81,7 +90,9 @@ function setVisibility(state: "visible" | "hidden") {
 describe("render cost", () => {
   test("the clock tick re-renders the clock, not the deck", async () => {
     const { client } = countingClient();
-    const queries = render(<App client={client} initialRoute="overview" />);
+    const queries = render(
+      <App client={client} initialRoute="overview" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.container.textContent).toContain("API LIVE"));
     // Let the mount-time probe and scramble animations settle.
     await act(() => new Promise((resolve) => setTimeout(resolve, 1200)));
@@ -124,7 +135,7 @@ describe("api call discipline", () => {
     };
 
     window.location.hash = "#/profiles";
-    const queries = render(<App client={client} />);
+    const queries = render(<App client={client} initialSession={adminSession} />);
     await waitFor(() => expect(pending.length).toBe(1));
     act(() => {
       window.location.hash = "#/overview";
@@ -147,7 +158,9 @@ describe("api call discipline", () => {
 
   test("a hidden deck skips the poll; showing it again probes once", async () => {
     const { client, calls } = countingClient();
-    const queries = render(<App client={client} initialRoute="overview" />);
+    const queries = render(
+      <App client={client} initialRoute="overview" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.container.textContent).toContain("API LIVE"));
     expect(calls["/api/v1/health"]).toBe(1);
 
@@ -193,7 +206,9 @@ describe("api call discipline", () => {
         },
       };
     });
-    const queries = render(<App client={client} initialRoute="health" />);
+    const queries = render(
+      <App client={client} initialRoute="health" initialSession={adminSession} />,
+    );
     await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
 
     fireEvent.click(queries.getByRole("button", { name: "RUN HEALTH CHECK" }));
