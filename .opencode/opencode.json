@@ -38,6 +38,8 @@
     "code-reviewer": {
       "description": "Expert code review specialist. Reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
       "mode": "subagent",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "variant": "max",
       "prompt": "{file:prompts/agents/code-reviewer.txt}",
       "permission": {
         "read": "allow",
