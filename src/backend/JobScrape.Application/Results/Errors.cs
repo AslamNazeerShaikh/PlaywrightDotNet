@@ -471,5 +471,203 @@ namespace JobScrape.Application.Results
                 new Dictionary<string, object?>()
             );
         }
+
+        /// <summary>
+        /// Creates a validation failure for a wrong email or password. The
+        /// detail never says which one was wrong.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo InvalidCredentials()
+        {
+            return new ErrorInfo(
+                "INVALID_CREDENTIALS",
+                "Invalid email or password.",
+                "The email or password is incorrect.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a forbidden failure for a login that must set a new
+        /// password first.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo PasswordResetRequired()
+        {
+            return new ErrorInfo(
+                "PASSWORD_RESET_REQUIRED",
+                "A password change is required.",
+                "Set a new password before signing in.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a forbidden failure for a login while the account is locked.
+        /// </summary>
+        /// <param name="lockedUntil">When the lockout ends, if known.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo AccountLocked(DateTimeOffset? lockedUntil)
+        {
+            return new ErrorInfo(
+                "ACCOUNT_LOCKED",
+                "The account is locked.",
+                "Too many failed sign-in attempts; try again later.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?> { ["retryAfter"] = lockedUntil }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for a password setup on an account
+        /// that already completed first login.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo PasswordSetupComplete()
+        {
+            return new ErrorInfo(
+                "PASSWORD_SETUP_COMPLETE",
+                "The password is already set.",
+                "First login is already complete; use the change-password flow instead.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing user.
+        /// </summary>
+        /// <param name="email">The requested email, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo UserNotFound(string email)
+        {
+            ArgumentNullException.ThrowIfNull(email);
+            return new ErrorInfo(
+                "USER_NOT_FOUND",
+                "User not found.",
+                $"User '{email}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["email"] = email }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for an email that is already taken.
+        /// </summary>
+        /// <param name="email">The requested email.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo EmailTaken(string email)
+        {
+            ArgumentNullException.ThrowIfNull(email);
+            return new ErrorInfo(
+                "EMAIL_TAKEN",
+                "Email already in use.",
+                $"A user with email '{email}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["email"] = email }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing role.
+        /// </summary>
+        /// <param name="name">The requested role name, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo RoleNotFound(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_NOT_FOUND",
+                "Role not found.",
+                $"Role '{name}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for a role name that already exists.
+        /// </summary>
+        /// <param name="name">The requested role name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo RoleNameTaken(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_NAME_TAKEN",
+                "Role already exists.",
+                $"A role named '{name}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for assigning a role the user already has.
+        /// </summary>
+        /// <param name="name">The role name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo RoleAlreadyAssigned(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_ALREADY_ASSIGNED",
+                "Role already assigned.",
+                $"The user already has role '{name}'.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for revoking the last admin assignment.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo LastAdminRequired()
+        {
+            return new ErrorInfo(
+                "LAST_ADMIN_REQUIRED",
+                "At least one admin is required.",
+                "Assign the admin role to another user before revoking it here.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a permission outside the catalog.
+        /// </summary>
+        /// <param name="key">The requested permission key, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo UnknownPermission(string key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return new ErrorInfo(
+                "UNKNOWN_PERMISSION",
+                "Unknown permission.",
+                $"Permission '{key}' is not in the v1 catalog.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?> { ["key"] = key }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for granting a permission the role already has.
+        /// </summary>
+        /// <param name="key">The permission key.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo PermissionAlreadyGranted(string key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return new ErrorInfo(
+                "PERMISSION_ALREADY_GRANTED",
+                "Permission already granted.",
+                $"The role already has permission '{key}'.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["key"] = key }
+            );
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using JobScrape.Application.Abstractions;
 using JobScrape.Domain.Access;
+using JobScrape.Domain.Identity;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +53,16 @@ namespace JobScrape.Infrastructure.Persistence
         public DbSet<SourceCircuitBreaker> SourceCircuitBreakers => Set<SourceCircuitBreaker>();
 
         /// <summary>
+        /// Gets the login accounts.
+        /// </summary>
+        public DbSet<User> Users => Set<User>();
+
+        /// <summary>
+        /// Gets the named roles.
+        /// </summary>
+        public DbSet<Role> Roles => Set<Role>();
+
+        /// <summary>
         /// Stores every <see cref="DateTimeOffset"/> as UTC ticks.
         /// </summary>
         /// <param name="configurationBuilder">The convention builder.</param>
@@ -75,6 +86,8 @@ namespace JobScrape.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new BrowserProfileConfiguration());
             modelBuilder.ApplyConfiguration(new SourceQuotaConfiguration());
             modelBuilder.ApplyConfiguration(new SourceCircuitBreakerConfiguration());
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new RoleConfiguration());
 
             foreach (
                 var property in modelBuilder

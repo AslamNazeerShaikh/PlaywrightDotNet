@@ -1,13 +1,17 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Health;
+using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
+using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
 using JobScrape.Infrastructure.Runtime;
+using JobScrape.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace JobScrape.Infrastructure.Composition
 {
@@ -56,6 +60,27 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<ExportRunPostingsHandler>();
             services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
             services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
+            // Identity: the token service is stateless, so it shares the
+            // validated options snapshot; the policy record keeps JwtOptions
+            // out of the application layer.
+            services.AddSingleton<ITokenService, JwtTokenService>();
+            services.AddSingleton(provider =>
+            {
+                var jwt = provider.GetRequiredService<IOptions<JwtOptions>>().Value;
+                return new LoginPolicy(
+                    jwt.MaxFailedAttempts,
+                    TimeSpan.FromMinutes(jwt.LockoutMinutes)
+                );
+            });
+            services.AddTransient<LoginHandler>();
+            services.AddTransient<SetupPasswordHandler>();
+            services.AddTransient<CreateUserHandler>();
+            services.AddTransient<AssignRoleHandler>();
+            services.AddTransient<RevokeRoleHandler>();
+            services.AddTransient<CreateRoleHandler>();
+            services.AddTransient<GrantPermissionHandler>();
+            services.AddTransient<RevokePermissionHandler>();
+            services.AddHostedService<AdminSeedHostedService>();
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             services.AddScoped<RunScrapeHandler>();

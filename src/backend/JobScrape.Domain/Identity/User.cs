@@ -17,8 +17,8 @@ namespace JobScrape.Domain.Identity
 
         /// <summary>
         /// Initializes a new instance. Private so users are created through
-        /// <see cref="CreateSeedAdmin"/> or rehydration at the persistence
-        /// edge (a later unit).
+        /// <see cref="Create"/>, <see cref="CreateSeedAdmin"/>, or rehydration
+        /// at the persistence edge.
         /// </summary>
         /// <param name="id">The user identifier.</param>
         /// <param name="email">The normalized email.</param>
@@ -42,14 +42,25 @@ namespace JobScrape.Domain.Identity
         }
 
         /// <summary>
+        /// Initializes an empty instance for Entity Framework rehydration.
+        /// Private so production code uses <see cref="Create"/> instead.
+        /// </summary>
+        private User()
+        {
+            Email = string.Empty;
+            PasswordHash = null!;
+            _roles = [];
+        }
+
+        /// <summary>
         /// Gets the user identifier.
         /// </summary>
-        public UserId Id { get; }
+        public UserId Id { get; private set; }
 
         /// <summary>
         /// Gets the email, trimmed and normalized to lowercase invariant.
         /// </summary>
-        public string Email { get; }
+        public string Email { get; private set; }
 
         /// <summary>
         /// Gets the current password hash.
@@ -75,12 +86,28 @@ namespace JobScrape.Domain.Identity
         /// <summary>
         /// Gets when the account was created.
         /// </summary>
-        public DateTimeOffset CreatedAt { get; }
+        public DateTimeOffset CreatedAt { get; private set; }
 
         /// <summary>
         /// Gets the assigned roles, in assignment order.
         /// </summary>
         public IReadOnlyList<RoleId> Roles => _roles.AsReadOnly();
+
+        /// <summary>
+        /// Creates a user that must set its password on first login. Starts
+        /// with no roles: the application layer assigns roles after creation.
+        /// </summary>
+        /// <param name="email">The user email. Trimmed and lowercased.</param>
+        /// <param name="hash">The initial password hash.</param>
+        /// <param name="now">The creation time.</param>
+        /// <returns>The user, awaiting first login.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="hash"/> is null.</exception>
+        /// <exception cref="DomainException">Thrown when <paramref name="email"/> is blank or malformed.</exception>
+        public static User Create(string? email, PasswordHash hash, DateTimeOffset now)
+        {
+            ArgumentNullException.ThrowIfNull(hash);
+            return new User(UserId.New(), NormalizeEmail(email), hash, true, now);
+        }
 
         /// <summary>
         /// Creates the seeded default admin, which must set its password on
@@ -95,8 +122,7 @@ namespace JobScrape.Domain.Identity
         /// <exception cref="DomainException">Thrown when <paramref name="email"/> is blank or malformed.</exception>
         public static User CreateSeedAdmin(string? email, PasswordHash hash, DateTimeOffset now)
         {
-            ArgumentNullException.ThrowIfNull(hash);
-            return new User(UserId.New(), NormalizeEmail(email), hash, true, now);
+            return Create(email, hash, now);
         }
 
         /// <summary>
