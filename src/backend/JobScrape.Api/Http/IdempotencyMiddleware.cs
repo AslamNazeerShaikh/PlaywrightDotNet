@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using Microsoft.Extensions.Options;
 
 namespace JobScrape.Api.Http
 {
@@ -16,6 +17,9 @@ namespace JobScrape.Api.Http
     /// tokens must never replay. Only POST, PUT, PATCH, and DELETE engage.
     /// Error responses at or above 500 and auth or throttle outcomes are
     /// never stored.
+    /// A reservation abandoned by a crashed host is not taken over by another
+    /// instance: recovery is best-effort and the row expires after the 24-hour
+    /// retention window, after which the client may retry with the same key.
     /// </summary>
     public sealed class IdempotencyMiddleware
     {
@@ -50,15 +54,32 @@ namespace JobScrape.Api.Http
         // Injected and never mutated.
         private readonly RequestDelegate _next;
 
+        private readonly TimeSpan _completionWaitTimeout;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IdempotencyMiddleware"/> class.
         /// </summary>
         /// <param name="next">The next middleware. Must not be null.</param>
+        /// <param name="options">Optional timeout options snapshot.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="next"/> is null.</exception>
-        public IdempotencyMiddleware(RequestDelegate next)
+        public IdempotencyMiddleware(
+            RequestDelegate next,
+            IOptions<IdempotencyOptions>? options = null
+        )
         {
             ArgumentNullException.ThrowIfNull(next);
             _next = next;
+            _completionWaitTimeout =
+                options?.Value.CompletionWaitTimeout ?? CompletionWaitTimeout;
+        }
+
+        /// <summary>
+        /// Test hook: constructs middleware with an explicit wait timeout.
+        /// </summary>
+        internal IdempotencyMiddleware(RequestDelegate next, TimeSpan completionWaitTimeout)
+            : this(next, null)
+        {
+            _completionWaitTimeout = completionWaitTimeout;
         }
 
         /// <summary>
@@ -115,7 +136,12 @@ namespace JobScrape.Api.Http
             var endpoint = Scope(context.Request);
             var lockKey = string.Concat(owner, "\u001f", endpoint, "\u001f", key);
             var semaphore = _locks.GetOrAdd(lockKey, static _ => new SemaphoreSlim(1, 1));
-            await semaphore.WaitAsync(context.RequestAborted);
+            if (!await semaphore.WaitAsync(_completionWaitTimeout, context.RequestAborted))
+            {
+                await Errors.IdempotencyPending().ToProblem().ExecuteAsync(context);
+                return;
+            }
+            var reserved = false;
             try
             {
                 context.Request.EnableBuffering();
@@ -130,7 +156,11 @@ namespace JobScrape.Api.Http
                     [],
                     clock.GetUtcNow()
                 );
-                var won = await store.TryReserveAsync(pendingEntry, context.RequestAborted);
+                var won = await store.TryReserveAsync(pendingEntry, CancellationToken.None);
+                if (won)
+                {
+                    reserved = true;
+                }
                 if (!won)
                 {
                     var stored = await WaitForCompletionAsync(
@@ -139,11 +169,12 @@ namespace JobScrape.Api.Http
                         endpoint,
                         key,
                         clock,
+                        _completionWaitTimeout,
                         context.RequestAborted
                     );
                     if (stored is null)
                     {
-                        await Errors.RunNotStarted().ToProblem().ExecuteAsync(context);
+                        await Errors.IdempotencyPending().ToProblem().ExecuteAsync(context);
                         return;
                     }
 
@@ -169,7 +200,6 @@ namespace JobScrape.Api.Http
                 catch
                 {
                     context.Response.Body = original;
-                    await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
                     throw;
                 }
 
@@ -193,20 +223,30 @@ namespace JobScrape.Api.Http
                             ),
                             context.RequestAborted
                         );
+                        reserved = false;
                     }
                     catch
                     {
-                        await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
                         throw;
                     }
                 }
                 else
                 {
-                    await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
+                    await store.RemoveAsync(owner, endpoint, key, CancellationToken.None);
+                    reserved = false;
                 }
 
                 buffer.Seek(0, SeekOrigin.Begin);
                 await buffer.CopyToAsync(original, context.RequestAborted);
+            }
+            catch
+            {
+                if (reserved)
+                {
+                    await store.RemoveAsync(owner, endpoint, key, CancellationToken.None);
+                }
+
+                throw;
             }
             finally
             {
@@ -228,10 +268,11 @@ namespace JobScrape.Api.Http
             string endpoint,
             string key,
             TimeProvider clock,
+            TimeSpan completionWaitTimeout,
             CancellationToken cancellationToken
         )
         {
-            var deadline = clock.GetUtcNow() + CompletionWaitTimeout;
+            var deadline = clock.GetUtcNow() + completionWaitTimeout;
             while (clock.GetUtcNow() < deadline)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -334,4 +375,18 @@ namespace JobScrape.Api.Http
                         or StatusCodes.Status423Locked;
         }
     }
+
+    /// <summary>
+    /// Options for <see cref="IdempotencyMiddleware"/>.
+    /// </summary>
+    public class IdempotencyOptions
+    {
+        /// <summary>
+        /// How long a loser waits for the winner's row to complete.
+        /// </summary>
+        public TimeSpan CompletionWaitTimeout { get; set; } =
+            IdempotencyMiddleware.CompletionWaitTimeout;
+    }
+
+
 }

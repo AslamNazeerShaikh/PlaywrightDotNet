@@ -11,8 +11,9 @@ namespace JobScrape.Api.Controllers
 {
     /// <summary>
     /// User administration: list, read, create, and role assignment. Admin
-    /// role only. Password hashes never leave the store.. Data-annotation failures map to coded validation
-    /// problems below because the automatic 400 is suppressed in Program.
+    /// role or a matching grant. Password hashes never leave the store.
+    /// Data-annotation failures map to coded validation problems below
+    /// because the automatic 400 is suppressed in Program.
     /// </summary>
     [ApiController]
     [Route("api/v1/users")]

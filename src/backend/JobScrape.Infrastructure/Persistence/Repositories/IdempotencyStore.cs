@@ -1,6 +1,8 @@
 using JobScrape.Application.Abstractions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace JobScrape.Infrastructure.Persistence.Repositories
 {
@@ -9,13 +11,23 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
     /// 24 hours) read as absent and are pruned on writes, so the table
     /// cannot grow without bound.
     /// </summary>
-    internal sealed class IdempotencyStore(JobScrapeDbContext db, TimeProvider clock)
-        : IIdempotencyStore
-    {
+    internal sealed partial class IdempotencyStore(
+    JobScrapeDbContext db,
+    TimeProvider clock,
+    ILogger<IdempotencyStore>? logger = null
+) : IIdempotencyStore
+{
+    private readonly ILogger<IdempotencyStore> _logger =
+        logger ?? NullLogger<IdempotencyStore>.Instance;
         /// <summary>
         /// How long a stored response replays, in hours.
         /// </summary>
         internal const int RetentionHours = 24;
+
+        /// <summary>
+        /// SQLite extended result code for a composite primary-key violation.
+        /// </summary>
+        private const int SqlitePrimaryKeyConstraintExtendedCode = 1555;
 
         /// <summary>
         /// SQLite extended result code for a unique constraint violation.
@@ -30,10 +42,18 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken
         )
         {
-            var record = await db.IdempotencyRecords.FindAsync(
-                [ownerKey, endpoint, key],
-                cancellationToken
-            );
+            // A reservation may be tracked in this unit of work; drop it so
+            // the read reflects committed state from other scopes.
+            db.ChangeTracker.Clear();
+            var record = await db.IdempotencyRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    stored =>
+                        stored.OwnerKey == ownerKey
+                        && stored.Endpoint == endpoint
+                        && stored.Key == key,
+                    cancellationToken
+                );
             if (record is null)
             {
                 return null;
@@ -174,6 +194,38 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken
         )
         {
+            // Cleanup must complete even when the requesting client has
+            // disconnected, so cancellation is never observed here.
+            var token = CancellationToken.None;
+            try
+            {
+                await RemoveCoreAsync(ownerKey, endpoint, key, token);
+            }
+            catch (Exception ex) when (IsBusy(ex))
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(50), token);
+                    await RemoveCoreAsync(ownerKey, endpoint, key, token);
+                }
+                catch (Exception retryEx)
+                {
+                    LogRemoveFailed(_logger, retryEx, ownerKey, endpoint, key);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogRemoveFailed(_logger, ex, ownerKey, endpoint, key);
+            }
+        }
+
+        private async Task RemoveCoreAsync(
+            string ownerKey,
+            string endpoint,
+            string key,
+            CancellationToken cancellationToken
+        )
+        {
             var record = await db.IdempotencyRecords.FindAsync(
                 [ownerKey, endpoint, key],
                 cancellationToken
@@ -184,15 +236,24 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             }
 
             db.IdempotencyRecords.Remove(record);
-            try
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        private static bool IsBusy(Exception exception)
+        {
+            for (var current = exception; current is not null; current = current.InnerException)
             {
-                await db.SaveChangesAsync(cancellationToken);
+                if (current is SqliteException sqlite)
+                {
+                    var primary = (int)sqlite.SqliteExtendedErrorCode & 0xFF;
+                    if (primary is 5 or 6) // SQLITE_BUSY, SQLITE_LOCKED
+                    {
+                        return true;
+                    }
+                }
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
-            {
-                // Already removed by another caller; nothing to do.
-                db.ChangeTracker.Clear();
-            }
+
+            return false;
         }
 
         /// <summary>
@@ -204,7 +265,24 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         private static bool IsUniqueViolation(DbUpdateException exception)
         {
             return exception.InnerException is SqliteException sqlite
-                && sqlite.SqliteExtendedErrorCode == SqliteUniqueConstraintExtendedCode;
+                && (
+                    sqlite.SqliteExtendedErrorCode
+                        == SqliteUniqueConstraintExtendedCode
+                    || sqlite.SqliteExtendedErrorCode
+                        == SqlitePrimaryKeyConstraintExtendedCode
+                );
         }
-    }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Idempotency cleanup failed for {OwnerKey}/{Endpoint}/{Key}"
+    )]
+    private static partial void LogRemoveFailed(
+        ILogger logger,
+        Exception exception,
+        string ownerKey,
+        string endpoint,
+        string key
+    );
+}
 }

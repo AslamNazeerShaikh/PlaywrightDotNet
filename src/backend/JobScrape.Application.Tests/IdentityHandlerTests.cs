@@ -503,7 +503,7 @@ namespace JobScrape.Application.Tests
                 users,
                 roles,
                 unitOfWork,
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -531,7 +531,7 @@ namespace JobScrape.Application.Tests
                 users,
                 roles,
                 new FakeUnitOfWork(),
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -550,7 +550,7 @@ namespace JobScrape.Application.Tests
                 new FakeUsers(),
                 new FakeRoles(),
                 new FakeUnitOfWork(),
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -573,7 +573,7 @@ namespace JobScrape.Application.Tests
                 users,
                 new FakeRoles(),
                 new FakeUnitOfWork(),
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -599,7 +599,7 @@ namespace JobScrape.Application.Tests
                 users,
                 roles,
                 new FakeUnitOfWork(),
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -631,7 +631,7 @@ namespace JobScrape.Application.Tests
                 users,
                 roles,
                 new FakeUnitOfWork(),
-                CallerContext.LocalOperator
+                new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>())
             );
 
             var result = await handler.HandleAsync(
@@ -910,7 +910,7 @@ namespace JobScrape.Application.Tests
             first.AssignRole(admin.Id);
             second.AssignRole(admin.Id);
             var unitOfWork = new FakeUnitOfWork();
-            var caller = CallerContext.LocalOperator;
+            var caller = new CallerContext("admin", new List<string> { "Admin" }, Array.Empty<string>());
             var firstHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
             var secondHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
             var ct = TestContext.Current.CancellationToken;

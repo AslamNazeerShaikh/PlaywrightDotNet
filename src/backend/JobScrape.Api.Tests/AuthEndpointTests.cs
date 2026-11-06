@@ -357,6 +357,51 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task LoginIpCapIsNotBypassedByTrailingSlashOrDistinctEmails()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            var statuses = new List<HttpStatusCode>();
+
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                using var response = await client.PostAsJsonAsync(
+                    "api/v1/auth/login/",
+                    new
+                    {
+                        email = $"distinct-{attempt}-{Guid.NewGuid():N}@example.com",
+                        password = "Wrong-Password1!!",
+                    },
+                    Ct
+                );
+                statuses.Add(response.StatusCode);
+
+                if (attempt < 10)
+                {
+                    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+                    var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+                    Assert.Equal("INVALID_CREDENTIALS", body.GetProperty("code").GetString());
+                }
+            }
+
+            Assert.Equal(HttpStatusCode.TooManyRequests, statuses[10]);
+            Assert.Equal(HttpStatusCode.TooManyRequests, statuses[11]);
+
+            using var limited = await client.PostAsJsonAsync(
+                "api/v1/auth/login/",
+                new
+                {
+                    email = $"distinct-final-{Guid.NewGuid():N}@example.com",
+                    password = "Wrong-Password1!!",
+                },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            Assert.True(limited.Headers.TryGetValues("Retry-After", out var retryAfter));
+            Assert.Equal("60", Assert.Single(retryAfter));
+        }
+
+        [Fact]
         public async Task AnonymousMatrixGrantsOnlyHealthAndAuth()
         {
             await using var factory = new ApiFactory();
@@ -575,6 +620,61 @@ namespace JobScrape.Api.Tests
 
             using var me = await client.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        }
+
+        [Fact]
+        public async Task AdminWithZeroPermissionsPassesPermissionPolicies()
+        {
+            await using var factory = new ApiFactory();
+            var email = $"stripped-{Guid.NewGuid():N}@example.com";
+            const string password = "Final-Password2@@";
+            using (var scope = factory.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+                var roleRepository = provider.GetRequiredService<IRoleRepository>();
+                var adminRole = await roleRepository.GetByNameAsync(RoleName.Admin, Ct);
+                if (adminRole is null)
+                {
+                    adminRole = Role.Create(RoleId.New(), RoleName.Admin);
+                    await roleRepository.AddAsync(adminRole, Ct);
+                }
+
+                foreach (var key in PermissionCatalog.Keys)
+                {
+                    adminRole.Revoke(key);
+                }
+
+                var clock = provider.GetRequiredService<TimeProvider>();
+                var user = User.CreateSeedAdmin(
+                    email,
+                    PasswordHash.Create("Temporary1!!"),
+                    clock.GetUtcNow()
+                );
+                user.AssignRole(adminRole.Id);
+                user.CompleteFirstLogin(PasswordHash.Create(password), clock.GetUtcNow());
+                await provider.GetRequiredService<IUserRepository>().AddAsync(user, Ct);
+                await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            using var client = await AuthTestHelper.LoginAsync(factory, email, password, Ct);
+
+            using var meResponse = await client.GetAsync("api/v1/auth/me", Ct);
+            Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
+            var me = await meResponse.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Contains(
+                "Admin",
+                me.GetProperty("roles").EnumerateArray().Select(value => value.GetString())
+            );
+            Assert.Empty(me.GetProperty("permissions").EnumerateArray());
+
+            using var users = await client.GetAsync("api/v1/users", Ct);
+            Assert.Equal(HttpStatusCode.OK, users.StatusCode);
+
+            using var roles = await client.GetAsync("api/v1/roles", Ct);
+            Assert.Equal(HttpStatusCode.OK, roles.StatusCode);
+
+            using var database = await client.GetAsync("api/v1/db/tables", Ct);
+            Assert.Equal(HttpStatusCode.OK, database.StatusCode);
         }
 
         [Fact]

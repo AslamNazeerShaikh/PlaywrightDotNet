@@ -473,6 +473,22 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates an unavailable failure for an idempotency reservation
+        /// that is still pending and did not complete within the wait window.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unavailable"/>.</returns>
+        public static ErrorInfo IdempotencyPending()
+        {
+            return new ErrorInfo(
+                "IDEMPOTENCY_IN_PROGRESS",
+                "The request is already in progress.",
+                "The request is already in progress.",
+                ErrorKind.Unavailable,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates an authentication failure for a wrong email or password.
         /// The detail never says which one was wrong. Maps to HTTP 401, never
         /// 400: bad credentials are not a validation error.

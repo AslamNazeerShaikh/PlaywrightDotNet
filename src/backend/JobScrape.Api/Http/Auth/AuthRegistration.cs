@@ -22,9 +22,14 @@ namespace JobScrape.Api.Http.Auth
     public static class RateLimitPolicies
     {
         /// <summary>
-        /// The stricter partition for the auth surface.
+        /// The per-account login partition.
         /// </summary>
         public const string Login = "login";
+
+        /// <summary>
+        /// The separate setup-password partition.
+        /// </summary>
+        public const string Setup = "setup";
     }
 
     /// <summary>
@@ -41,7 +46,9 @@ namespace JobScrape.Api.Http.Auth
         internal const int GlobalPermitLimit = 100;
 
         /// <summary>
-        /// The stricter auth-surface ceiling, per client IP.
+        /// The stricter auth-surface ceiling, per client IP and per account.
+        /// Shared by the per-account policy limiters and the IP-scoped
+        /// middleware limiter.
         /// </summary>
         internal const int LoginPermitLimit = 10;
 
@@ -50,16 +57,11 @@ namespace JobScrape.Api.Http.Auth
         /// an authenticated user on every endpoint that does not opt out.
         /// </summary>
         /// <param name="services">The service collection.</param>
-        /// <param name="configuration">The app configuration.</param>
         /// <returns>The same service collection.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public static IServiceCollection AddJobScrapeAuth(
-            this IServiceCollection services,
-            IConfiguration configuration
-        )
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
+        public static IServiceCollection AddJobScrapeAuth(this IServiceCollection services)
         {
             ArgumentNullException.ThrowIfNull(services);
-            ArgumentNullException.ThrowIfNull(configuration);
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
             services
@@ -167,9 +169,10 @@ namespace JobScrape.Api.Http.Auth
 
         /// <summary>
         /// Registers the fixed-window limiters: 100 requests per minute per
-        /// IP globally, 10 per minute per IP on the auth surface. Rejections
-        /// render as 429 Problem Details with a stable code, never an empty
-        /// body.
+        /// IP globally, 10 per minute per account on login and setup, and 10
+        /// per minute per IP on login and setup via the middleware limiter.
+        /// Rejections render as 429 Problem Details with a stable code, never
+        /// an empty body.
         /// </summary>
         /// <param name="services">The service collection.</param>
         /// <returns>The same service collection.</returns>
@@ -182,12 +185,7 @@ namespace JobScrape.Api.Http.Auth
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
                 options.OnRejected = (context, _) =>
-                {
-                    context.HttpContext.Response.Headers.RetryAfter = "60";
-                    return new ValueTask(
-                        Errors.TooManyRequests().ToProblem().ExecuteAsync(context.HttpContext)
-                    );
-                };
+                    new ValueTask(WriteRateLimitedProblemAsync(context.HttpContext));
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                     context =>
                         RateLimitPartition.GetFixedWindowLimiter(
@@ -203,14 +201,28 @@ namespace JobScrape.Api.Http.Auth
                             }
                         )
                 );
-                // Partition key is the account identifier (email) from the
-                // request body when present, otherwise the client IP. This
-                // keeps one account's failed attempts from exhausting another
-                // account's budget on a shared host, and keeps the anonymous
-                // login/setup budget (this policy) separate from the
-                // authenticated /me polling budget (the global limiter).
+                // Per-account login budget, keyed by the submitted email
+                // when present, otherwise the client IP.
                 options.AddPolicy(
                     RateLimitPolicies.Login,
+                    context =>
+                        RateLimitPartition.GetFixedWindowLimiter(
+                            partitionKey: GetLoginPartitionKey(context),
+                            factory: _ => new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = LoginPermitLimit,
+                                Window = TimeSpan.FromMinutes(1),
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                                QueueLimit = 0,
+                                AutoReplenishment = true,
+                            }
+                        )
+                );
+
+                // Separate setup-password budget, so setup spam cannot burn an
+                // account's login budget.
+                options.AddPolicy(
+                    RateLimitPolicies.Setup,
                     context =>
                         RateLimitPartition.GetFixedWindowLimiter(
                             partitionKey: GetLoginPartitionKey(context),
@@ -280,6 +292,20 @@ namespace JobScrape.Api.Http.Auth
             return string.IsNullOrWhiteSpace(email)
                 ? $"ip:{context.Connection.RemoteIpAddress}"
                 : $"account:{email}";
+        }
+
+        /// <summary>
+        /// Renders the shared 429 rejection body used by both the registered
+        /// limiters and the IP-scoped middleware limiter, so every rejection
+        /// has an identical shape.
+        /// </summary>
+        /// <param name="context">The HTTP context.</param>
+        /// <returns>A task that completes when the response is written.</returns>
+        internal static Task WriteRateLimitedProblemAsync(HttpContext context)
+        {
+            context.Response.Headers.RetryAfter = "60";
+            context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            return Errors.TooManyRequests().ToProblem().ExecuteAsync(context);
         }
     }
 }
