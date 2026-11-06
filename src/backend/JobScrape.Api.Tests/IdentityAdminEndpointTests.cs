@@ -61,6 +61,89 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task RevokedAdminTokenIsDenied()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"second-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var secondId = createdBody.GetProperty("id").GetGuid();
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "Second-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            var setupBody = await setup.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var secondToken = setupBody.GetProperty("token").GetString();
+            using var second = factory.CreateClient();
+            second.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", secondToken);
+            using var assigned = await admin.PostAsJsonAsync(
+                $"api/v1/users/{secondId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            assigned.EnsureSuccessStatusCode();
+            using var secondFresh = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Second-Password2@@",
+                Ct
+            );
+            using var users = await admin.GetAsync("api/v1/users", Ct);
+            users.EnsureSuccessStatusCode();
+            var list = await users.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var firstId = list.GetProperty("users")
+                .EnumerateArray()
+                .Select(user => user.GetProperty("id").GetGuid())
+                .First(id => id != secondId);
+            using var revoked = await secondFresh.SendAsync(
+                new HttpRequestMessage(HttpMethod.Delete, $"api/v1/users/{firstId:D}/roles/Admin"),
+                Ct
+            );
+            revoked.EnsureSuccessStatusCode();
+
+            using var response = await admin.GetAsync("api/v1/users", Ct);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task SetupOracleDoesNotDistinguishUnknownEmail()
+        {
+            await using var factory = new ApiFactory();
+            using var anonymous = factory.CreateClient();
+            using var unknown = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email = $"ghost-{Guid.NewGuid():N}@example.com",
+                    currentSecret = "whatever",
+                    newPassword = "New-Password3##",
+                },
+                Ct
+            );
+            var unknownBody = await unknown.Content.ReadFromJsonAsync<JsonElement>(Ct);
+
+            Assert.Equal(HttpStatusCode.Conflict, unknown.StatusCode);
+            Assert.Equal("PASSWORD_SETUP_COMPLETE", unknownBody.GetProperty("code").GetString());
+        }
+
+        [Fact]
         public async Task GetUnknownUserIs404WithCode()
         {
             await using var factory = new ApiFactory();

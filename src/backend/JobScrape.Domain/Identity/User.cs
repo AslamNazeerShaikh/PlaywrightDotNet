@@ -255,6 +255,15 @@ namespace JobScrape.Domain.Identity
         }
 
         /// <summary>
+        /// Invalidates issued tokens without changing anything else: role
+        /// and permission changes call this so stale claims die at once.
+        /// </summary>
+        public void BumpTokenVersion()
+        {
+            TokenVersion++;
+        }
+
+        /// <summary>
         /// Assigns a role. Duplicate assignment is rejected: the roles list
         /// is a set in assignment order.
         /// </summary>

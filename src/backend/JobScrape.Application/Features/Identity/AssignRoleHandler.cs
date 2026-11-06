@@ -84,6 +84,7 @@ namespace JobScrape.Application.Features.Identity
             try
             {
                 user.AssignRole(role.Id);
+                user.BumpTokenVersion();
             }
             catch (DomainException)
             {
