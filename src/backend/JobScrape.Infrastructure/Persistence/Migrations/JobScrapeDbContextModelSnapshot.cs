@@ -328,34 +328,6 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.ToTable("scrape_runs", (string)null);
                 });
 
-            modelBuilder.Entity("JobScrape.Domain.Sourcing.ScrapeRunProgress", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<string>("NextCursor")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("next_cursor");
-
-                    b.Property<int>("PagesCompleted")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("pages_completed");
-
-                    b.Property<string>("SeenExternalIds")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("seen_external_ids");
-
-                    b.Property<long>("UpdatedAt")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("scrape_run_progress", (string)null);
-                });
-
             modelBuilder.Entity("JobScrape.Domain.Sourcing.SearchProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -410,6 +382,39 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsOne("JobScrape.Domain.Sourcing.ScrapeRunProgress", "Progress", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("TEXT")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("NextCursor")
+                                .HasColumnType("TEXT")
+                                .HasColumnName("next_cursor");
+
+                            b1.Property<int>("PagesCompleted")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("pages_completed");
+
+                            b1.Property<string>("SeenExternalIds")
+                                .IsRequired()
+                                .HasColumnType("TEXT")
+                                .HasColumnName("seen_external_ids");
+
+                            b1.Property<long>("UpdatedAt")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("updated_at");
+
+                            b1.HasKey("Id");
+
+                            b1.ToTable("scrape_run_progress", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("Id");
+                        });
+
+                    b.Navigation("Progress");
                 });
 #pragma warning restore 612, 618
         }

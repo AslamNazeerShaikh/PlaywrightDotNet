@@ -177,7 +177,6 @@ namespace JobScrape.Application.Tests.Scraping
                 IBrowserProfileRepository,
                 ISourceQuotaRepository,
                 ISourceCircuitBreakerRepository,
-                IScrapeRunProgressRepository,
                 IUnitOfWork
         {
             public List<SearchProfile> SearchProfiles { get; } = [];
@@ -185,8 +184,6 @@ namespace JobScrape.Application.Tests.Scraping
             public List<ScrapeRun> Runs { get; } = [];
 
             public List<JobPosting> Postings { get; } = [];
-
-            public List<ScrapeRunProgress> Progress { get; } = [];
 
             public List<BrowserProfile> BrowserProfiles { get; } = [];
 
@@ -204,7 +201,7 @@ namespace JobScrape.Application.Tests.Scraping
 
             public ScrapeStores AsStores()
             {
-                return new ScrapeStores(this, this, this, this, this, this, this, this);
+                return new ScrapeStores(this, this, this, this, this, this, this);
             }
 
             public Task<SearchProfile?> GetAsync(
@@ -264,42 +261,6 @@ namespace JobScrape.Application.Tests.Scraping
                         p.Source == source && p.ExternalJobId == externalJobId
                     )
                 );
-            }
-
-            public Task<ScrapeRunProgress?> GetProgressAsync(
-                ScrapeRunId id,
-                CancellationToken cancellationToken
-            )
-            {
-                return Task.FromResult(Progress.FirstOrDefault(p => p.Id == id));
-            }
-
-            async Task<ScrapeRunProgress?> IScrapeRunProgressRepository.GetAsync(
-                ScrapeRunId id,
-                CancellationToken cancellationToken
-            )
-            {
-                return await GetProgressAsync(id, cancellationToken);
-            }
-
-            public Task SaveAsync(ScrapeRunProgress progress, CancellationToken cancellationToken)
-            {
-                var existing = Progress.FirstOrDefault(p => p.Id == progress.Id);
-                if (existing is null)
-                {
-                    Progress.Add(progress);
-                }
-                else
-                {
-                    existing.RecordPage(
-                        progress.PagesCompleted,
-                        progress.NextCursor,
-                        progress.SeenExternalIds,
-                        progress.UpdatedAt
-                    );
-                }
-
-                return Task.CompletedTask;
             }
 
             public Task AddAsync(JobPosting posting, CancellationToken cancellationToken)

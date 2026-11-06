@@ -220,41 +220,67 @@ namespace JobScrape.Infrastructure.Tests.Persistence
         }
 
         [Fact]
-        public async Task RunProgressRoundTripsAndOverwrites()
+        public async Task RunProgressRoundTripsAsOwnedPartOfTheRun()
         {
             await using var database = await TestDatabase.CreateAsync(Ct);
-            var id = ScrapeRunId.New();
+            var profile = Profile();
+            var run = ScrapeRun.Create(profile, Now);
+            run.Start(Now);
+            run.BeginSearching();
+            var started = run.ResumeProgress(Now);
+            started.RecordPage(1, "next", ["101"], Now);
             await using (var scope = database.Scope())
             {
-                var stored = ScrapeRunProgress.Start(id, Now);
-                stored.RecordPage(1, "next", ["101"], Now);
-                await scope.Get<IScrapeRunProgressRepository>().SaveAsync(stored, Ct);
+                await scope.Get<ISearchProfileRepository>().AddAsync(profile, Ct);
+                await scope.Get<IScrapeRunRepository>().AddAsync(run, Ct);
                 await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
             }
 
             await using (var scope = database.Scope())
             {
-                var loaded = await scope.Get<IScrapeRunProgressRepository>().GetAsync(id, Ct);
+                var loaded = await scope.Get<IScrapeRunRepository>().GetAsync(run.Id, Ct);
 
                 Assert.NotNull(loaded);
-                Assert.Equal(1, loaded.PagesCompleted);
-                Assert.Equal("next", loaded.NextCursor);
-                Assert.Equal(["101"], loaded.SeenExternalIds);
-                loaded.RecordPage(2, null, ["101", "102"], Now.AddMinutes(1));
-                await scope.Get<IScrapeRunProgressRepository>().SaveAsync(loaded, Ct);
+                var progress = loaded.Progress;
+                Assert.NotNull(progress);
+                Assert.Equal(1, progress.PagesCompleted);
+                Assert.Equal("next", progress.NextCursor);
+                Assert.Equal(["101"], progress.SeenExternalIds);
+                progress.RecordPage(2, null, ["101", "102"], Now.AddMinutes(1));
                 await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
             }
 
             await using var reload = database.Scope();
-            var reloaded = await reload.Get<IScrapeRunProgressRepository>().GetAsync(id, Ct);
+            var reloaded = await reload.Get<IScrapeRunRepository>().GetAsync(run.Id, Ct);
 
             Assert.NotNull(reloaded);
-            Assert.Equal(2, reloaded.PagesCompleted);
-            Assert.Null(reloaded.NextCursor);
-            Assert.Equal(["101", "102"], reloaded.SeenExternalIds);
-            Assert.Null(
-                await reload.Get<IScrapeRunProgressRepository>().GetAsync(ScrapeRunId.New(), Ct)
-            );
+            var finalProgress = reloaded.Progress;
+            Assert.NotNull(finalProgress);
+            Assert.Equal(2, finalProgress.PagesCompleted);
+            Assert.Null(finalProgress.NextCursor);
+            Assert.Equal(["101", "102"], finalProgress.SeenExternalIds);
+        }
+
+        [Fact]
+        public async Task FreshRunPersistsWithoutProgressRow()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var profile = Profile();
+            var run = ScrapeRun.Create(profile, Now);
+            run.Start(Now);
+            run.BeginSearching();
+            await using (var scope = database.Scope())
+            {
+                await scope.Get<ISearchProfileRepository>().AddAsync(profile, Ct);
+                await scope.Get<IScrapeRunRepository>().AddAsync(run, Ct);
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            await using var reload = database.Scope();
+            var loaded = await reload.Get<IScrapeRunRepository>().GetAsync(run.Id, Ct);
+
+            Assert.NotNull(loaded);
+            Assert.Null(loaded.Progress);
         }
 
         [Fact]

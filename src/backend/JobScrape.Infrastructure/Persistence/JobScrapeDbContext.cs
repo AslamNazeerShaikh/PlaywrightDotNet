@@ -37,11 +37,6 @@ namespace JobScrape.Infrastructure.Persistence
         public DbSet<JobPosting> JobPostings => Set<JobPosting>();
 
         /// <summary>
-        /// Gets the run resume positions.
-        /// </summary>
-        public DbSet<ScrapeRunProgress> ScrapeRunProgress => Set<ScrapeRunProgress>();
-
-        /// <summary>
         /// Gets the browser profiles.
         /// </summary>
         public DbSet<BrowserProfile> BrowserProfiles => Set<BrowserProfile>();
@@ -76,7 +71,6 @@ namespace JobScrape.Infrastructure.Persistence
             ArgumentNullException.ThrowIfNull(modelBuilder);
             modelBuilder.ApplyConfiguration(new SearchProfileConfiguration());
             modelBuilder.ApplyConfiguration(new ScrapeRunConfiguration());
-            modelBuilder.ApplyConfiguration(new ScrapeRunProgressConfiguration());
             modelBuilder.ApplyConfiguration(new JobPostingConfiguration());
             modelBuilder.ApplyConfiguration(new BrowserProfileConfiguration());
             modelBuilder.ApplyConfiguration(new SourceQuotaConfiguration());
