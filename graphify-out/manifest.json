@@ -1,8 +1,8 @@
 {
   ".opencode/opencode.json": {
-    "mtime": 1793881362.6603537,
-    "seen": 1793884357.2292328,
-    "ast_hash": "6338c8dd70a1d03026a0483f2860ec03",
+    "mtime": 1793964882.6127741,
+    "seen": 1793965341.238236,
+    "ast_hash": "f9b057f7faf238991ec0e59d991fa5a7",
     "semantic_hash": ""
   },
   "AGENTS.md": {
@@ -2130,21 +2130,21 @@
     "semantic_hash": ""
   },
   ".opencode/README.md": {
-    "mtime": 1793612906.7010248,
-    "seen": 1793614405.753104,
-    "ast_hash": "dc050d4a69773a65196d95742d9704a5",
+    "mtime": 1793964893.140029,
+    "seen": 1793965341.23858,
+    "ast_hash": "1142a3f38368e4a77189c91369281a7a",
     "semantic_hash": ""
   },
   ".opencode/agents/comment-sicko.md": {
-    "mtime": 1793612932.1667273,
-    "seen": 1793614405.753105,
-    "ast_hash": "54271426e05b150cb10f94af8e5373af",
+    "mtime": 1793964838.285669,
+    "seen": 1793965341.2385821,
+    "ast_hash": "02d888921d46edfe8364babadc940e8f",
     "semantic_hash": ""
   },
   ".opencode/agents/poteto-agent.md": {
-    "mtime": 1793612932.1666787,
-    "seen": 1793614405.7531059,
-    "ast_hash": "08d4a4adfa6789d2bd62f659c2bfe871",
+    "mtime": 1793964822.118493,
+    "seen": 1793965341.238583,
+    "ast_hash": "8b19a223cf9bd246c2785e3951058e51",
     "semantic_hash": ""
   },
   ".opencode/commands/architect.md": {
@@ -2202,9 +2202,9 @@
     "semantic_hash": ""
   },
   ".opencode/commands/checkpoint.md": {
-    "mtime": 1793613815.8083005,
-    "seen": 1793614405.7531111,
-    "ast_hash": "461e9cd4a8ac166f5e57baed241b78dc",
+    "mtime": 1793964874.4297252,
+    "seen": 1793965341.2385888,
+    "ast_hash": "e9b04ab9b28283cd09f9c31a1726702f",
     "semantic_hash": ""
   },
   ".opencode/commands/code-review.md": {
@@ -2256,9 +2256,9 @@
     "semantic_hash": ""
   },
   ".opencode/commands/eval.md": {
-    "mtime": 1793613815.8123217,
-    "seen": 1793614405.753115,
-    "ast_hash": "5dac73dcbcfb200989538c4bfff6000b",
+    "mtime": 1793964874.3977365,
+    "seen": 1793965341.238594,
+    "ast_hash": "548f6c18900a47016dd1fed9e9a9b732",
     "semantic_hash": ""
   },
   ".opencode/commands/figure-it-out.md": {
@@ -2304,15 +2304,15 @@
     "semantic_hash": ""
   },
   ".opencode/commands/learn.md": {
-    "mtime": 1793613815.806132,
-    "seen": 1793614405.753119,
-    "ast_hash": "9ea3348fe144ba0a0d0f906a840e2dfe",
+    "mtime": 1793964874.3634758,
+    "seen": 1793965341.2385988,
+    "ast_hash": "3fa14b720e9fd006c670c6daf307b4a8",
     "semantic_hash": ""
   },
   ".opencode/commands/loop-start.md": {
-    "mtime": 1793613815.8251812,
-    "seen": 1793614405.753119,
-    "ast_hash": "af704988aab001ac21716dc76572f04b",
+    "mtime": 1793964882.6127696,
+    "seen": 1793965341.2385988,
+    "ast_hash": "df95ee084850b3762c22bb633caa5aa7",
     "semantic_hash": ""
   },
   ".opencode/commands/loop-status.md": {
@@ -2424,9 +2424,9 @@
     "semantic_hash": ""
   },
   ".opencode/commands/skill-create.md": {
-    "mtime": 1793613815.8286664,
-    "seen": 1793614405.753129,
-    "ast_hash": "f9195bf03f3fed1588276067c73225b2",
+    "mtime": 1793964882.611326,
+    "seen": 1793965341.23861,
+    "ast_hash": "2168c5e9d053b8ac5a789256f0762c44",
     "semantic_hash": ""
   },
   ".opencode/commands/slides.md": {
@@ -2508,9 +2508,9 @@
     "semantic_hash": ""
   },
   ".opencode/commands/verify.md": {
-    "mtime": 1793613815.8103354,
-    "seen": 1793614405.7531362,
-    "ast_hash": "daed35f2087a7df39eda0cbf620ef029",
+    "mtime": 1793964874.4158995,
+    "seen": 1793965341.2386189,
+    "ast_hash": "e1a5c50a33a9e5992a378a5cf42a4d4c",
     "semantic_hash": ""
   },
   ".opencode/commands/why.md": {
@@ -2586,8 +2586,8 @@
     "semantic_hash": ""
   },
   ".opencode/docs/harness/claude-code.md": {
-    "mtime": 1793612906.6992266,
-    "seen": 1793614405.753142,
+    "mtime": 1793964352.2716136,
+    "seen": 1793965341.238626,
     "ast_hash": "c18316741d28ba2bd19a358259ec48a0",
     "semantic_hash": ""
   },
@@ -2598,9 +2598,9 @@
     "semantic_hash": ""
   },
   ".opencode/instructions/INSTRUCTIONS.md": {
-    "mtime": 1793613815.8441064,
-    "seen": 1793614405.753143,
-    "ast_hash": "d0867a9bef17a676c692d36c1496f3ff",
+    "mtime": 1793964874.3306763,
+    "seen": 1793965341.238627,
+    "ast_hash": "b60bdc0ef08ee718113219755bacbea0",
     "semantic_hash": ""
   },
   ".opencode/prompts/agents/build-error-resolver.txt": {
@@ -3012,9 +3012,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/no-comments/SKILL.md": {
-    "mtime": 1793612906.691133,
-    "seen": 1793614405.7531781,
-    "ast_hash": "0582984bd8ddecfd5dba884158aec82c",
+    "mtime": 1793964830.963528,
+    "seen": 1793965341.238741,
+    "ast_hash": "f3cde10793eaadd287b603ae2bda85a9",
     "semantic_hash": ""
   },
   ".opencode/skills/optimizing-ef-core-queries/SKILL.md": {
@@ -3036,9 +3036,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/SKILL.md": {
-    "mtime": 1793884805.355096,
-    "seen": 1793908212.684642,
-    "ast_hash": "fa479babc2e81fd265f4712946784690",
+    "mtime": 1793964794.1956115,
+    "seen": 1793965341.2387462,
+    "ast_hash": "1233c454d230cc244feb3c45cacca6fe",
     "semantic_hash": ""
   },
   ".opencode/skills/principle-attack-the-premise/SKILL.md": {
@@ -3228,9 +3228,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/setup-pstack/SKILL.md": {
-    "mtime": 1793612906.5566201,
-    "seen": 1793614405.753196,
-    "ast_hash": "f3fdaef3fd48d925d0671ee64a86c9e0",
+    "mtime": 1793964816.9645119,
+    "seen": 1793965341.238781,
+    "ast_hash": "28e673f206c59eacacea72dc9694df59",
     "semantic_hash": ""
   },
   ".opencode/skills/sharpen/SKILL.md": {
@@ -3774,9 +3774,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/package.json": {
-    "mtime": 1793612906.6813805,
-    "seen": 1793614462.8345642,
-    "ast_hash": "64b4cff654a4dca3c7b1c336c23a629e",
+    "mtime": 1793964843.1980925,
+    "seen": 1793965341.2382772,
+    "ast_hash": "861b74c141e612784580290eb71802d1",
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/passes/annotate.ts": {
@@ -6030,8 +6030,8 @@
     "semantic_hash": ""
   },
   "docs/19-pstack-claude-code.md": {
-    "mtime": 1793692593.3632054,
-    "seen": 1793697992.366561,
+    "mtime": 1793964352.2719595,
+    "seen": 1793965341.238864,
     "ast_hash": "4bb9728013930514b691e96ced470853",
     "semantic_hash": ""
   },
@@ -6197,12 +6197,6 @@
     "ast_hash": "cbf91afc20283bf666a7b1bb15225efe",
     "semantic_hash": ""
   },
-  ".opencode/plugins/graphify.js": {
-    "mtime": 1793457083.6751373,
-    "seen": 1793884357.229235,
-    "ast_hash": "dedd29af2cb8a6160dbaf9742a5080d4",
-    "semantic_hash": ""
-  },
   "src/backend/JobScrape.Application/Features/Scraping/DetailEnricher.cs": {
     "mtime": 1793870229.3423004,
     "seen": 1793884357.229342,
@@ -6305,60 +6299,6 @@
     "ast_hash": "67bb074878b9c76dfd934b8cece1e984",
     "semantic_hash": ""
   },
-  ".opencode/skills/graphify/SKILL.md": {
-    "mtime": 1793457083.6871295,
-    "seen": 1793884357.229568,
-    "ast_hash": "5bd0c585c5fa42bb9a682a5900cfa556",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/add-watch.md": {
-    "mtime": 1793457083.6872752,
-    "seen": 1793884357.229569,
-    "ast_hash": "c1f65eb4102ad515149303c7f296b718",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/exports.md": {
-    "mtime": 1793457083.6876388,
-    "seen": 1793884357.229569,
-    "ast_hash": "73968e2842f6eb742f96cf04c1f8db68",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/extraction-spec.md": {
-    "mtime": 1793280348.7701304,
-    "seen": 1793884357.229569,
-    "ast_hash": "b50f43d87ae9a11bcf1082942e1f99d4",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/github-and-merge.md": {
-    "mtime": 1793457083.6878147,
-    "seen": 1793884357.2295702,
-    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/hooks.md": {
-    "mtime": 1793280348.7707472,
-    "seen": 1793884357.2295702,
-    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/query.md": {
-    "mtime": 1793457083.6880255,
-    "seen": 1793884357.2295702,
-    "ast_hash": "d650e8b65648aa27c5f99c3742e010c9",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/transcribe.md": {
-    "mtime": 1793457083.6881664,
-    "seen": 1793884357.229571,
-    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
-    "semantic_hash": ""
-  },
-  ".opencode/skills/graphify/references/update.md": {
-    "mtime": 1793457083.6884239,
-    "seen": 1793884357.229571,
-    "ast_hash": "54bb75d63631ba69e65d5908d52fbbd0",
-    "semantic_hash": ""
-  },
   ".opencode/skills/mtp-hot-reload/SKILL.md": {
     "mtime": 1793869497.9851086,
     "seen": 1793884357.229593,
@@ -6432,8 +6372,8 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Mcp.Host/Program.cs": {
-    "mtime": 1793907551.8354344,
-    "seen": 1793908212.6844769,
+    "mtime": 1793960027.772541,
+    "seen": 1793965341.238534,
     "ast_hash": "eb5191109ec7803ca5f22c40ccc707db",
     "semantic_hash": ""
   },
@@ -6579,6 +6519,24 @@
     "mtime": 1793954037.6804874,
     "seen": 1793955433.767371,
     "ast_hash": "a8bd46d9f91c4177fd0d25592f235752",
+    "semantic_hash": ""
+  },
+  ".opencode/SYNC-LOG.md": {
+    "mtime": 1793964893.1401222,
+    "seen": 1793965341.238581,
+    "ast_hash": "d0a174ef0cd0d5f034945ac94b29f61d",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/no-comments/references/comment-sicko.md": {
+    "mtime": 1793964838.279913,
+    "seen": 1793965341.238742,
+    "ast_hash": "84833aaa95c88bb31e6574b559d0d558",
+    "semantic_hash": ""
+  },
+  "tools/vscodeprofile/README.md": {
+    "mtime": 1793960581.702303,
+    "seen": 1793965341.238883,
+    "ast_hash": "e6355d997bd086a674eb1d42fba624df",
     "semantic_hash": ""
   }
 }
