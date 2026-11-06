@@ -15,6 +15,7 @@ namespace JobScrape.Mcp.Tools
     {
         private readonly StartRunHandler _start;
         private readonly CancelRunHandler _cancel;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RunActionsTools"/> class.
@@ -22,8 +23,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="start">The run starter. Must not be null.</param>
         /// <param name="cancel">The run canceller. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Actions ignore it today; the parameter exists
-        /// so future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>runs.write</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunActionsTools(
@@ -37,6 +37,7 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(caller);
             _start = start;
             _cancel = cancel;
+            _caller = caller;
         }
 
         /// <summary>
@@ -59,6 +60,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "runs.write");
             var profile = McpErrors.ParseIdOrThrow(profileId, "A profile id is required.");
             var browser = McpErrors.ParseIdOrThrow(
                 browserProfileId,
@@ -85,6 +87,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "runs.write");
             var runId = McpErrors.ParseIdOrThrow(id, "A run id is required.");
             return McpErrors.OrThrow(await _cancel.HandleAsync(runId, cancellationToken));
         }

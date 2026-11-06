@@ -1,5 +1,6 @@
 ### MCP over Streamable HTTP, stateless session mode.
-### Base address is the local API (loopback only, no auth in this repo).
+### Base address is the local API (loopback only, bearer auth required).
+### Sign in at /api/v1/auth/login and send the token below.
 
 @base = https://localhost:5208/mcp
 

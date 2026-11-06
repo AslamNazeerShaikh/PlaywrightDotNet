@@ -10,6 +10,7 @@ using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
 using JobScrape.Infrastructure.Runtime;
 using JobScrape.Infrastructure.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -38,9 +39,34 @@ namespace JobScrape.Infrastructure.Composition
             // TimeProvider so tests can substitute a fake.
             services.AddSingleton(TimeProvider.System);
 
-            // Loopback only and no auth in this repo, so every MCP call
-            // runs as the local operator.
-            services.AddScoped<ICallerContext>(_ => CallerContext.LocalOperator);
+            // The bearer token owns the identity: sub is the actor, role
+            // claims are the roles. With no authenticated identity (dev
+            // loopback), every call runs as the local operator.
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICallerContext>(provider =>
+            {
+                var user = provider.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    return CallerContext.LocalOperator;
+                }
+
+                var actor =
+                    user.FindFirst(IdentityClaimTypes.Subject)?.Value
+                    ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
+                    ?? CallerContext.LocalOperator.ActorId;
+                var roles = user
+                    .FindAll(IdentityClaimTypes.Role)
+                    .Select(claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                var permissions = user
+                    .FindAll(IdentityClaimTypes.Permission)
+                    .Select(claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                return new CallerContext(actor, roles, permissions);
+            });
 
             services.AddTransient<GetHealthHandler>();
             services.AddTransient<GetSearchProfileHandler>();
@@ -74,10 +100,15 @@ namespace JobScrape.Infrastructure.Composition
             });
             services.AddTransient<LoginHandler>();
             services.AddTransient<SetupPasswordHandler>();
+            services.AddTransient<ChangePasswordHandler>();
             services.AddTransient<CreateUserHandler>();
+            services.AddTransient<GetUserHandler>();
+            services.AddTransient<ListUsersHandler>();
             services.AddTransient<AssignRoleHandler>();
             services.AddTransient<RevokeRoleHandler>();
             services.AddTransient<CreateRoleHandler>();
+            services.AddTransient<GetRoleHandler>();
+            services.AddTransient<ListRolesHandler>();
             services.AddTransient<GrantPermissionHandler>();
             services.AddTransient<RevokePermissionHandler>();
             services.AddHostedService<AdminSeedHostedService>();

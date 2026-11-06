@@ -63,6 +63,11 @@ namespace JobScrape.Infrastructure.Persistence
         public DbSet<Role> Roles => Set<Role>();
 
         /// <summary>
+        /// Gets the stored idempotency responses.
+        /// </summary>
+        internal DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+        /// <summary>
         /// Stores every <see cref="DateTimeOffset"/> as UTC ticks.
         /// </summary>
         /// <param name="configurationBuilder">The convention builder.</param>
@@ -88,6 +93,7 @@ namespace JobScrape.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new SourceCircuitBreakerConfiguration());
             modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new RoleConfiguration());
+            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());
 
             foreach (
                 var property in modelBuilder

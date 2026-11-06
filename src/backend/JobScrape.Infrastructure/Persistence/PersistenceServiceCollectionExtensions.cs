@@ -53,6 +53,7 @@ namespace JobScrape.Infrastructure.Persistence
             services.AddScoped<ISourceCircuitBreakerRepository, SourceCircuitBreakerRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IIdempotencyStore, IdempotencyStore>();
             services.AddScoped(provider => new ScrapeStores(
                 provider.GetRequiredService<ISearchProfileRepository>(),
                 provider.GetRequiredService<IScrapeRunRepository>(),

@@ -12,14 +12,14 @@ namespace JobScrape.Mcp.Tools
     public sealed class SourcesTools
     {
         private readonly ListSourcesHandler _sources;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SourcesTools"/> class.
         /// </summary>
         /// <param name="sources">The source list handler. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Read tools ignore it; the parameter exists so
-        /// future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>sources.read</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public SourcesTools(ListSourcesHandler sources, ICallerContext caller)
@@ -27,6 +27,7 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(sources);
             ArgumentNullException.ThrowIfNull(caller);
             _sources = sources;
+            _caller = caller;
         }
 
         /// <summary>
@@ -40,6 +41,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "sources.read");
             return _sources.HandleAsync(cancellationToken);
         }
     }

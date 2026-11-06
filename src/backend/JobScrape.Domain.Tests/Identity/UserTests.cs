@@ -123,6 +123,24 @@ namespace JobScrape.Domain.Tests.Identity
         }
 
         [Fact]
+        public void TokenVersionBumpsOnSecretsAndLockoutOnly()
+        {
+            var user = ReadyUser();
+
+            Assert.Equal(1, user.TokenVersion);
+            user.RecordFailedLogin(Now, 3, Lockout);
+
+            Assert.Equal(1, user.TokenVersion);
+            user.RecordFailedLogin(Now, 3, Lockout);
+            user.RecordFailedLogin(Now, 3, Lockout);
+
+            Assert.Equal(2, user.TokenVersion);
+            user.ChangePassword(PasswordHash.Create("Newer-Password3##"));
+
+            Assert.Equal(3, user.TokenVersion);
+        }
+
+        [Fact]
         public void NonPositiveMaxAttemptsIsRejected()
         {
             var user = ReadyUser();

@@ -1,0 +1,79 @@
+### JobScrape API v1 with HS256 bearer auth. Loopback only.
+### Sign in, then send `Authorization: Bearer <token>` on every call.
+### Mutating calls accept an `Idempotency-Key` header: a repeat with the
+### same user, endpoint, and key replays the stored response for 24h.
+
+@base = http://localhost:5208/api/v1
+
+### 1. Sign in. 200 with the token; 401 INVALID_CREDENTIALS for a wrong
+### email or password; 403 PASSWORD_RESET_REQUIRED before first login or
+### ACCOUNT_LOCKED while locked out.
+
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin-Password1!!"
+}
+
+### 2. Complete first login: replaces the seeded password, then returns a
+### token for the new password in the same 200 response.
+
+POST {{base}}/auth/setup-password
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "currentSecret": "ADMIN_SETUP_SECRET",
+  "newPassword": "Admin-Password1!!"
+}
+
+### 3. Change the password for the signed-in account.
+
+POST {{base}}/auth/change-password
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "currentPassword": "Admin-Password1!!",
+  "newPassword": "Admin-Password2@@"
+}
+
+### 4. The signed-in caller: email, roles, and permissions from the token.
+
+GET {{base}}/auth/me
+Authorization: Bearer <token>
+
+### 5. Create a user (admin role only). Replay-safe: sending the same
+### Idempotency-Key twice creates the user once.
+
+POST {{base}}/users
+Content-Type: application/json
+Authorization: Bearer <token>
+Idempotency-Key: 3f9a2c1e-7b4d-4a8e-9c0f-1a2b3c4d5e6f
+
+{
+  "email": "operator@example.com",
+  "temporaryPassword": "Temp-Secret1!!"
+}
+
+### 6. Assign a role (admin role only): Admin, Operator, or Viewer.
+
+POST {{base}}/users/<user-id>/roles
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "role": "Operator"
+}
+
+### 7. Grant a permission (admin role only).
+
+POST {{base}}/roles/Operator/permissions
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "key": "runs.read"
+}

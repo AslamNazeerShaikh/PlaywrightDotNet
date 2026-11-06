@@ -473,17 +473,68 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
-        /// Creates a validation failure for a wrong email or password. The
-        /// detail never says which one was wrong.
+        /// Creates an authentication failure for a wrong email or password.
+        /// The detail never says which one was wrong. Maps to HTTP 401, never
+        /// 400: bad credentials are not a validation error.
         /// </summary>
-        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
         public static ErrorInfo InvalidCredentials()
         {
             return new ErrorInfo(
                 "INVALID_CREDENTIALS",
                 "Invalid email or password.",
                 "The email or password is incorrect.",
-                ErrorKind.Validation,
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authentication failure for a request with no usable
+        /// bearer token. Returned by the JWT challenge handler, never by
+        /// domain or application code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo Unauthenticated()
+        {
+            return new ErrorInfo(
+                "UNAUTHENTICATED",
+                "Authentication is required.",
+                "Sign in and retry with a bearer token.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authorization failure for an authenticated caller
+        /// missing the required role or permission. Returned by the
+        /// authorization handlers, never by domain or application code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo AccessDenied()
+        {
+            return new ErrorInfo(
+                "ACCESS_DENIED",
+                "Access is denied.",
+                "The account lacks the required role or permission.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a rate-limit failure for HTTP throttling. Returned by
+        /// the rate-limiter rejection handler, never by domain code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.RateLimited"/>.</returns>
+        public static ErrorInfo TooManyRequests()
+        {
+            return new ErrorInfo(
+                "RATE_LIMITED",
+                "Too many requests.",
+                "The request rate is too high; retry later.",
+                ErrorKind.RateLimited,
                 new Dictionary<string, object?>()
             );
         }
@@ -531,6 +582,23 @@ namespace JobScrape.Application.Results
                 "PASSWORD_SETUP_COMPLETE",
                 "The password is already set.",
                 "First login is already complete; use the change-password flow instead.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for an idempotency key reused with a
+        /// different request body. The first response is never replayed for
+        /// a different request: the caller must send a fresh key.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo IdempotencyKeyReused()
+        {
+            return new ErrorInfo(
+                "IDEMPOTENCY_KEY_REUSED",
+                "Idempotency key was reused with a different request.",
+                "The idempotency key was already used with a different request body; retry with a fresh key.",
                 ErrorKind.Conflict,
                 new Dictionary<string, object?>()
             );
@@ -632,6 +700,23 @@ namespace JobScrape.Application.Results
                 "At least one admin is required.",
                 "Assign the admin role to another user before revoking it here.",
                 ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a forbidden failure for stripping a permission from the
+        /// admin role. The admin role keeps the full catalog by definition;
+        /// use role assignment to limit an operator instead.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo RoleProtected()
+        {
+            return new ErrorInfo(
+                "ROLE_PROTECTED",
+                "The admin role cannot lose permissions.",
+                "The admin role keeps every catalog permission; assign a narrower role instead.",
+                ErrorKind.Forbidden,
                 new Dictionary<string, object?>()
             );
         }
