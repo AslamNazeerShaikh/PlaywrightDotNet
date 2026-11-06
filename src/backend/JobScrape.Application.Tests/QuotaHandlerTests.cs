@@ -139,7 +139,10 @@ namespace JobScrape.Application.Tests
             Assert.True(result.IsFailure);
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
             Assert.Equal(0, unitOfWork.Saves);
-            Assert.Equal(TimeSpan.FromHours(1), (await quotas.GetAsync(QuotaScope.Api, Ct))!.Window);
+            Assert.Equal(
+                TimeSpan.FromHours(1),
+                (await quotas.GetAsync(QuotaScope.Api, Ct))!.Window
+            );
         }
     }
 }

@@ -170,7 +170,11 @@ namespace JobScrape.Application.Tests
             var unitOfWork = new FakeUnitOfWork();
             var handler = Login(users, roles, tokens, unitOfWork, new FakeTimeProvider(Now));
 
-            var result = await handler.HandleAsync("OP@example.com", FinalPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "OP@example.com",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsSuccess);
             Assert.Equal("opaque-token", result.Value.Token);
@@ -184,9 +188,19 @@ namespace JobScrape.Application.Tests
         [Fact]
         public async Task LoginWithUnknownEmailFailsInvalidCredentials()
         {
-            var handler = Login(new FakeUsers(), new FakeRoles(), new FakeTokens(), new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = Login(
+                new FakeUsers(),
+                new FakeRoles(),
+                new FakeTokens(),
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("nobody@example.com", "whatever", TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "nobody@example.com",
+                "whatever",
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Unauthorized, result.Error.Kind);
@@ -198,9 +212,19 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
-            var handler = Login(users, new FakeRoles(), new FakeTokens(), new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = Login(
+                users,
+                new FakeRoles(),
+                new FakeTokens(),
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("op@example.com", SeedSecret, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                SeedSecret,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
@@ -214,7 +238,14 @@ namespace JobScrape.Application.Tests
             users.Seed(ActiveUser());
             var unitOfWork = new FakeUnitOfWork();
             var clock = new FakeTimeProvider(Now);
-            var handler = Login(users, new FakeRoles(), new FakeTokens(), unitOfWork, clock, maxAttempts: 2);
+            var handler = Login(
+                users,
+                new FakeRoles(),
+                new FakeTokens(),
+                unitOfWork,
+                clock,
+                maxAttempts: 2
+            );
             var ct = TestContext.Current.CancellationToken;
 
             var first = await handler.HandleAsync("op@example.com", "wrong", ct);
@@ -238,7 +269,12 @@ namespace JobScrape.Application.Tests
             var unitOfWork = new FakeUnitOfWork();
             var handler = new SetupPasswordHandler(users, unitOfWork, new FakeTimeProvider(Now));
 
-            var result = await handler.HandleAsync("op@example.com", SeedSecret, FinalPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                SeedSecret,
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsSuccess);
             Assert.False(user.MustChangePassword);
@@ -251,9 +287,18 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
-            var handler = new SetupPasswordHandler(users, new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("op@example.com", "wrong", FinalPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                "wrong",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
         }
@@ -263,9 +308,18 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(ActiveUser());
-            var handler = new SetupPasswordHandler(users, new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("op@example.com", FinalPassword, TempPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                FinalPassword,
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
@@ -277,9 +331,18 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
-            var handler = new SetupPasswordHandler(users, new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("op@example.com", SeedSecret, "short", TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                SeedSecret,
+                "short",
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
         }
@@ -291,10 +354,17 @@ namespace JobScrape.Application.Tests
             var unitOfWork = new FakeUnitOfWork();
             var handler = new CreateUserHandler(users, unitOfWork, new FakeTimeProvider(Now));
 
-            var result = await handler.HandleAsync("new@example.com", TempPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "new@example.com",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsSuccess);
-            var saved = await users.GetAsync(UserId.From(result.Value), TestContext.Current.CancellationToken);
+            var saved = await users.GetAsync(
+                UserId.From(result.Value),
+                TestContext.Current.CancellationToken
+            );
             Assert.NotNull(saved);
             Assert.True(saved.MustChangePassword);
             Assert.True(saved.PasswordHash.Verify(TempPassword));
@@ -306,9 +376,17 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
-            var handler = new CreateUserHandler(users, new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = new CreateUserHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("OP@example.com", TempPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "OP@example.com",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("EMAIL_TAKEN", result.Error.Code);
             Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
@@ -317,9 +395,17 @@ namespace JobScrape.Application.Tests
         [Fact]
         public async Task CreateUserWithBadEmailFailsValidation()
         {
-            var handler = new CreateUserHandler(new FakeUsers(), new FakeUnitOfWork(), new FakeTimeProvider(Now));
+            var handler = new CreateUserHandler(
+                new FakeUsers(),
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
 
-            var result = await handler.HandleAsync("not-an-email", TempPassword, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                "not-an-email",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
         }
@@ -336,7 +422,11 @@ namespace JobScrape.Application.Tests
             var unitOfWork = new FakeUnitOfWork();
             var handler = new AssignRoleHandler(users, roles, unitOfWork);
 
-            var result = await handler.HandleAsync(user.Id.Value, RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsSuccess);
             Assert.Contains(admin.Id, user.Roles);
@@ -355,7 +445,11 @@ namespace JobScrape.Application.Tests
             user.AssignRole(admin.Id);
             var handler = new AssignRoleHandler(users, roles, new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(user.Id.Value, RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("ROLE_ALREADY_ASSIGNED", result.Error.Code);
         }
@@ -363,9 +457,17 @@ namespace JobScrape.Application.Tests
         [Fact]
         public async Task AssignRoleToMissingUserFailsNotFound()
         {
-            var handler = new AssignRoleHandler(new FakeUsers(), new FakeRoles(), new FakeUnitOfWork());
+            var handler = new AssignRoleHandler(
+                new FakeUsers(),
+                new FakeRoles(),
+                new FakeUnitOfWork()
+            );
 
-            var result = await handler.HandleAsync(Guid.NewGuid(), RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                Guid.NewGuid(),
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("USER_NOT_FOUND", result.Error.Code);
             Assert.Equal(ErrorKind.NotFound, result.Error.Kind);
@@ -379,7 +481,11 @@ namespace JobScrape.Application.Tests
             users.Seed(user);
             var handler = new AssignRoleHandler(users, new FakeRoles(), new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(user.Id.Value, RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("ROLE_NOT_FOUND", result.Error.Code);
         }
@@ -396,7 +502,11 @@ namespace JobScrape.Application.Tests
             user.AssignRole(admin.Id);
             var handler = new RevokeRoleHandler(users, roles, new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(user.Id.Value, RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
@@ -419,7 +529,11 @@ namespace JobScrape.Application.Tests
             second.AssignRole(admin.Id);
             var handler = new RevokeRoleHandler(users, roles, new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(first.Id.Value, RoleName.Admin, TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                first.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
 
             Assert.True(result.IsSuccess);
             Assert.DoesNotContain(admin.Id, first.Roles);
@@ -464,7 +578,11 @@ namespace JobScrape.Application.Tests
             roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
             var handler = new GrantPermissionHandler(roles, new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(RoleName.Viewer, "nope.zone", TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                RoleName.Viewer,
+                "nope.zone",
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("UNKNOWN_PERMISSION", result.Error.Code);
             Assert.Equal(ErrorKind.Validation, result.Error.Kind);
@@ -477,7 +595,11 @@ namespace JobScrape.Application.Tests
             roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
             var handler = new GrantPermissionHandler(roles, new FakeUnitOfWork());
 
-            var result = await handler.HandleAsync(RoleName.Viewer, "bogus", TestContext.Current.CancellationToken);
+            var result = await handler.HandleAsync(
+                RoleName.Viewer,
+                "bogus",
+                TestContext.Current.CancellationToken
+            );
 
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
         }
@@ -530,14 +652,20 @@ namespace JobScrape.Application.Tests
             var clock = new FakeTimeProvider(Now);
             var policy = new LoginPolicy(5, TimeSpan.FromMinutes(15));
 
-            Assert.Throws<ArgumentNullException>(() => new LoginHandler(null!, roles, new FakeTokens(), unitOfWork, policy, clock));
-            Assert.Throws<ArgumentNullException>(() => new SetupPasswordHandler(null!, unitOfWork, clock));
+            Assert.Throws<ArgumentNullException>(() =>
+                new LoginHandler(null!, roles, new FakeTokens(), unitOfWork, policy, clock)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new SetupPasswordHandler(null!, unitOfWork, clock)
+            );
             Assert.Throws<ArgumentNullException>(() => new CreateUserHandler(users, null!, clock));
             Assert.Throws<ArgumentNullException>(() => new AssignRoleHandler(users, roles, null!));
             Assert.Throws<ArgumentNullException>(() => new RevokeRoleHandler(users, roles, null!));
             Assert.Throws<ArgumentNullException>(() => new CreateRoleHandler(null!, unitOfWork));
             Assert.Throws<ArgumentNullException>(() => new GrantPermissionHandler(roles, null!));
-            Assert.Throws<ArgumentNullException>(() => new RevokePermissionHandler(null!, unitOfWork));
+            Assert.Throws<ArgumentNullException>(() =>
+                new RevokePermissionHandler(null!, unitOfWork)
+            );
         }
     }
 }

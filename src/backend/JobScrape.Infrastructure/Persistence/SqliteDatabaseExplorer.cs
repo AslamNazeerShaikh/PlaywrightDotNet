@@ -19,7 +19,9 @@ namespace JobScrape.Infrastructure.Persistence
         /// <summary>
         /// Tables the explorer never lists, describes, or touches.
         /// </summary>
-        private static readonly HashSet<string> BlockedTables = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> BlockedTables = new(
+            StringComparer.OrdinalIgnoreCase
+        )
         {
             "users",
             "roles",

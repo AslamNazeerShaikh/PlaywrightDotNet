@@ -51,7 +51,10 @@ namespace JobScrape.Infrastructure.Security
                 new(JwtRegisteredClaimNames.Sub, user.Id.Value.ToString()),
                 new(JwtRegisteredClaimNames.Email, user.Email),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("D")),
-                new(IdentityClaimTypes.TokenVersion, user.TokenVersion.ToString(CultureInfo.InvariantCulture)),
+                new(
+                    IdentityClaimTypes.TokenVersion,
+                    user.TokenVersion.ToString(CultureInfo.InvariantCulture)
+                ),
             };
             foreach (var role in roles)
             {

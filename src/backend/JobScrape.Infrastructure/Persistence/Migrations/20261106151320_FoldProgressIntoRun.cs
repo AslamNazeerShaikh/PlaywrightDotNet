@@ -11,14 +11,16 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(
-                "DELETE FROM scrape_run_progress WHERE id NOT IN (SELECT id FROM scrape_runs)");
+                "DELETE FROM scrape_run_progress WHERE id NOT IN (SELECT id FROM scrape_runs)"
+            );
             migrationBuilder.AddForeignKey(
                 name: "FK_scrape_run_progress_scrape_runs_id",
                 table: "scrape_run_progress",
                 column: "id",
                 principalTable: "scrape_runs",
                 principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
         }
 
         /// <inheritdoc />
@@ -26,7 +28,8 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_scrape_run_progress_scrape_runs_id",
-                table: "scrape_run_progress");
+                table: "scrape_run_progress"
+            );
         }
     }
 }

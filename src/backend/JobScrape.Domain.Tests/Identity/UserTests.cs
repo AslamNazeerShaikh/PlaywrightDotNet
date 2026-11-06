@@ -8,13 +8,16 @@ namespace JobScrape.Domain.Tests.Identity
         private const string Password = "Correct-Horse-99!";
         private const string OtherPassword = "Another-Good-42?";
         private static readonly TimeSpan Lockout = TimeSpan.FromMinutes(15);
-        private static readonly DateTimeOffset Now =
-            new(2026, 11, 6, 12, 0, 0, TimeSpan.Zero);
+        private static readonly DateTimeOffset Now = new(2026, 11, 6, 12, 0, 0, TimeSpan.Zero);
 
         [Fact]
         public void SeedAdminStartsAwaitingFirstLogin()
         {
-            var admin = User.CreateSeedAdmin("Admin@Example.com", PasswordHash.Create(Password), Now);
+            var admin = User.CreateSeedAdmin(
+                "Admin@Example.com",
+                PasswordHash.Create(Password),
+                Now
+            );
 
             Assert.Equal("admin@example.com", admin.Email);
             Assert.True(admin.MustChangePassword);
@@ -32,15 +35,19 @@ namespace JobScrape.Domain.Tests.Identity
         [InlineData("a @b.com")]
         public void SeedAdminRejectsBadEmails(string? email)
         {
-            Assert.Throws<DomainException>(
-                () => User.CreateSeedAdmin(email, PasswordHash.Create(Password), Now)
+            Assert.Throws<DomainException>(() =>
+                User.CreateSeedAdmin(email, PasswordHash.Create(Password), Now)
             );
         }
 
         [Fact]
         public void FirstLoginReplacesThePasswordAndClearsTheFlag()
         {
-            var admin = User.CreateSeedAdmin("admin@example.com", PasswordHash.Create(Password), Now);
+            var admin = User.CreateSeedAdmin(
+                "admin@example.com",
+                PasswordHash.Create(Password),
+                Now
+            );
 
             admin.CompleteFirstLogin(PasswordHash.Create(OtherPassword), Now.AddMinutes(1));
 
@@ -53,11 +60,15 @@ namespace JobScrape.Domain.Tests.Identity
         [Fact]
         public void SecondFirstLoginSetupIsRejected()
         {
-            var admin = User.CreateSeedAdmin("admin@example.com", PasswordHash.Create(Password), Now);
+            var admin = User.CreateSeedAdmin(
+                "admin@example.com",
+                PasswordHash.Create(Password),
+                Now
+            );
             admin.CompleteFirstLogin(PasswordHash.Create(OtherPassword), Now);
 
-            var rejected = Assert.Throws<DomainException>(
-                () => admin.CompleteFirstLogin(PasswordHash.Create(Password), Now)
+            var rejected = Assert.Throws<DomainException>(() =>
+                admin.CompleteFirstLogin(PasswordHash.Create(Password), Now)
             );
 
             Assert.False(admin.PasswordHash.Verify(Password));
@@ -67,10 +78,14 @@ namespace JobScrape.Domain.Tests.Identity
         [Fact]
         public void AuthenticateBeforeFirstLoginDemandsAReset()
         {
-            var admin = User.CreateSeedAdmin("admin@example.com", PasswordHash.Create(Password), Now);
+            var admin = User.CreateSeedAdmin(
+                "admin@example.com",
+                PasswordHash.Create(Password),
+                Now
+            );
 
-            var failure = Assert.Throws<DomainException>(
-                () => admin.Authenticate(Password, Now, 3, Lockout)
+            var failure = Assert.Throws<DomainException>(() =>
+                admin.Authenticate(Password, Now, 3, Lockout)
             );
 
             Assert.Contains("PASSWORD_RESET_REQUIRED", failure.Message, StringComparison.Ordinal);
@@ -82,8 +97,8 @@ namespace JobScrape.Domain.Tests.Identity
         {
             var user = ReadyUser();
 
-            var failure = Assert.Throws<DomainException>(
-                () => user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
+            var failure = Assert.Throws<DomainException>(() =>
+                user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
             );
 
             Assert.Contains("INVALID_CREDENTIALS", failure.Message, StringComparison.Ordinal);
@@ -96,13 +111,19 @@ namespace JobScrape.Domain.Tests.Identity
         {
             var user = ReadyUser();
 
-            Assert.Throws<DomainException>(() => user.Authenticate("Wrong-Password-1!", Now, 3, Lockout));
-            Assert.Throws<DomainException>(() => user.Authenticate("Wrong-Password-1!", Now, 3, Lockout));
-            Assert.Throws<DomainException>(() => user.Authenticate("Wrong-Password-1!", Now, 3, Lockout));
+            Assert.Throws<DomainException>(() =>
+                user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
+            );
+            Assert.Throws<DomainException>(() =>
+                user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
+            );
+            Assert.Throws<DomainException>(() =>
+                user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
+            );
 
             Assert.True(user.IsLockedOut(Now));
-            var locked = Assert.Throws<DomainException>(
-                () => user.Authenticate(Password, Now, 3, Lockout)
+            var locked = Assert.Throws<DomainException>(() =>
+                user.Authenticate(Password, Now, 3, Lockout)
             );
             Assert.Contains("ACCOUNT_LOCKED", locked.Message, StringComparison.Ordinal);
 
@@ -116,7 +137,9 @@ namespace JobScrape.Domain.Tests.Identity
         {
             var user = ReadyUser();
 
-            Assert.Throws<DomainException>(() => user.Authenticate("Wrong-Password-1!", Now, 3, Lockout));
+            Assert.Throws<DomainException>(() =>
+                user.Authenticate("Wrong-Password-1!", Now, 3, Lockout)
+            );
             user.Authenticate(Password, Now, 3, Lockout);
 
             Assert.Equal(0, user.FailedAttempts);

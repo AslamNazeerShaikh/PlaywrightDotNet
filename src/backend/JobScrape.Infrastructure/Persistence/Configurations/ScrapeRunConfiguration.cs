@@ -51,8 +51,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
             var progress = builder.OwnsOne(run => run.Progress!);
             progress.ToTable("scrape_run_progress");
-            progress.Property(position => position.Id).HasConversion(
-                DomainConverters.ScrapeRunId);
+            progress.Property(position => position.Id).HasConversion(DomainConverters.ScrapeRunId);
             progress.Property(position => position.PagesCompleted);
             progress.Property(position => position.NextCursor);
             progress

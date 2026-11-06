@@ -31,9 +31,7 @@ namespace JobScrape.Domain.Tests.Identity
         {
             foreach (var key in PermissionCatalog.Keys)
             {
-                Assert.False(
-                    string.IsNullOrWhiteSpace(PermissionCatalog.Describe(key))
-                );
+                Assert.False(string.IsNullOrWhiteSpace(PermissionCatalog.Describe(key)));
             }
         }
 
@@ -47,8 +45,8 @@ namespace JobScrape.Domain.Tests.Identity
         [Fact]
         public void DescribeRejectsUnknownKeys()
         {
-            Assert.Throws<DomainException>(
-                () => PermissionCatalog.Describe(PermissionKey.From("unknown.scope"))
+            Assert.Throws<DomainException>(() =>
+                PermissionCatalog.Describe(PermissionKey.From("unknown.scope"))
             );
         }
     }

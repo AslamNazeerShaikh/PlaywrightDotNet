@@ -93,8 +93,12 @@ namespace JobScrape.Api.Tests
                 );
                 user.AssignRole(admin.Id);
                 user.CompleteFirstLogin(PasswordHash.Create(FinalPassword), clock.GetUtcNow());
-                await provider.GetRequiredService<IUserRepository>().AddAsync(user, cancellationToken);
-                await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(cancellationToken);
+                await provider
+                    .GetRequiredService<IUserRepository>()
+                    .AddAsync(user, cancellationToken);
+                await provider
+                    .GetRequiredService<IUnitOfWork>()
+                    .SaveChangesAsync(cancellationToken);
             }
 
             using var client = factory.CreateClient();
@@ -104,9 +108,7 @@ namespace JobScrape.Api.Tests
                 cancellationToken
             );
             response.EnsureSuccessStatusCode();
-            var login = await response.Content.ReadFromJsonAsync<LoginResponse>(
-                cancellationToken
-            );
+            var login = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken);
             return login!.Token;
         }
 
@@ -132,9 +134,7 @@ namespace JobScrape.Api.Tests
                 cancellationToken
             );
             response.EnsureSuccessStatusCode();
-            var login = await response.Content.ReadFromJsonAsync<LoginResponse>(
-                cancellationToken
-            );
+            var login = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                 "Bearer",
                 login!.Token

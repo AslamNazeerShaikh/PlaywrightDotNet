@@ -106,7 +106,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -159,7 +162,10 @@ namespace JobScrape.Api.Controllers
                 return Errors
                     .ValidationFailed(
                         "The request body is required.",
-                        new Dictionary<string, string[]> { ["body"] = ["The request body is required."] }
+                        new Dictionary<string, string[]>
+                        {
+                            ["body"] = ["The request body is required."],
+                        }
                     )
                     .ToProblem();
             }
@@ -210,8 +216,7 @@ namespace JobScrape.Api.Controllers
         /// <returns>True when the name is a defined role.</returns>
         private static bool TryParseRole(string? raw, out RoleName name)
         {
-            return Enum.TryParse(raw, ignoreCase: true, out name)
-                && Enum.IsDefined(name);
+            return Enum.TryParse(raw, ignoreCase: true, out name) && Enum.IsDefined(name);
         }
 
         /// <summary>

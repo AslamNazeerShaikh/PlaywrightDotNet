@@ -70,9 +70,7 @@ namespace JobScrape.Domain.Identity
             foreach (var c in value)
             {
                 var legal =
-                    (c >= 'a' && c <= 'z')
-                    || (c >= '0' && c <= '9')
-                    || c is '.' or '-' or '_';
+                    (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c is '.' or '-' or '_';
                 if (!legal)
                 {
                     return false;

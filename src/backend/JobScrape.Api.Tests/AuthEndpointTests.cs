@@ -34,7 +34,10 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
-            Assert.Equal("application/problem+json", response.Content.Headers.ContentType!.MediaType);
+            Assert.Equal(
+                "application/problem+json",
+                response.Content.Headers.ContentType!.MediaType
+            );
         }
 
         [Fact]
@@ -73,16 +76,29 @@ namespace JobScrape.Api.Tests
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             using var setup = factory.CreateClient();
             var email = $"locked-{Guid.NewGuid():N}@example.com";
-            using (var created = await admin.PostAsJsonAsync("api/v1/users", new { email, temporaryPassword = "Temp-Secret1!!" }, Ct))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
             }
 
-            using (var setupResponse = await setup.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setupResponse = await setup.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 setupResponse.EnsureSuccessStatusCode();
             }
@@ -115,33 +131,47 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"first-{Guid.NewGuid():N}@example.com";
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
             }
 
             using var pending = factory.CreateClient();
-            using (var blocked = await pending.PostAsJsonAsync(
-                "api/v1/auth/login",
-                new { email, password = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var blocked = await pending.PostAsJsonAsync(
+                    "api/v1/auth/login",
+                    new { email, password = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
                 var blockedBody = await blocked.Content.ReadFromJsonAsync<JsonElement>(Ct);
-                Assert.Equal("PASSWORD_RESET_REQUIRED", blockedBody.GetProperty("code").GetString());
+                Assert.Equal(
+                    "PASSWORD_RESET_REQUIRED",
+                    blockedBody.GetProperty("code").GetString()
+                );
             }
 
             using var setupClient = factory.CreateClient();
-            using (var setup = await setupClient.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setup = await setupClient.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 Assert.Equal(HttpStatusCode.OK, setup.StatusCode);
                 var login = await setup.Content.ReadFromJsonAsync<LoginResponse>(Ct);
@@ -150,7 +180,12 @@ namespace JobScrape.Api.Tests
                 Assert.NotEmpty(login.Token);
             }
 
-            using var signedIn = await AuthTestHelper.LoginAsync(factory, email, "Final-Password2@@", Ct);
+            using var signedIn = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
+                Ct
+            );
             using var me = await signedIn.GetAsync("api/v1/auth/me", Ct);
 
             Assert.Equal(HttpStatusCode.OK, me.StatusCode);
@@ -164,20 +199,24 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"op-{Guid.NewGuid():N}@example.com";
-            using (var createViewerRole = await admin.PostAsJsonAsync(
-                "api/v1/roles",
-                new { name = "Viewer" },
-                Ct
-            ))
+            using (
+                var createViewerRole = await admin.PostAsJsonAsync(
+                    "api/v1/roles",
+                    new { name = "Viewer" },
+                    Ct
+                )
+            )
             {
                 createViewerRole.EnsureSuccessStatusCode();
             }
 
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
                 var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
@@ -191,16 +230,28 @@ namespace JobScrape.Api.Tests
             }
 
             using var setupClient = factory.CreateClient();
-            using (var setup = await setupClient.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setup = await setupClient.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 setup.EnsureSuccessStatusCode();
             }
 
-            using var viewer = await AuthTestHelper.LoginAsync(factory, email, "Final-Password2@@", Ct);
+            using var viewer = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
+                Ct
+            );
             using var denied = await viewer.GetAsync("api/v1/users", Ct);
 
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
@@ -227,8 +278,9 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             using var replayClient = factory.CreateClient();
-            replayClient.DefaultRequestHeaders.Authorization =
-                admin.DefaultRequestHeaders.Authorization;
+            replayClient.DefaultRequestHeaders.Authorization = admin
+                .DefaultRequestHeaders
+                .Authorization;
             var key = Guid.NewGuid().ToString("N");
             var email = $"idem-{Guid.NewGuid():N}@example.com";
             replayClient.DefaultRequestHeaders.Add("Idempotency-Key", key);
@@ -296,7 +348,10 @@ namespace JobScrape.Api.Tests
                 Assert.Equal("60", Assert.Single(retryAfter));
                 var body = await limited.Content.ReadFromJsonAsync<JsonElement>(Ct);
                 Assert.Equal("RATE_LIMITED", body.GetProperty("code").GetString());
-                Assert.Equal("application/problem+json", limited.Content.Headers.ContentType!.MediaType);
+                Assert.Equal(
+                    "application/problem+json",
+                    limited.Content.Headers.ContentType!.MediaType
+                );
             }
             finally
             {
@@ -331,11 +386,7 @@ namespace JobScrape.Api.Tests
             using var health = await client.GetAsync("api/v1/health", Ct);
             Assert.Equal(HttpStatusCode.OK, health.StatusCode);
 
-            using var login = await client.PostAsJsonAsync(
-                "api/v1/auth/login",
-                new { },
-                Ct
-            );
+            using var login = await client.PostAsJsonAsync("api/v1/auth/login", new { }, Ct);
             using var setup = await client.PostAsJsonAsync(
                 "api/v1/auth/setup-password",
                 new { },
@@ -351,31 +402,51 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"changed-{Guid.NewGuid():N}@example.com";
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
             }
 
             using var setup = factory.CreateClient();
-            using (var setupResponse = await setup.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setupResponse = await setup.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 setupResponse.EnsureSuccessStatusCode();
             }
 
-            using var before = await AuthTestHelper.LoginAsync(factory, email, "Final-Password2@@", Ct);
-            using (var changed = await before.PostAsJsonAsync(
-                "api/v1/auth/change-password",
-                new { currentPassword = "Final-Password2@@", newPassword = "Newer-Password3##" },
+            using var before = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
                 Ct
-            ))
+            );
+            using (
+                var changed = await before.PostAsJsonAsync(
+                    "api/v1/auth/change-password",
+                    new
+                    {
+                        currentPassword = "Final-Password2@@",
+                        newPassword = "Newer-Password3##",
+                    },
+                    Ct
+                )
+            )
             {
                 changed.EnsureSuccessStatusCode();
             }
@@ -385,7 +456,12 @@ namespace JobScrape.Api.Tests
             var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("UNAUTHENTICATED", staleBody.GetProperty("code").GetString());
 
-            using var fresh = await AuthTestHelper.LoginAsync(factory, email, "Newer-Password3##", Ct);
+            using var fresh = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Newer-Password3##",
+                Ct
+            );
             using var me = await fresh.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.OK, me.StatusCode);
         }
@@ -396,26 +472,40 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"locked-out-{Guid.NewGuid():N}@example.com";
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
             }
 
             using var setup = factory.CreateClient();
-            using (var setupResponse = await setup.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setupResponse = await setup.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 setupResponse.EnsureSuccessStatusCode();
             }
 
-            using var before = await AuthTestHelper.LoginAsync(factory, email, "Final-Password2@@", Ct);
+            using var before = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
+                Ct
+            );
             using var attacker = factory.CreateClient();
             for (var attempt = 0; attempt < 5; attempt++)
             {
@@ -464,7 +554,8 @@ namespace JobScrape.Api.Tests
             {
                 var provider = scope.ServiceProvider;
                 var clock = provider.GetRequiredService<TimeProvider>();
-                var user = await provider.GetRequiredService<IUserRepository>()
+                var user = await provider
+                    .GetRequiredService<IUserRepository>()
                     .GetByEmailAsync(email, Ct);
                 token = tokens.CreateToken(
                     user!,
@@ -475,7 +566,10 @@ namespace JobScrape.Api.Tests
             }
 
             using var client = factory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                token
+            );
 
             using var denied = await client.GetAsync("api/v1/search-profiles", Ct);
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
@@ -492,8 +586,9 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             using var replayClient = factory.CreateClient();
-            replayClient.DefaultRequestHeaders.Authorization =
-                admin.DefaultRequestHeaders.Authorization;
+            replayClient.DefaultRequestHeaders.Authorization = admin
+                .DefaultRequestHeaders
+                .Authorization;
             var key = Guid.NewGuid().ToString("N");
             var firstEmail = $"idem-first-{Guid.NewGuid():N}@example.com";
             var secondEmail = $"idem-second-{Guid.NewGuid():N}@example.com";
@@ -526,21 +621,30 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"replay-{Guid.NewGuid():N}@example.com";
-            using (var created = await admin.PostAsJsonAsync(
-                "api/v1/users",
-                new { email, temporaryPassword = "Temp-Secret1!!" },
-                Ct
-            ))
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
             {
                 created.EnsureSuccessStatusCode();
             }
 
             using var setup = factory.CreateClient();
-            using (var setupResponse = await setup.PostAsJsonAsync(
-                "api/v1/auth/setup-password",
-                new { email, currentSecret = "Temp-Secret1!!", newPassword = "Final-Password2@@" },
-                Ct
-            ))
+            using (
+                var setupResponse = await setup.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
             {
                 setupResponse.EnsureSuccessStatusCode();
             }

@@ -20,19 +20,27 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     status_code = table.Column<int>(type: "INTEGER", nullable: false),
                     content_type = table.Column<string>(type: "TEXT", nullable: false),
                     body = table.Column<byte[]>(type: "BLOB", nullable: false),
-                    created_at = table.Column<long>(type: "INTEGER", nullable: false)
+                    created_at = table.Column<long>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_idempotency_keys", x => new { x.owner_key, x.endpoint, x.key });
-                });
+                    table.PrimaryKey(
+                        "PK_idempotency_keys",
+                        x => new
+                        {
+                            x.owner_key,
+                            x.endpoint,
+                            x.key,
+                        }
+                    );
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "idempotency_keys");
+            migrationBuilder.DropTable(name: "idempotency_keys");
         }
     }
 }

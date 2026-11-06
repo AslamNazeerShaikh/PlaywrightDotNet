@@ -22,8 +22,8 @@ namespace JobScrape.Domain.Tests.Access
         [InlineData(-1)]
         public void CreateRejectsNonPositiveLimit(int limit)
         {
-            Assert.Throws<DomainException>(
-                () => UsageQuota.Create(QuotaScope.Api, limit, TimeSpan.FromMinutes(1))
+            Assert.Throws<DomainException>(() =>
+                UsageQuota.Create(QuotaScope.Api, limit, TimeSpan.FromMinutes(1))
             );
         }
 
@@ -33,8 +33,12 @@ namespace JobScrape.Domain.Tests.Access
         [InlineData("1.00:00:01")]
         public void CreateRejectsOutOfRangeWindow(string window)
         {
-            Assert.Throws<DomainException>(
-                () => UsageQuota.Create(QuotaScope.Mcp, 10, TimeSpan.Parse(window, CultureInfo.InvariantCulture))
+            Assert.Throws<DomainException>(() =>
+                UsageQuota.Create(
+                    QuotaScope.Mcp,
+                    10,
+                    TimeSpan.Parse(window, CultureInfo.InvariantCulture)
+                )
             );
         }
 

@@ -58,10 +58,9 @@ namespace JobScrape.Application.Features.Identity
             CancellationToken cancellationToken
         )
         {
-            var user =
-                string.IsNullOrWhiteSpace(email)
-                    ? null
-                    : await _users.GetByEmailAsync(email, cancellationToken);
+            var user = string.IsNullOrWhiteSpace(email)
+                ? null
+                : await _users.GetByEmailAsync(email, cancellationToken);
             if (user is null)
             {
                 return Result.Fail(Errors.InvalidCredentials());

@@ -15,26 +15,24 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 table: "users",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 0
+            );
 
             migrationBuilder.AddColumn<string>(
                 name: "request_hash",
                 table: "idempotency_keys",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: ""
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "token_version",
-                table: "users");
+            migrationBuilder.DropColumn(name: "token_version", table: "users");
 
-            migrationBuilder.DropColumn(
-                name: "request_hash",
-                table: "idempotency_keys");
+            migrationBuilder.DropColumn(name: "request_hash", table: "idempotency_keys");
         }
     }
 }

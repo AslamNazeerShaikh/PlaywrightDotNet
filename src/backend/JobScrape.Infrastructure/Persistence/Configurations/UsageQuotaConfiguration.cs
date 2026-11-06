@@ -29,10 +29,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
             builder.Property(quota => quota.Limit);
             builder
                 .Property(quota => quota.Window)
-                .HasConversion<long>(
-                    window => window.Ticks,
-                    ticks => TimeSpan.FromTicks(ticks)
-                )
+                .HasConversion<long>(window => window.Ticks, ticks => TimeSpan.FromTicks(ticks))
                 .HasColumnName("window_ticks");
             builder.Ignore(quota => quota.DomainEvents);
         }

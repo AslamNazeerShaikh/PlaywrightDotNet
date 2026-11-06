@@ -103,7 +103,9 @@ namespace JobScrape.Domain.Access
         {
             if (window <= TimeSpan.Zero || window > MaxWindow)
             {
-                throw new DomainException("Usage quota window must be positive and at most 24 hours.");
+                throw new DomainException(
+                    "Usage quota window must be positive and at most 24 hours."
+                );
             }
 
             return window;

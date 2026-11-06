@@ -25,7 +25,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task ListsTables()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables",
                 TestContext.Current.CancellationToken
@@ -41,7 +43,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task GetsSchema()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/search_profiles/schema",
                 TestContext.Current.CancellationToken
@@ -52,7 +56,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task RowsAndCrudRoundTrip()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             // insert
             var insert = await client.PostAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
@@ -101,7 +107,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task UnknownTableReturnsNotFound()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/does_not_exist/schema",
                 TestContext.Current.CancellationToken
@@ -112,7 +120,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task UnknownTableSchemaReturnsTableNotFoundCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/does_not_exist/schema",
                 TestContext.Current.CancellationToken
@@ -127,7 +137,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task UnknownTableRowsReturnsTableNotFoundCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/does_not_exist/rows?offset=0&limit=10",
                 TestContext.Current.CancellationToken
@@ -142,7 +154,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task UpdateUnknownRowReturnsRowNotFoundCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             var missing = await client.PutAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
                 new
@@ -162,7 +176,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task DeleteUnknownRowReturnsRowNotFoundCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.DeleteAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows/no-such-row-xyz",
                 TestContext.Current.CancellationToken
@@ -177,7 +193,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task InvalidTableNameReturnsInvalidTableCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/bad-table!/schema",
                 TestContext.Current.CancellationToken
@@ -197,7 +215,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task InvalidTableNameOnRowsReturnsInvalidTableCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.GetAsync(
                 "api/v1/db/tables/bad-table!/rows?offset=0&limit=10",
                 TestContext.Current.CancellationToken
@@ -213,7 +233,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task InsertWithoutValidColumnsReturnsInvalidInputCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.PostAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
                 new { },
@@ -234,7 +256,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task UpdateWithoutPrimaryKeyReturnsInvalidInputCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             using var response = await client.PutAsJsonAsync(
                 "api/v1/db/tables/source_circuit_breakers/rows",
                 new { primaryKeyValue = "", values = new { consecutive_failures = 3 } },
@@ -252,7 +276,9 @@ namespace JobScrape.Api.Tests
         [Fact]
         public async Task DuplicateInsertReturnsDbErrorCode()
         {
-            using var client = await _factory.CreateAdminClientAsync(TestContext.Current.CancellationToken);
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
             var ct = TestContext.Current.CancellationToken;
             var row = new
             {
@@ -313,20 +339,14 @@ namespace JobScrape.Api.Tests
 
             foreach (var path in new[] { "users", "roles" })
             {
-                using var schema = await client.GetAsync(
-                    $"api/v1/db/tables/{path}/schema",
-                    ct
-                );
+                using var schema = await client.GetAsync($"api/v1/db/tables/{path}/schema", ct);
                 Assert.Equal(HttpStatusCode.NotFound, schema.StatusCode);
                 var problem = await schema.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
                     ct
                 );
                 Assert.Equal("TABLE_NOT_FOUND", problem.GetProperty("code").GetString());
 
-                using var rows = await client.GetAsync(
-                    $"api/v1/db/tables/{path}/rows",
-                    ct
-                );
+                using var rows = await client.GetAsync($"api/v1/db/tables/{path}/rows", ct);
                 Assert.Equal(HttpStatusCode.NotFound, rows.StatusCode);
             }
         }

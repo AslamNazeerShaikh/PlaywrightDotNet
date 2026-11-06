@@ -21,8 +21,8 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<IReadOnlyList<UsageQuota>> ListAsync(CancellationToken cancellationToken)
         {
-            var quotas = await db.UsageQuotas
-                .AsNoTracking()
+            var quotas = await db
+                .UsageQuotas.AsNoTracking()
                 .OrderBy(quota => quota.Scope)
                 .ToListAsync(cancellationToken);
             return quotas;

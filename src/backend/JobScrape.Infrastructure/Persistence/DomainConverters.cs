@@ -196,12 +196,9 @@ namespace JobScrape.Infrastructure.Persistence
             (left, right) =>
                 left == null
                     ? right == null
-                    : right != null && left.Select(id => id.Value).SequenceEqual(right.Select(id => id.Value)),
-            ids =>
-                ids.Aggregate(
-                    0,
-                    (hash, id) => HashCode.Combine(hash, id.Value.GetHashCode())
-                ),
+                    : right != null
+                        && left.Select(id => id.Value).SequenceEqual(right.Select(id => id.Value)),
+            ids => ids.Aggregate(0, (hash, id) => HashCode.Combine(hash, id.Value.GetHashCode())),
             ids => ids.ToList()
         );
 
@@ -212,10 +209,7 @@ namespace JobScrape.Infrastructure.Persistence
         /// </summary>
         public static readonly ValueConverter<List<PermissionKey>, string> PermissionList = new(
             keys => Json.WriteStringList(keys.Select(key => key.Value).ToArray()),
-            json =>
-                Json.ReadStringList(json)
-                    .Select(Domain.Identity.PermissionKey.From)
-                    .ToList()
+            json => Json.ReadStringList(json).Select(Domain.Identity.PermissionKey.From).ToList()
         );
 
         /// <summary>
@@ -226,15 +220,13 @@ namespace JobScrape.Infrastructure.Persistence
                 left == null
                     ? right == null
                     : right != null
-                        && left.Select(key => key.Value).SequenceEqual(right.Select(key => key.Value)),
+                        && left.Select(key => key.Value)
+                            .SequenceEqual(right.Select(key => key.Value)),
             keys =>
                 keys.Aggregate(
                     0,
                     (hash, key) =>
-                        HashCode.Combine(
-                            hash,
-                            StringComparer.Ordinal.GetHashCode(key.Value)
-                        )
+                        HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(key.Value))
                 ),
             keys => keys.ToList()
         );
@@ -309,7 +301,8 @@ namespace JobScrape.Infrastructure.Persistence
         /// JSON shapes for multi-field value objects. Private DTOs keep the
         /// storage format independent of the domain types' shape.
         /// </summary>
-        private static class Json        {
+        private static class Json
+        {
             private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
             public static string WriteCriteria(SearchCriteria criteria)
@@ -470,7 +463,10 @@ namespace JobScrape.Infrastructure.Persistence
 
             public static string WriteGuidList(Guid[] ids)
             {
-                return JsonSerializer.Serialize(ids.Select(id => id.ToString("D")).ToArray(), Options);
+                return JsonSerializer.Serialize(
+                    ids.Select(id => id.ToString("D")).ToArray(),
+                    Options
+                );
             }
 
             public static Guid[] ReadGuidList(string json)
