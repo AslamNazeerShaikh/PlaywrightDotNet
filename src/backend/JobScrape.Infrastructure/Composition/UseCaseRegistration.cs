@@ -41,17 +41,25 @@ namespace JobScrape.Infrastructure.Composition
             services.AddSingleton(TimeProvider.System);
 
             // The bearer token owns the identity: sub is the actor, role
-            // claims are the roles. With no authenticated identity (dev
-            // loopback), every call runs as the local operator.
+            // claims are the roles. Unauthenticated callers get a denied
+            // (empty-permission) context instead of the local operator, so a
+            // missing auth gate can never silently run as a trusted actor.
             services.AddHttpContextAccessor();
             services.AddScoped<ICallerContext>(provider =>
             {
                 var user = provider.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
                 if (user?.Identity?.IsAuthenticated != true)
                 {
-                    return CallerContext.LocalOperator;
+                    return new CallerContext(
+                        "unauthenticated",
+                        Array.Empty<string>(),
+                        Array.Empty<string>()
+                    );
                 }
 
+                var mustChange = user.HasClaim(claim =>
+                    claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
+                );
                 var actor =
                     user.FindFirst(IdentityClaimTypes.Subject)?.Value
                     ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
@@ -64,7 +72,10 @@ namespace JobScrape.Infrastructure.Composition
                     .Select(claim => claim.Value)
                     .Distinct(StringComparer.Ordinal)
                     .ToArray();
-                return new CallerContext(actor, roles, permissions);
+                return new CallerContext(actor, roles, permissions)
+                {
+                    MustChangePassword = mustChange,
+                };
             });
 
             services.AddTransient<GetHealthHandler>();

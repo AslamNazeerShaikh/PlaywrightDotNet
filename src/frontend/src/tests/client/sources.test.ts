@@ -15,14 +15,20 @@ const closed = {
 describe("sources", () => {
   test("listSources GETs the snapshot", async () => {
     let seen = "";
-    const fetchImpl: FetchImpl = async (url) => {
+    let seenInit: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (url, init) => {
       seen = url;
+      seenInit = init;
       return { ok: true, status: 200, json: async () => ({ items: [], asOf: "x" }) };
     };
 
-    const { result } = await createApiClient(fetchImpl).listSources();
+    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const { result } = await client.listSources();
 
     expect(seen).toBe("/api/v1/sources");
+    expect((seenInit?.headers as Record<string, string> | undefined)?.authorization).toBe(
+      "Bearer tok-1",
+    );
     expect(result).toEqual({ ok: true, value: { items: [], asOf: "x" } });
   });
 

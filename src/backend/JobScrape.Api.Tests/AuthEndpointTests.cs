@@ -151,12 +151,9 @@ namespace JobScrape.Api.Tests
                 )
             )
             {
-                Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+                Assert.Equal(HttpStatusCode.Unauthorized, blocked.StatusCode);
                 var blockedBody = await blocked.Content.ReadFromJsonAsync<JsonElement>(Ct);
-                Assert.Equal(
-                    "PASSWORD_RESET_REQUIRED",
-                    blockedBody.GetProperty("code").GetString()
-                );
+                Assert.Equal("INVALID_CREDENTIALS", blockedBody.GetProperty("code").GetString());
             }
 
             using var setupClient = factory.CreateClient();

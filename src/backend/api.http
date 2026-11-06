@@ -6,8 +6,8 @@
 @base = http://localhost:5208/api/v1
 
 ### 1. Sign in. 200 with the token; 401 INVALID_CREDENTIALS for a wrong
-### email or password; 403 PASSWORD_RESET_REQUIRED before first login or
-### ACCOUNT_LOCKED while locked out.
+### email or password, or before first login; 403 ACCOUNT_LOCKED
+### while locked out.
 
 POST {{base}}/auth/login
 Content-Type: application/json

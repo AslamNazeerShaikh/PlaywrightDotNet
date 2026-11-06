@@ -15,6 +15,7 @@ namespace JobScrape.Application.Features.Identity
         private readonly IUserRepository _users;
         private readonly IRoleRepository _roles;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssignRoleHandler"/> class.
@@ -22,19 +23,23 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="users">The user port. Must not be null.</param>
         /// <param name="roles">The role port. Must not be null.</param>
         /// <param name="unitOfWork">Commits the assignment. Must not be null.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public AssignRoleHandler(
             IUserRepository users,
             IRoleRepository roles,
-            IUnitOfWork unitOfWork
+            IUnitOfWork unitOfWork,
+            ICallerContext caller
         )
         {
             ArgumentNullException.ThrowIfNull(users);
             ArgumentNullException.ThrowIfNull(roles);
             ArgumentNullException.ThrowIfNull(unitOfWork);
+            ArgumentNullException.ThrowIfNull(caller);
             _users = users;
             _roles = roles;
             _unitOfWork = unitOfWork;
+            _caller = caller;
         }
 
         /// <summary>
@@ -67,6 +72,11 @@ namespace JobScrape.Application.Features.Identity
                         new Dictionary<string, string[]> { ["userId"] = [ex.Message] }
                     )
                 );
+            }
+
+            if (id.Value.ToString() == _caller.ActorId)
+            {
+                return Result.Fail(Errors.AccessDenied());
             }
 
             var user = await _users.GetAsync(id, cancellationToken);

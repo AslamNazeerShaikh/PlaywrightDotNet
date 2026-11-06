@@ -23,7 +23,10 @@ namespace JobScrape.Mcp.Tools
         {
             ArgumentNullException.ThrowIfNull(caller);
             ArgumentNullException.ThrowIfNull(permission);
-            if (!caller.Permissions.Contains(permission, StringComparer.Ordinal))
+            if (
+                caller.MustChangePassword
+                || !caller.Permissions.Contains(permission, StringComparer.Ordinal)
+            )
             {
                 throw McpErrors.From(Errors.AccessDenied());
             }

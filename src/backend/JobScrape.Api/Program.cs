@@ -140,8 +140,8 @@ namespace JobScrape.Api
             app.UseSerilogRequestLogging(options =>
                 options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
             );
-            app.UseMiddleware<UsageQuotaMiddleware>();
             app.UseMiddleware<IdempotencyMiddleware>();
+            app.UseMiddleware<UsageQuotaMiddleware>();
             app.MapControllers();
 
             // MCP lives beside the controllers on /mcp; loopback only, like

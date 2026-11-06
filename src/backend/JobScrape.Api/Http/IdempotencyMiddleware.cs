@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
@@ -33,6 +34,19 @@ namespace JobScrape.Api.Http
         /// </summary>
         internal const int MaxKeyLength = 128;
 
+        /// <summary>
+        /// How long a loser waits for the winner's row to complete.
+        /// </summary>
+        internal static readonly TimeSpan CompletionWaitTimeout = TimeSpan.FromSeconds(10);
+
+        /// <summary>
+        /// Per-key locks so parallel duplicate requests serialize and only
+        /// the first executes.
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(
+            StringComparer.Ordinal
+        );
+
         // Injected and never mutated.
         private readonly RequestDelegate _next;
 
@@ -65,69 +79,183 @@ namespace JobScrape.Api.Http
             ArgumentNullException.ThrowIfNull(clock);
 
             var key = context.Request.Headers[HeaderName].FirstOrDefault()?.Trim();
+            var isAuthenticated = context.User.Identity?.IsAuthenticated == true;
             if (
-                !IsReplayable(context.Request.Method)
-                || string.IsNullOrEmpty(key)
-                || key.Length > MaxKeyLength
-                || context.User.Identity?.IsAuthenticated != true
+                !isAuthenticated
                 || IsAuthPath(context.Request.Path)
+                || !IsReplayable(context.Request.Method)
             )
             {
                 await _next(context);
                 return;
             }
 
-            context.Request.EnableBuffering();
-            var requestHash = await HashBodyAsync(context.Request);
-            var endpoint = Scope(context.Request);
-            var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
-            var stored = await store.GetAsync(owner, endpoint, key, context.RequestAborted);
-            if (stored is not null)
+            if (string.IsNullOrEmpty(key))
             {
-                if (!stored.RequestHash.Equals(requestHash, StringComparison.Ordinal))
-                {
-                    await Errors.IdempotencyKeyReused().ToProblem().ExecuteAsync(context);
-                    return;
-                }
-
-                context.Response.StatusCode = stored.StatusCode;
-                context.Response.ContentType = stored.ContentType;
-                await context.Response.Body.WriteAsync(stored.Body, context.RequestAborted);
+                await _next(context);
                 return;
             }
 
-            var original = context.Response.Body;
-            await using var buffer = new MemoryStream();
-            context.Response.Body = buffer;
-            try
+            if (key.Length > MaxKeyLength)
             {
-                await _next(context);
-            }
-            finally
-            {
-                context.Response.Body = original;
+                await Errors
+                    .ValidationFailed(
+                        "Idempotency key exceeds the 128 character limit.",
+                        new Dictionary<string, string[]>
+                        {
+                            [HeaderName] = ["Idempotency key must be 128 characters or fewer."],
+                        }
+                    )
+                    .ToProblem()
+                    .ExecuteAsync(context);
+                return;
             }
 
-            buffer.Seek(0, SeekOrigin.Begin);
-            if (buffer.Length <= MaxBodyBytes && IsStorable(context.Response.StatusCode))
+            var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
+            var endpoint = Scope(context.Request);
+            var lockKey = string.Concat(owner, "\u001f", endpoint, "\u001f", key);
+            var semaphore = _locks.GetOrAdd(lockKey, static _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync(context.RequestAborted);
+            try
             {
-                await store.SaveAsync(
-                    new IdempotencyEntry(
+                context.Request.EnableBuffering();
+                var requestHash = await HashBodyAsync(context.Request);
+                var pendingEntry = new IdempotencyEntry(
+                    owner,
+                    endpoint,
+                    key,
+                    requestHash,
+                    0,
+                    "application/json",
+                    [],
+                    clock.GetUtcNow()
+                );
+                var won = await store.TryReserveAsync(pendingEntry, context.RequestAborted);
+                if (!won)
+                {
+                    var stored = await WaitForCompletionAsync(
+                        store,
                         owner,
                         endpoint,
                         key,
-                        requestHash,
-                        context.Response.StatusCode,
-                        context.Response.ContentType ?? "application/json",
-                        buffer.ToArray(),
-                        clock.GetUtcNow()
-                    ),
-                    context.RequestAborted
-                );
+                        clock,
+                        context.RequestAborted
+                    );
+                    if (stored is null)
+                    {
+                        await Errors.RunNotStarted().ToProblem().ExecuteAsync(context);
+                        return;
+                    }
+
+                    if (!stored.RequestHash.Equals(requestHash, StringComparison.Ordinal))
+                    {
+                        await Errors.IdempotencyKeyReused().ToProblem().ExecuteAsync(context);
+                        return;
+                    }
+
+                    context.Response.StatusCode = stored.StatusCode;
+                    context.Response.ContentType = stored.ContentType;
+                    await context.Response.Body.WriteAsync(stored.Body, context.RequestAborted);
+                    return;
+                }
+
+                var original = context.Response.Body;
+                await using var buffer = new MemoryStream();
+                context.Response.Body = buffer;
+                try
+                {
+                    await _next(context);
+                }
+                catch
+                {
+                    context.Response.Body = original;
+                    await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
+                    throw;
+                }
+
+                context.Response.Body = original;
+
+                buffer.Seek(0, SeekOrigin.Begin);
+                if (buffer.Length <= MaxBodyBytes && IsStorable(context.Response.StatusCode))
+                {
+                    try
+                    {
+                        await store.SaveAsync(
+                            new IdempotencyEntry(
+                                owner,
+                                endpoint,
+                                key,
+                                requestHash,
+                                context.Response.StatusCode,
+                                context.Response.ContentType ?? "application/json",
+                                buffer.ToArray(),
+                                clock.GetUtcNow()
+                            ),
+                            context.RequestAborted
+                        );
+                    }
+                    catch
+                    {
+                        await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
+                        throw;
+                    }
+                }
+                else
+                {
+                    await store.RemoveAsync(owner, endpoint, key, context.RequestAborted);
+                }
+
+                buffer.Seek(0, SeekOrigin.Begin);
+                await buffer.CopyToAsync(original, context.RequestAborted);
+            }
+            finally
+            {
+                semaphore.Release();
+                if (semaphore.CurrentCount == 1)
+                {
+                    _locks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(lockKey, semaphore));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Waits for the winner's row to leave the pending state, bounded by
+        /// <see cref="CompletionWaitTimeout"/>.
+        /// </summary>
+        private static async Task<IdempotencyEntry?> WaitForCompletionAsync(
+            IIdempotencyStore store,
+            string owner,
+            string endpoint,
+            string key,
+            TimeProvider clock,
+            CancellationToken cancellationToken
+        )
+        {
+            var deadline = clock.GetUtcNow() + CompletionWaitTimeout;
+            while (clock.GetUtcNow() < deadline)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                var entry = await store.GetAsync(owner, endpoint, key, cancellationToken);
+                if (entry is not null && entry.StatusCode != 0)
+                {
+                    return entry;
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
             }
 
-            buffer.Seek(0, SeekOrigin.Begin);
-            await buffer.CopyToAsync(original, context.RequestAborted);
+            return null;
         }
 
         /// <summary>

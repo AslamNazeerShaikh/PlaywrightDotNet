@@ -19,14 +19,7 @@ import {
   type UpdateProfileInput,
   type UpdateSessionInput,
 } from "./lib/api.ts";
-import {
-  canSeeRoles,
-  canSeeUsers,
-  clearToken,
-  hasAnyPermission,
-  loadToken,
-  saveToken,
-} from "./lib/auth.ts";
+import { clearToken, hasAnyPermission, loadToken, saveToken } from "./lib/auth.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute } from "./lib/router.ts";
@@ -431,6 +424,20 @@ export function App({
     setAuthProblem(null);
   }
 
+  // A 401 on a page-level call means the token died: drop it and show the same
+  // session-ended notice as the /me refresh path.
+  function endSession() {
+    clearToken();
+    setSession(null);
+    setPendingSetupEmail(null);
+    setAuthProblem({
+      status: 401,
+      title: "Your session ended. Sign in again to pick up any account changes.",
+      detail: "",
+      code: "UNAUTHENTICATED",
+    });
+  }
+
   async function refreshMe(): Promise<boolean> {
     const { result } = await activeClient.fetchMe();
     if (result.ok) {
@@ -438,7 +445,7 @@ export function App({
       return true;
     }
     if (result.problem.status === 401) {
-      signOut();
+      endSession();
       return false;
     }
     setAuthProblem(result.problem);
@@ -451,18 +458,7 @@ export function App({
     try {
       const { result } = await activeClient.login(input);
       if (!result.ok) {
-        // Seeded accounts cannot sign in yet: the 403 carries them to setup-password.
-        if (result.problem.code === "PASSWORD_RESET_REQUIRED") {
-          setPendingSetupEmail(input.email);
-          setAuthProblem(null);
-          return false;
-        }
         setAuthProblem(result.problem);
-        return false;
-      }
-      if (result.value.mustChangePassword) {
-        setPendingSetupEmail(input.email);
-        setAuthProblem(null);
         return false;
       }
       saveToken(result.value.token);
@@ -525,9 +521,47 @@ export function App({
   const loadersRef = useRef({ loadProfiles, loadSources, loadSessions });
   loadersRef.current = { loadProfiles, loadSources, loadSessions };
 
+  // Me-driven navigation: the admin stops appear only with the matching visibility. The
+  // order follows ROUTES, so users/roles/quotas land at the rail's end.
+  const me = session?.me ?? null;
+  const visibleRoutes = useMemo(() => {
+    const base: DeckRoute[] = ["overview", "health"];
+    if (me !== null) {
+      if (hasAnyPermission(me, "profiles.read")) {
+        base.push("profiles");
+      }
+      if (hasAnyPermission(me, "sources.read")) {
+        base.push("sources");
+      }
+      if (hasAnyPermission(me, "sessions.read")) {
+        base.push("sessions");
+      }
+      if (hasAnyPermission(me, "runs.read")) {
+        base.push("runs");
+      }
+      base.push("topology");
+      if (me.roles.includes("Admin")) {
+        base.push("database");
+      }
+      if (hasAnyPermission(me, "users.read", "users.write")) {
+        base.push("users");
+      }
+      if (hasAnyPermission(me, "roles.read", "roles.write")) {
+        base.push("roles", "quotas");
+      }
+    }
+    return new Set(base);
+  }, [me]);
+  // A deep link to a hidden admin stop explains itself instead of bouncing home.
+  const routeDenied = me !== null && !visibleRoutes.has(route);
+
   // Page data loads whenever its page opens; the ref keeps the effect keyed
-  // on the route alone, so renders never refetch.
+  // on the route alone, so renders never refetch. A denied deep link renders
+  // the denied copy without firing the page's loader.
   useEffect(() => {
+    if (routeDenied) {
+      return;
+    }
     if (route === "profiles") {
       void loadersRef.current.loadProfiles();
     }
@@ -537,34 +571,7 @@ export function App({
     if (route === "sessions") {
       void loadersRef.current.loadSessions();
     }
-  }, [route]);
-
-  // Me-driven navigation: the admin stops appear only with the matching visibility. The
-  // order follows ROUTES, so users/roles/quotas land at the rail's end.
-  const me = session?.me ?? null;
-  const visibleRoutes = useMemo(() => {
-    const base: DeckRoute[] = [
-      "overview",
-      "health",
-      "profiles",
-      "sources",
-      "sessions",
-      "runs",
-      "topology",
-      "database",
-    ];
-    if (me !== null) {
-      if (canSeeUsers(me)) {
-        base.push("users");
-      }
-      if (canSeeRoles(me)) {
-        base.push("roles", "quotas");
-      }
-    }
-    return new Set(base);
-  }, [me]);
-  // A deep link to a hidden admin stop explains itself instead of bouncing home.
-  const routeDenied = me !== null && !visibleRoutes.has(route);
+  }, [route, routeDenied]);
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
@@ -647,6 +654,10 @@ export function App({
             busy={authBusy}
             problem={authProblem}
             onLogin={handleLogin}
+            onFirstLogin={() => {
+              setPendingSetupEmail(lastEmail);
+              setAuthProblem(null);
+            }}
           />
         )}
         {!restoring && me === null && pendingSetupEmail !== null && (
@@ -686,7 +697,20 @@ export function App({
               </div>
               <p className="alert" role="alert">
                 <CodeTag code="ACCESS_DENIED" tone="bad" /> The {route} stop needs{" "}
-                {route === "users" ? "users.read or users.write" : "roles.read or roles.write"}.
+                {route === "profiles"
+                  ? "profiles.read"
+                  : route === "sources"
+                    ? "sources.read"
+                    : route === "sessions"
+                      ? "sessions.read"
+                      : route === "runs"
+                        ? "runs.read"
+                        : route === "database"
+                          ? "the Admin role"
+                          : route === "users"
+                            ? "users.read or users.write"
+                            : "roles.read or roles.write"}
+                .{" "}
               </p>
             </section>
           </>
@@ -767,20 +791,20 @@ export function App({
           <DatabasePage client={activeClient} />
         )}
         {me !== null && !routeDenied && route === "users" && (
-          <UsersPage client={activeClient} me={me} onUnauthorized={signOut} />
+          <UsersPage client={activeClient} me={me} onUnauthorized={endSession} />
         )}
         {me !== null && !routeDenied && route === "roles" && (
           <RolesPage
             client={activeClient}
             canWrite={hasAnyPermission(me, "roles.write")}
-            onUnauthorized={signOut}
+            onUnauthorized={endSession}
           />
         )}
         {me !== null && !routeDenied && route === "quotas" && (
           <QuotasPage
             client={activeClient}
             canWrite={hasAnyPermission(me, "roles.write")}
-            onUnauthorized={signOut}
+            onUnauthorized={endSession}
           />
         )}
       </main>

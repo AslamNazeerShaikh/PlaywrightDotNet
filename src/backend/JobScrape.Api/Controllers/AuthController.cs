@@ -18,7 +18,6 @@ namespace JobScrape.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/v1/auth")]
-    [EnableRateLimiting(RateLimitPolicies.Login)]
     public sealed class AuthController : ControllerBase
     {
         // Constructor-injected handlers, never mutated.
@@ -54,11 +53,12 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>
         /// 200 with the token; 401 <c>INVALID_CREDENTIALS</c> for a wrong
-        /// email or password; 403 <c>PASSWORD_RESET_REQUIRED</c> before first
-        /// login or <c>ACCOUNT_LOCKED</c> while locked out.
+        /// email or password or a pending first login; 403
+        /// <c>ACCOUNT_LOCKED</c> while locked out.
         /// </returns>
         [HttpPost("login")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Login)]
         public async Task<IResult> LoginAsync(
             [FromBody] LoginRequest? request,
             CancellationToken cancellationToken
@@ -99,11 +99,13 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>
         /// 200 with the token; 401 <c>INVALID_CREDENTIALS</c> for a wrong
-        /// secret; 409 <c>PASSWORD_SETUP_COMPLETE</c> when first login
+        /// secret; 403 <c>ACCOUNT_LOCKED</c> when the account is locked out;
+        /// 409 <c>PASSWORD_SETUP_COMPLETE</c> when first login
         /// already finished; 400 with field errors for a weak new password.
         /// </returns>
         [HttpPost("setup-password")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Login)]
         public async Task<IResult> SetupPasswordAsync(
             [FromBody] SetupPasswordRequest? request,
             CancellationToken cancellationToken

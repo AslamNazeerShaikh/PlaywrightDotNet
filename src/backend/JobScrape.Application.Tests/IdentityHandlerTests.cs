@@ -1,3 +1,4 @@
+using System.Threading;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Results;
@@ -40,8 +41,16 @@ namespace JobScrape.Application.Tests
         private sealed class FakeUsers : IUserRepository
         {
             private readonly List<User> _users = [];
+            private int _listCalls;
 
             public int Saves { get; private set; }
+
+            /// <summary>
+            /// When set, the first <see cref="ListAsync"/> call awaits this gate
+            /// before returning, so two handlers can be held in flight without
+            /// sleeping.
+            /// </summary>
+            public TaskCompletionSource? ListGate { get; set; }
 
             public void Seed(User user)
             {
@@ -69,9 +78,14 @@ namespace JobScrape.Application.Tests
                 return Task.CompletedTask;
             }
 
-            public Task<IReadOnlyList<User>> ListAsync(CancellationToken cancellationToken)
+            public async Task<IReadOnlyList<User>> ListAsync(CancellationToken cancellationToken)
             {
-                return Task.FromResult<IReadOnlyList<User>>(_users.ToList());
+                if (ListGate is not null && Interlocked.Increment(ref _listCalls) == 1)
+                {
+                    await ListGate.Task.ConfigureAwait(false);
+                }
+
+                return _users.ToList();
             }
         }
 
@@ -208,7 +222,7 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task LoginBeforeFirstLoginFailsResetRequired()
+        public async Task LoginBeforeFirstLoginFailsInvalidCredentials()
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
@@ -227,8 +241,8 @@ namespace JobScrape.Application.Tests
             );
 
             Assert.True(result.IsFailure);
-            Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
-            Assert.Equal("PASSWORD_RESET_REQUIRED", result.Error.Code);
+            Assert.Equal(ErrorKind.Unauthorized, result.Error.Kind);
+            Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
         }
 
         [Fact]
@@ -327,7 +341,51 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task SetupPasswordWithUnknownEmailMatchesCompletedCode()
+        public async Task SetupPasswordCompletedAccountConflictsUnknownUnauthorized()
+        {
+            var ct = TestContext.Current.CancellationToken;
+
+            var completedUsers = new FakeUsers();
+            completedUsers.Seed(ActiveUser());
+            var completedUnitOfWork = new FakeUnitOfWork();
+            var completedHandler = new SetupPasswordHandler(
+                completedUsers,
+                completedUnitOfWork,
+                new FakeTimeProvider(Now)
+            );
+            var completedResult = await completedHandler.HandleAsync(
+                "op@example.com",
+                FinalPassword,
+                TempPassword,
+                ct
+            );
+
+            var unknownUnitOfWork = new FakeUnitOfWork();
+            var unknownHandler = new SetupPasswordHandler(
+                new FakeUsers(),
+                unknownUnitOfWork,
+                new FakeTimeProvider(Now)
+            );
+            var unknownResult = await unknownHandler.HandleAsync(
+                "ghost@example.com",
+                "whatever",
+                FinalPassword,
+                ct
+            );
+
+            Assert.True(completedResult.IsFailure);
+            Assert.Equal(ErrorKind.Conflict, completedResult.Error.Kind);
+            Assert.Equal("PASSWORD_SETUP_COMPLETE", completedResult.Error.Code);
+            Assert.Equal(0, completedUnitOfWork.Saves);
+
+            Assert.True(unknownResult.IsFailure);
+            Assert.Equal(ErrorKind.Unauthorized, unknownResult.Error.Kind);
+            Assert.Equal("INVALID_CREDENTIALS", unknownResult.Error.Code);
+            Assert.Equal(0, unknownUnitOfWork.Saves);
+        }
+
+        [Fact]
+        public async Task SetupPasswordWithUnknownEmailFailsInvalidCredentials()
         {
             var handler = new SetupPasswordHandler(
                 new FakeUsers(),
@@ -343,8 +401,8 @@ namespace JobScrape.Application.Tests
             );
 
             Assert.True(result.IsFailure);
-            Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
-            Assert.Equal("PASSWORD_SETUP_COMPLETE", result.Error.Code);
+            Assert.Equal(ErrorKind.Unauthorized, result.Error.Kind);
+            Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
         }
 
         [Fact]
@@ -441,7 +499,12 @@ namespace JobScrape.Application.Tests
             var admin = AdminRole();
             roles.Seed(admin);
             var unitOfWork = new FakeUnitOfWork();
-            var handler = new AssignRoleHandler(users, roles, unitOfWork);
+            var handler = new AssignRoleHandler(
+                users,
+                roles,
+                unitOfWork,
+                CallerContext.LocalOperator
+            );
 
             var result = await handler.HandleAsync(
                 user.Id.Value,
@@ -464,7 +527,12 @@ namespace JobScrape.Application.Tests
             var admin = AdminRole();
             roles.Seed(admin);
             user.AssignRole(admin.Id);
-            var handler = new AssignRoleHandler(users, roles, new FakeUnitOfWork());
+            var handler = new AssignRoleHandler(
+                users,
+                roles,
+                new FakeUnitOfWork(),
+                CallerContext.LocalOperator
+            );
 
             var result = await handler.HandleAsync(
                 user.Id.Value,
@@ -481,7 +549,8 @@ namespace JobScrape.Application.Tests
             var handler = new AssignRoleHandler(
                 new FakeUsers(),
                 new FakeRoles(),
-                new FakeUnitOfWork()
+                new FakeUnitOfWork(),
+                CallerContext.LocalOperator
             );
 
             var result = await handler.HandleAsync(
@@ -500,7 +569,12 @@ namespace JobScrape.Application.Tests
             var users = new FakeUsers();
             var user = ActiveUser();
             users.Seed(user);
-            var handler = new AssignRoleHandler(users, new FakeRoles(), new FakeUnitOfWork());
+            var handler = new AssignRoleHandler(
+                users,
+                new FakeRoles(),
+                new FakeUnitOfWork(),
+                CallerContext.LocalOperator
+            );
 
             var result = await handler.HandleAsync(
                 user.Id.Value,
@@ -521,7 +595,12 @@ namespace JobScrape.Application.Tests
             var admin = AdminRole();
             roles.Seed(admin);
             user.AssignRole(admin.Id);
-            var handler = new RevokeRoleHandler(users, roles, new FakeUnitOfWork());
+            var handler = new RevokeRoleHandler(
+                users,
+                roles,
+                new FakeUnitOfWork(),
+                CallerContext.LocalOperator
+            );
 
             var result = await handler.HandleAsync(
                 user.Id.Value,
@@ -548,7 +627,12 @@ namespace JobScrape.Application.Tests
             roles.Seed(admin);
             first.AssignRole(admin.Id);
             second.AssignRole(admin.Id);
-            var handler = new RevokeRoleHandler(users, roles, new FakeUnitOfWork());
+            var handler = new RevokeRoleHandler(
+                users,
+                roles,
+                new FakeUnitOfWork(),
+                CallerContext.LocalOperator
+            );
 
             var result = await handler.HandleAsync(
                 first.Id.Value,
@@ -665,6 +749,194 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task AssignRoleToSelfFailsAccessDenied()
+        {
+            var users = new FakeUsers();
+            var user = ActiveUser();
+            users.Seed(user);
+            var roles = new FakeRoles();
+            var admin = AdminRole();
+            roles.Seed(admin);
+            user.AssignRole(admin.Id);
+            var caller = new CallerContext(
+                user.Id.Value.ToString(),
+                Array.Empty<string>(),
+                Array.Empty<string>()
+            );
+            var handler = new AssignRoleHandler(users, roles, new FakeUnitOfWork(), caller);
+
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
+            Assert.Equal("ACCESS_DENIED", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task RevokeRoleFromSelfFailsAccessDenied()
+        {
+            var users = new FakeUsers();
+            var user = ActiveUser();
+            users.Seed(user);
+            var roles = new FakeRoles();
+            var admin = AdminRole();
+            roles.Seed(admin);
+            user.AssignRole(admin.Id);
+            var caller = new CallerContext(
+                user.Id.Value.ToString(),
+                Array.Empty<string>(),
+                Array.Empty<string>()
+            );
+            var handler = new RevokeRoleHandler(users, roles, new FakeUnitOfWork(), caller);
+
+            var result = await handler.HandleAsync(
+                user.Id.Value,
+                RoleName.Admin,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
+            Assert.Equal("ACCESS_DENIED", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task SetupPasswordWithSameSecretFailsValidation()
+        {
+            var users = new FakeUsers();
+            users.Seed(PendingUser());
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                SeedSecret,
+                SeedSecret,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Validation, result.Error.Kind);
+            Assert.Equal("VALIDATION_FAILED", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task ChangePasswordWithSameSecretFailsValidation()
+        {
+            var users = new FakeUsers();
+            users.Seed(ActiveUser());
+            var handler = new ChangePasswordHandler(users, new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                FinalPassword,
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Validation, result.Error.Kind);
+            Assert.Equal("VALIDATION_FAILED", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task SetupPasswordOnLockedAccountWithWrongSecretIsUnauthorized()
+        {
+            var users = new FakeUsers();
+            var user = PendingUser();
+            user.RecordFailedLogin(Now, 1, TimeSpan.FromMinutes(15));
+            users.Seed(user);
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                "wrong",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Unauthorized, result.Error.Kind);
+            Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task SetupPasswordOnLockedAccountWithCorrectSecretIsForbidden()
+        {
+            var users = new FakeUsers();
+            var user = PendingUser();
+            user.RecordFailedLogin(Now, 1, TimeSpan.FromMinutes(15));
+            users.Seed(user);
+            var handler = new SetupPasswordHandler(
+                users,
+                new FakeUnitOfWork(),
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                SeedSecret,
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorKind.Forbidden, result.Error.Kind);
+            Assert.Equal("ACCOUNT_LOCKED", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task ConcurrentRevokeLeavesOneAdmin()
+        {
+            var users = new FakeUsers();
+            var first = ActiveUser("first@example.com");
+            var second = ActiveUser("second@example.com");
+            users.Seed(first);
+            users.Seed(second);
+            var roles = new FakeRoles();
+            var admin = AdminRole();
+            roles.Seed(admin);
+            first.AssignRole(admin.Id);
+            second.AssignRole(admin.Id);
+            var unitOfWork = new FakeUnitOfWork();
+            var caller = CallerContext.LocalOperator;
+            var firstHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
+            var secondHandler = new RevokeRoleHandler(users, roles, unitOfWork, caller);
+            var ct = TestContext.Current.CancellationToken;
+
+            // Hold the first handler inside the guarded region until the second
+            // has reached the semaphore, so both calls are genuinely in flight.
+            var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            users.ListGate = gate;
+
+            var firstTask = firstHandler.HandleAsync(first.Id.Value, RoleName.Admin, ct);
+            var secondTask = secondHandler.HandleAsync(second.Id.Value, RoleName.Admin, ct);
+
+            gate.SetResult();
+            await Task.WhenAll(firstTask, secondTask);
+
+            var results = new[] { firstTask.Result, secondTask.Result };
+            Assert.Equal(1, results.Count(result => result.IsSuccess));
+            Assert.Equal(
+                1,
+                results.Count(result =>
+                    result.IsFailure && result.Error.Code == "LAST_ADMIN_REQUIRED"
+                )
+            );
+        }
+
+        [Fact]
         public void HandlersRejectNullPorts()
         {
             var users = new FakeUsers();
@@ -680,8 +952,12 @@ namespace JobScrape.Application.Tests
                 new SetupPasswordHandler(null!, unitOfWork, clock)
             );
             Assert.Throws<ArgumentNullException>(() => new CreateUserHandler(users, null!, clock));
-            Assert.Throws<ArgumentNullException>(() => new AssignRoleHandler(users, roles, null!));
-            Assert.Throws<ArgumentNullException>(() => new RevokeRoleHandler(users, roles, null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                new AssignRoleHandler(users, roles, null!, CallerContext.LocalOperator)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new RevokeRoleHandler(users, roles, null!, CallerContext.LocalOperator)
+            );
             Assert.Throws<ArgumentNullException>(() => new CreateRoleHandler(null!, unitOfWork));
             Assert.Throws<ArgumentNullException>(() =>
                 new GrantPermissionHandler(roles, new FakeUsers(), null!)
