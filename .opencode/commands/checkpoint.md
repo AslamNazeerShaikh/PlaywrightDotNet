@@ -1,6 +1,5 @@
 ---
 description: Save verification state and progress checkpoint
-agent: build
 ---
 
 # Checkpoint Command

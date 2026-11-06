@@ -19,28 +19,38 @@ namespace JobScrape.Application.Features.SearchProfiles
         private readonly TimeProvider _clock;
 
         /// <summary>
+        /// Gets the calling actor. Stored for future authorization; the
+        /// single local user is always permitted, so updates are not gated.
+        /// </summary>
+        public ICallerContext Caller { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="UpdateSearchProfileHandler"/> class.
         /// </summary>
         /// <param name="profiles">The profile repository.</param>
         /// <param name="unitOfWork">Commits the changes.</param>
         /// <param name="sources">The configured sources and their policy limits.</param>
         /// <param name="clock">The time source.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public UpdateSearchProfileHandler(
             ISearchProfileRepository profiles,
             IUnitOfWork unitOfWork,
             SourceSettingsCatalog sources,
-            TimeProvider clock
+            TimeProvider clock,
+            ICallerContext caller
         )
         {
             ArgumentNullException.ThrowIfNull(profiles);
             ArgumentNullException.ThrowIfNull(unitOfWork);
             ArgumentNullException.ThrowIfNull(sources);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(caller);
             _profiles = profiles;
             _unitOfWork = unitOfWork;
             _sources = sources;
             _clock = clock;
+            Caller = caller;
         }
 
         /// <summary>

@@ -20,6 +20,12 @@ namespace JobScrape.Application.Features.Runs
         private readonly TimeProvider _clock;
 
         /// <summary>
+        /// Gets the calling actor. Stored for future authorization; the
+        /// single local user is always permitted, so cancels are not gated.
+        /// </summary>
+        public ICallerContext Caller { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="CancelRunHandler"/> class.
         /// </summary>
         /// <param name="launcher">Signals executing runs.</param>
@@ -27,13 +33,15 @@ namespace JobScrape.Application.Features.Runs
         /// <param name="unitOfWork">Commits a direct cancellation.</param>
         /// <param name="store">Reads the run back.</param>
         /// <param name="clock">The time source.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public CancelRunHandler(
             IRunLauncher launcher,
             IScrapeRunRepository runs,
             IUnitOfWork unitOfWork,
             IRunStore store,
-            TimeProvider clock
+            TimeProvider clock,
+            ICallerContext caller
         )
         {
             ArgumentNullException.ThrowIfNull(launcher);
@@ -41,11 +49,13 @@ namespace JobScrape.Application.Features.Runs
             ArgumentNullException.ThrowIfNull(unitOfWork);
             ArgumentNullException.ThrowIfNull(store);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(caller);
             _launcher = launcher;
             _runs = runs;
             _unitOfWork = unitOfWork;
             _store = store;
             _clock = clock;
+            Caller = caller;
         }
 
         /// <summary>

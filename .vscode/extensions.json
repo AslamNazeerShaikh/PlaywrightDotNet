@@ -1,0 +1,11 @@
+{
+  // Recommended extensions for this repo. VS Code prompts to install these.
+  "recommendations": [
+    // C# language support (Roslyn language server, debugger, acquisition)
+    "ms-dotnettools.csharp",
+    // C# DevKit: solution management, build, test, project system
+    "ms-dotnettools.csdevkit",
+    // Code formatter referenced by [csharp] in settings.json
+    "csharpier.csharpier-vscode"
+  ]
+}
