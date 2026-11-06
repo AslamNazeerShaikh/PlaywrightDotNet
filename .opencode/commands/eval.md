@@ -1,6 +1,5 @@
 ---
 description: Run evaluation against acceptance criteria
-agent: build
 ---
 
 # Eval Command

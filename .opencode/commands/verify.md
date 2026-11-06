@@ -1,6 +1,5 @@
 ---
 description: Run verification loop to validate implementation
-agent: build
 ---
 
 # Verify Command

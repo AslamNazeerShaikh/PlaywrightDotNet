@@ -1,6 +1,6 @@
 # ECC - OpenCode Instructions
 
-This document consolidates the core rules and guidelines from the Claude Code configuration for use with OpenCode.
+This document consolidates the core rules and guidelines for use with OpenCode.
 
 ## Security Guidelines (CRITICAL)
 
@@ -195,17 +195,13 @@ When creating PRs:
 | Agent | Purpose | When to Use |
 |-------|---------|-------------|
 | planner | Implementation planning | Complex features, refactoring |
-| architect | System design | Architectural decisions |
-| tdd-guide | Test-driven development | New features, bug fixes |
 | code-reviewer | Code review | After writing code |
 | security-reviewer | Security analysis | Before commits |
+| tdd-guide | Test-driven development | New features, bug fixes |
 | build-error-resolver | Fix build errors | When build fails |
 | e2e-runner | E2E testing | Critical user flows |
 | refactor-cleaner | Dead code cleanup | Code maintenance |
 | doc-updater | Documentation | Updating docs |
-| go-reviewer | Go code review | Go projects |
-| go-build-resolver | Go build errors | Go build failures |
-| database-reviewer | Database optimization | SQL, schema design |
 
 ### Immediate Agent Usage
 
@@ -213,7 +209,7 @@ No user prompt needed:
 1. Complex feature requests - Use **planner** agent
 2. Code just written/modified - Use **code-reviewer** agent
 3. Bug fix or new feature - Use **tdd-guide** agent
-4. Architectural decision - Use **architect** agent
+4. Architectural decision - Use **planner** agent
 
 ---
 
@@ -221,20 +217,17 @@ No user prompt needed:
 
 ### Model Selection Strategy
 
-**Haiku** (90% of Sonnet capability, 3x cost savings):
+Routine delegates run on the parent chat model (`inherit-parent` in `.opencode/pstack-models.md`):
 - Lightweight agents with frequent invocation
 - Pair programming and code generation
 - Worker agents in multi-agent systems
 
-**Sonnet** (Best coding model):
-- Main development work
-- Orchestrating multi-agent workflows
-- Complex coding tasks
-
-**Opus** (Deepest reasoning):
+Reserve the strongest reasoning model available for:
 - Complex architectural decisions
 - Maximum reasoning requirements
 - Research and analysis tasks
+
+Keep review panels diverse instead of stacking one model. See `.opencode/pstack-models.md` for the per-role map.
 
 ### Context Window Management
 
@@ -302,8 +295,7 @@ interface Repository<T> {
 ## OpenCode-Specific Notes
 
 OpenCode supports hooks through its [plugin system](https://opencode.ai/docs/plugins/).
-The ECC plugin automates selected checks when installed and enabled; see
-[Hook Runtime Controls](../README.md#hook-runtime-controls) for hook profiles and disabled hook IDs.
+The ECC plugin automates selected checks when installed and enabled; see the `mcp` section of `.opencode/opencode.json` for the plugin and server configuration.
 Formatting and type checking require the `strict` profile. Type checking runs only for
 qualifying TypeScript edits; check newly written files manually. Confirm which checks
 actually completed in the plugin output, then run any remaining checks below manually.
@@ -323,7 +315,7 @@ Always complete the security review, secret review, and full test suite before c
 
 Use these commands in OpenCode:
 - `/plan` - Create implementation plan
-- `/tdd` - Enforce TDD workflow
+- `/test-coverage` - Enforce TDD workflow
 - `/code-review` - Review code changes
 - `/security` - Run security review
 - `/build-fix` - Fix build errors
