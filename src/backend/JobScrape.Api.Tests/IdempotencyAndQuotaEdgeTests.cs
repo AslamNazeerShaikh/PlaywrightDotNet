@@ -341,7 +341,7 @@ namespace JobScrape.Api.Tests
             try
             {
                 var first = middleware.InvokeAsync(ctx1, store, clock);
-                await entered.Task;
+                await CompleteWithinAsync(entered.Task, "reserve gate");
                 var second = middleware.InvokeAsync(ctx2, store, clock);
 
                 var finished = await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(2), Ct));
@@ -350,13 +350,20 @@ namespace JobScrape.Api.Tests
                 Assert.Equal(StatusCodes.Status503ServiceUnavailable, ctx2.Response.StatusCode);
 
                 release.TrySetResult();
-                await first;
+                await CompleteWithinAsync(first, "first request");
                 Assert.Equal(StatusCodes.Status200OK, ctx1.Response.StatusCode);
             }
             finally
             {
                 release.TrySetResult();
             }
+        }
+
+        private static async Task CompleteWithinAsync(Task task, string label)
+        {
+            var done = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(2), Ct));
+            Assert.True(ReferenceEquals(done, task), $"{label} did not complete in time.");
+            await task;
         }
 
         private sealed class BlockingStore : IIdempotencyStore
