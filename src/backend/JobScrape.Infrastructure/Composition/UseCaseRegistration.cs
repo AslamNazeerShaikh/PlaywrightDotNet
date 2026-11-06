@@ -1,6 +1,7 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Health;
 using JobScrape.Application.Features.Identity;
+using JobScrape.Application.Features.Quotas;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
@@ -98,6 +99,8 @@ namespace JobScrape.Infrastructure.Composition
                     TimeSpan.FromMinutes(jwt.LockoutMinutes)
                 );
             });
+            services.AddTransient<ListUsageQuotasHandler>();
+            services.AddTransient<UpdateUsageQuotaHandler>();
             services.AddTransient<LoginHandler>();
             services.AddTransient<SetupPasswordHandler>();
             services.AddTransient<ChangePasswordHandler>();

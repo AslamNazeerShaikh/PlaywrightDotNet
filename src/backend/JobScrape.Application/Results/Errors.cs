@@ -754,5 +754,48 @@ namespace JobScrape.Application.Results
                 new Dictionary<string, object?> { ["key"] = key }
             );
         }
+
+        /// <summary>
+        /// Creates a not-found failure for a quota scope outside the
+        /// <see cref="QuotaScope"/> enum.
+        /// </summary>
+        /// <param name="scope">The requested scope, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo UnknownQuotaScope(string? scope)
+        {
+            return new ErrorInfo(
+                "UNKNOWN_QUOTA_SCOPE",
+                "Unknown quota scope.",
+                $"Quota scope '{scope}' is unknown. Use 'Api' or 'Mcp'.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["scope"] = scope }
+            );
+        }
+
+        /// <summary>
+        /// Creates a quota-exceeded failure for a per-user usage quota.
+        /// Enforcement counters stay in memory at the edge; only the
+        /// definition persists, so metadata carries the definition that
+        /// applied, not a counter row.
+        /// </summary>
+        /// <param name="scope">The governed surface.</param>
+        /// <param name="limit">The requests-per-window limit that applied.</param>
+        /// <param name="window">The fixed window that applied.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.QuotaExceeded"/>.</returns>
+        public static ErrorInfo UsageQuotaExceeded(QuotaScope scope, int limit, TimeSpan window)
+        {
+            return new ErrorInfo(
+                "QUOTA_EXCEEDED",
+                "Usage quota exceeded.",
+                $"The {scope.ToString().ToLowerInvariant()} usage quota ({limit} requests per {window}) has been reached; retry when the window resets.",
+                ErrorKind.QuotaExceeded,
+                new Dictionary<string, object?>
+                {
+                    ["scope"] = scope.ToString(),
+                    ["limit"] = limit,
+                    ["window"] = window.ToString(),
+                }
+            );
+        }
     }
 }
