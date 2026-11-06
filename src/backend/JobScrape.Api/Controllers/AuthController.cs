@@ -13,7 +13,7 @@ namespace JobScrape.Api.Controllers
     /// <summary>
     /// Sign-in, first-login setup, password change, and the current caller.
     /// Login and setup are anonymous; everything else needs a bearer token.
-    /// The whole surface carries the stricter login rate limit. Data-annotation failures map to coded validation
+    /// Change-password and me stay on the global limiter only. Data-annotation failures map to coded validation
     /// problems below because the automatic 400 is suppressed in Program.
     /// </summary>
     [ApiController]
@@ -105,7 +105,7 @@ namespace JobScrape.Api.Controllers
         /// </returns>
         [HttpPost("setup-password")]
         [AllowAnonymous]
-        [EnableRateLimiting(RateLimitPolicies.Login)]
+        [EnableRateLimiting(RateLimitPolicies.Setup)]
         public async Task<IResult> SetupPasswordAsync(
             [FromBody] SetupPasswordRequest? request,
             CancellationToken cancellationToken

@@ -11,8 +11,9 @@ namespace JobScrape.Api.Controllers
 {
     /// <summary>
     /// Role administration: list, read, create, and permission grants. Admin
-    /// role only.. Data-annotation failures map to coded validation
-    /// problems below because the automatic 400 is suppressed in Program.
+    /// role or a matching grant. Data-annotation failures map to coded
+    /// validation problems below because the automatic 400 is suppressed in
+    /// Program.
     /// </summary>
     [ApiController]
     [Route("api/v1/roles")]
@@ -184,6 +185,14 @@ namespace JobScrape.Api.Controllers
                 return Errors.RoleNotFound(name).ToProblem();
             }
 
+            if (
+                role == RoleName.Admin
+                && !User.IsInRole(RoleName.Admin.ToString())
+            )
+            {
+                return Errors.AccessDenied().ToProblem();
+            }
+
             var result = await _grant.HandleAsync(role, request!.Key, cancellationToken);
             return result.IsSuccess ? Results.Ok() : result.Error.ToProblem();
         }
@@ -206,6 +215,14 @@ namespace JobScrape.Api.Controllers
             if (!TryParseRole(name, out var role))
             {
                 return Errors.RoleNotFound(name).ToProblem();
+            }
+
+            if (
+                role == RoleName.Admin
+                && !User.IsInRole(RoleName.Admin.ToString())
+            )
+            {
+                return Errors.AccessDenied().ToProblem();
             }
 
             var result = await _revoke.HandleAsync(role, key, cancellationToken);

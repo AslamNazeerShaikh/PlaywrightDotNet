@@ -85,6 +85,14 @@ namespace JobScrape.Application.Features.Identity
                 return Result.Fail(Errors.AccessDenied());
             }
 
+            if (
+                roleName == RoleName.Admin
+                && !_caller.Roles.Any(role => string.Equals(role, RoleName.Admin.ToString(), StringComparison.Ordinal))
+            )
+            {
+                return Result.Fail(Errors.AccessDenied());
+            }
+
             var user = await _users.GetAsync(id, cancellationToken);
             if (user is null)
             {

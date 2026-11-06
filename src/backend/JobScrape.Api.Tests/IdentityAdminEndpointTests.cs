@@ -361,6 +361,100 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task NonAdminWithUsersWriteCanAssignOperatorButNotAdmin()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            foreach (var roleName in new[] { "Operator", "Viewer" })
+            {
+                using var seed = await admin.PostAsJsonAsync(
+                    "api/v1/roles",
+                    new { name = roleName },
+                    Ct
+                );
+                Assert.True(
+                    seed.StatusCode == HttpStatusCode.Created
+                        || seed.StatusCode == HttpStatusCode.Conflict
+                );
+            }
+
+            using var grant = await admin.PostAsJsonAsync(
+                "api/v1/roles/Operator/permissions",
+                new { key = "users.write" },
+                Ct
+            );
+            Assert.True(
+                grant.StatusCode == HttpStatusCode.OK
+                    || grant.StatusCode == HttpStatusCode.Conflict
+            );
+
+            var callerEmail = $"caller-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var createdCaller = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email = callerEmail, temporaryPassword = temporary },
+                Ct
+            );
+            createdCaller.EnsureSuccessStatusCode();
+            var createdCallerBody = await createdCaller.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var callerId = createdCallerBody.GetProperty("id").GetGuid();
+
+            using var assignedCallerRole = await admin.PostAsJsonAsync(
+                $"api/v1/users/{callerId:D}/roles",
+                new { role = "Operator" },
+                Ct
+            );
+            assignedCallerRole.EnsureSuccessStatusCode();
+
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email = callerEmail,
+                    currentSecret = temporary,
+                    newPassword = "Caller-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+
+            using var caller = await AuthTestHelper.LoginAsync(
+                factory,
+                callerEmail,
+                "Caller-Password2@@",
+                Ct
+            );
+
+            var targetEmail = $"target-{Guid.NewGuid():N}@example.com";
+            using var createdTarget = await caller.PostAsJsonAsync(
+                "api/v1/users",
+                new { email = targetEmail, temporaryPassword = temporary },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, createdTarget.StatusCode);
+            var createdTargetBody = await createdTarget.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var targetId = createdTargetBody.GetProperty("id").GetGuid();
+
+            using var adminAssign = await caller.PostAsJsonAsync(
+                $"api/v1/users/{targetId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Forbidden, adminAssign.StatusCode);
+            var adminAssignBody = await adminAssign.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("ACCESS_DENIED", adminAssignBody.GetProperty("code").GetString());
+
+            using var operatorAssign = await caller.PostAsJsonAsync(
+                $"api/v1/users/{targetId:D}/roles",
+                new { role = "Operator" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, operatorAssign.StatusCode);
+        }
+
+        [Fact]
         public async Task OldTokenIsUnauthorizedAfterRoleGrant()
         {
             await using var factory = new ApiFactory();

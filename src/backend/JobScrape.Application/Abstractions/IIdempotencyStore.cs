@@ -65,7 +65,9 @@ namespace JobScrape.Application.Abstractions
 
         /// <summary>
         /// Removes any row for the triple, used to abandon a reservation
-        /// that will not be completed (non-storable outcome).
+        /// that will not be completed (non-storable outcome). Cleanup is
+        /// best-effort: a row left by a crashed host is not taken over by
+        /// another instance and expires after the 24-hour retention window.
         /// </summary>
         /// <param name="ownerKey">The authenticated user id.</param>
         /// <param name="endpoint">The concrete request path.</param>
