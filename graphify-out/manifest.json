@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Properties/launchSettings.json": {
-    "mtime": 1793605922.470746,
-    "seen": 1793606170.349578,
-    "ast_hash": "54e3ae4feeff14ecf936169bb46766a0",
+    "mtime": 1793955375.5382364,
+    "seen": 1793955433.767384,
+    "ast_hash": "2cd41d45ebc892b2bb0dacb49d70f787",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/appsettings.json": {
@@ -6567,6 +6567,18 @@
     "mtime": 1793908114.9396682,
     "seen": 1793908212.684739,
     "ast_hash": "8f6f51c2c7a4a1db22f68de6c0add69a",
+    "semantic_hash": ""
+  },
+  ".vscode/extensions.json": {
+    "mtime": 1793954037.6804807,
+    "seen": 1793955433.76737,
+    "ast_hash": "6732b290e148bfb38ec2c091abf298b2",
+    "semantic_hash": ""
+  },
+  ".vscode/settings.json": {
+    "mtime": 1793954037.6804874,
+    "seen": 1793955433.767371,
+    "ast_hash": "a8bd46d9f91c4177fd0d25592f235752",
     "semantic_hash": ""
   }
 }
