@@ -281,6 +281,37 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void JwtDefaultsAreValidAndShortSecretsAreRejected()
+        {
+            static bool IsValid(object options)
+            {
+                return Validator.TryValidateObject(
+                    options,
+                    new ValidationContext(options),
+                    null,
+                    true
+                );
+            }
+
+            Assert.False(IsValid(new JwtOptions()));
+            Assert.False(IsValid(new JwtOptions { Secret = "too-short" }));
+            Assert.True(
+                IsValid(
+                    new JwtOptions { Secret = "a-demo-secret-of-at-least-32-characters" }
+                )
+            );
+            Assert.False(
+                IsValid(
+                    new JwtOptions
+                    {
+                        Secret = "a-demo-secret-of-at-least-32-characters",
+                        TokenLifetimeMinutes = 0,
+                    }
+                )
+            );
+        }
+
+        [Fact]
         public void SystemRandomSourceStaysInRange()
         {
             var random = new SystemRandomSource();

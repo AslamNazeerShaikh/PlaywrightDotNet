@@ -26,14 +26,23 @@ namespace JobScrape.Domain.Identity
         }
 
         /// <summary>
+        /// Initializes an empty instance for Entity Framework rehydration.
+        /// Private so production code uses <see cref="Create"/> instead.
+        /// </summary>
+        private Role()
+        {
+            _permissions = [];
+        }
+
+        /// <summary>
         /// Gets the role identifier.
         /// </summary>
-        public RoleId Id { get; }
+        public RoleId Id { get; private set; }
 
         /// <summary>
         /// Gets the closed role name.
         /// </summary>
-        public RoleName Name { get; }
+        public RoleName Name { get; private set; }
 
         /// <summary>
         /// Gets the granted permissions, in grant order.

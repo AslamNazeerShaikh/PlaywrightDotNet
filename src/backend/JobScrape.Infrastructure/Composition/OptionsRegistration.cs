@@ -48,6 +48,11 @@ namespace JobScrape.Infrastructure.Composition
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
             services
+                .AddOptions<JwtOptions>()
+                .BindConfiguration(JwtOptions.SectionName)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services
                 .AddOptions<SourcesOptions>()
                 .BindConfiguration(SourcesOptions.SectionName)
                 .ValidateOnStart();
