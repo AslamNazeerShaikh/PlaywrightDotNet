@@ -23,7 +23,7 @@ namespace JobScrape.Domain.Identity
 
         /// <summary>
         /// Creates a new time-ordered (UUIDv7) identifier. Ordered ids keep
-        /// clustered index inserts sequential.
+        /// primary-key B-tree inserts sequential.
         /// </summary>
         /// <returns>A new, non-empty identifier.</returns>
         public static RoleId New()
