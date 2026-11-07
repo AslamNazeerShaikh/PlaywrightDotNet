@@ -2,7 +2,7 @@
 
 ## Claude Code
 
-The project rules in `AGENTS.md` (architecture, commits, UI design, graphify) apply here too. Its pstack, ECC, and Caveman sections describe the OpenCode setup under `.opencode/`; in Claude Code, the pstack section below replaces them.
+The project rules in `AGENTS.md` (architecture, commits, UI design, graphify) apply here too. Its pstack, ECC, and OpenCode config scope sections describe the OpenCode setup under `.opencode/`; in Claude Code, the pstack section below replaces them.
 
 ## Agent workflow (pstack)
 
