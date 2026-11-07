@@ -19,6 +19,13 @@ namespace JobScrape.Api.Http
     public sealed class UsageQuotaMiddleware
     {
         /// <summary>
+        /// Monotonic window generation counter, used to tag counters so a
+        /// 404 refund can never land in a window that reset since the
+        /// request was counted.
+        /// </summary>
+        private static long _nextWindowGeneration;
+
+        /// <summary>
         /// The definitions cache entry. Internal so the admin controller
         /// evicts it the moment an update lands; otherwise a lowered limit
         /// would wait out the one-minute lifetime before enforcing.
@@ -57,7 +64,10 @@ namespace JobScrape.Api.Http
         public async Task InvokeAsync(HttpContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            var scope = ScopeFor(context.Request.Path.Value ?? string.Empty);
+            var scope = ScopeFor(
+                context.Request.Method,
+                context.Request.Path.Value ?? string.Empty
+            );
             if (scope is null || context.User?.Identity?.IsAuthenticated != true)
             {
                 await _next(context);
@@ -77,18 +87,21 @@ namespace JobScrape.Api.Http
             var counter = CounterFor(actor, scope.Value, definition, now);
             bool overLimit;
             TimeSpan retryAfter;
+            long requestGeneration;
             lock (counter)
             {
                 if (now - counter.Start >= definition.Window)
                 {
                     counter.Start = now;
                     counter.Count = 0;
+                    counter.Generation = Interlocked.Increment(ref _nextWindowGeneration);
                     _cache.Set(CounterKey(actor, scope.Value), counter, now + definition.Window);
                 }
 
                 counter.Count++;
                 overLimit = counter.Count > definition.Limit;
                 retryAfter = counter.Start + definition.Window - now;
+                requestGeneration = counter.Generation;
             }
 
             if (overLimit)
@@ -106,14 +119,26 @@ namespace JobScrape.Api.Http
             }
 
             await _next(context);
+
+            if (context.Response.StatusCode == StatusCodes.Status404NotFound)
+            {
+                lock (counter)
+                {
+                    if (counter.Generation == requestGeneration && counter.Count > 0)
+                    {
+                        counter.Count--;
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Maps a request path to its quota scope, or null when exempt.
         /// </summary>
+        /// <param name="method">The request method.</param>
         /// <param name="path">The request path.</param>
         /// <returns>The scope, or null for exempt and ungoverned paths.</returns>
-        private static QuotaScope? ScopeFor(string path)
+        private static QuotaScope? ScopeFor(string method, string path)
         {
             if (
                 path.Equals("/mcp", StringComparison.OrdinalIgnoreCase)
@@ -134,6 +159,22 @@ namespace JobScrape.Api.Http
                 rest.Equals("auth", StringComparison.OrdinalIgnoreCase)
                 || rest.StartsWith("auth/", StringComparison.OrdinalIgnoreCase)
                 || rest.Equals("health", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return null;
+            }
+
+            // Quota-definition reads are exempt from consumption so admin
+            // reads never self-429. Writes still count.
+            if (
+                (
+                    method.Equals("GET", StringComparison.OrdinalIgnoreCase)
+                    || method.Equals("HEAD", StringComparison.OrdinalIgnoreCase)
+                )
+                && (
+                    rest.Equals("quotas", StringComparison.OrdinalIgnoreCase)
+                    || rest.StartsWith("quotas/", StringComparison.OrdinalIgnoreCase)
+                )
             )
             {
                 return null;
@@ -226,7 +267,11 @@ namespace JobScrape.Api.Http
                 entry =>
                 {
                     entry.AbsoluteExpiration = now + definition.Window;
-                    return new Counter { Start = now };
+                    return new Counter
+                    {
+                        Start = now,
+                        Generation = Interlocked.Increment(ref _nextWindowGeneration),
+                    };
                 }
             )!;
         }
@@ -266,6 +311,13 @@ namespace JobScrape.Api.Http
             /// Gets or sets the requests counted in the current window.
             /// </summary>
             public int Count;
+
+            /// <summary>
+            /// Gets or sets the window generation, incremented on every
+            /// reset, so refunds can be scoped to the window that counted
+            /// the request.
+            /// </summary>
+            public long Generation;
         }
     }
 }

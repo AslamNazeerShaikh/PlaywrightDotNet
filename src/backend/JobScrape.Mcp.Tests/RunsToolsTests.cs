@@ -154,11 +154,32 @@ namespace JobScrape.Mcp.Tests
             Assert.Throws<ArgumentNullException>(() => new RunsTools(list, get, postings, null!));
         }
 
+        [Fact]
+        public async Task PendingCallerIsDenied()
+        {
+            var store = new FakeRunStore();
+            var caller = new FakeCaller { MustChangePassword = true };
+            var tools = new RunsTools(
+                new ListRunsHandler(store),
+                new GetRunHandler(store),
+                new ListRunPostingsHandler(store),
+                caller
+            );
+
+            var error = await Assert.ThrowsAsync<McpException>(() =>
+                tools.ListRunsAsync(0, 50, Ct)
+            );
+
+            Assert.StartsWith("ACCESS_DENIED:", error.Message);
+        }
+
         private sealed class FakeCaller : ICallerContext
         {
             public string ActorId => "tests";
 
             public IReadOnlyCollection<string> Roles => [];
+
+            public bool MustChangePassword { get; init; }
 
             public IReadOnlyCollection<string> Permissions { get; init; } =
             [

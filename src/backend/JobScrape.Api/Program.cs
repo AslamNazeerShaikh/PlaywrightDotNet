@@ -75,7 +75,7 @@ namespace JobScrape.Api
             // HS256 bearer tokens, the admin and per-permission policies
             // with a fallback requiring an authenticated user, and the
             // fixed-window rate limiters.
-            builder.Services.AddJobScrapeAuth(builder.Configuration);
+            builder.Services.AddJobScrapeAuth();
             builder.Services.AddJobScrapeRateLimiting();
 
             // Serilog owns sinks and enrichers; app code logs through ILogger<T>.
@@ -131,6 +131,7 @@ namespace JobScrape.Api
             DatabaseRegistration.MigrateInDevelopment(app);
 
             app.UseMiddleware<CorrelationMiddleware>();
+            app.UseMiddleware<LoginIpRateLimitMiddleware>();
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -140,8 +141,8 @@ namespace JobScrape.Api
             app.UseSerilogRequestLogging(options =>
                 options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
             );
-            app.UseMiddleware<UsageQuotaMiddleware>();
             app.UseMiddleware<IdempotencyMiddleware>();
+            app.UseMiddleware<UsageQuotaMiddleware>();
             app.MapControllers();
 
             // MCP lives beside the controllers on /mcp; loopback only, like

@@ -383,29 +383,33 @@ export type FetchImpl = (
   headers?: { get(name: string): string | null };
 }>;
 
-export function createApiClient(
-  fetchImpl: FetchImpl = fetch as unknown as FetchImpl,
-  options?: { getToken?: () => string | null },
-) {
-  const getToken = options?.getToken;
-  // The bearer token travels in exactly one place: this sender. It is never
-  // logged, never rendered, never stored outside the auth store.
+export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   const authed = <T>(
     method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
     path: string,
     body?: unknown,
     idempotencyKey?: string,
   ): Promise<ApiResult<T>> => {
-    const token = getToken?.() ?? null;
-    return send<T>(fetchImpl, method, path, body, token, idempotencyKey);
+    return send<T>(fetchImpl, method, path, body, idempotencyKey);
   };
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
     login: (input: LoginInput) =>
-      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/login", input)),
+      timed(() => send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session", input)),
     setupPassword: (input: SetupPasswordInput) =>
-      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/setup-password", input)),
+      timed(() =>
+        send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session/setup", input),
+      ),
+    fetchSession: () =>
+      timed(() =>
+        send<MeResponse | { authenticated: false; expired?: boolean }>(
+          fetchImpl,
+          "GET",
+          "/bff/session",
+        ),
+      ),
+    signOut: () => timed(() => send<void>(fetchImpl, "DELETE", "/bff/session")),
     changePassword: (input: ChangePasswordInput) =>
       timed(() => authed<void>("POST", "/api/v1/auth/change-password", input)),
     fetchMe: () => timed(() => authed<MeResponse>("GET", "/api/v1/auth/me")),
@@ -428,67 +432,59 @@ export function createApiClient(
     listQuotas: () => timed(() => authed<QuotaListResponse>("GET", "/api/v1/quotas")),
     updateQuota: (scope: string, input: UpdateQuotaInput) =>
       timed(() => authed<QuotaResponse>("PUT", `/api/v1/quotas/${scope}`, input)),
-    listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
-    listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
-    listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
+    listProfiles: () => timed(() => authed<SearchProfileList>("GET", "/api/v1/search-profiles")),
+    listSources: () => timed(() => authed<SourceList>("GET", "/api/v1/sources")),
+    listSessions: () => timed(() => authed<SessionList>("GET", "/api/v1/sessions")),
     createSession: (input: CreateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
+      timed(() => authed<SessionPayload>("POST", "/api/v1/sessions", input)),
     updateSession: (id: string, input: UpdateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "PATCH", `/api/v1/sessions/${id}`, input)),
+      timed(() => authed<SessionPayload>("PATCH", `/api/v1/sessions/${id}`, input)),
     createProfile: (input: CreateProfileInput) =>
-      timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
+      timed(() => authed<SearchProfilePayload>("POST", "/api/v1/search-profiles", input)),
     updateProfile: (id: string, input: UpdateProfileInput) =>
-      timed(() =>
-        send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
-      ),
+      timed(() => authed<SearchProfilePayload>("PUT", `/api/v1/search-profiles/${id}`, input)),
     listRuns: (offset = 0, limit = 50) =>
-      timed(() => get<RunList>(fetchImpl, `/api/v1/runs?offset=${offset}&limit=${limit}`)),
-    getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
+      timed(() => authed<RunList>("GET", `/api/v1/runs?offset=${offset}&limit=${limit}`)),
+    getRun: (id: string) => timed(() => authed<RunPayload>("GET", `/api/v1/runs/${id}`)),
     listRunPostings: (id: string, offset = 0, limit = 200) =>
       timed(() =>
-        get<RunPostingList>(
-          fetchImpl,
+        authed<RunPostingList>(
+          "GET",
           `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
         ),
       ),
     downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
       timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
+      timed(() => authed<RunPayload>("POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
-    listDbTables: () => timed(() => get<{ items: DbTableInfo[] }>(fetchImpl, "/api/v1/db/tables")),
+      timed(() => authed<RunPayload>("POST", `/api/v1/runs/${id}/cancel`, {})),
+    listDbTables: () => timed(() => authed<{ items: DbTableInfo[] }>("GET", "/api/v1/db/tables")),
     getDbSchema: (table: string) =>
       timed(() =>
-        get<DbTableSchema>(fetchImpl, `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
+        authed<DbTableSchema>("GET", `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
       ),
     listDbRows: (table: string, offset: number, limit: number) =>
       timed(() =>
-        get<DbRowsResult>(
-          fetchImpl,
+        authed<DbRowsResult>(
+          "GET",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows?offset=${offset}&limit=${limit}`,
         ),
       ),
     insertDbRow: (table: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
-          "POST",
-          `/api/v1/db/tables/${encodeURIComponent(table)}/rows`,
-          values,
-        ),
+        authed<null>("POST", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, values),
       ),
     updateDbRow: (table: string, pk: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(fetchImpl, "PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
+        authed<null>("PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
           primaryKeyValue: pk,
           values,
         }),
       ),
     deleteDbRow: (table: string, pk: string) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
+        authed<null>(
           "DELETE",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows/${encodeURIComponent(pk)}`,
         ),
@@ -521,9 +517,14 @@ async function downloadExport(
 ): Promise<ApiResult<{ blob: Blob; filename: string }>> {
   const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
   const path = `/api/v1/runs/${id}/postings/export?${query}`;
+  const headers: Record<string, string> = {};
+  const csrf = readCsrfToken();
+  if (csrf) headers["x-csrf-token"] = csrf;
+  const init: RequestInit = { method: "GET", credentials: "same-origin" };
+  if (Object.keys(headers).length > 0) init.headers = headers;
   let res: Awaited<ReturnType<FetchImpl>>;
   try {
-    res = await fetchImpl(path, { method: "GET" });
+    res = await fetchImpl(path, init);
   } catch {
     return {
       ok: false,
@@ -595,7 +596,6 @@ async function send<T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
-  token?: string | null,
   idempotencyKey?: string,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
@@ -616,14 +616,16 @@ async function send<T>(
     if (body !== undefined) {
       headers["content-type"] = "application/json";
     }
-    if (token !== undefined && token !== null && token !== "") {
-      headers["authorization"] = `Bearer ${token}`;
-    }
     if (idempotencyKey !== undefined && idempotencyKey !== "") {
       headers["idempotency-key"] = idempotencyKey;
     }
+    const unsafe = method !== "GET";
+    if (unsafe) {
+      const csrf = readCsrfToken();
+      if (csrf) headers["x-csrf-token"] = csrf;
+    }
     // No headers on anonymous reads: the wire keeps its old shape exactly.
-    const init: RequestInit = { method };
+    const init: RequestInit = { method, credentials: "same-origin" };
     if (Object.keys(headers).length > 0) {
       init.headers = headers;
     }
@@ -719,13 +721,47 @@ async function toProblem(res: {
   }
 }
 
-/** Parses a Retry-After header value (delta seconds) to a number, else null. */
+/** Backoff renders are capped at a day so absurd header values cannot reach the page. */
+const MAX_RETRY_AFTER_SECONDS = 86400;
+
+/**
+ * Parses a Retry-After header value to whole seconds from now, else null. Accepts delta-seconds and
+ * HTTP-date (RFC 9110 §15.5.3); a negative delta-seconds clamps to 0, a past HTTP-date yields 0,
+ * and any value above MAX_RETRY_AFTER_SECONDS clamps to the cap.
+ */
 function parseRetryAfter(raw: string | null): number | null {
   if (raw === null) {
     return null;
   }
-  const seconds = Number(raw.trim());
-  return Number.isInteger(seconds) && seconds >= 0 ? seconds : null;
+  const value = raw.trim();
+  if (value === "") {
+    return null;
+  }
+  if (/^-?\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, seconds));
+  }
+  const at = Date.parse(value);
+  if (Number.isNaN(at)) {
+    return null;
+  }
+  return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, Math.ceil((at - Date.now()) / 1000)));
+}
+
+/** Reads the CSRF double-submit token from the (JS-readable) cookie, or null. */
+function readCsrfToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|; )jobscrape_csrf=([^;]*)/);
+  if (match === null || match[1] === undefined) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 /** Field errors are a map of JSON field name to messages; anything else is ignored. */

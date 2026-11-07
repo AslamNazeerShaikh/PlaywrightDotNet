@@ -16,7 +16,7 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    name = table.Column<string>(type: "TEXT", nullable: false),
+                    name = table.Column<string>(type: "TEXT", nullable: false, collation: "NOCASE"),
                     source_key = table.Column<string>(type: "TEXT", nullable: false),
                     engine = table.Column<string>(type: "TEXT", nullable: false),
                     channel = table.Column<string>(type: "TEXT", nullable: false),
@@ -29,6 +29,33 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_browser_profiles", x => x.id);
+                }
+            );
+
+            migrationBuilder.CreateTable(
+                name: "idempotency_keys",
+                columns: table => new
+                {
+                    owner_key = table.Column<string>(type: "TEXT", nullable: false),
+                    endpoint = table.Column<string>(type: "TEXT", nullable: false),
+                    key = table.Column<string>(type: "TEXT", nullable: false),
+                    request_hash = table.Column<string>(type: "TEXT", nullable: false),
+                    status_code = table.Column<int>(type: "INTEGER", nullable: false),
+                    content_type = table.Column<string>(type: "TEXT", nullable: false),
+                    body = table.Column<byte[]>(type: "BLOB", nullable: false),
+                    created_at = table.Column<long>(type: "INTEGER", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey(
+                        "PK_idempotency_keys",
+                        x => new
+                        {
+                            x.owner_key,
+                            x.endpoint,
+                            x.key,
+                        }
+                    );
                 }
             );
 
@@ -68,11 +95,25 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
             );
 
             migrationBuilder.CreateTable(
-                name: "search_profiles",
+                name: "roles",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "TEXT", nullable: false),
                     name = table.Column<string>(type: "TEXT", nullable: false),
+                    permission_keys = table.Column<string>(type: "TEXT", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_roles", x => x.id);
+                }
+            );
+
+            migrationBuilder.CreateTable(
+                name: "search_profiles",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    name = table.Column<string>(type: "TEXT", nullable: false, collation: "NOCASE"),
                     source_key = table.Column<string>(type: "TEXT", nullable: false),
                     criteria = table.Column<string>(type: "TEXT", nullable: false),
                     limits = table.Column<string>(type: "TEXT", nullable: false),
@@ -121,6 +162,44 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
             );
 
             migrationBuilder.CreateTable(
+                name: "usage_quotas",
+                columns: table => new
+                {
+                    scope = table.Column<string>(type: "TEXT", nullable: false),
+                    limit = table.Column<int>(type: "INTEGER", nullable: false),
+                    window_ticks = table.Column<long>(type: "INTEGER", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_usage_quotas", x => x.scope);
+                }
+            );
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    email = table.Column<string>(
+                        type: "TEXT",
+                        nullable: false,
+                        collation: "NOCASE"
+                    ),
+                    password_hash = table.Column<string>(type: "TEXT", nullable: false),
+                    must_change_password = table.Column<bool>(type: "INTEGER", nullable: false),
+                    failed_attempts = table.Column<int>(type: "INTEGER", nullable: false),
+                    locked_until_utc = table.Column<long>(type: "INTEGER", nullable: true),
+                    token_version = table.Column<int>(type: "INTEGER", nullable: false),
+                    created_at = table.Column<long>(type: "INTEGER", nullable: false),
+                    role_ids = table.Column<string>(type: "TEXT", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                }
+            );
+
+            migrationBuilder.CreateTable(
                 name: "scrape_runs",
                 columns: table => new
                 {
@@ -128,6 +207,7 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     profile_id = table.Column<Guid>(type: "TEXT", nullable: false),
                     source_key = table.Column<string>(type: "TEXT", nullable: false),
                     limits = table.Column<string>(type: "TEXT", nullable: false),
+                    companies = table.Column<string>(type: "TEXT", nullable: false),
                     stage = table.Column<string>(type: "TEXT", nullable: false),
                     stats = table.Column<string>(type: "TEXT", nullable: false),
                     created_at = table.Column<long>(type: "INTEGER", nullable: false),
@@ -147,6 +227,29 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         principalTable: "search_profiles",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict
+                    );
+                }
+            );
+
+            migrationBuilder.CreateTable(
+                name: "scrape_run_progress",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    pages_completed = table.Column<int>(type: "INTEGER", nullable: false),
+                    next_cursor = table.Column<string>(type: "TEXT", nullable: true),
+                    seen_external_ids = table.Column<string>(type: "TEXT", nullable: false),
+                    updated_at = table.Column<long>(type: "INTEGER", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_scrape_run_progress", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_scrape_run_progress_scrape_runs_id",
+                        column: x => x.id,
+                        principalTable: "scrape_runs",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade
                     );
                 }
             );
@@ -184,6 +287,13 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
             );
 
             migrationBuilder.CreateIndex(
+                name: "IX_roles_name",
+                table: "roles",
+                column: "name",
+                unique: true
+            );
+
+            migrationBuilder.CreateIndex(
                 name: "IX_scrape_runs_created_at",
                 table: "scrape_runs",
                 column: "created_at"
@@ -201,6 +311,13 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 column: "name",
                 unique: true
             );
+
+            migrationBuilder.CreateIndex(
+                name: "IX_users_email",
+                table: "users",
+                column: "email",
+                unique: true
+            );
         }
 
         /// <inheritdoc />
@@ -208,13 +325,23 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(name: "browser_profiles");
 
+            migrationBuilder.DropTable(name: "idempotency_keys");
+
             migrationBuilder.DropTable(name: "job_postings");
 
-            migrationBuilder.DropTable(name: "scrape_runs");
+            migrationBuilder.DropTable(name: "roles");
+
+            migrationBuilder.DropTable(name: "scrape_run_progress");
 
             migrationBuilder.DropTable(name: "source_circuit_breakers");
 
             migrationBuilder.DropTable(name: "source_quotas");
+
+            migrationBuilder.DropTable(name: "usage_quotas");
+
+            migrationBuilder.DropTable(name: "users");
+
+            migrationBuilder.DropTable(name: "scrape_runs");
 
             migrationBuilder.DropTable(name: "search_profiles");
         }

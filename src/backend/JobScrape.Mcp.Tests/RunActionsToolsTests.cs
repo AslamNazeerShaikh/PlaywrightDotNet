@@ -328,6 +328,8 @@ namespace JobScrape.Mcp.Tests
 
             public IReadOnlyCollection<string> Roles => [];
 
+            public bool MustChangePassword => false;
+
             public IReadOnlyCollection<string> Permissions { get; init; } =
             [
                 "profiles.read",
@@ -406,6 +408,11 @@ namespace JobScrape.Mcp.Tests
             {
                 Saves++;
                 return Task.FromResult(0);
+            }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
             }
         }
 

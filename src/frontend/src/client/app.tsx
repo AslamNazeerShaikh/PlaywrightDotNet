@@ -19,14 +19,7 @@ import {
   type UpdateProfileInput,
   type UpdateSessionInput,
 } from "./lib/api.ts";
-import {
-  canSeeRoles,
-  canSeeUsers,
-  clearToken,
-  hasAnyPermission,
-  loadToken,
-  saveToken,
-} from "./lib/auth.ts";
+import { hasAnyPermission } from "./lib/auth.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute } from "./lib/router.ts";
@@ -101,16 +94,21 @@ export function App({
   const [updateProfileProblem, setUpdateProfileProblem] = useState<ApiProblem | null>(null);
   const [updatingSession, setUpdatingSession] = useState(false);
   const [updateSessionProblem, setUpdateSessionProblem] = useState<ApiProblem | null>(null);
-  // Auth: the signed-in caller, restored from the tab token on mount. `initialSession` (tests)
-  // bypasses storage entirely; `restoring` covers the one me-fetch so the login page never
-  // flashes for a signed-in operator.
-  const [session, setSession] = useState<{ me: MeResponse } | null>(() => initialSession ?? null);
-  const [restoring, setRestoring] = useState(
-    () => initialSession === undefined && loadToken() !== null,
-  );
+  type AuthState =
+    | { kind: "restoring" }
+    | { kind: "anonymous"; email: string; problem: ApiProblem | null; notice: ApiProblem | null }
+    | { kind: "setup"; email: string; problem: ApiProblem | null }
+    | { kind: "signedIn"; me: MeResponse };
+  // Auth: state machine. Always start restoring unless a test seam supplies a session.
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    if (initialSession !== undefined) {
+      return initialSession === null
+        ? { kind: "anonymous", email: "", problem: null, notice: null }
+        : { kind: "signedIn", me: initialSession.me };
+    }
+    return { kind: "restoring" };
+  });
   const [authBusy, setAuthBusy] = useState(false);
-  const [authProblem, setAuthProblem] = useState<ApiProblem | null>(null);
-  const [pendingSetupEmail, setPendingSetupEmail] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
   const probeBusy = useRef(false);
   const lastProbeAt = useRef(0);
@@ -122,10 +120,7 @@ export function App({
   // Default client must be identity-stable: a fresh object per render would
   // refire every [client] effect below and spiral into a fetch loop. The bearer
   // token is read live from storage per request, so sign-in needs no rebuild.
-  const fallbackClient = useMemo(
-    () => createApiClient(undefined, { getToken: () => loadToken() }),
-    [],
-  );
+  const fallbackClient = useMemo(() => createApiClient(undefined), []);
   const activeClient = client ?? fallbackClient;
   // Stable sink for pages that log to the killfeed from their own effects.
   const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
@@ -423,25 +418,98 @@ export function App({
     return true;
   }
 
-  // Auth handlers. The token lives in tab storage; the shell only holds the caller snapshot.
-  function signOut() {
-    clearToken();
-    setSession(null);
-    setPendingSetupEmail(null);
-    setAuthProblem(null);
+  const sessionNotice: ApiProblem = {
+    status: 401,
+    title: "Your session ended. Sign in again to pick up any account changes.",
+    detail: "",
+    code: "UNAUTHENTICATED",
+  };
+  const revokedNotice: ApiProblem = {
+    status: 401,
+    title: "Your account changed. Sign in again.",
+    detail: "",
+    code: "SESSION_REVOKED",
+  };
+  function noticeFor(problem?: ApiProblem): ApiProblem {
+    return problem?.code === "SESSION_REVOKED" ? revokedNotice : sessionNotice;
+  }
+
+  // Auth handlers. Session lives in an HttpOnly cookie owned by the BFF.
+  async function signOut() {
+    let failed = false;
+    try {
+      const { result } = await activeClient.signOut();
+      if (!result.ok) {
+        failed = true;
+      }
+    } catch {
+      failed = true;
+    } finally {
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
+      setAuthState({
+        kind: "anonymous",
+        email: "",
+        problem: null,
+        notice: failed ? sessionNotice : null,
+      });
+    }
+  }
+
+  // A page-level 401 with a token code (UNAUTHENTICATED or SESSION_REVOKED) means the session died.
+  function endSession(problem?: ApiProblem) {
+    try {
+      sessionStorage.removeItem("jobscrape.setupEmail");
+    } catch {
+      // ignore
+    }
+    setAuthState({ kind: "anonymous", email: "", problem: noticeFor(problem), notice: null });
   }
 
   async function refreshMe(): Promise<boolean> {
-    const { result } = await activeClient.fetchMe();
+    const { result } = await activeClient.fetchSession();
     if (result.ok) {
-      setSession({ me: result.value });
-      return true;
-    }
-    if (result.problem.status === 401) {
-      signOut();
+      const value = result.value as {
+        email?: string;
+        authenticated?: boolean;
+        expired?: boolean;
+        revoked?: boolean;
+        mustChangePassword?: boolean;
+      };
+      if (value.mustChangePassword) {
+        const email = value.email ?? safeSessionStorage("jobscrape.setupEmail") ?? "";
+        setAuthState({ kind: "setup", email, problem: null });
+        return false;
+      }
+      if (value.email) {
+        setAuthState({ kind: "signedIn", me: value as MeResponse });
+        return true;
+      }
+      if (value.authenticated === false && value.expired) {
+        setAuthState({
+          kind: "anonymous",
+          email: "",
+          problem: null,
+          notice: value.revoked ? revokedNotice : sessionNotice,
+        });
+        return false;
+      }
+      const setupEmail = safeSessionStorage("jobscrape.setupEmail");
+      if (setupEmail) {
+        setAuthState({ kind: "setup", email: setupEmail, problem: null });
+        return false;
+      }
+      setAuthState({ kind: "anonymous", email: "", problem: null, notice: null });
       return false;
     }
-    setAuthProblem(result.problem);
+    if (result.problem.status === 401) {
+      endSession(result.problem);
+      return false;
+    }
+    setAuthState({ kind: "anonymous", email: "", problem: result.problem, notice: null });
     return false;
   }
 
@@ -451,23 +519,23 @@ export function App({
     try {
       const { result } = await activeClient.login(input);
       if (!result.ok) {
-        // Seeded accounts cannot sign in yet: the 403 carries them to setup-password.
-        if (result.problem.code === "PASSWORD_RESET_REQUIRED") {
-          setPendingSetupEmail(input.email);
-          setAuthProblem(null);
-          return false;
-        }
-        setAuthProblem(result.problem);
+        setAuthState({ kind: "anonymous", email: "", problem: result.problem, notice: null });
         return false;
       }
       if (result.value.mustChangePassword) {
-        setPendingSetupEmail(input.email);
-        setAuthProblem(null);
-        return false;
+        try {
+          sessionStorage.setItem("jobscrape.setupEmail", input.email);
+        } catch {
+          // ignore
+        }
+        setAuthState({ kind: "setup", email: input.email, problem: null });
+        return true;
       }
-      saveToken(result.value.token);
-      setAuthProblem(null);
-      setPendingSetupEmail(null);
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
       await refreshMe();
       return true;
     } finally {
@@ -481,16 +549,29 @@ export function App({
     try {
       const { result } = await activeClient.setupPassword(input);
       if (!result.ok) {
-        // Setup already ran: fall back to sign-in instead of stranding the operator.
         if (result.problem.code === "PASSWORD_SETUP_COMPLETE") {
-          setPendingSetupEmail(null);
+          try {
+            sessionStorage.removeItem("jobscrape.setupEmail");
+          } catch {
+            // ignore
+          }
+          // One-time notice on the sign-in screen, not a stuck setup-page alert.
+          setAuthState({
+            kind: "anonymous",
+            email: input.email,
+            problem: null,
+            notice: result.problem,
+          });
+          return false;
         }
-        setAuthProblem(result.problem);
+        setAuthState({ kind: "setup", email: input.email, problem: result.problem });
         return false;
       }
-      saveToken(result.value.token);
-      setAuthProblem(null);
-      setPendingSetupEmail(null);
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
       await refreshMe();
       return true;
     } finally {
@@ -498,36 +579,81 @@ export function App({
     }
   }
 
-  // Token restore: one me-fetch on mount when storage holds a token. Skipped for the
-  // `initialSession` test seam and when already signed in.
-  const restoreRef = useRef(refreshMe);
-  restoreRef.current = refreshMe;
-  const restoringRef = useRef(restoring);
-  restoringRef.current = restoring;
+  // Restore: always attempt GET /bff/session on mount (skipped for test seam).
   useEffect(() => {
-    if (initialSession !== undefined || !restoringRef.current) {
+    if (initialSession !== undefined) {
       return;
     }
     let alive = true;
     void (async () => {
-      await restoreRef.current();
+      const setupEmail = safeSessionStorage("jobscrape.setupEmail");
+      await refreshMe();
+      // If restore found anonymous but a setup email is stored, prefer setup state.
+      if (alive && setupEmail && authState.kind === "anonymous") {
+        setAuthState({ kind: "setup", email: setupEmail, problem: null });
+      }
       if (alive) {
-        setRestoring(false);
+        // restoring already replaced by refreshMe; ensure not stuck
       }
     })();
     return () => {
       alive = false;
     };
-    // Active client is identity-stable; run once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadersRef = useRef({ loadProfiles, loadSources, loadSessions });
   loadersRef.current = { loadProfiles, loadSources, loadSessions };
 
+  // Me-driven navigation: the admin stops appear only with the matching visibility. The
+  // order follows ROUTES, so users/roles/quotas land at the rail's end.
+  const me = authState.kind === "signedIn" ? authState.me : null;
+  const restoring = authState.kind === "restoring";
+  const pendingSetupEmail = authState.kind === "setup" ? authState.email : null;
+  const authProblem =
+    authState.kind === "anonymous"
+      ? (authState.problem ?? authState.notice)
+      : authState.kind === "setup"
+        ? authState.problem
+        : null;
+  const visibleRoutes = useMemo(() => {
+    const base: DeckRoute[] = ["overview", "health"];
+    if (me !== null) {
+      if (hasAnyPermission(me, "profiles.read")) {
+        base.push("profiles");
+      }
+      if (hasAnyPermission(me, "sources.read")) {
+        base.push("sources");
+      }
+      if (hasAnyPermission(me, "sessions.read")) {
+        base.push("sessions");
+      }
+      if (hasAnyPermission(me, "runs.read")) {
+        base.push("runs");
+      }
+      base.push("topology");
+      if (me.roles.includes("Admin")) {
+        base.push("database");
+      }
+      if (hasAnyPermission(me, "users.read", "users.write")) {
+        base.push("users");
+      }
+      if (hasAnyPermission(me, "roles.read", "roles.write")) {
+        base.push("roles", "quotas");
+      }
+    }
+    return new Set(base);
+  }, [me]);
+  // A deep link to a hidden admin stop explains itself instead of bouncing home.
+  const routeDenied = me !== null && !visibleRoutes.has(route);
+
   // Page data loads whenever its page opens; the ref keeps the effect keyed
-  // on the route alone, so renders never refetch.
+  // on the route alone, so renders never refetch. A denied deep link renders
+  // the denied copy without firing the page's loader.
   useEffect(() => {
+    if (routeDenied) {
+      return;
+    }
     if (route === "profiles") {
       void loadersRef.current.loadProfiles();
     }
@@ -537,34 +663,7 @@ export function App({
     if (route === "sessions") {
       void loadersRef.current.loadSessions();
     }
-  }, [route]);
-
-  // Me-driven navigation: the admin stops appear only with the matching visibility. The
-  // order follows ROUTES, so users/roles/quotas land at the rail's end.
-  const me = session?.me ?? null;
-  const visibleRoutes = useMemo(() => {
-    const base: DeckRoute[] = [
-      "overview",
-      "health",
-      "profiles",
-      "sources",
-      "sessions",
-      "runs",
-      "topology",
-      "database",
-    ];
-    if (me !== null) {
-      if (canSeeUsers(me)) {
-        base.push("users");
-      }
-      if (canSeeRoles(me)) {
-        base.push("roles", "quotas");
-      }
-    }
-    return new Set(base);
-  }, [me]);
-  // A deep link to a hidden admin stop explains itself instead of bouncing home.
-  const routeDenied = me !== null && !visibleRoutes.has(route);
+  }, [route, routeDenied]);
 
   return (
     <div className="deck-root" data-density={density} data-theme={theme}>
@@ -598,7 +697,12 @@ export function App({
             </span>
           )}
           {me !== null && (
-            <button type="button" className="density-btn" onClick={signOut} title="Sign out">
+            <button
+              type="button"
+              className="density-btn"
+              onClick={() => void signOut()}
+              title="Sign out"
+            >
               SIGN OUT
             </button>
           )}
@@ -647,6 +751,15 @@ export function App({
             busy={authBusy}
             problem={authProblem}
             onLogin={handleLogin}
+            onFirstLogin={(email) => {
+              setLastEmail(email);
+              try {
+                sessionStorage.setItem("jobscrape.setupEmail", email);
+              } catch {
+                // ignore
+              }
+              setAuthState({ kind: "setup", email, problem: null });
+            }}
           />
         )}
         {!restoring && me === null && pendingSetupEmail !== null && (
@@ -662,8 +775,12 @@ export function App({
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => {
-                  setPendingSetupEmail(null);
-                  setAuthProblem(null);
+                  try {
+                    sessionStorage.removeItem("jobscrape.setupEmail");
+                  } catch {
+                    // ignore
+                  }
+                  setAuthState({ kind: "anonymous", email: "", problem: null, notice: null });
                 }}
               >
                 BACK TO SIGN IN
@@ -686,7 +803,20 @@ export function App({
               </div>
               <p className="alert" role="alert">
                 <CodeTag code="ACCESS_DENIED" tone="bad" /> The {route} stop needs{" "}
-                {route === "users" ? "users.read or users.write" : "roles.read or roles.write"}.
+                {route === "profiles"
+                  ? "profiles.read"
+                  : route === "sources"
+                    ? "sources.read"
+                    : route === "sessions"
+                      ? "sessions.read"
+                      : route === "runs"
+                        ? "runs.read"
+                        : route === "database"
+                          ? "the Admin role"
+                          : route === "users"
+                            ? "users.read or users.write"
+                            : "roles.read or roles.write"}
+                .{" "}
               </p>
             </section>
           </>
@@ -767,20 +897,20 @@ export function App({
           <DatabasePage client={activeClient} />
         )}
         {me !== null && !routeDenied && route === "users" && (
-          <UsersPage client={activeClient} me={me} onUnauthorized={signOut} />
+          <UsersPage client={activeClient} me={me} onUnauthorized={endSession} />
         )}
         {me !== null && !routeDenied && route === "roles" && (
           <RolesPage
             client={activeClient}
             canWrite={hasAnyPermission(me, "roles.write")}
-            onUnauthorized={signOut}
+            onUnauthorized={endSession}
           />
         )}
         {me !== null && !routeDenied && route === "quotas" && (
           <QuotasPage
             client={activeClient}
             canWrite={hasAnyPermission(me, "roles.write")}
-            onUnauthorized={signOut}
+            onUnauthorized={endSession}
           />
         )}
       </main>
@@ -833,6 +963,14 @@ function useNow(): string {
     return () => clearInterval(timer);
   }, []);
   return formatClock(now.toISOString());
+}
+
+function safeSessionStorage(key: string): string | null {
+  try {
+    return typeof sessionStorage === "undefined" ? null : sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function readHash(): DeckRoute {

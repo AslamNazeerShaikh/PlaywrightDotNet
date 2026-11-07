@@ -22,12 +22,13 @@ namespace JobScrape.Domain.Identity
         public Guid Value { get; }
 
         /// <summary>
-        /// Creates a new unique identifier.
+        /// Creates a new time-ordered (UUIDv7) identifier. Ordered ids keep
+        /// primary-key B-tree inserts sequential.
         /// </summary>
         /// <returns>A new, non-empty identifier.</returns>
         public static UserId New()
         {
-            return new UserId(Guid.NewGuid());
+            return new UserId(Guid.CreateVersion7());
         }
 
         /// <summary>

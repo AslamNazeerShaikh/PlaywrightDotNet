@@ -52,5 +52,33 @@ namespace JobScrape.Application.Abstractions
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>A task that completes when the entry is stored.</returns>
         Task SaveAsync(IdempotencyEntry entry, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Attempts to reserve a pending row for the triple. Returns true
+        /// when this caller won the insert race and owns execution; false
+        /// when another caller already reserved it.
+        /// </summary>
+        /// <param name="entry">The pending entry to insert.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>True when reserved by this caller.</returns>
+        Task<bool> TryReserveAsync(IdempotencyEntry entry, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Removes any row for the triple, used to abandon a reservation
+        /// that will not be completed (non-storable outcome). Cleanup is
+        /// best-effort: a row left by a crashed host is not taken over by
+        /// another instance and expires after the 24-hour retention window.
+        /// </summary>
+        /// <param name="ownerKey">The authenticated user id.</param>
+        /// <param name="endpoint">The concrete request path.</param>
+        /// <param name="key">The client-supplied idempotency key.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>A task that completes when the row is removed.</returns>
+        Task RemoveAsync(
+            string ownerKey,
+            string endpoint,
+            string key,
+            CancellationToken cancellationToken
+        );
     }
 }

@@ -343,6 +343,11 @@ namespace JobScrape.Application.Tests.Scraping
                 cancellationToken.ThrowIfCancellationRequested();
                 return Task.FromResult(0);
             }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
+            }
         }
 
         internal sealed class ScriptedSource(SourceKey key) : IJobSource

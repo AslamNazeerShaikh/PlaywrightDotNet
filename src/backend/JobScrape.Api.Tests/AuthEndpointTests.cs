@@ -126,6 +126,41 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task ExpiredLockoutNoLongerBlocksLogin()
+        {
+            await using var factory = new ApiFactory();
+            var email = $"expired-lock-{Guid.NewGuid():N}@example.com";
+            const string password = "Final-Password2@@";
+            using (var scope = factory.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+                var clock = provider.GetRequiredService<TimeProvider>();
+                var user = User.Create(email, PasswordHash.Create(password), clock.GetUtcNow());
+                user.CompleteFirstLogin(PasswordHash.Create(password), clock.GetUtcNow());
+                user.RecordFailedLogin(
+                    clock.GetUtcNow().AddMinutes(-16),
+                    5,
+                    TimeSpan.FromMinutes(15)
+                );
+                await provider.GetRequiredService<IUserRepository>().AddAsync(user, Ct);
+                await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            using var client = factory.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "api/v1/auth/login",
+                new { email, password },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<LoginResponse>(Ct);
+            Assert.NotNull(body);
+            Assert.False(body!.MustChangePassword);
+            Assert.NotEmpty(body.Token);
+        }
+
+        [Fact]
         public async Task SetupPasswordFlowFlipsFlagAndReturnsUsableToken()
         {
             await using var factory = new ApiFactory();
@@ -151,12 +186,9 @@ namespace JobScrape.Api.Tests
                 )
             )
             {
-                Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+                Assert.Equal(HttpStatusCode.Unauthorized, blocked.StatusCode);
                 var blockedBody = await blocked.Content.ReadFromJsonAsync<JsonElement>(Ct);
-                Assert.Equal(
-                    "PASSWORD_RESET_REQUIRED",
-                    blockedBody.GetProperty("code").GetString()
-                );
+                Assert.Equal("INVALID_CREDENTIALS", blockedBody.GetProperty("code").GetString());
             }
 
             using var setupClient = factory.CreateClient();
@@ -199,16 +231,6 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"op-{Guid.NewGuid():N}@example.com";
-            using (
-                var createViewerRole = await admin.PostAsJsonAsync(
-                    "api/v1/roles",
-                    new { name = "Viewer" },
-                    Ct
-                )
-            )
-            {
-                createViewerRole.EnsureSuccessStatusCode();
-            }
 
             using (
                 var created = await admin.PostAsJsonAsync(
@@ -219,14 +241,6 @@ namespace JobScrape.Api.Tests
             )
             {
                 created.EnsureSuccessStatusCode();
-                var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
-                var userId = createdBody.GetProperty("id").GetGuid();
-                using var assigned = await admin.PostAsJsonAsync(
-                    $"api/v1/users/{userId}/roles",
-                    new { role = "Viewer" },
-                    Ct
-                );
-                assigned.EnsureSuccessStatusCode();
             }
 
             using var setupClient = factory.CreateClient();
@@ -300,21 +314,9 @@ namespace JobScrape.Api.Tests
             var secondBody = await second.Content.ReadAsStringAsync(Ct);
 
             Assert.Equal(first.StatusCode, second.StatusCode);
-            Assert.Equal(NormalizeTrace(firstBody), NormalizeTrace(secondBody));
-
-            static string NormalizeTrace(string body)
-            {
-                using var document = JsonDocument.Parse(body);
-                if (
-                    !document.RootElement.TryGetProperty("traceId", out var trace)
-                    || trace.GetString() is not { } traceId
-                )
-                {
-                    return body;
-                }
-
-                return body.Replace(traceId, "trace", StringComparison.Ordinal);
-            }
+            Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+            Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+            Assert.Equal(firstBody, secondBody);
 
             using var list = await admin.GetAsync("api/v1/users", Ct);
             var users = await list.Content.ReadFromJsonAsync<UserListResponse>(Ct);
@@ -327,6 +329,7 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var client = factory.CreateClient();
             HttpResponseMessage? limited = null;
+            var firstLimitedAttempt = -1;
             try
             {
                 for (var attempt = 0; attempt < 12; attempt++)
@@ -339,10 +342,12 @@ namespace JobScrape.Api.Tests
                     );
                     if (limited.StatusCode == HttpStatusCode.TooManyRequests)
                     {
+                        firstLimitedAttempt = attempt;
                         break;
                     }
                 }
 
+                Assert.Equal(10, firstLimitedAttempt);
                 Assert.Equal(HttpStatusCode.TooManyRequests, limited!.StatusCode);
                 Assert.True(limited.Headers.TryGetValues("Retry-After", out var retryAfter));
                 Assert.Equal("60", Assert.Single(retryAfter));
@@ -357,6 +362,51 @@ namespace JobScrape.Api.Tests
             {
                 limited?.Dispose();
             }
+        }
+
+        [Fact]
+        public async Task LoginIpCapIsNotBypassedByTrailingSlashOrDistinctEmails()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            var statuses = new List<HttpStatusCode>();
+
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                using var response = await client.PostAsJsonAsync(
+                    "api/v1/auth/login/",
+                    new
+                    {
+                        email = $"distinct-{attempt}-{Guid.NewGuid():N}@example.com",
+                        password = "Wrong-Password1!!",
+                    },
+                    Ct
+                );
+                statuses.Add(response.StatusCode);
+
+                if (attempt < 10)
+                {
+                    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+                    var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+                    Assert.Equal("INVALID_CREDENTIALS", body.GetProperty("code").GetString());
+                }
+            }
+
+            Assert.Equal(HttpStatusCode.TooManyRequests, statuses[10]);
+            Assert.Equal(HttpStatusCode.TooManyRequests, statuses[11]);
+
+            using var limited = await client.PostAsJsonAsync(
+                "api/v1/auth/login/",
+                new
+                {
+                    email = $"distinct-final-{Guid.NewGuid():N}@example.com",
+                    password = "Wrong-Password1!!",
+                },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            Assert.True(limited.Headers.TryGetValues("Retry-After", out var retryAfter));
+            Assert.Equal("60", Assert.Single(retryAfter));
         }
 
         [Fact]
@@ -392,8 +442,17 @@ namespace JobScrape.Api.Tests
                 new { },
                 Ct
             );
-            Assert.NotEqual(HttpStatusCode.Unauthorized, login.StatusCode);
-            Assert.NotEqual(HttpStatusCode.Unauthorized, setup.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, login.StatusCode);
+            var loginBody = await login.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", loginBody.GetProperty("code").GetString());
+            Assert.True(loginBody.GetProperty("errors").TryGetProperty("Email", out _));
+            Assert.Equal(HttpStatusCode.BadRequest, setup.StatusCode);
+            var setupBody = await setup.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", setupBody.GetProperty("code").GetString());
+            var setupErrors = setupBody.GetProperty("errors");
+            Assert.True(setupErrors.TryGetProperty("Email", out _));
+            Assert.True(setupErrors.TryGetProperty("CurrentSecret", out _));
+            Assert.True(setupErrors.TryGetProperty("NewPassword", out _));
         }
 
         [Fact]
@@ -454,7 +513,7 @@ namespace JobScrape.Api.Tests
             using var stale = await before.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
             var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Equal("UNAUTHENTICATED", staleBody.GetProperty("code").GetString());
+            Assert.Equal("SESSION_REVOKED", staleBody.GetProperty("code").GetString());
 
             using var fresh = await AuthTestHelper.LoginAsync(
                 factory,
@@ -519,6 +578,103 @@ namespace JobScrape.Api.Tests
 
             using var stale = await before.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
+            var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("SESSION_REVOKED", staleBody.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task RealSetupTokenWorksWhereTheForgedMustChangePasswordTokenIsDenied()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"attribution-{Guid.NewGuid():N}@example.com";
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
+            {
+                created.EnsureSuccessStatusCode();
+            }
+
+            // The real issuance path refuses a pending account outright.
+            using var pendingLogin = factory.CreateClient();
+            using (
+                var rejected = await pendingLogin.PostAsJsonAsync(
+                    "api/v1/auth/login",
+                    new { email, password = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
+            {
+                Assert.Equal(HttpStatusCode.Unauthorized, rejected.StatusCode);
+            }
+
+            // Mint a must-change token for the pending account while it is
+            // pending, so the sub, token version, and signature all match.
+            string forged;
+            using (var scope = factory.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+                var pending = await provider
+                    .GetRequiredService<IUserRepository>()
+                    .GetByEmailAsync(email, Ct);
+                Assert.True(pending!.MustChangePassword);
+                forged = new JwtTokenService(
+                    Options.Create(
+                        new JwtOptions
+                        {
+                            Secret = AuthTestHelper.TestJwtSecret,
+                            Issuer = "jobscrape",
+                            Audience = "jobscrape-api",
+                        }
+                    )
+                ).CreateToken(
+                    pending,
+                    [],
+                    [PermissionKey.From("profiles.read")],
+                    provider.GetRequiredService<TimeProvider>().GetUtcNow()
+                );
+            }
+
+            using var forgedClient = factory.CreateClient();
+            forgedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                forged
+            );
+            using (var denied = await forgedClient.GetAsync("api/v1/search-profiles", Ct))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+                var deniedBody = await denied.Content.ReadFromJsonAsync<JsonElement>(Ct);
+                Assert.Equal("ACCESS_DENIED", deniedBody.GetProperty("code").GetString());
+            }
+
+            // The real temp-secret setup flow signs in for the same account.
+            using var setupClient = factory.CreateClient();
+            using var setup = await setupClient.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = "Temp-Secret1!!",
+                    newPassword = "Final-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            var real = await setup.Content.ReadFromJsonAsync<LoginResponse>(Ct);
+            Assert.NotNull(real);
+            Assert.False(real!.MustChangePassword);
+
+            using var realClient = factory.CreateClient();
+            realClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                real.Token
+            );
+            using var allowed = await realClient.GetAsync("api/v1/search-profiles", Ct);
+            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
         }
 
         [Fact]
@@ -578,6 +734,61 @@ namespace JobScrape.Api.Tests
 
             using var me = await client.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        }
+
+        [Fact]
+        public async Task AdminWithZeroPermissionsPassesPermissionPolicies()
+        {
+            await using var factory = new ApiFactory();
+            var email = $"stripped-{Guid.NewGuid():N}@example.com";
+            const string password = "Final-Password2@@";
+            using (var scope = factory.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+                var roleRepository = provider.GetRequiredService<IRoleRepository>();
+                var adminRole = await roleRepository.GetByNameAsync(RoleName.Admin, Ct);
+                if (adminRole is null)
+                {
+                    adminRole = Role.Create(RoleId.New(), RoleName.Admin);
+                    await roleRepository.AddAsync(adminRole, Ct);
+                }
+
+                foreach (var key in PermissionCatalog.Keys)
+                {
+                    adminRole.Revoke(key);
+                }
+
+                var clock = provider.GetRequiredService<TimeProvider>();
+                var user = User.CreateSeedAdmin(
+                    email,
+                    PasswordHash.Create("Temporary1!!"),
+                    clock.GetUtcNow()
+                );
+                user.AssignRole(adminRole.Id);
+                user.CompleteFirstLogin(PasswordHash.Create(password), clock.GetUtcNow());
+                await provider.GetRequiredService<IUserRepository>().AddAsync(user, Ct);
+                await provider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            using var client = await AuthTestHelper.LoginAsync(factory, email, password, Ct);
+
+            using var meResponse = await client.GetAsync("api/v1/auth/me", Ct);
+            Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
+            var me = await meResponse.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Contains(
+                "Admin",
+                me.GetProperty("roles").EnumerateArray().Select(value => value.GetString())
+            );
+            Assert.Empty(me.GetProperty("permissions").EnumerateArray());
+
+            using var users = await client.GetAsync("api/v1/users", Ct);
+            Assert.Equal(HttpStatusCode.OK, users.StatusCode);
+
+            using var roles = await client.GetAsync("api/v1/roles", Ct);
+            Assert.Equal(HttpStatusCode.OK, roles.StatusCode);
+
+            using var database = await client.GetAsync("api/v1/db/tables", Ct);
+            Assert.Equal(HttpStatusCode.OK, database.StatusCode);
         }
 
         [Fact]

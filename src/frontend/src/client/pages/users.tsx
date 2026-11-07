@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { CodeTag, Field, Module, plural, RefreshButton } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiClient, ApiProblem, MeResponse, UserResponse } from "../lib/api.ts";
-import { canSeeUsers, hasAnyPermission, isTokenFailure } from "../lib/auth.ts";
+import { hasAnyPermission, isTokenFailure } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
 import { AuthProblem, fieldErrorsFor } from "./login.tsx";
@@ -22,10 +22,10 @@ export function UsersPage({
 }: {
   client: ApiClient;
   me: MeResponse;
-  onUnauthorized: () => void;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("UsersPage");
-  const admin = canSeeUsers(me);
+  const admin = hasAnyPermission(me, "users.read", "users.write");
   const canWrite = hasAnyPermission(me, "users.write");
   const [users, setUsers] = useState<UserResponse[] | null>(null);
   const [listProblem, setListProblem] = useState<ApiProblem | null>(null);
@@ -45,7 +45,7 @@ export function UsersPage({
 
   async function fail(problem: ApiProblem): Promise<boolean> {
     if (isTokenFailure(problem)) {
-      onUnauthorized();
+      onUnauthorized(problem);
       return true;
     }
     return false;
@@ -64,6 +64,16 @@ export function UsersPage({
         setListProblem(null);
       } else if (!(await fail(result.problem))) {
         setListProblem(result.problem);
+      }
+      // Skip the roles fetch when users already failed with a client/rate error:
+      // the second call would just repeat the same denial and noise the network tab.
+      const skipRoles =
+        !result.ok &&
+        (result.problem.status === 401 ||
+          result.problem.status === 403 ||
+          result.problem.status === 429);
+      if (skipRoles) {
+        return;
       }
       // Role options follow the live catalog: assigning a name no role carries
       // would 404, so offer what the server knows.
@@ -103,9 +113,10 @@ export function UsersPage({
     if (selectedId !== null && admin) {
       void loadDetail(selectedId);
     }
-    // loadDetail reads the client prop; re-run only on selection change.
+    // loadDetail is a fresh closure per render; re-running on client swap covers a hot-swapped
+    // BFF. admin and selection changes are the other legitimate re-fetch triggers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, admin]);
+  }, [selectedId, admin, client]);
 
   async function submitCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

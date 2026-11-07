@@ -1,3 +1,4 @@
+using System.Threading;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain;
@@ -11,9 +12,16 @@ namespace JobScrape.Application.Features.Identity
     /// </summary>
     public sealed class RevokeRoleHandler
     {
+        // Single-instance guard only: the host runs as a single process
+        // (Program.cs:66-68, docs/02-architecture.md:17), so a process-local
+        // semaphore serializes the last-admin check across concurrent
+        // requests. It does not coordinate across processes.
+        private static readonly SemaphoreSlim _adminGuard = new(1, 1);
+
         private readonly IUserRepository _users;
         private readonly IRoleRepository _roles;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RevokeRoleHandler"/> class.
@@ -21,19 +29,23 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="users">The user port. Must not be null.</param>
         /// <param name="roles">The role port. Must not be null.</param>
         /// <param name="unitOfWork">Commits the revocation. Must not be null.</param>
+        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RevokeRoleHandler(
             IUserRepository users,
             IRoleRepository roles,
-            IUnitOfWork unitOfWork
+            IUnitOfWork unitOfWork,
+            ICallerContext caller
         )
         {
             ArgumentNullException.ThrowIfNull(users);
             ArgumentNullException.ThrowIfNull(roles);
             ArgumentNullException.ThrowIfNull(unitOfWork);
+            ArgumentNullException.ThrowIfNull(caller);
             _users = users;
             _roles = roles;
             _unitOfWork = unitOfWork;
+            _caller = caller;
         }
 
         /// <summary>
@@ -68,6 +80,21 @@ namespace JobScrape.Application.Features.Identity
                 );
             }
 
+            if (Guid.TryParse(_caller.ActorId, out var callerId) && callerId == id.Value)
+            {
+                return Result.Fail(Errors.AccessDenied());
+            }
+
+            if (
+                roleName == RoleName.Admin
+                && !_caller.Roles.Any(role =>
+                    string.Equals(role, RoleName.Admin.ToString(), StringComparison.Ordinal)
+                )
+            )
+            {
+                return Result.Fail(Errors.AccessDenied());
+            }
+
             var user = await _users.GetAsync(id, cancellationToken);
             if (user is null)
             {
@@ -80,22 +107,30 @@ namespace JobScrape.Application.Features.Identity
                 return Result.Fail(Errors.RoleNotFound(roleName.ToString()));
             }
 
-            if (role.Name == RoleName.Admin && user.Roles.Contains(role.Id))
+            await _adminGuard.WaitAsync(cancellationToken);
+            try
             {
-                var users = await _users.ListAsync(cancellationToken);
-                var anotherAdmin = users.Any(other =>
-                    other.Id != user.Id && other.Roles.Contains(role.Id)
-                );
-                if (!anotherAdmin)
+                if (role.Name == RoleName.Admin && user.Roles.Contains(role.Id))
                 {
-                    return Result.Fail(Errors.LastAdminRequired());
+                    var users = await _users.ListAsync(cancellationToken);
+                    var anotherAdmin = users.Any(other =>
+                        other.Id != user.Id && other.Roles.Contains(role.Id)
+                    );
+                    if (!anotherAdmin)
+                    {
+                        return Result.Fail(Errors.LastAdminRequired());
+                    }
                 }
-            }
 
-            user.RevokeRole(role.Id);
-            user.BumpTokenVersion();
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Ok();
+                user.RevokeRole(role.Id);
+                user.BumpTokenVersion();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result.Ok();
+            }
+            finally
+            {
+                _adminGuard.Release();
+            }
         }
     }
 }

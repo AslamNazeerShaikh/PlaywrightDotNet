@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { CodeTag, Field, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem } from "../lib/api.ts";
@@ -5,9 +7,10 @@ import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
 
 /**
- * Sign-in and first-login setup. Both forms are uncontrolled (read from FormData on submit,
- * happy-dom-safe); the server is the only validator, so every rule surfaces here verbatim keyed by
- * its JSON field name. Passwords are never stored: they travel one request and the form resets.
+ * Sign-in and first-login setup. Read from FormData on submit (happy-dom-safe); the sign-in email
+ * is mirrored into state so the first-login button can hand it to the setup screen. The server is
+ * the only validator, so every rule surfaces here verbatim keyed by its JSON field name. Passwords
+ * are never stored: they travel one request and the form resets.
  */
 
 /** Looks up field errors tolerating the API's PascalCase keys ("Email") and camelCase names. */
@@ -26,9 +29,7 @@ export function fieldErrorsFor(
 /** One alert row for an auth/admin failure: stable code first, prose second, backoff when 429. */
 export function AuthProblem({ problem }: { problem: ApiProblem }) {
   const backoff =
-    (problem.code === "RATE_LIMITED" || problem.code === "QUOTA_EXCEEDED") &&
-    problem.retryAfter !== undefined &&
-    problem.retryAfter !== null
+    problem.status === 429 && problem.retryAfter !== undefined && problem.retryAfter !== null
       ? ` Back off ${problem.retryAfter}s, then retry.`
       : "";
   return (
@@ -45,13 +46,16 @@ export function LoginPage({
   busy,
   problem,
   onLogin,
+  onFirstLogin,
 }: {
   initialEmail: string;
   busy: boolean;
   problem: ApiProblem | null;
   onLogin: (input: { email: string; password: string }) => Promise<boolean>;
+  onFirstLogin?: (email: string) => void;
 }) {
   useRenderLog("LoginPage");
+  const [email, setEmail] = useState(initialEmail);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,7 +92,10 @@ export function LoginPage({
               name="email"
               aria-label="Email"
               autoComplete="username"
-              defaultValue={initialEmail}
+              // onInput, not onChange: happy-dom never settles React's change value tracker,
+              // so onChange silently never fires in the test harness.
+              value={email}
+              onInput={(event) => setEmail(event.currentTarget.value)}
             />
           </Field>
           <Field
@@ -113,14 +120,20 @@ export function LoginPage({
 
       <Module
         code="AUTH-02"
-        title="First login?"
+        title="First login / setup password"
         span="span-4"
         note="Seeded accounts finish at setup-password before they can sign in."
       >
         <p className="status-line">
-          A 403 <CodeTag code="PASSWORD_RESET_REQUIRED" tone="warn" /> answer means the account
-          still needs its operator password.
+          Pending accounts trade their seeded secret for an operator password here.
         </p>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => onFirstLogin?.(email)}
+        >
+          First login / setup password
+        </button>
       </Module>
     </>
   );

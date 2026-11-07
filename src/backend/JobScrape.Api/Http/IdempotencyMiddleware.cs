@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using Microsoft.Extensions.Options;
 
 namespace JobScrape.Api.Http
 {
@@ -15,6 +17,11 @@ namespace JobScrape.Api.Http
     /// tokens must never replay. Only POST, PUT, PATCH, and DELETE engage.
     /// Error responses at or above 500 and auth or throttle outcomes are
     /// never stored.
+    /// A reservation abandoned by a crashed host is not taken over by another
+    /// instance: recovery is best-effort and the row expires after the 24-hour
+    /// retention window, after which the client may retry with the same key.
+    /// A contender waits up to the completion timeout and then receives 503;
+    /// locks are in-process only.
     /// </summary>
     public sealed class IdempotencyMiddleware
     {
@@ -33,18 +40,47 @@ namespace JobScrape.Api.Http
         /// </summary>
         internal const int MaxKeyLength = 128;
 
+        /// <summary>
+        /// How long a loser waits for the winner's row to complete.
+        /// </summary>
+        internal static readonly TimeSpan CompletionWaitTimeout = TimeSpan.FromSeconds(10);
+
+        /// <summary>
+        /// Per-key locks so parallel duplicate requests serialize and only
+        /// the first executes.
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(
+            StringComparer.Ordinal
+        );
+
         // Injected and never mutated.
         private readonly RequestDelegate _next;
+
+        private readonly TimeSpan _completionWaitTimeout;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IdempotencyMiddleware"/> class.
         /// </summary>
         /// <param name="next">The next middleware. Must not be null.</param>
+        /// <param name="options">Optional timeout options snapshot.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="next"/> is null.</exception>
-        public IdempotencyMiddleware(RequestDelegate next)
+        public IdempotencyMiddleware(
+            RequestDelegate next,
+            IOptions<IdempotencyOptions>? options = null
+        )
         {
             ArgumentNullException.ThrowIfNull(next);
             _next = next;
+            _completionWaitTimeout = options?.Value.CompletionWaitTimeout ?? CompletionWaitTimeout;
+        }
+
+        /// <summary>
+        /// Test hook: constructs middleware with an explicit wait timeout.
+        /// </summary>
+        internal IdempotencyMiddleware(RequestDelegate next, TimeSpan completionWaitTimeout)
+            : this(next, null)
+        {
+            _completionWaitTimeout = completionWaitTimeout;
         }
 
         /// <summary>
@@ -65,69 +101,203 @@ namespace JobScrape.Api.Http
             ArgumentNullException.ThrowIfNull(clock);
 
             var key = context.Request.Headers[HeaderName].FirstOrDefault()?.Trim();
+            var isAuthenticated = context.User.Identity?.IsAuthenticated == true;
             if (
-                !IsReplayable(context.Request.Method)
-                || string.IsNullOrEmpty(key)
-                || key.Length > MaxKeyLength
-                || context.User.Identity?.IsAuthenticated != true
+                !isAuthenticated
                 || IsAuthPath(context.Request.Path)
+                || !IsReplayable(context.Request.Method)
             )
             {
                 await _next(context);
                 return;
             }
 
-            context.Request.EnableBuffering();
-            var requestHash = await HashBodyAsync(context.Request);
-            var endpoint = Scope(context.Request);
-            var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
-            var stored = await store.GetAsync(owner, endpoint, key, context.RequestAborted);
-            if (stored is not null)
+            if (string.IsNullOrEmpty(key))
             {
-                if (!stored.RequestHash.Equals(requestHash, StringComparison.Ordinal))
-                {
-                    await Errors.IdempotencyKeyReused().ToProblem().ExecuteAsync(context);
-                    return;
-                }
-
-                context.Response.StatusCode = stored.StatusCode;
-                context.Response.ContentType = stored.ContentType;
-                await context.Response.Body.WriteAsync(stored.Body, context.RequestAborted);
+                await _next(context);
                 return;
             }
 
-            var original = context.Response.Body;
-            await using var buffer = new MemoryStream();
-            context.Response.Body = buffer;
-            try
+            if (key.Length > MaxKeyLength)
             {
-                await _next(context);
-            }
-            finally
-            {
-                context.Response.Body = original;
+                await Errors
+                    .ValidationFailed(
+                        "Idempotency key exceeds the 128 character limit.",
+                        new Dictionary<string, string[]>
+                        {
+                            [HeaderName] = ["Idempotency key must be 128 characters or fewer."],
+                        }
+                    )
+                    .ToProblem()
+                    .ExecuteAsync(context);
+                return;
             }
 
-            buffer.Seek(0, SeekOrigin.Begin);
-            if (buffer.Length <= MaxBodyBytes && IsStorable(context.Response.StatusCode))
+            var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
+            var endpoint = Scope(context.Request);
+            var lockKey = string.Concat(owner, "\u001f", endpoint, "\u001f", key);
+            var semaphore = _locks.GetOrAdd(lockKey, static _ => new SemaphoreSlim(1, 1));
+            if (!await semaphore.WaitAsync(_completionWaitTimeout, context.RequestAborted))
             {
-                await store.SaveAsync(
-                    new IdempotencyEntry(
+                await Errors.IdempotencyPending().ToProblem().ExecuteAsync(context);
+                return;
+            }
+            var reserved = false;
+            try
+            {
+                context.Request.EnableBuffering();
+                var requestHash = await HashBodyAsync(context.Request);
+                var pendingEntry = new IdempotencyEntry(
+                    owner,
+                    endpoint,
+                    key,
+                    requestHash,
+                    0,
+                    "application/json",
+                    [],
+                    clock.GetUtcNow()
+                );
+                var won = await store.TryReserveAsync(pendingEntry, CancellationToken.None);
+                if (won)
+                {
+                    reserved = true;
+                }
+                if (!won)
+                {
+                    var stored = await WaitForCompletionAsync(
+                        store,
                         owner,
                         endpoint,
                         key,
-                        requestHash,
-                        context.Response.StatusCode,
-                        context.Response.ContentType ?? "application/json",
-                        buffer.ToArray(),
-                        clock.GetUtcNow()
-                    ),
-                    context.RequestAborted
-                );
+                        clock,
+                        _completionWaitTimeout,
+                        context.RequestAborted
+                    );
+                    if (stored is null)
+                    {
+                        await Errors.IdempotencyPending().ToProblem().ExecuteAsync(context);
+                        return;
+                    }
+
+                    if (!stored.RequestHash.Equals(requestHash, StringComparison.Ordinal))
+                    {
+                        await Errors.IdempotencyKeyReused().ToProblem().ExecuteAsync(context);
+                        return;
+                    }
+
+                    context.Response.StatusCode = stored.StatusCode;
+                    context.Response.ContentType = stored.ContentType;
+                    await context.Response.Body.WriteAsync(stored.Body, context.RequestAborted);
+                    return;
+                }
+
+                var original = context.Response.Body;
+                await using var buffer = new MemoryStream();
+                context.Response.Body = buffer;
+                try
+                {
+                    await _next(context);
+                }
+                catch
+                {
+                    context.Response.Body = original;
+                    throw;
+                }
+
+                context.Response.Body = original;
+
+                buffer.Seek(0, SeekOrigin.Begin);
+                if (buffer.Length <= MaxBodyBytes && IsStorable(context.Response.StatusCode))
+                {
+                    try
+                    {
+                        await store.SaveAsync(
+                            new IdempotencyEntry(
+                                owner,
+                                endpoint,
+                                key,
+                                requestHash,
+                                context.Response.StatusCode,
+                                context.Response.ContentType ?? "application/json",
+                                buffer.ToArray(),
+                                clock.GetUtcNow()
+                            ),
+                            context.RequestAborted
+                        );
+                        reserved = false;
+                    }
+                    catch
+                    {
+                        throw;
+                    }
+                }
+                else
+                {
+                    await store.RemoveAsync(owner, endpoint, key, CancellationToken.None);
+                    reserved = false;
+                }
+
+                buffer.Seek(0, SeekOrigin.Begin);
+                await buffer.CopyToAsync(original, context.RequestAborted);
+            }
+            catch
+            {
+                if (reserved)
+                {
+                    await store.RemoveAsync(owner, endpoint, key, CancellationToken.None);
+                }
+
+                throw;
+            }
+            finally
+            {
+                semaphore.Release();
+                if (semaphore.CurrentCount == 1)
+                {
+                    _locks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(lockKey, semaphore));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Waits for the winner's row to leave the pending state, bounded by
+        /// <see cref="CompletionWaitTimeout"/>.
+        /// </summary>
+        private static async Task<IdempotencyEntry?> WaitForCompletionAsync(
+            IIdempotencyStore store,
+            string owner,
+            string endpoint,
+            string key,
+            TimeProvider clock,
+            TimeSpan completionWaitTimeout,
+            CancellationToken cancellationToken
+        )
+        {
+            var deadline = clock.GetUtcNow() + completionWaitTimeout;
+            while (clock.GetUtcNow() < deadline)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                var entry = await store.GetAsync(owner, endpoint, key, cancellationToken);
+                if (entry is not null && entry.StatusCode != 0)
+                {
+                    return entry;
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
             }
 
-            buffer.Seek(0, SeekOrigin.Begin);
-            await buffer.CopyToAsync(original, context.RequestAborted);
+            return null;
         }
 
         /// <summary>
@@ -205,5 +375,17 @@ namespace JobScrape.Api.Http
                         or StatusCodes.Status422UnprocessableEntity
                         or StatusCodes.Status423Locked;
         }
+    }
+
+    /// <summary>
+    /// Options for <see cref="IdempotencyMiddleware"/>.
+    /// </summary>
+    public class IdempotencyOptions
+    {
+        /// <summary>
+        /// How long a loser waits for the winner's row to complete.
+        /// </summary>
+        public TimeSpan CompletionWaitTimeout { get; set; } =
+            IdempotencyMiddleware.CompletionWaitTimeout;
     }
 }

@@ -24,8 +24,14 @@ describe("sessions", () => {
       channel: "Bundled",
     });
 
-    expect(calls[0]).toEqual({ url: "/api/v1/sessions", init: { method: "GET" } });
+    expect(calls[0]).toEqual({
+      url: "/api/v1/sessions",
+      init: { method: "GET", credentials: "same-origin" },
+    });
     expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.headers).toEqual({
+      "content-type": "application/json",
+    });
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       name: "main",
       sourceKey: "naukri",
@@ -66,7 +72,9 @@ describe("sessions", () => {
 
     expect(result.ok).toBe(true);
     expect(seen?.method).toBe("PATCH");
-    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(seen?.headers).toEqual({
+      "content-type": "application/json",
+    });
     expect(JSON.parse(String(seen?.body))).toEqual({
       name: "after",
       engine: "Chromium",

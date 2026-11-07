@@ -7,8 +7,8 @@ namespace JobScrape.Domain.Identity
     /// hash, first-login state, lockout counters, and role assignments.
     /// Authentication failures are domain failures: <see cref="Authenticate"/>
     /// throws a <see cref="DomainException"/> whose message starts with a
-    /// machine-readable code (<c>PASSWORD_RESET_REQUIRED</c>,
-    /// <c>ACCOUNT_LOCKED</c>, <c>INVALID_CREDENTIALS</c>) so the application
+    /// machine-readable code (<c>INVALID_CREDENTIALS</c>,
+    /// <c>ACCOUNT_LOCKED</c>) so the application
     /// layer can map it to a 401/403 response without parsing internals.
     /// </summary>
     public sealed class User : AggregateRoot
@@ -179,9 +179,9 @@ namespace JobScrape.Domain.Identity
         /// <param name="maxAttempts">Failures allowed before lockout. Must be positive.</param>
         /// <param name="lockout">How long a lockout lasts.</param>
         /// <exception cref="DomainException">
-        /// Thrown with <c>PASSWORD_RESET_REQUIRED</c> when first login is
-        /// pending, <c>ACCOUNT_LOCKED</c> while locked out, or
-        /// <c>INVALID_CREDENTIALS</c> when the password does not match.
+        /// Thrown with <c>INVALID_CREDENTIALS</c> when first login is
+        /// pending or the password does not match, or
+        /// <c>ACCOUNT_LOCKED</c> while locked out.
         /// </exception>
         public void Authenticate(
             string? password,
@@ -190,10 +190,15 @@ namespace JobScrape.Domain.Identity
             TimeSpan lockout
         )
         {
+            // Cost one verification before branching on account state, so a
+            // pending account is not distinguishable from an unknown account
+            // (or any other account) by timing.
+            var verified = PasswordHash.Verify(password);
+
             if (MustChangePassword)
             {
                 throw new DomainException(
-                    "PASSWORD_RESET_REQUIRED: First login must set a new password."
+                    "INVALID_CREDENTIALS: First login must set a new password."
                 );
             }
 
@@ -202,7 +207,7 @@ namespace JobScrape.Domain.Identity
                 throw new DomainException("ACCOUNT_LOCKED: Too many failed logins.");
             }
 
-            if (PasswordHash.Verify(password))
+            if (verified)
             {
                 RecordSuccessfulLogin();
                 return;

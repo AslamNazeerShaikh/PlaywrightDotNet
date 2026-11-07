@@ -107,6 +107,8 @@ namespace JobScrape.Mcp.Tests
 
             public IReadOnlyCollection<string> Roles => [];
 
+            public bool MustChangePassword => false;
+
             public IReadOnlyCollection<string> Permissions { get; init; } =
             [
                 "profiles.read",

@@ -76,7 +76,7 @@ namespace JobScrape.Domain.Tests.Identity
         }
 
         [Fact]
-        public void AuthenticateBeforeFirstLoginDemandsAReset()
+        public void AuthenticateBeforeFirstLoginFailsInvalidCredentials()
         {
             var admin = User.CreateSeedAdmin(
                 "admin@example.com",
@@ -88,7 +88,7 @@ namespace JobScrape.Domain.Tests.Identity
                 admin.Authenticate(Password, Now, 3, Lockout)
             );
 
-            Assert.Contains("PASSWORD_RESET_REQUIRED", failure.Message, StringComparison.Ordinal);
+            Assert.Contains("INVALID_CREDENTIALS", failure.Message, StringComparison.Ordinal);
             Assert.Equal(0, admin.FailedAttempts);
         }
 

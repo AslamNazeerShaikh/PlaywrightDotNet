@@ -54,6 +54,9 @@ function rowsLabel(count: number): string {
 }
 
 const CARD_H = 48;
+// Empty map keeps a readable 5:1 frame instead of collapsing to a sliver of viewBox.
+const EMPTY_VIEW_W = 360;
+const EMPTY_VIEW_H = 72;
 const CARD_GAP = 8;
 const GROUP_COL = 208;
 const GROUP_GAP_X = 12;
@@ -91,9 +94,15 @@ export function TablesDiagram({
     }));
     return { group, x, height, items, cards };
   });
-  const height = Math.max(...layouts.map((layout) => layout.height), 40) + GROUP_ORIGIN_Y * 2;
-  const viewWidth =
-    GROUP_ORIGIN_X * 2 + layouts.length * GROUP_COL + Math.max(layouts.length - 1, 0) * GROUP_GAP_X;
+  const isEmpty = layouts.length === 0;
+  const height = isEmpty
+    ? EMPTY_VIEW_H
+    : Math.max(...layouts.map((layout) => layout.height), 40) + GROUP_ORIGIN_Y * 2;
+  const viewWidth = isEmpty
+    ? EMPTY_VIEW_W
+    : GROUP_ORIGIN_X * 2 +
+      layouts.length * GROUP_COL +
+      Math.max(layouts.length - 1, 0) * GROUP_GAP_X;
 
   return (
     <svg
@@ -102,10 +111,11 @@ export function TablesDiagram({
       role="img"
       aria-label="Tables map"
     >
-      {layouts.length === 0 && (
+      {isEmpty && (
         <text
-          x={GROUP_ORIGIN_X}
-          y={26}
+          x={EMPTY_VIEW_W / 2}
+          y={40}
+          textAnchor="middle"
           style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
         >
           No user tables yet.
