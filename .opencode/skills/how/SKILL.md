@@ -25,6 +25,8 @@ When in doubt, take the simple path.
 
 Decompose the question into 2 to 4 angles, each a distinct slice of the subsystem. Spawn all explorers in a single message, each with `references/explorer-prompt.md` and its angle filled in.
 
+Seed from the graph when the question names a subsystem rather than a symbol: if `graphify-out/graph.json` exists, run `graphify query "<question>" --budget 600` before spawning explorers, take the angles from the returned nodes inside the target subsystem, and ignore build-file nodes (`*.csproj`, `*.slnx`, package references). For a named symbol, `grep -rn` is the cheaper seed, because a dense query prints every node regardless of `--budget`. See `../graphify/references/query.md` for query expansion and traversal modes.
+
 ## 3. Synthesize (complex only)
 
 Once all explorers have returned, spawn one explainer with `references/explainer-prompt.md` and every explorer's findings filled in.

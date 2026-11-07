@@ -26,6 +26,8 @@ If the target is vague ("why do we do it this way?" with no clear referent), mak
 
 Before spawning investigators, build the seed context inline: file paths and line ranges, key symbols (functions, classes, constants), the last few commits touching the target, PR numbers from merge commits (pattern `(#1234)` in the subject line), and any linked ticket IDs. Run `git blame -L <start>,<end> <file>` for last-touch commits, `git log --follow -p -- <file>` for full history with patches through renames, `git log --oneline -20 -- <file>` for recent commits with PR numbers visible, and `git log -1 --format=%B <commit>` to extract PR numbers. Then pull the PR bodies and discussion for any substantive commit: `gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews`. This anchor goes to every investigator and to the synthesizer.
 
+Fold the graph into the code anchor when the question names a subsystem rather than a symbol: if `graphify-out/graph.json` exists, run `graphify query "<question>" --budget 600` before spawning investigators and keep the returned nodes inside the target subsystem, ignoring build-file nodes (`*.csproj`, `*.slnx`, package references). For a named symbol, `grep -rn` is the cheaper seed, because a dense query prints every node regardless of `--budget`. See `../graphify/references/query.md` for query expansion and traversal modes.
+
 ## Step 3. Spawn Parallel Investigators
 
 **Default to the full parallel investigation.** The goal is a complete coverage map, not a minimal one. Document the null, don't skip the search.
