@@ -4,6 +4,7 @@ using JobScrape.Domain.Access;
 using JobScrape.Domain.Identity;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Persistence.Configurations;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobScrape.Infrastructure.Persistence
@@ -66,6 +67,32 @@ namespace JobScrape.Infrastructure.Persistence
         /// Gets the named roles.
         /// </summary>
         public DbSet<Role> Roles => Set<Role>();
+
+        private const int SqlitePrimaryKeyConstraintExtendedCode = 1555;
+        private const int SqliteUniqueConstraintExtendedCode = 2067;
+
+        /// <inheritdoc />
+        public bool IsUniqueViolation(Exception exception)
+        {
+            var current = exception;
+            while (current is not null)
+            {
+                if (
+                    current is SqliteException sqlite
+                    && (
+                        sqlite.SqliteExtendedErrorCode == SqlitePrimaryKeyConstraintExtendedCode
+                        || sqlite.SqliteExtendedErrorCode == SqliteUniqueConstraintExtendedCode
+                    )
+                )
+                {
+                    return true;
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Gets the stored idempotency responses.

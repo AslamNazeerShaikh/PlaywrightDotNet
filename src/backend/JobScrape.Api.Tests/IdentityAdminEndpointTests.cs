@@ -549,5 +549,52 @@ namespace JobScrape.Api.Tests
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("EMAIL_TAKEN", body.GetProperty("code").GetString());
         }
+
+        [Fact]
+        public async Task CreatedUserIsAutoAssignedViewerRole()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"viewer-{Guid.NewGuid():N}@example.com";
+
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = "Temp-Secret1!!" },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+
+            using var users = await admin.GetAsync("api/v1/users", Ct);
+            users.EnsureSuccessStatusCode();
+            var body = await users.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var createdUser = body.GetProperty("users")
+                .EnumerateArray()
+                .Single(user => user.GetProperty("email").GetString() == email);
+
+            Assert.Contains(
+                "Viewer",
+                createdUser.GetProperty("roles").EnumerateArray().Select(role => role.GetString())
+            );
+        }
+
+        [Fact]
+        public async Task FreshBootSeedsThreeRoles()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            using var response = await admin.GetAsync("api/v1/roles", Ct);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var names = body.GetProperty("roles")
+                .EnumerateArray()
+                .Select(role => role.GetProperty("name").GetString())
+                .ToList();
+
+            Assert.Equal(3, names.Count);
+            Assert.Contains("Admin", names);
+            Assert.Contains("Operator", names);
+            Assert.Contains("Viewer", names);
+        }
     }
 }

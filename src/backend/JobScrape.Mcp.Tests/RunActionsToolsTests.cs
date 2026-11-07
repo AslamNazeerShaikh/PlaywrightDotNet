@@ -409,6 +409,11 @@ namespace JobScrape.Mcp.Tests
                 Saves++;
                 return Task.FromResult(0);
             }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
+            }
         }
 
         private sealed class FakeRunStore(params RunResponse[] runs) : IRunStore

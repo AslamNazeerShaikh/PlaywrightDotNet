@@ -365,6 +365,11 @@ namespace JobScrape.Mcp.Tests
             {
                 return Task.FromResult(0);
             }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
+            }
         }
     }
 }

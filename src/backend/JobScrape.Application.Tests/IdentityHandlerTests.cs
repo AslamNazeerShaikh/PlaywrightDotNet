@@ -3,6 +3,7 @@ using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -42,8 +43,16 @@ namespace JobScrape.Application.Tests
         {
             private readonly List<User> _users = [];
             private int _listCalls;
+            private int _emailCalls;
 
             public int Saves { get; private set; }
+
+            /// <summary>
+            /// When set, the first two <see cref="GetByEmailAsync"/> calls
+            /// await this gate before returning, so two handlers can both
+            /// pass the pre-check in flight without sleeping.
+            /// </summary>
+            public TaskCompletionSource? EmailGate { get; set; }
 
             /// <summary>
             /// When set, the first <see cref="ListAsync"/> call awaits this gate
@@ -57,13 +66,28 @@ namespace JobScrape.Application.Tests
                 _users.Add(user);
             }
 
-            public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+            /// <summary>
+            /// When true, <see cref="AddAsync"/> stages into a pending list
+            /// invisible to reads, modelling uncommitted rows. Committed
+            /// rows are the only ones queries return.
+            /// </summary>
+            public bool StageAdds { get; set; }
+
+            private readonly List<User> _staged = [];
+
+            public async Task<User?> GetByEmailAsync(
+                string email,
+                CancellationToken cancellationToken
+            )
             {
+                if (EmailGate is not null && Interlocked.Increment(ref _emailCalls) <= 2)
+                {
+                    await EmailGate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
+
                 var normalized = email.Trim().ToLowerInvariant();
-                return Task.FromResult(
-                    _users.FirstOrDefault(user =>
-                        string.Equals(user.Email, normalized, StringComparison.OrdinalIgnoreCase)
-                    )
+                return _users.FirstOrDefault(user =>
+                    string.Equals(user.Email, normalized, StringComparison.OrdinalIgnoreCase)
                 );
             }
 
@@ -74,7 +98,7 @@ namespace JobScrape.Application.Tests
 
             public Task AddAsync(User user, CancellationToken cancellationToken)
             {
-                _users.Add(user);
+                (StageAdds ? _staged : _users).Add(user);
                 return Task.CompletedTask;
             }
 
@@ -143,10 +167,28 @@ namespace JobScrape.Application.Tests
         {
             public int Saves { get; private set; }
 
+            /// When set, invoked with the 1-based save count. A returned
+            /// exception is thrown instead of succeeding.
+            public Func<int, Exception?>? SaveFailure { get; set; }
+
+            /// Decides unique-violation classification for the handler.
+            public Func<Exception, bool>? Unique { get; set; }
+
             public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
             {
                 Saves++;
+                var failure = SaveFailure?.Invoke(Saves);
+                if (failure is not null)
+                {
+                    throw failure;
+                }
+
                 return Task.FromResult(0);
+            }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return Unique?.Invoke(exception) ?? false;
             }
         }
 
@@ -156,7 +198,8 @@ namespace JobScrape.Application.Tests
             FakeTokens tokens,
             FakeUnitOfWork unitOfWork,
             FakeTimeProvider clock,
-            int maxAttempts = 5
+            int maxAttempts = 5,
+            Microsoft.Extensions.Logging.ILogger<LoginHandler>? logger = null
         )
         {
             return new LoginHandler(
@@ -165,7 +208,8 @@ namespace JobScrape.Application.Tests
                 tokens,
                 unitOfWork,
                 new LoginPolicy(maxAttempts, TimeSpan.FromMinutes(15)),
-                clock
+                clock,
+                logger
             );
         }
 
@@ -430,8 +474,16 @@ namespace JobScrape.Application.Tests
         public async Task CreateUserStagesPendingUser()
         {
             var users = new FakeUsers();
+            var roles = new FakeRoles();
+            var viewer = Role.Create(RoleId.New(), RoleName.Viewer);
+            roles.Seed(viewer);
             var unitOfWork = new FakeUnitOfWork();
-            var handler = new CreateUserHandler(users, unitOfWork, new FakeTimeProvider(Now));
+            var handler = new CreateUserHandler(
+                users,
+                roles,
+                unitOfWork,
+                new FakeTimeProvider(Now)
+            );
 
             var result = await handler.HandleAsync(
                 "new@example.com",
@@ -447,7 +499,137 @@ namespace JobScrape.Application.Tests
             Assert.NotNull(saved);
             Assert.True(saved.MustChangePassword);
             Assert.True(saved.PasswordHash.Verify(TempPassword));
+            Assert.Contains(viewer.Id, saved.Roles);
             Assert.Equal(1, unitOfWork.Saves);
+        }
+
+        [Fact]
+        public async Task CreateUserWithoutViewerRoleFailsRoleNotFound()
+        {
+            var users = new FakeUsers();
+            var roles = new FakeRoles();
+            var unitOfWork = new FakeUnitOfWork();
+            var handler = new CreateUserHandler(
+                users,
+                roles,
+                unitOfWork,
+                new FakeTimeProvider(Now)
+            );
+
+            var result = await handler.HandleAsync(
+                "new@example.com",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.Equal("ROLE_NOT_FOUND", result.Error.Code);
+            Assert.Equal(ErrorKind.NotFound, result.Error.Kind);
+            Assert.Equal(0, unitOfWork.Saves);
+        }
+
+        [Fact]
+        public async Task CreateUserRethrowsNonUniqueSaveFailure()
+        {
+            var users = new FakeUsers();
+            var roles = new FakeRoles();
+            roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
+            var unitOfWork = new FakeUnitOfWork
+            {
+                SaveFailure = _ => new InvalidOperationException("disk full"),
+                Unique = _ => false,
+            };
+            var handler = new CreateUserHandler(
+                users,
+                roles,
+                unitOfWork,
+                new FakeTimeProvider(Now)
+            );
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                handler.HandleAsync(
+                    "new@example.com",
+                    TempPassword,
+                    TestContext.Current.CancellationToken
+                )
+            );
+        }
+
+        [Fact]
+        public async Task CreateUserRethrowsUniqueViolationWithNoWinner()
+        {
+            // Staged adds stay invisible to reads, so the loser's own
+            // uncommitted row cannot pose as the winner.
+            var users = new FakeUsers { StageAdds = true };
+            var roles = new FakeRoles();
+            roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
+            var unitOfWork = new FakeUnitOfWork
+            {
+                SaveFailure = _ => new InvalidOperationException(
+                    "UNIQUE constraint failed: users.email"
+                ),
+                Unique = _ => true,
+            };
+            var handler = new CreateUserHandler(
+                users,
+                roles,
+                unitOfWork,
+                new FakeTimeProvider(Now)
+            );
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                handler.HandleAsync(
+                    "new@example.com",
+                    TempPassword,
+                    TestContext.Current.CancellationToken
+                )
+            );
+        }
+
+        [Fact]
+        public async Task CreateUserRaceYieldsOneEmailTaken()
+        {
+            var users = new FakeUsers();
+            var roles = new FakeRoles();
+            roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
+            var unitOfWork = new FakeUnitOfWork();
+            // The loser's save fails with a unique violation; the winner is
+            // the user the first handler staged, found by re-query.
+            unitOfWork.SaveFailure = saves =>
+                saves >= 2
+                    ? new InvalidOperationException("UNIQUE constraint failed: users.email")
+                    : null;
+            unitOfWork.Unique = _ => true;
+            var clock = new FakeTimeProvider(Now);
+            var firstHandler = new CreateUserHandler(users, roles, unitOfWork, clock);
+            var secondHandler = new CreateUserHandler(users, roles, unitOfWork, clock);
+
+            // Both handlers must pass the pre-check before either stages
+            // its insert; otherwise the second fails before reaching save
+            // and the conflict path stays untested.
+            var emailGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            users.EmailGate = emailGate;
+
+            var firstTask = firstHandler.HandleAsync(
+                "dupe@example.com",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
+            var secondTask = secondHandler.HandleAsync(
+                "dupe@example.com",
+                TempPassword,
+                TestContext.Current.CancellationToken
+            );
+            emailGate.SetResult();
+            await Task.WhenAll(firstTask, secondTask);
+
+            var results = new[] { firstTask.Result, secondTask.Result };
+            Assert.Equal(1, results.Count(result => result.IsSuccess));
+            Assert.Equal(
+                1,
+                results.Count(result => result.IsFailure && result.Error.Code == "EMAIL_TAKEN")
+            );
         }
 
         [Fact]
@@ -455,8 +637,11 @@ namespace JobScrape.Application.Tests
         {
             var users = new FakeUsers();
             users.Seed(PendingUser());
+            var roles = new FakeRoles();
+            roles.Seed(Role.Create(RoleId.New(), RoleName.Viewer));
             var handler = new CreateUserHandler(
                 users,
+                roles,
                 new FakeUnitOfWork(),
                 new FakeTimeProvider(Now)
             );
@@ -476,6 +661,7 @@ namespace JobScrape.Application.Tests
         {
             var handler = new CreateUserHandler(
                 new FakeUsers(),
+                new FakeRoles(),
                 new FakeUnitOfWork(),
                 new FakeTimeProvider(Now)
             );
@@ -941,6 +1127,167 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task LoginPrunesUnknownRoleWithOneWarning()
+        {
+            var users = new FakeUsers();
+            var user = ActiveUser();
+            var unknownRoleId = RoleId.New();
+            user.AssignRole(unknownRoleId);
+            users.Seed(user);
+            var roles = new FakeRoles();
+            var tokens = new FakeTokens();
+            var unitOfWork = new FakeUnitOfWork();
+            var logger = new CapturingLogger();
+            var handler = Login(
+                users,
+                roles,
+                tokens,
+                unitOfWork,
+                new FakeTimeProvider(Now),
+                logger: logger
+            );
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.DoesNotContain(unknownRoleId, user.Roles);
+            Assert.Single(
+                logger.Entries,
+                entry =>
+                    entry.Level == LogLevel.Warning
+                    && entry.Message.Contains("Dropped unknown role", StringComparison.Ordinal)
+            );
+            Assert.Equal(1, unitOfWork.Saves);
+        }
+
+        [Fact]
+        public async Task LoginSecondRunAfterPruneIsSilent()
+        {
+            var users = new FakeUsers();
+            var user = ActiveUser();
+            var unknownRoleId = RoleId.New();
+            user.AssignRole(unknownRoleId);
+            users.Seed(user);
+            var roles = new FakeRoles();
+            var tokens = new FakeTokens();
+            var unitOfWork = new FakeUnitOfWork();
+            var logger = new CapturingLogger();
+            var handler = Login(
+                users,
+                roles,
+                tokens,
+                unitOfWork,
+                new FakeTimeProvider(Now),
+                logger: logger
+            );
+            var ct = TestContext.Current.CancellationToken;
+
+            var first = await handler.HandleAsync("op@example.com", FinalPassword, ct);
+            var second = await handler.HandleAsync("op@example.com", FinalPassword, ct);
+
+            Assert.True(first.IsSuccess);
+            Assert.True(second.IsSuccess);
+            Assert.DoesNotContain(unknownRoleId, user.Roles);
+            Assert.Single(logger.Entries);
+        }
+
+        [Fact]
+        public async Task LoginDropsCatalogUnknownPermissionAndRetainsValidKeys()
+        {
+            var users = new FakeUsers();
+            var user = ActiveUser();
+            users.Seed(user);
+            var roles = new FakeRoles();
+            var role = Role.Create(RoleId.New(), RoleName.Viewer);
+            role.Grant(PermissionKey.From("runs.read"));
+            var badRole = Role.Create(RoleId.New(), RoleName.Operator);
+            // `nope.zone` is syntactically valid but absent from the catalog,
+            // so it models a key removed from the catalog after granting.
+            var unknownKey = PermissionKey.From("nope.zone");
+            badRole.Grant(unknownKey);
+            badRole.Grant(PermissionKey.From("profiles.read"));
+            roles.Seed(role);
+            roles.Seed(badRole);
+            user.AssignRole(role.Id);
+            user.AssignRole(badRole.Id);
+            var tokens = new FakeTokens();
+            var unitOfWork = new FakeUnitOfWork();
+            var logger = new CapturingLogger();
+            var handler = Login(
+                users,
+                roles,
+                tokens,
+                unitOfWork,
+                new FakeTimeProvider(Now),
+                logger: logger
+            );
+
+            var result = await handler.HandleAsync(
+                "op@example.com",
+                FinalPassword,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Contains(PermissionKey.From("runs.read"), tokens.SeenPermissions!);
+            Assert.Contains(PermissionKey.From("profiles.read"), tokens.SeenPermissions!);
+            Assert.DoesNotContain(unknownKey, tokens.SeenPermissions!);
+            Assert.Single(
+                logger.Entries,
+                entry =>
+                    entry.Level == LogLevel.Warning
+                    && entry.Message.Contains(
+                        "Dropped unknown permission",
+                        StringComparison.Ordinal
+                    )
+            );
+            Assert.Equal(1, unitOfWork.Saves);
+        }
+
+        internal sealed class CapturingLogger : ILogger<LoginHandler>
+        {
+            public List<LogEntry> Entries { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull
+            {
+                return null;
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                return true;
+            }
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter
+            )
+            {
+                var properties = state is IEnumerable<KeyValuePair<string, object?>> pairs
+                    ? pairs.ToDictionary(pair => pair.Key, pair => pair.Value)
+                    : [];
+                Entries.Add(
+                    new LogEntry(logLevel, formatter(state, exception), properties, exception)
+                );
+            }
+        }
+
+        internal sealed record LogEntry(
+            LogLevel Level,
+            string Message,
+            Dictionary<string, object?> Properties,
+            Exception? Exception
+        );
+
+        [Fact]
         public void HandlersRejectNullPorts()
         {
             var users = new FakeUsers();
@@ -955,7 +1302,9 @@ namespace JobScrape.Application.Tests
             Assert.Throws<ArgumentNullException>(() =>
                 new SetupPasswordHandler(null!, unitOfWork, clock)
             );
-            Assert.Throws<ArgumentNullException>(() => new CreateUserHandler(users, null!, clock));
+            Assert.Throws<ArgumentNullException>(() =>
+                new CreateUserHandler(users, null!, unitOfWork, clock)
+            );
             Assert.Throws<ArgumentNullException>(() =>
                 new AssignRoleHandler(users, roles, null!, CallerContext.LocalOperator)
             );

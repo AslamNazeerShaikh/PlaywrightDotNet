@@ -196,16 +196,6 @@ namespace JobScrape.Api.Tests
             await using var factory = new ApiFactory();
             using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
             var email = $"op-{Guid.NewGuid():N}@example.com";
-            using (
-                var createViewerRole = await admin.PostAsJsonAsync(
-                    "api/v1/roles",
-                    new { name = "Viewer" },
-                    Ct
-                )
-            )
-            {
-                createViewerRole.EnsureSuccessStatusCode();
-            }
 
             using (
                 var created = await admin.PostAsJsonAsync(
@@ -216,14 +206,6 @@ namespace JobScrape.Api.Tests
             )
             {
                 created.EnsureSuccessStatusCode();
-                var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
-                var userId = createdBody.GetProperty("id").GetGuid();
-                using var assigned = await admin.PostAsJsonAsync(
-                    $"api/v1/users/{userId}/roles",
-                    new { role = "Viewer" },
-                    Ct
-                );
-                assigned.EnsureSuccessStatusCode();
             }
 
             using var setupClient = factory.CreateClient();
