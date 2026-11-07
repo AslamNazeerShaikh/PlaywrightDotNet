@@ -79,12 +79,10 @@ describe("api client", () => {
       };
     };
 
-    const { result } = await createApiClient(fetchImpl, {
-      getToken: () => "tok-1",
-    }).downloadRunExport("r1", "csv", "only");
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv", "only");
 
     expect(result).toEqual({ ok: true, value: { blob, filename: "custom.csv" } });
-    expect(seenInit?.headers).toEqual({ authorization: "Bearer tok-1" });
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport falls back to run-postings-{id}.{format} without a header", async () => {
@@ -96,15 +94,13 @@ describe("api client", () => {
       return { ok: true, status: 200, json: async () => ({}), blob: async () => blob };
     };
 
-    const { result } = await createApiClient(fetchImpl, {
-      getToken: () => "tok-1",
-    }).downloadRunExport("r1", "xlsx");
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "xlsx");
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.filename).toBe("run-postings-r1.xlsx");
     }
-    expect(seenInit?.headers).toEqual({ authorization: "Bearer tok-1" });
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport maps a missing blob to BAD_RESPONSE", async () => {
@@ -114,15 +110,13 @@ describe("api client", () => {
       return { ok: true, status: 200, json: async () => ({}) };
     };
 
-    const { result } = await createApiClient(fetchImpl, {
-      getToken: () => "tok-1",
-    }).downloadRunExport("r1", "csv");
+    const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv");
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.problem.code).toBe("BAD_RESPONSE");
     }
-    expect(seenInit?.headers).toEqual({ authorization: "Bearer tok-1" });
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport surfaces export problem codes", async () => {

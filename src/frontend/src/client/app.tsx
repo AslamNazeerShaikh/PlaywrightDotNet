@@ -19,7 +19,7 @@ import {
   type UpdateProfileInput,
   type UpdateSessionInput,
 } from "./lib/api.ts";
-import { clearToken, hasAnyPermission, loadToken, saveToken } from "./lib/auth.ts";
+import { hasAnyPermission } from "./lib/auth.ts";
 import { useRenderLog } from "./lib/debug.ts";
 import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute } from "./lib/router.ts";
@@ -94,16 +94,21 @@ export function App({
   const [updateProfileProblem, setUpdateProfileProblem] = useState<ApiProblem | null>(null);
   const [updatingSession, setUpdatingSession] = useState(false);
   const [updateSessionProblem, setUpdateSessionProblem] = useState<ApiProblem | null>(null);
-  // Auth: the signed-in caller, restored from the tab token on mount. `initialSession` (tests)
-  // bypasses storage entirely; `restoring` covers the one me-fetch so the login page never
-  // flashes for a signed-in operator.
-  const [session, setSession] = useState<{ me: MeResponse } | null>(() => initialSession ?? null);
-  const [restoring, setRestoring] = useState(
-    () => initialSession === undefined && loadToken() !== null,
-  );
+  type AuthState =
+    | { kind: "restoring" }
+    | { kind: "anonymous"; email: string; problem: ApiProblem | null; notice: ApiProblem | null }
+    | { kind: "setup"; email: string; problem: ApiProblem | null }
+    | { kind: "signedIn"; me: MeResponse };
+  // Auth: state machine. Always start restoring unless a test seam supplies a session.
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    if (initialSession !== undefined) {
+      return initialSession === null
+        ? { kind: "anonymous", email: "", problem: null, notice: null }
+        : { kind: "signedIn", me: initialSession.me };
+    }
+    return { kind: "restoring" };
+  });
   const [authBusy, setAuthBusy] = useState(false);
-  const [authProblem, setAuthProblem] = useState<ApiProblem | null>(null);
-  const [pendingSetupEmail, setPendingSetupEmail] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
   const probeBusy = useRef(false);
   const lastProbeAt = useRef(0);
@@ -115,10 +120,7 @@ export function App({
   // Default client must be identity-stable: a fresh object per render would
   // refire every [client] effect below and spiral into a fetch loop. The bearer
   // token is read live from storage per request, so sign-in needs no rebuild.
-  const fallbackClient = useMemo(
-    () => createApiClient(undefined, { getToken: () => loadToken() }),
-    [],
-  );
+  const fallbackClient = useMemo(() => createApiClient(undefined), []);
   const activeClient = client ?? fallbackClient;
   // Stable sink for pages that log to the killfeed from their own effects.
   const logEvent = useCallback((event: LogEvent) => setEvents((e) => pushEvent(e, event)), []);
@@ -416,39 +418,83 @@ export function App({
     return true;
   }
 
-  // Auth handlers. The token lives in tab storage; the shell only holds the caller snapshot.
-  function signOut() {
-    clearToken();
-    setSession(null);
-    setPendingSetupEmail(null);
-    setAuthProblem(null);
+  const sessionNotice: ApiProblem = {
+    status: 401,
+    title: "Your session ended. Sign in again to pick up any account changes.",
+    detail: "",
+    code: "UNAUTHENTICATED",
+  };
+
+  // Auth handlers. Session lives in an HttpOnly cookie owned by the BFF.
+  async function signOut() {
+    let failed = false;
+    try {
+      const { result } = await activeClient.signOut();
+      if (!result.ok) {
+        failed = true;
+      }
+    } catch {
+      failed = true;
+    } finally {
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
+      setAuthState({
+        kind: "anonymous",
+        email: "",
+        problem: null,
+        notice: failed ? sessionNotice : null,
+      });
+    }
   }
 
-  // A 401 on a page-level call means the token died: drop it and show the same
-  // session-ended notice as the /me refresh path.
+  // A 401 on a page-level call means the session died.
   function endSession() {
-    clearToken();
-    setSession(null);
-    setPendingSetupEmail(null);
-    setAuthProblem({
-      status: 401,
-      title: "Your session ended. Sign in again to pick up any account changes.",
-      detail: "",
-      code: "UNAUTHENTICATED",
-    });
+    try {
+      sessionStorage.removeItem("jobscrape.setupEmail");
+    } catch {
+      // ignore
+    }
+    setAuthState({ kind: "anonymous", email: "", problem: sessionNotice, notice: null });
   }
 
   async function refreshMe(): Promise<boolean> {
-    const { result } = await activeClient.fetchMe();
+    const { result } = await activeClient.fetchSession();
     if (result.ok) {
-      setSession({ me: result.value });
-      return true;
+      const value = result.value as {
+        email?: string;
+        authenticated?: boolean;
+        expired?: boolean;
+        mustChangePassword?: boolean;
+      };
+      if (value.mustChangePassword) {
+        const email = value.email ?? safeSessionStorage("jobscrape.setupEmail") ?? "";
+        setAuthState({ kind: "setup", email, problem: null });
+        return false;
+      }
+      if (value.email) {
+        setAuthState({ kind: "signedIn", me: value as MeResponse });
+        return true;
+      }
+      if (value.authenticated === false && value.expired) {
+        setAuthState({ kind: "anonymous", email: "", problem: null, notice: sessionNotice });
+        return false;
+      }
+      const setupEmail = safeSessionStorage("jobscrape.setupEmail");
+      if (setupEmail) {
+        setAuthState({ kind: "setup", email: setupEmail, problem: null });
+        return false;
+      }
+      setAuthState({ kind: "anonymous", email: "", problem: null, notice: null });
+      return false;
     }
     if (result.problem.status === 401) {
       endSession();
       return false;
     }
-    setAuthProblem(result.problem);
+    setAuthState({ kind: "anonymous", email: "", problem: result.problem, notice: null });
     return false;
   }
 
@@ -458,12 +504,23 @@ export function App({
     try {
       const { result } = await activeClient.login(input);
       if (!result.ok) {
-        setAuthProblem(result.problem);
+        setAuthState({ kind: "anonymous", email: "", problem: result.problem, notice: null });
         return false;
       }
-      saveToken(result.value.token);
-      setAuthProblem(null);
-      setPendingSetupEmail(null);
+      if (result.value.mustChangePassword) {
+        try {
+          sessionStorage.setItem("jobscrape.setupEmail", input.email);
+        } catch {
+          // ignore
+        }
+        setAuthState({ kind: "setup", email: input.email, problem: null });
+        return true;
+      }
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
       await refreshMe();
       return true;
     } finally {
@@ -477,16 +534,21 @@ export function App({
     try {
       const { result } = await activeClient.setupPassword(input);
       if (!result.ok) {
-        // Setup already ran: fall back to sign-in instead of stranding the operator.
         if (result.problem.code === "PASSWORD_SETUP_COMPLETE") {
-          setPendingSetupEmail(null);
+          try {
+            sessionStorage.removeItem("jobscrape.setupEmail");
+          } catch {
+            // ignore
+          }
         }
-        setAuthProblem(result.problem);
+        setAuthState({ kind: "setup", email: input.email, problem: result.problem });
         return false;
       }
-      saveToken(result.value.token);
-      setAuthProblem(null);
-      setPendingSetupEmail(null);
+      try {
+        sessionStorage.removeItem("jobscrape.setupEmail");
+      } catch {
+        // ignore
+      }
       await refreshMe();
       return true;
     } finally {
@@ -494,27 +556,26 @@ export function App({
     }
   }
 
-  // Token restore: one me-fetch on mount when storage holds a token. Skipped for the
-  // `initialSession` test seam and when already signed in.
-  const restoreRef = useRef(refreshMe);
-  restoreRef.current = refreshMe;
-  const restoringRef = useRef(restoring);
-  restoringRef.current = restoring;
+  // Restore: always attempt GET /bff/session on mount (skipped for test seam).
   useEffect(() => {
-    if (initialSession !== undefined || !restoringRef.current) {
+    if (initialSession !== undefined) {
       return;
     }
     let alive = true;
     void (async () => {
-      await restoreRef.current();
+      const setupEmail = safeSessionStorage("jobscrape.setupEmail");
+      await refreshMe();
+      // If restore found anonymous but a setup email is stored, prefer setup state.
+      if (alive && setupEmail && authState.kind === "anonymous") {
+        setAuthState({ kind: "setup", email: setupEmail, problem: null });
+      }
       if (alive) {
-        setRestoring(false);
+        // restoring already replaced by refreshMe; ensure not stuck
       }
     })();
     return () => {
       alive = false;
     };
-    // Active client is identity-stable; run once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -523,7 +584,15 @@ export function App({
 
   // Me-driven navigation: the admin stops appear only with the matching visibility. The
   // order follows ROUTES, so users/roles/quotas land at the rail's end.
-  const me = session?.me ?? null;
+  const me = authState.kind === "signedIn" ? authState.me : null;
+  const restoring = authState.kind === "restoring";
+  const pendingSetupEmail = authState.kind === "setup" ? authState.email : null;
+  const authProblem =
+    authState.kind === "anonymous"
+      ? (authState.problem ?? authState.notice)
+      : authState.kind === "setup"
+        ? authState.problem
+        : null;
   const visibleRoutes = useMemo(() => {
     const base: DeckRoute[] = ["overview", "health"];
     if (me !== null) {
@@ -605,7 +674,12 @@ export function App({
             </span>
           )}
           {me !== null && (
-            <button type="button" className="density-btn" onClick={signOut} title="Sign out">
+            <button
+              type="button"
+              className="density-btn"
+              onClick={() => void signOut()}
+              title="Sign out"
+            >
               SIGN OUT
             </button>
           )}
@@ -655,8 +729,12 @@ export function App({
             problem={authProblem}
             onLogin={handleLogin}
             onFirstLogin={() => {
-              setPendingSetupEmail(lastEmail);
-              setAuthProblem(null);
+              try {
+                sessionStorage.setItem("jobscrape.setupEmail", lastEmail);
+              } catch {
+                // ignore
+              }
+              setAuthState({ kind: "setup", email: lastEmail, problem: null });
             }}
           />
         )}
@@ -673,8 +751,12 @@ export function App({
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => {
-                  setPendingSetupEmail(null);
-                  setAuthProblem(null);
+                  try {
+                    sessionStorage.removeItem("jobscrape.setupEmail");
+                  } catch {
+                    // ignore
+                  }
+                  setAuthState({ kind: "anonymous", email: "", problem: null, notice: null });
                 }}
               >
                 BACK TO SIGN IN
@@ -857,6 +939,14 @@ function useNow(): string {
     return () => clearInterval(timer);
   }, []);
   return formatClock(now.toISOString());
+}
+
+function safeSessionStorage(key: string): string | null {
+  try {
+    return typeof sessionStorage === "undefined" ? null : sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function readHash(): DeckRoute {

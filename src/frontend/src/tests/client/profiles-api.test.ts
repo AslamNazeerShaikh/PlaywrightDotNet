@@ -33,14 +33,14 @@ describe("profiles api", () => {
       return { ok: true, status: 200, json: async () => ({ items: [profile], total: 1 }) };
     };
 
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
     const { result } = await client.listProfiles();
 
     expect(result).toEqual({ ok: true, value: { items: [profile], total: 1 } });
     expect(calls).toEqual([
       {
         url: "/api/v1/search-profiles",
-        init: { method: "GET", headers: { authorization: "Bearer tok-1" } },
+        init: { method: "GET", credentials: "same-origin" },
       },
     ]);
   });
@@ -63,15 +63,12 @@ describe("profiles api", () => {
       companies: ["Infosys", "TCS"],
     };
 
-    const { result } = await createApiClient(fetchImpl, { getToken: () => "tok-1" }).createProfile(
-      input,
-    );
+    const { result } = await createApiClient(fetchImpl).createProfile(input);
 
     expect(result).toEqual({ ok: true, value: profile });
     expect(seen?.method).toBe("POST");
     expect(seen?.headers).toEqual({
       "content-type": "application/json",
-      authorization: "Bearer tok-1",
     });
     expect(JSON.parse(String(seen?.body))).toEqual(input);
   });
@@ -100,16 +97,12 @@ describe("profiles api", () => {
       enabled: true,
     };
 
-    const { result } = await createApiClient(fetchImpl, { getToken: () => "tok-1" }).updateProfile(
-      "p1",
-      input,
-    );
+    const { result } = await createApiClient(fetchImpl).updateProfile("p1", input);
 
     expect(result).toEqual({ ok: true, value: profile });
     expect(seen?.method).toBe("PUT");
     expect(seen?.headers).toEqual({
       "content-type": "application/json",
-      authorization: "Bearer tok-1",
     });
     expect(JSON.parse(String(seen?.body))).toEqual(input);
   });
