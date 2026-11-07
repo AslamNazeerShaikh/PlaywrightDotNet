@@ -1,6 +1,6 @@
 # pstack model configuration. One line per role. Delete a line to fall back to inherit-parent (the parent chat model).
-# `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit the task `model`). Alias entries in a panel list still count toward its fan-out.
-# Values are OpenCode model IDs (`provider/model-id`, see `opencode models`). Cursor slugs (claude-opus-5-5-xhigh, grok-4.7-xhigh-fast) are not valid here.
+# `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit the subagent `model`). Alias entries in a panel list still count toward its fan-out.
+# Values are `provider/model#variant` (see `opencode models`; variants per model in `opencode api GET /api/model`). The variant carries the effort. Cursor slugs (claude-opus-5-5-xhigh, grok-4.7-xhigh-fast) are not valid here.
 # budget: large (xhigh)
 # thinking: muse-spark runs #high, inkling-2-small-free runs #max, deepseek-v4.1-flash runs #max. DeepSeek carries hardest tasks, why synthesizer, architect runners, arena cross-judge pool, and interrogate reviewers.
 # parent session: run the interactive session on opencode-go/muse-spark-1.3-contributor#high; role lines below only affect subagents.
