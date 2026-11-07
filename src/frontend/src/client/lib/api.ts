@@ -721,9 +721,13 @@ async function toProblem(res: {
   }
 }
 
+/** Backoff renders are capped at a day so absurd header values cannot reach the page. */
+const MAX_RETRY_AFTER_SECONDS = 86400;
+
 /**
  * Parses a Retry-After header value to whole seconds from now, else null. Accepts delta-seconds and
- * HTTP-date (RFC 9110 §15.5.3); a negative delta-seconds clamps to 0, and a past HTTP-date yields 0.
+ * HTTP-date (RFC 9110 §15.5.3); a negative delta-seconds clamps to 0, a past HTTP-date yields 0,
+ * and any value above MAX_RETRY_AFTER_SECONDS clamps to the cap.
  */
 function parseRetryAfter(raw: string | null): number | null {
   if (raw === null) {
@@ -734,13 +738,14 @@ function parseRetryAfter(raw: string | null): number | null {
     return null;
   }
   if (/^-?\d+$/.test(value)) {
-    return Math.max(0, Number(value));
+    const seconds = Number(value);
+    return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, seconds));
   }
   const at = Date.parse(value);
   if (Number.isNaN(at)) {
     return null;
   }
-  return Math.max(0, Math.ceil((at - Date.now()) / 1000));
+  return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, Math.ceil((at - Date.now()) / 1000)));
 }
 
 /** Reads the CSRF double-submit token from the (JS-readable) cookie, or null. */

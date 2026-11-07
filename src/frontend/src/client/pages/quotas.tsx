@@ -171,7 +171,7 @@ export function QuotasPage({
         [scope]: {
           status: 400,
           title: message,
-          detail: message,
+          detail: "Use a fixed span like 00:01:00 (hh:mm:ss), up to 24:00:00.",
           code: "VALIDATION_FAILED",
           errors: { window: [message] },
         },
