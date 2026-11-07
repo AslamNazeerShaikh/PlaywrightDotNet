@@ -80,7 +80,7 @@ namespace JobScrape.Application.Features.Identity
                 );
             }
 
-            if (id.Value.ToString() == _caller.ActorId)
+            if (Guid.TryParse(_caller.ActorId, out var callerId) && callerId == id.Value)
             {
                 return Result.Fail(Errors.AccessDenied());
             }

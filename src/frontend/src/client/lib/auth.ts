@@ -12,5 +12,8 @@ export function hasAnyPermission(me: MeResponse | null, ...keys: string[]): bool
 
 /** Whether a 401 means the token died (redirect to login) as opposed to a bad login attempt. */
 export function isTokenFailure(problem: { status: number; code: string }): boolean {
-  return problem.status === 401 && problem.code === "UNAUTHENTICATED";
+  return (
+    problem.status === 401 &&
+    (problem.code === "UNAUTHENTICATED" || problem.code === "SESSION_REVOKED")
+  );
 }

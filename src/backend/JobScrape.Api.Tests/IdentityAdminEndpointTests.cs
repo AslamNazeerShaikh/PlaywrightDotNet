@@ -129,7 +129,7 @@ namespace JobScrape.Api.Tests
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
+            Assert.Equal("SESSION_REVOKED", body.GetProperty("code").GetString());
         }
 
         [Fact]
@@ -216,6 +216,9 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+            var errors = body.GetProperty("errors");
+            Assert.True(errors.TryGetProperty("newPassword", out var newPasswordErrors));
+            Assert.NotEmpty(newPasswordErrors.EnumerateArray());
         }
 
         [Fact]
@@ -233,6 +236,9 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+            var errors = body.GetProperty("errors");
+            Assert.True(errors.TryGetProperty("newPassword", out var newPasswordErrors));
+            Assert.NotEmpty(newPasswordErrors.EnumerateArray());
         }
 
         [Fact]
@@ -365,6 +371,68 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("ACCESS_DENIED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task AssignRoleToNonSelfAdminIs200ThenTheirOldTokenIsRevoked()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"otheradmin-{Guid.NewGuid():N}@example.com";
+            const string temporary = "Temporary1!!";
+            using var created = await admin.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = temporary },
+                Ct
+            );
+            created.EnsureSuccessStatusCode();
+            var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var userId = createdBody.GetProperty("id").GetGuid();
+            using var anonymous = factory.CreateClient();
+            using var setup = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = temporary,
+                    newPassword = "Other-Password2@@",
+                },
+                Ct
+            );
+            setup.EnsureSuccessStatusCode();
+            using var assignedAdmin = await admin.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Admin" },
+                Ct
+            );
+            assignedAdmin.EnsureSuccessStatusCode();
+            using var other = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Other-Password2@@",
+                Ct
+            );
+            using var seedOperator = await admin.PostAsJsonAsync(
+                "api/v1/roles",
+                new { name = "Operator" },
+                Ct
+            );
+            Assert.True(
+                seedOperator.StatusCode == HttpStatusCode.Created
+                    || seedOperator.StatusCode == HttpStatusCode.Conflict
+            );
+
+            using var response = await admin.PostAsJsonAsync(
+                $"api/v1/users/{userId:D}/roles",
+                new { role = "Operator" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var stale = await other.GetAsync("api/v1/auth/me", Ct);
+            Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
+            var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("SESSION_REVOKED", staleBody.GetProperty("code").GetString());
         }
 
         [Fact]
@@ -504,7 +572,7 @@ namespace JobScrape.Api.Tests
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
+            Assert.Equal("SESSION_REVOKED", body.GetProperty("code").GetString());
         }
 
         [Fact]

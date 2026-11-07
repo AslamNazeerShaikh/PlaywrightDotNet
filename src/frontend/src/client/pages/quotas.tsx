@@ -98,7 +98,7 @@ export function QuotasPage({
 }: {
   client: ApiClient;
   canWrite: boolean;
-  onUnauthorized: () => void;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("QuotasPage");
   const [quotas, setQuotas] = useState<QuotaResponse[] | null>(null);
@@ -111,7 +111,7 @@ export function QuotasPage({
 
   async function fail(problem: ApiProblem): Promise<boolean> {
     if (isTokenFailure(problem)) {
-      onUnauthorized();
+      onUnauthorized(problem);
       return true;
     }
     return false;

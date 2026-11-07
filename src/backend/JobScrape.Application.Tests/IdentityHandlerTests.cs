@@ -1011,6 +1011,10 @@ namespace JobScrape.Application.Tests
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Validation, result.Error.Kind);
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
+            var fieldMap = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Contains("newPassword", fieldMap.Keys);
         }
 
         [Fact]
@@ -1030,6 +1034,10 @@ namespace JobScrape.Application.Tests
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorKind.Validation, result.Error.Kind);
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
+            var fieldMap = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Contains("newPassword", fieldMap.Keys);
         }
 
         [Fact]

@@ -122,6 +122,7 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "BFF_NOT_FOUND" ||
     code === "INVALID_CREDENTIALS" ||
     code === "UNAUTHENTICATED" ||
+    code === "SESSION_REVOKED" ||
     code === "ACCESS_DENIED" ||
     code === "USER_NOT_FOUND" ||
     code === "ROLE_NOT_FOUND" ||

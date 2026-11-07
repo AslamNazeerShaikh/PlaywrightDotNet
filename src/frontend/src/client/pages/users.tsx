@@ -22,7 +22,7 @@ export function UsersPage({
 }: {
   client: ApiClient;
   me: MeResponse;
-  onUnauthorized: () => void;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("UsersPage");
   const admin = hasAnyPermission(me, "users.read", "users.write");
@@ -45,7 +45,7 @@ export function UsersPage({
 
   async function fail(problem: ApiProblem): Promise<boolean> {
     if (isTokenFailure(problem)) {
-      onUnauthorized();
+      onUnauthorized(problem);
       return true;
     }
     return false;

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/index.ts",
+    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",

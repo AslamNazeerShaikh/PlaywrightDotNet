@@ -209,7 +209,7 @@ Codes use uppercase snake case and are stable across releases. The cockpit maps 
 | `ErrorKind` | Actual `Code`(s) | HTTP status (API) |
 |---|---|---|
 | `Validation` | `VALIDATION_FAILED` | `400` |
-| `Unauthorized` | `INVALID_CREDENTIALS`, `UNAUTHENTICATED` | `401` |
+| `Unauthorized` | `INVALID_CREDENTIALS`, `UNAUTHENTICATED`, `SESSION_REVOKED` | `401` |
 | `NotFound` | `PROFILE_NOT_FOUND`, `BROWSER_PROFILE_NOT_FOUND` | `404` |
 | `Conflict` | `PROFILE_DISABLED`, `SOURCE_DISABLED` | `409` |
 | `Forbidden` | `COMPLIANCE_BLOCKED` | `403` |

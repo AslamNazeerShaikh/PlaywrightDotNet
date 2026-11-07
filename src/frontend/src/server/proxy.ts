@@ -119,7 +119,7 @@ export async function proxyRequest(
   outHeaders.delete("set-cookie");
 
   if (upstream.status === 401) {
-    // Read the body once: only UNAUTHENTICATED (JWT challenge, token death)
+    // Read the body once: only UNAUTHENTICATED or SESSION_REVOKED (JWT challenge, token death)
     // clears the session. INVALID_CREDENTIALS and friends keep the session.
     const text = await upstream.text();
     let code: string | undefined;
@@ -129,7 +129,7 @@ export async function proxyRequest(
     } catch {
       code = undefined;
     }
-    if (code === "UNAUTHENTICATED") {
+    if (code === "UNAUTHENTICATED" || code === "SESSION_REVOKED") {
       const secure = new URL(req.url).protocol === "https:";
       for (const name of SESSION_COOKIE_NAMES) {
         outHeaders.append("set-cookie", clearCookieHeader(name, secure));

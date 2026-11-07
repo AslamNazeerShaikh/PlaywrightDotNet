@@ -138,7 +138,7 @@ flowchart LR
 
 | Mode | Process | Port | Notes |
 |---|---|---|---|
-| Development | `bun --hot src/server/index.ts` + Tailwind watch | `5173` | HMR, source maps, detailed errors |
+| Development | `bun --hot src/server/dev.ts` + Tailwind watch | `5173` | HMR, source maps, detailed errors |
 | Development | .NET API (`dotnet run --project src/JobLens.Api`) | `5080` | Loopback only |
 | Production | `bun dist/server/index.js` or compiled binary | `5173` | Prebuilt assets, minified, no HMR |
 | Production | .NET API | `5080` | Loopback only; bearer token required |
@@ -319,7 +319,7 @@ PlaywrightDotNet/
   "trustedDependencies": [],
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "bun --hot src/server/index.ts",
+    "dev:server": "bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",

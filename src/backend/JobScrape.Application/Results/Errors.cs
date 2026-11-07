@@ -523,6 +523,25 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates an authentication failure for a token whose version no longer
+        /// matches the account (a password change, lockout, or admin-driven role
+        /// change bumped it). Returned by the JWT challenge handler, never by
+        /// domain or application code. The detail is neutral: it never says
+        /// which change bumped the version.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo SessionRevoked()
+        {
+            return new ErrorInfo(
+                "SESSION_REVOKED",
+                "Session ended.",
+                "Your account changed. Sign in again.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates an authorization failure for an authenticated caller
         /// missing the required role or permission. Returned by the
         /// authorization handlers, never by domain or application code.
