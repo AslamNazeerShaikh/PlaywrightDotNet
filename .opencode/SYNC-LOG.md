@@ -5,6 +5,16 @@ Source of truth: https://github.com/backnotprop/pstack (standalone mirror of `cu
 Vendor packs (dotnet, testing, UI, graphify) and ECC are synced separately; see `docs/18-harness-packs.md`.
 The `.claude/` tree is a separate port checkout and is never touched by these syncs.
 
+## 2026-11-07 — mirror f104aa8 (0.15.36), OpenCode V2 (2.2.6) audit
+
+- Global OpenCode config removed (`~/.config/opencode/`, backed up to `~/opencode-global-config-backup-2026-11-07.tar.gz`). Config is repo-only now.
+- Synced 26 files that were still raw upstream to the mirror (architect, arena, automate-me, create-verification-skill, how, interrogate, ketchup, maintain-verification-skill, poteto-help, poteto-mode playbooks and `scripts/worktree-audit.sh`, recall, reflect and its reviewer references, show-me-your-work, statechart scripts, swarm, why).
+- Rewrote the mirror's V1 OpenCode lines for V2: `task`/`subagent_type` to `subagent`/`agent`, settings file `.opencode/pstack-models.md`, project skill folder `.opencode/skills/`, transcripts via `opencode session list`/`export`, and repo-local install text in poteto-help.
+- `poteto-mode`, `agents/poteto-agent.md`, `no-comments`: `poteto-agent` and `comment-sicko` are registered V2 subagents (verified with `opencode debug agents`); spawn them by `agent` ID.
+- `agents/comment-sicko.md`: body now equals the mirror (completes the REVIEW sync); dropped `edit: deny`, which blocked its comment deletions. `skills/no-comments/references/comment-sicko.md` synced too.
+- `setup-pstack`, `pstack-models.md` comments, `docs/harness/opencode.md`: role values are `provider/model#variant`; the adapter now maps to V2 tools (`subagent`, `skill` with `id`, `shell`, `background`, `sessionID`).
+- `opencode.json`: V1 keys migrated to V2 (`agents`, `system`, `permissions` arrays, `model#variant`); removed the `command` block, which Markdown commands always replaced; dropped MCP `enabled`. Commands use `subagent: true`, and four ECC commands gained frontmatter.
+
 ## 2026-11-06 — mirror 0.15.36
 
 - `skills/poteto-mode/SKILL.md`: pulled upstream wording fixes (agent-facing prose rule, deslop line, control-skill line, babysit line, pause-safely line, rejected-slug protocol). Appended an OpenCode-only Harness section adapted from upstream. Kept the project tables rule in Writing the reply.

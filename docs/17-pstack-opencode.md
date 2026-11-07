@@ -1,18 +1,22 @@
 # pstack on OpenCode
 
 pstack (poteto's agent workflow plugin, [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack))
-is installed project-locally for OpenCode. It turns the agent into a rigorous
-engineering team: match the task to a playbook, run the steps, verify against
-the real artifact. The goal is less, higher-quality code.
+is installed project-locally for OpenCode V2 (2.2.6) from the
+[backnotprop/pstack](https://github.com/backnotprop/pstack) mirror. It turns
+the agent into a rigorous engineering team: match the task to a playbook, run
+the steps, verify against the real artifact. The goal is less, higher-quality
+code.
+
+OpenCode configuration for this repo lives only in `.opencode/` and
+`AGENTS.md`. There is no global `~/.config/opencode/` config: no global
+skills, agents, commands, plugins, or instructions leak into sessions here.
 
 ## Use
 
-Two steps (mirrors upstream `get started`):
-
-1. Run `/setup-pstack`: pick a reasoning budget and per-role models. It writes
-   `.opencode/pstack-models.md` (auto-loaded every session via `instructions`
-   in `.opencode/opencode.json`). Until you run it, every role runs on the
-   parent chat model.
+1. Optional: run `/setup-pstack` to pick a reasoning budget and per-role
+   models. It rewrites `.opencode/pstack-models.md`, auto-loaded every session
+   via `instructions` in `.opencode/opencode.json`. A role value is
+   `provider/model#variant`, where the variant carries the effort.
 2. Use `/poteto-mode` at the start of any task that needs rigor. It matches
    your request to one of 23 playbooks, opens a todo list from the playbook's
    steps, and routes to the other skills as the steps need them.
@@ -25,91 +29,68 @@ Stuck, or unsure which skill fits? Ask `/poteto-help`.
 
 ## Layout
 
-| Upstream (`pstack/`) | This repo |
+| Mirror (`backnotprop/pstack`) | This repo |
 | --- | --- |
-| `skills/` (58 skills) | `.opencode/skills/` (verbatim copy; `../<name>/SKILL.md` links intact) |
-| `agents/` (`poteto-agent`, `comment-sicko`) | `.opencode/agents/` (frontmatter converted to `mode: subagent`) |
-| Slash invocation (`/poteto-mode`) | `.opencode/commands/` (34 commands, one per non-`principle-*` skill) |
+| `skills/` (58 skills) | `.opencode/skills/`. Mirror copies, with OpenCode edits in `poteto-mode`, `setup-pstack`, and `no-comments`, and V2 corrections to the mirror's generic OpenCode lines (see Re-syncing) |
+| `agents/` (`poteto-agent`, `comment-sicko`) | `.opencode/agents/`, registered as V2 subagents (`mode: subagent`). `poteto-agent` carries an OpenCode harness note |
+| Slash invocation (`/poteto-mode`) | `.opencode/commands/`, one loader per non-`principle-*` skill, plus `/deslop` |
 | `docs/guide/`, `README.md` | `.opencode/docs/guide/`, `.opencode/README.md` (kept so skill-relative links resolve) |
-| `docs/harness/claude-code.md` | Kept at `.opencode/docs/harness/claude-code.md` for reference; OpenCode sessions use `.opencode/docs/harness/opencode.md` instead |
+| `docs/harness/claude-code.md` | Kept for reference; OpenCode sessions use `.opencode/docs/harness/opencode.md` |
 | `~/.cursor/rules/pstack-models.mdc` | `.opencode/pstack-models.md` |
-| `automations/benny` | Not copied. It runs on Cursor Automations (Cursor-only); see the adapter's skip rule |
+| `cursor-team-kit/skills/deslop` (upstream) | `.opencode/skills/deslop/` (verbatim) |
+| `automations/benny` | Not copied. It runs on Cursor Automations (Cursor-only) |
 
-Skill files are verbatim upstream copies so a future pstack update is a
-re-copy plus diff. OpenCode-specific mappings (tools, subagents, models,
-paths, skipped Cursor-only steps) live only in
-`.opencode/docs/harness/opencode.md`, which sessions read once per task.
-`cursor-team-kit` skills referenced by playbooks (`deslop`, `control-cli`,
-`control-ui`) are not installed; those steps are skipped with a one-line note.
+OpenCode-specific mappings (tools, subagents, models, paths, skipped
+Cursor-only steps) live in `.opencode/docs/harness/opencode.md`, which
+sessions read once per task. `control-cli` and `control-ui` are not
+installed; those steps are skipped with a one-line note and CLI/UI work is
+verified with `dotnet test` and Playwright.
 
-## Cross-check against pstack-claude (michael-denyer)
+## OpenCode V2 facts this setup relies on
 
-A third-party port ([pstack-claude](https://github.com/michael-denyer/pstack-claude))
-targets Claude Code, Codex, Pi, Copilot, Muse, and (via `~/.agents/skills/`
-symlinks) OpenCode. It was used to audit this install. Findings and deltas:
+- Subagents spawn with the `subagent` tool (`agent`, `description`, `prompt`,
+  optional `model`, `background`, `sessionID`). V1's `task` tool and
+  `subagent_type` do not exist. Nesting depth is 1, so fan-out runs from the
+  parent session.
+- `.opencode/agents/*.md` with `mode: subagent` registers the agent;
+  `opencode debug agents` lists `poteto-agent` and `comment-sicko`.
+- Models are `provider/model#variant` for agents, commands, and subagent
+  calls. Variant names differ per model; `opencode api GET /api/model` lists
+  them. The root `model` drops any variant.
+- The `skill` tool takes `id`. Most pstack skills set
+  `disable-model-invocation: true`, which hides them from the advertised list,
+  but the tool still loads them by ID.
+- `experimental.todo: true` enables `todowrite` (off by default in V2).
+- A Markdown command replaces a same-named JSON `commands` entry, so commands
+  are defined only as `.opencode/commands/*.md`.
+- V2 reads `AGENTS.md` only, never `CLAUDE.md`. It also discovers project
+  `.claude/skills/`; every skill there has a same-named copy in
+  `.opencode/skills/`, which takes precedence.
 
-- **Our 58 skills are byte-identical to upstream `cursor/plugins` HEAD.**
-  Their sync pin lags HEAD slightly; nothing in our tree is stale.
-- **`deslop` was the one load-bearing gap.** Upstream `poteto-mode`,
-  `multi-phase-plan`, and `opening-a-pr` invoke `/deslop` from
-  `cursor-team-kit`, which we had not installed. Added verbatim from
-  upstream (`cursor-team-kit/skills/deslop`) plus the `/deslop` command.
-  `control-cli` / `control-ui` are referenced too but need Cursor IDE /
-  browser harness tooling; like pstack-claude, we do not port them (see the
-  adapter's skip rule) and verify CLI/UI work with `dotnet test` + Playwright.
-- **`make-bot-ui` is kept, they drop it.** The skill is entirely
-  Cursor-Automations-bound (webhook routines, `api2.cursor.sh`) and can never
-  run here, so pstack-claude excludes it. We keep the verbatim copy so
-  skill-relative links stay intact and re-syncs stay diff-clean; the adapter
-  marks the whole skill skip-entirely.
-- **Their standalone `babysit` skill is not ported.** It is port-authored
-  (not upstream) and leans on Claude's `loop` skill. On OpenCode, PR
-  shepherding stays with `/poteto-mode`'s Babysit playbook (see adapter).
-- **Their extra bundle is not copied.** `fix-ci`, `fix-merge-conflicts`,
-  `get-pr-comments`, `make-pr-easy-to-review`, `what-did-i-get-done`,
-  `thermos`, and the thermo-nuclear reviews are unreferenced by pstack
-  skills; they are easy verbatim adds from upstream if a workflow needs them.
-- **Model-sheet shape agrees.** Their per-runtime sheet for OpenCode is the
-  global `~/.config/opencode/pstack-models.md` loaded via `instructions`;
-  ours is the project-local equivalent (matches the project-local skills),
-  with the same role labels as the skills. Their extra roles
-  (`strongest judgment`, `thermos reviewers`) are port-specific and unused by
-  verbatim skills.
-- **Routing agrees.** OpenCode has no SessionStart hook, so both ports fall
-  back to a standing instruction: ours is the `AGENTS.md` section above.
+## Re-syncing with the mirror
 
-## Re-syncing with upstream
-
-Skill files are verbatim copies of `cursor/plugins` HEAD plus verbatim
-`deslop` from `cursor-team-kit`. To update (deslop aside, everything lives
-under `pstack/` upstream):
+Check the mirror's `SYNC-LOG.md`, then diff and copy changed files:
 
 ```sh
-git clone --depth 1 --filter=blob:none --sparse https://github.com/cursor/plugins.git /tmp/pstack-up
-cd /tmp/pstack-up && git sparse-checkout set pstack/skills pstack/docs pstack/README.md pstack/LICENSE cursor-team-kit/skills/deslop
-diff -rq pstack/skills/ <repo>/.opencode/skills/ | grep -v "Only in <repo>"
+git clone --depth 1 https://github.com/backnotprop/pstack.git /tmp/pstack-bn
+diff -rq /tmp/pstack-bn/skills <repo>/.opencode/skills | grep -v "Only in <repo>"
 ```
 
-Copy over changed files (never rename: `name` must equal the directory),
-re-run the validation below, and regenerate `/deslop` only if its
-frontmatter changed. Upstream `plugin.json`/`docs/harness/claude-code.md`
-are reference-only here.
+Copy changed files over (never rename: `name` must equal the directory),
+except the three OpenCode-edited skills (`poteto-mode`, `setup-pstack`,
+`no-comments`), which are merged by hand. The mirror's harness-generic lines
+still name V1 OpenCode tools, so after copying, rewrite them: `` `task` in
+OpenCode (`subagent_type: general`) `` becomes `` `subagent` in OpenCode
+(`agent: general`) ``, the settings file for OpenCode is
+`.opencode/pstack-models.md`, the project skill folder is `.opencode/skills/`,
+and OpenCode transcripts are `opencode session list` / `export`. Record the
+sync in `.opencode/SYNC-LOG.md`.
 
 ## Validation
 
-After any skill change, re-run: frontmatter `name` == directory, lowercase
-hyphenated, `description` 1–1024 chars, every `/<command>` has a matching
-skill, every `../<skill>/SKILL.md` and `../../docs|README` link resolves
-under `.opencode/`, `python3 -c "import json; json.load(open('.opencode/opencode.json'))"`,
-and `opencode debug agents` lists `poteto-agent` + `comment-sicko`.
-
-## Conventions
-
-- Spawn playbook delegates as `poteto-agent` (`task` tool,
-  `subagent_type: "poteto-agent"`), fresh per unit of work with consolidated
-  scope. Never run the playbook itself in a `poteto-agent`.
-- Read-only investigation goes to `explore`; implementation delegates go to
-  `general` unless the skill prescribes otherwise.
-- Every role line in `.opencode/pstack-models.md` accepts an OpenCode model ID
-  or `inherit-parent` (run on the parent model). Re-run `/setup-pstack` after
-  `opencode models` changes.
+After any change: every `.opencode/skills/*/SKILL.md` has `name` equal to its
+directory and a `description`; every `.opencode/commands/*.md` has frontmatter
+with a `description`, and each loader names an installed skill;
+`opencode debug config` loads with no warnings; `opencode debug agents` lists
+`poteto-agent` and `comment-sicko` as subagents; and every `#variant` in
+`.opencode/pstack-models.md` appears in that model's `variants`.
