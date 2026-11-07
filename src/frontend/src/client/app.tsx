@@ -540,6 +540,14 @@ export function App({
           } catch {
             // ignore
           }
+          // One-time notice on the sign-in screen, not a stuck setup-page alert.
+          setAuthState({
+            kind: "anonymous",
+            email: input.email,
+            problem: null,
+            notice: result.problem,
+          });
+          return false;
         }
         setAuthState({ kind: "setup", email: input.email, problem: result.problem });
         return false;

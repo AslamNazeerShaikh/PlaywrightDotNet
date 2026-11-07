@@ -721,13 +721,26 @@ async function toProblem(res: {
   }
 }
 
-/** Parses a Retry-After header value (delta seconds) to a number, else null. */
+/**
+ * Parses a Retry-After header value to whole seconds from now, else null. Accepts delta-seconds and
+ * HTTP-date (RFC 9110 §15.5.3); a negative delta-seconds clamps to 0, and a past HTTP-date yields 0.
+ */
 function parseRetryAfter(raw: string | null): number | null {
   if (raw === null) {
     return null;
   }
-  const seconds = Number(raw.trim());
-  return Number.isInteger(seconds) && seconds >= 0 ? seconds : null;
+  const value = raw.trim();
+  if (value === "") {
+    return null;
+  }
+  if (/^-?\d+$/.test(value)) {
+    return Math.max(0, Number(value));
+  }
+  const at = Date.parse(value);
+  if (Number.isNaN(at)) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((at - Date.now()) / 1000));
 }
 
 /** Reads the CSRF double-submit token from the (JS-readable) cookie, or null. */

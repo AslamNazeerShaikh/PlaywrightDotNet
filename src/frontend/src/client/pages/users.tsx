@@ -113,9 +113,10 @@ export function UsersPage({
     if (selectedId !== null && admin) {
       void loadDetail(selectedId);
     }
-    // loadDetail reads the client prop; re-run only on selection change.
+    // loadDetail is a fresh closure per render; re-running on client swap covers a hot-swapped
+    // BFF. admin and selection changes are the other legitimate re-fetch triggers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, admin]);
+  }, [selectedId, admin, client]);
 
   async function submitCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

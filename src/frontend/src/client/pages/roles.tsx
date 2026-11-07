@@ -58,7 +58,12 @@ export function RolesPage({
       if (result.ok) {
         setRoles(result.value.roles);
         setListProblem(null);
-        setSelectedName((current) => current ?? result.value.roles[0]?.name ?? null);
+        // Keep the pinned role across reloads; re-pin to the first only when it vanished.
+        setSelectedName((current) =>
+          current !== null && result.value.roles.some((r) => r.name === current)
+            ? current
+            : (result.value.roles[0]?.name ?? null),
+        );
       } else if (!(await fail(result.problem))) {
         setListProblem(result.problem);
       }
@@ -90,6 +95,7 @@ export function RolesPage({
       if (result.ok) {
         setCreateProblem(null);
         form.reset();
+        setSelectedName(name);
         await loadRoles();
       } else if (!(await fail(result.problem))) {
         setCreateProblem(result.problem);

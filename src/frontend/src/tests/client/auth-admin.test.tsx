@@ -12,6 +12,7 @@ import {
 } from "../../client/lib/api.ts";
 import { hasAnyPermission, isTokenFailure } from "../../client/lib/auth.ts";
 import { parseRoute } from "../../client/lib/router.ts";
+import { AuthProblem } from "../../client/pages/login.tsx";
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -188,6 +189,46 @@ describe("auth api client", () => {
       expect(result.problem.retryAfter).toBe(30);
     }
   });
+
+  test("Retry-After accepts an HTTP-date and clamps a past date to zero", async () => {
+    const body = { status: 429, title: "Too many requests.", detail: "", code: "RATE_LIMITED" };
+    const future = new Date(Date.now() + 60_000).toUTCString();
+    const futureRes = await createApiClient(
+      stubJson(429, body, { "retry-after": future }),
+    ).listUsers();
+    expect(futureRes.result.ok).toBe(false);
+    if (!futureRes.result.ok) {
+      expect(futureRes.result.problem.retryAfter).toBeGreaterThanOrEqual(59);
+      expect(futureRes.result.problem.retryAfter).toBeLessThanOrEqual(60);
+    }
+
+    const pastRes = await createApiClient(
+      stubJson(429, body, { "retry-after": "Thu, 01 Jan 1970 00:00:00 GMT" }),
+    ).listUsers();
+    expect(pastRes.result.ok).toBe(false);
+    if (!pastRes.result.ok) {
+      expect(pastRes.result.problem.retryAfter).toBe(0);
+    }
+  });
+
+  test("Retry-After clamps negative delta-seconds to zero and drops garbage", async () => {
+    const body = { status: 429, title: "Too many requests.", detail: "", code: "RATE_LIMITED" };
+    const negative = await createApiClient(
+      stubJson(429, body, { "retry-after": "-5" }),
+    ).listUsers();
+    expect(negative.result.ok).toBe(false);
+    if (!negative.result.ok) {
+      expect(negative.result.problem.retryAfter).toBe(0);
+    }
+
+    const garbage = await createApiClient(
+      stubJson(429, body, { "retry-after": "banana" }),
+    ).listUsers();
+    expect(garbage.result.ok).toBe(false);
+    if (!garbage.result.ok) {
+      expect(garbage.result.problem.retryAfter).toBeUndefined();
+    }
+  });
 });
 
 describe("auth store", () => {
@@ -347,6 +388,47 @@ describe("auth flow", () => {
     fireEvent.click(queries.getByRole("button", { name: "SET PASSWORD" }));
 
     await waitFor(() => expect(queries.container.textContent).toContain("admin@example.com"));
+  });
+
+  test("setup-password 409 lands back on sign-in with a one-time notice", async () => {
+    const fetchImpl: FetchImpl = async (url, init) => {
+      const reply = (status: number, body: unknown) => ({
+        ok: status >= 200 && status < 300,
+        status,
+        json: async () => body,
+      });
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "GET") {
+        return reply(200, { authenticated: false });
+      }
+      if (url === "/bff/session/setup" && init?.method === "POST") {
+        return reply(409, {
+          status: 409,
+          title: "This account already finished setup. Sign in with its password.",
+          detail: "",
+          code: "PASSWORD_SETUP_COMPLETE",
+        });
+      }
+      return reply(200, { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" });
+    };
+
+    const queries = render(<App client={createApiClient(fetchImpl)} initialRoute="overview" />);
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("button", { name: "First login / setup password" }));
+    await waitFor(() => expect(queries.getByRole("form", { name: "Set password" })).toBeDefined());
+
+    fireEvent.change(queries.getByLabelText("Email"), { target: { value: "seed@example.com" } });
+    fireEvent.change(queries.getByLabelText("Current secret"), { target: { value: "temp" } });
+    fireEvent.change(queries.getByLabelText("New password"), { target: { value: "New-1!!" } });
+    fireEvent.click(queries.getByRole("button", { name: "SET PASSWORD" }));
+
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
+    expect(queries.queryByRole("form", { name: "Set password" })).toBeNull();
+    expect(queries.getByRole("alert").textContent).toContain("PASSWORD_SETUP_COMPLETE");
+    expect(sessionStorage.getItem("jobscrape.setupEmail")).toBeNull();
   });
 
   test("viewer deep links to a hidden stop get access denied", async () => {
@@ -582,5 +664,46 @@ describe("auth wave 2 proving tests", () => {
       expect(queries.getByRole("alert").textContent).toContain("Your session ended"),
     );
     expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined();
+  });
+});
+
+describe("AuthProblem backoff note", () => {
+  test("renders the header value for any 429 code", () => {
+    const { container } = render(
+      <AuthProblem
+        problem={{
+          status: 429,
+          title: "Too many requests.",
+          detail: "",
+          code: "SOME_NEW_429",
+          retryAfter: 45,
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Back off 45s");
+  });
+
+  test("renders no backoff note when the status is not 429", () => {
+    const { container } = render(
+      <AuthProblem
+        problem={{
+          status: 403,
+          title: "Denied.",
+          detail: "",
+          code: "ACCESS_DENIED",
+          retryAfter: 45,
+        }}
+      />,
+    );
+    expect(container.textContent).not.toContain("Back off");
+  });
+
+  test("renders no backoff note without a Retry-After value", () => {
+    const { container } = render(
+      <AuthProblem
+        problem={{ status: 429, title: "Too many requests.", detail: "", code: "RATE_LIMITED" }}
+      />,
+    );
+    expect(container.textContent).not.toContain("Back off");
   });
 });
