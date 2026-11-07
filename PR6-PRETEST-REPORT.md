@@ -133,6 +133,29 @@ Scope of PR: identity domain plus persistence, JWT edge with policies plus rate 
 9. MCP: anonymous 401, pending-token tool call, no-perm token quota-plus-deny.
 10. UI: first-login reload survival, wrong-password no-signout, role-change nav freshness, bearer on profiles/sources/sessions, error plus backoff notes.
 
+### Phase E live verification (2026-11-07, `fix/pr6-pretest-findings` @ de2a8c7)
+
+Backend rebuilt clean (`dotnet build` 0 warnings/0 errors), frontend rebuilt clean (`bun run build`). Fresh DB `/tmp/jobscrape-phasee/jobscrape.db`, seed env `ADMIN_EMAIL=admin@example.com` + `ADMIN_SETUP_SECRET`, JWT secret 64-hex. Backend `https://localhost:5208` (log `/tmp/jobscrape-phasee/backend.log`), cockpit `https://127.0.0.1:3000` (log `/tmp/jobscrape-phasee/cockpit.log`). Chrome 157 headless over CDP for UI flows (shots `/tmp/jobscrape-phasee/shots/`). Servers killed after the run. Result: every Phase E flow PASS, no blocking FAIL. Per-checklist status below; unticked items were not part of Phase E scope and remain unverified.
+
+| # | Result | Evidence |
+|---|---|---|
+| 1 | Verified | Fresh boot seeded admin + `Admin`/`Operator`/`Viewer` roles (ROL-01 shows 3 rows; NEW ROLE shows "All roles already exist"). Quotas: `Api` 10000/`1.00:00:00`, `Mcp` 1000/`1.00:00:00` (`GET /api/v1/quotas`). |
+| 2 | Verified (expectation stale) | Wrong password `401 INVALID_CREDENTIALS`; unknown email `401 INVALID_CREDENTIALS`; pending temp-secret login `401 INVALID_CREDENTIALS` — identical bodies, no account oracle. Item's "pending temp secret 403" no longer matches the wave-0 unified-401 behavior. Bodies compared live, not just codes. |
+| 3 | Not run | Setup 409/401 split, double setup, weak password unchecked. |
+| 4 | Not run | Lockout matrix unchecked. |
+| 5 | Not run | Grant/revoke/last-admin over HTTP unchecked. Role-pin UI only (see 10). |
+| 6 | Not run | Rate-limit matrix unchecked. |
+| 7 | Not run | Idempotency matrix unchecked. |
+| 8 | Not run | Quota API matrix unchecked. UI clear of Window field never fired a mutating request (see 10). |
+| 9 | Not run | MCP matrix unchecked. |
+| 10 | Partial | Sign-in PASS; first-login reload survival PASS (failed sign-in carries `lastEmail`, setup screen survives reload with email prefilled, setup completes to OVERVIEW); session-expired notice PASS (cookie swapped to expired JWT, reload shows "Your session ended. Sign in again to pick up any account changes." + sign-in form); role-pin stability PASS (Viewer pinned across two refreshes, `aria-current=Viewer`); quota inline validation PASS (`.field-error[data-field=window]` = "Window '' is not a valid time span.", zero mutating requests); empty-DB state PASS-as-rendered (diagram 1134x272px vs 1080px viewport; empty `0 0 360 72` branch unreachable on a migrated DB, pinned only by frontend test `TablesDiagram tables={[]}`); wrong-password change-password `401 INVALID_CREDENTIALS` keeps session cookies PASS (E2E via UI not run; curl only). Bearer on profiles/sources/sessions, role-change nav freshness, error plus backoff notes: NOT run. |
+
+Auth-cookie matrix also verified live: anonymous `GET /api/v1/auth/me` `401 UNAUTHENTICATED`; `POST /bff/session/setup` sets `__Host-jobscrape_session` `Path=/; Secure; HttpOnly; SameSite=Strict` plus `jobscrape_csrf` `Path=/; Secure; SameSite=Strict` (not HttpOnly, by design); `GET /bff/session` returns `{authenticated:false}` anonymous, `{authenticated:true-ish, email, roles, permissions, mustChangePassword:false}` after setup; expired JWT through the BFF proxy answers `401 UNAUTHENTICATED` with session + CSRF cookies cleared (`Max-Age=0`); expired JWT through `/bff/session` answers `{authenticated:false, expired:true}` with cookies cleared; `DELETE /bff/session` answers `204` with all cookies cleared. Sign-out clears cookies client-side only; the stateless JWT stays technically valid until `exp`/`ver` bump, by design.
+
+Two observations, not failures: (a) the AUTH-02 "First login / setup password" button reads stale `lastEmail` (only set by a login submit), so a typed-but-unsubmitted email is dropped and a reload lands back on sign-in; survival works only after a failed sign-in attempt sets `lastEmail`. (b) `GET /bff/session` `mustChangePassword:true` is not issuable on this backend — pending users are refused login (`401 INVALID_CREDENTIALS`) and `setup-password` completes first login in one step — so the `true` branch is only unit-testable, not live-verifiable.
+
+Test caveats: the pending-account fixtures created for this run (`pending@example.com`, password since rotated to `Pending-Pass9!!`) and the `/tmp/jobscrape-phasee/` dir are disposable and can be deleted. `bun run start` (dist/server) exits with `Bundled file "./index-r7ptpdbt.js" not found` under Bun 1.4.4; the BFF was verified via `bun --hot src/server/index.ts` instead.
+
 ## Fix list from manual test (user-reported, code-verified)
 
 | # | Fix |
