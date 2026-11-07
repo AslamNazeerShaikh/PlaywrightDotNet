@@ -5964,9 +5964,9 @@
     "semantic_hash": ""
   },
   "docs/19-pstack-claude-code.md": {
-    "mtime": 1794060733.6153014,
-    "seen": 1794060761.060409,
-    "ast_hash": "955da1e1639a2f989a5f4489a3f1cc1c",
+    "mtime": 1794061430.600759,
+    "seen": 1794061443.195486,
+    "ast_hash": "d3ae2c9b870f238c753318df7a024b4c",
     "semantic_hash": ""
   },
   "src/frontend/src/client/lib/format.ts": {

@@ -1,7 +1,7 @@
 # Graph Report - PlaywrightDotNet  (2026-11-07)
 
 ## Corpus Check
-- 1126 files · ~1,198,511 words
+- 1126 files · ~1,198,553 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8de2c71d`
+- Built from commit: `de41aa18`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -3299,7 +3299,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Path` connect `ValidationResult` to `JobScrapeDbContext`, `generate_design_system`?**
   _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **Why does `persist_design_system()` connect `generate_design_system` to `ValidationResult`, `design_system.py`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **What connects `$schema`, `todo`, `instructions` to the rest of the system?**
   _4415 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useRenderLog` be split into smaller, more focused modules?**

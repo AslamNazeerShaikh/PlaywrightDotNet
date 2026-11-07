@@ -170403,7 +170403,7 @@
       "node_kind": "heading",
       "norm_label": "layout",
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L42"
+      "source_location": "L45"
     },
     {
       "id": "docs_19_pstack_claude_code_pstack_on_claude_code",
@@ -170427,7 +170427,7 @@
       "node_kind": "heading",
       "norm_label": "re-syncing with the mirror",
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L73"
+      "source_location": "L76"
     },
     {
       "id": "docs_19_pstack_claude_code_use",
@@ -170451,7 +170451,7 @@
       "node_kind": "heading",
       "norm_label": "validation",
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L101"
+      "source_location": "L104"
     },
     {
       "id": "docs_19_pstack_claude_code_why_vendored_not_the_plugin",
@@ -170463,7 +170463,7 @@
       "node_kind": "heading",
       "norm_label": "why vendored, not the plugin",
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L32"
+      "source_location": "L35"
     },
     {
       "id": "opencode_skills_ui_styling_scripts_shadcn_add_rationale_147",
@@ -366759,7 +366759,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L101",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -366770,7 +366770,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L32",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -366781,7 +366781,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L42",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -366792,7 +366792,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/19-pstack-claude-code.md",
-      "source_location": "L73",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -491466,5 +491466,5 @@
       ]
     }
   ],
-  "built_at_commit": "8de2c71d5807c2384b83a6027b5fca3660b23445"
+  "built_at_commit": "de41aa18466b357eb7d55a13b93d43ec5d2753ee"
 }
