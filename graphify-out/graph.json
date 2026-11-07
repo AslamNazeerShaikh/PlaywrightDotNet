@@ -109166,7 +109166,7 @@
       "node_kind": "heading",
       "norm_label": "common failure modes to avoid",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L98"
+      "source_location": "L100"
     },
     {
       "id": "opencode_skills_why_skill_discovery",
@@ -109178,7 +109178,7 @@
       "node_kind": "heading",
       "norm_label": "discovery",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L33"
+      "source_location": "L35"
     },
     {
       "id": "opencode_skills_why_skill_investigator_roster_one_per_available_evidence_category",
@@ -109190,7 +109190,7 @@
       "node_kind": "heading",
       "norm_label": "investigator roster, one per available evidence category",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L58"
+      "source_location": "L60"
     },
     {
       "id": "opencode_skills_why_skill_operating_posture",
@@ -109214,7 +109214,7 @@
       "node_kind": "heading",
       "norm_label": "output format",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L92"
+      "source_location": "L94"
     },
     {
       "id": "opencode_skills_why_skill_step_1_understand_the_target_and_the_question",
@@ -109250,7 +109250,7 @@
       "node_kind": "heading",
       "norm_label": "step 3. spawn parallel investigators",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L29"
+      "source_location": "L31"
     },
     {
       "id": "opencode_skills_why_skill_step_4_synthesize",
@@ -109262,7 +109262,7 @@
       "node_kind": "heading",
       "norm_label": "step 4. synthesize",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L79"
+      "source_location": "L81"
     },
     {
       "id": "opencode_skills_why_skill_step_5_present",
@@ -109274,7 +109274,7 @@
       "node_kind": "heading",
       "norm_label": "step 5. present",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L88"
+      "source_location": "L90"
     },
     {
       "id": "opencode_skills_why_skill_when_to_skip_an_investigator",
@@ -109286,7 +109286,7 @@
       "node_kind": "heading",
       "norm_label": "when to skip an investigator",
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L70"
+      "source_location": "L72"
     },
     {
       "id": "opencode_skills_why_skill_why",
@@ -176303,7 +176303,7 @@
       "node_kind": "heading",
       "norm_label": "3. synthesize (complex only)",
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L28"
+      "source_location": "L30"
     },
     {
       "id": "opencode_skills_how_skill_4_present",
@@ -176315,7 +176315,7 @@
       "node_kind": "heading",
       "norm_label": "4. present",
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L32"
+      "source_location": "L34"
     },
     {
       "id": "opencode_skills_how_skill_how",
@@ -176339,7 +176339,7 @@
       "node_kind": "heading",
       "norm_label": "output format",
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L36"
+      "source_location": "L38"
     },
     {
       "id": "opencode_skills_microbenchmarking_references_diagnosers_and_exporters_diagnosers",
@@ -399653,7 +399653,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -399664,7 +399664,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L32",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -399675,7 +399675,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/how/SKILL.md",
-      "source_location": "L36",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -424029,7 +424029,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -424040,7 +424040,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L58",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -424051,7 +424051,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L70",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "opencode_skills_why_skill_why",
+      "target": "opencode_skills_why_skill_common_failure_modes_to_avoid",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/skills/why/SKILL.md",
+      "source_location": "L100",
       "weight": 1.0
     },
     {
@@ -424095,7 +424106,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -424106,7 +424117,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L79",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -424117,7 +424128,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L88",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -424128,18 +424139,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L92",
-      "weight": 1.0
-    },
-    {
-      "source": "opencode_skills_why_skill_why",
-      "target": "opencode_skills_why_skill_common_failure_modes_to_avoid",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".opencode/skills/why/SKILL.md",
-      "source_location": "L98",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -493776,5 +493776,5 @@
       ]
     }
   ],
-  "built_at_commit": "f815fd5a87681b58895b93824d57a0960f6bb93f"
+  "built_at_commit": "7b18b16e97d041b38b1dabc797810510d57995f0"
 }
