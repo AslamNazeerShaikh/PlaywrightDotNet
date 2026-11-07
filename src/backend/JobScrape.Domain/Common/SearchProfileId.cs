@@ -27,7 +27,7 @@ namespace JobScrape.Domain.Common
         /// <returns>A new, non-empty identifier.</returns>
         public static SearchProfileId New()
         {
-            return new SearchProfileId(Guid.NewGuid());
+            return new SearchProfileId(Guid.CreateVersion7());
         }
 
         /// <summary>
