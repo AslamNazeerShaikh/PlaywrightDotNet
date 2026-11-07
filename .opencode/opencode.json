@@ -3,6 +3,7 @@
   "experimental": {
     "todo": true
   },
+  "lsp": {},
   "instructions": [
     ".opencode/pstack-models.md",
     ".opencode/instructions/INSTRUCTIONS.md"

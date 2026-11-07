@@ -1,3 +1,4 @@
+using System.Globalization;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
@@ -164,6 +165,19 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     // Next vanished or the page did not change: report the
                     // same page so the handler's repeated-page guard stops.
                     LogNextDidNotAdvance(_logger, context.RunId.Value, request.PageNumber);
+                }
+                else if (
+                    !IsExpectedPageUrl(
+                        page.Url,
+                        NaukriUrlBuilder.SearchUrl(context.Criteria),
+                        request.PageNumber
+                    )
+                )
+                {
+                    // A cold -N load bounces to page 1; the fingerprint
+                    // alone cannot tell that from a real advance. Report
+                    // the page so the repeated-page guard stops the run.
+                    LogUnexpectedPageUrl(_logger, context.RunId.Value, request.PageNumber, page.Url);
                 }
 
                 return await FinishPageAsync(page, context, request, null, cancellationToken);
@@ -371,6 +385,33 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
+        /// Page 1 is goto-driven and logged by LogLanded; only the Next
+        /// path can land somewhere unexpected. Pages above 1 must carry
+        /// the <c>-N</c> suffix on the page-1 path; the query is free.
+        /// </summary>
+        /// <param name="actualUrl">The address bar after the navigation.</param>
+        /// <param name="page1Url">The page-1 URL built by NaukriUrlBuilder.SearchUrl.</param>
+        /// <param name="pageNumber">The requested absolute page number.</param>
+        /// <returns>True when the URL is the expected page.</returns>
+        internal static bool IsExpectedPageUrl(string actualUrl, Uri page1Url, int pageNumber)
+        {
+            ArgumentNullException.ThrowIfNull(actualUrl);
+            ArgumentNullException.ThrowIfNull(page1Url);
+
+            if (pageNumber == 1)
+            {
+                return true;
+            }
+
+            return Uri.TryCreate(actualUrl, UriKind.Absolute, out var actual)
+                && string.Equals(
+                    actual.AbsolutePath,
+                    page1Url.AbsolutePath + "-" + pageNumber.ToString(CultureInfo.InvariantCulture),
+                    StringComparison.OrdinalIgnoreCase
+                );
+        }
+
+        /// <summary>
         /// Waits for the detail's JSON-LD or description; the parser decides
         /// what is usable.
         /// </summary>
@@ -411,6 +452,17 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Message = "Naukri Next did not advance for run {RunId} on page {Page}"
         )]
         private static partial void LogNextDidNotAdvance(ILogger logger, Guid runId, int page);
+
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Naukri Next landed off-page for run {RunId} on requested page {Page} at {Url}"
+        )]
+        private static partial void LogUnexpectedPageUrl(
+            ILogger logger,
+            Guid runId,
+            int page,
+            string url
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,
