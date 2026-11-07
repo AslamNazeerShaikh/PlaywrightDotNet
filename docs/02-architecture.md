@@ -330,11 +330,8 @@ PlaywrightDotNet/
 > and `artifacts/`. None of `JobLens.Cli`, `JobLens.TestKit`,
 > `JobLens.E2E.Tests`, or `JobLens.Cli.Tests` exist in the tree above.
 
-Persistence ships five migrations: `20261101074339_InitialCreate`,
-`20261102135052_AddScrapeRunProgress`,
-`20261102181907_AddCaseInsensitiveProfileNames`,
-`20261102193803_AddRunCompanies`, and
-`20261106150345_FoldProgressIntoRun` (current).
+Persistence ships one migration: `20261107112658_InitialCreate`
+(current). History was squashed during development; no downgrade path is kept.
 
 ---
 
@@ -774,8 +771,8 @@ SQLite is the source of truth. CSV/Excel/JSON files are disposable snapshots.
 
 ### 10.4 Schema overview
 
-> Verified against `JobScrapeDbContext`, the seven `IEntityTypeConfiguration`
-> classes (seven tables), and migration `20261102193803_AddRunCompanies`.
+> Verified against `JobScrapeDbContext`, the ten `IEntityTypeConfiguration`
+> classes (eleven tables), and migration `20261107112658_InitialCreate`.
 > Tables and columns
 > are snake_case; every `DateTimeOffset` is stored as UTC ticks
 > (`UtcTicksConverter`). Foreign keys are enforced for
@@ -876,17 +873,14 @@ erDiagram
     }
 ```
 
-`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly one FK (`scrape_runs.profile_id → search_profiles.id`, restrict on delete).
+`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly two FKs (`scrape_runs.profile_id → search_profiles.id`, restrict on delete; `scrape_run_progress.id → scrape_runs.id`, cascade on delete).
 
 Full domain model and invariants: [Domain Model](03-domain-model.md).
 
 ### 10.5 Migrations
 
-- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; four exist:
-  - `20261101074339_InitialCreate`
-  - `20261102135052_AddScrapeRunProgress`
-  - `20261102181907_AddCaseInsensitiveProfileNames`
-  - `20261102193803_AddRunCompanies` (current)
+- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; one exists:
+  - `20261107112658_InitialCreate` (current)
 - The context is registered by `PersistenceServiceCollectionExtensions.AddJobScrapePersistence` (scoped per run/request), called from the API through `DatabaseRegistration.AddJobScrapeDatabase`, which resolves `JobScrape:Storage:DatabasePath` against the content root and creates its directory.
 - Migrations apply automatically **only in Development** (`DatabaseRegistration.MigrateInDevelopment`, used by the `http` launch profile and the API tests). Any other environment applies them explicitly with `dotnet tool run dotnet-ef database update --project src/backend/JobScrape.Infrastructure`.
 - `JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only.

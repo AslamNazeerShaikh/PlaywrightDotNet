@@ -87,7 +87,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             await using var scope = database.Scope();
 
             Assert.Empty(await scope.Db.Database.GetPendingMigrationsAsync(Ct));
-            Assert.True((await scope.Db.Database.GetAppliedMigrationsAsync(Ct)).Count() >= 3);
+            Assert.Single(await scope.Db.Database.GetAppliedMigrationsAsync(Ct));
         }
 
         [Fact]

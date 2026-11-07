@@ -1368,9 +1368,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/PersistenceTests.cs": {
-    "mtime": 1793985623.2733343,
-    "seen": 1794043628.672415,
-    "ast_hash": "05a29222565283376f62946389cf61c0",
+    "mtime": 1794050957.4420786,
+    "seen": 1794051086.932342,
+    "ast_hash": "c32de7c0f1493fa9a4f5dea46c6c8302",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/RunScrapeOnSqliteTests.cs": {
@@ -1439,21 +1439,9 @@
     "ast_hash": "58caa14d2157494db8ee91e0662487ab",
     "semantic_hash": ""
   },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261101074339_InitialCreate.Designer.cs": {
-    "mtime": 1793523193.716314,
-    "seen": 1793606170.349663,
-    "ast_hash": "4150c520dc7e6783a8be7087afdcb214",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261101074339_InitialCreate.cs": {
-    "mtime": 1793523193.7163982,
-    "seen": 1793606170.349664,
-    "ast_hash": "59f352b30e92f1e3eab8d67f396db63f",
-    "semantic_hash": ""
-  },
   "src/backend/JobScrape.Infrastructure/Persistence/Migrations/JobScrapeDbContextModelSnapshot.cs": {
-    "mtime": 1793997748.542451,
-    "seen": 1794043628.6724522,
+    "mtime": 1794050818.4223585,
+    "seen": 1794051086.9323788,
     "ast_hash": "eafc35c431b858bde55654cc4bf84851",
     "semantic_hash": ""
   },
@@ -5825,18 +5813,6 @@
     "ast_hash": "c53f851e2d1f8c1d8851030eae0253ab",
     "semantic_hash": ""
   },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102135052_AddScrapeRunProgress.Designer.cs": {
-    "mtime": 1793627452.4772065,
-    "seen": 1793628476.743862,
-    "ast_hash": "7ae6b8f64c580eded3053317f635ba1e",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102135052_AddScrapeRunProgress.cs": {
-    "mtime": 1793876897.3909564,
-    "seen": 1793884357.229432,
-    "ast_hash": "2d0b29cbbf5a669ff9e25076d249e489",
-    "semantic_hash": ""
-  },
   "src/backend/JobScrape.Infrastructure.Tests/Browser/BrowserExtensionArgsTests.cs": {
     "mtime": 1793876897.2849798,
     "seen": 1793884357.229404,
@@ -5949,30 +5925,6 @@
     "mtime": 1793876897.3474107,
     "seen": 1793884357.229416,
     "ast_hash": "17da4896cde1edc4a781d724e0fcb488",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102181907_AddCaseInsensitiveProfileNames.Designer.cs": {
-    "mtime": 1793643547.2506368,
-    "seen": 1793697992.3663192,
-    "ast_hash": "2c2123df15cc3e7882ab75b52a06a30f",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102181907_AddCaseInsensitiveProfileNames.cs": {
-    "mtime": 1793876897.4137337,
-    "seen": 1793884357.229433,
-    "ast_hash": "49a5393600f0301177b95eba9eb12c21",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102193803_AddRunCompanies.Designer.cs": {
-    "mtime": 1793648283.3828447,
-    "seen": 1793697992.3663201,
-    "ast_hash": "88e41cc5a24d832a8de4f426f5c82aad",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261102193803_AddRunCompanies.cs": {
-    "mtime": 1793876897.3921988,
-    "seen": 1793884357.229434,
-    "ast_hash": "e005329237a767ca5359401d61db8cd2",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/SqliteDatabaseExplorer.cs": {
@@ -6953,90 +6905,6 @@
     "ast_hash": "08e246cc6c45b0ba0ad69d1998340ce1",
     "semantic_hash": ""
   },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106151320_FoldProgressIntoRun.Designer.cs": {
-    "mtime": 1793985623.2748241,
-    "seen": 1794043628.672447,
-    "ast_hash": "85c4d8db09718d5e628a2726aeff7475",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106151320_FoldProgressIntoRun.cs": {
-    "mtime": 1794009654.0605898,
-    "seen": 1794043628.672447,
-    "ast_hash": "9815e5c9b4f39d43880cb027a540bf0d",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106152627_AddIdentityAuth.Designer.cs": {
-    "mtime": 1793985623.274953,
-    "seen": 1794043628.672448,
-    "ast_hash": "bf3a7cc3a41e19e17564fcbbc2fa4bed",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106152627_AddIdentityAuth.cs": {
-    "mtime": 1793985623.2750132,
-    "seen": 1794043628.672448,
-    "ast_hash": "34e5dfb7cbcf19135797683b9d1b6aeb",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106153849_AddIdempotencyKeys.Designer.cs": {
-    "mtime": 1793985623.2750876,
-    "seen": 1794043628.672448,
-    "ast_hash": "e36153088b2dc590dcd382ff4a43aa7b",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106153849_AddIdempotencyKeys.cs": {
-    "mtime": 1793985623.2751493,
-    "seen": 1794043628.672449,
-    "ast_hash": "4a5569989918eea5f9cd1088b97d0def",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106161543_AddTokenVersionAndRequestHash.Designer.cs": {
-    "mtime": 1793985623.2752287,
-    "seen": 1794043628.672449,
-    "ast_hash": "696535818b06857192a252e09f410318",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106161543_AddTokenVersionAndRequestHash.cs": {
-    "mtime": 1793985623.2752888,
-    "seen": 1794043628.672449,
-    "ast_hash": "1a8356666b1276d3ba34aaabc3d350f7",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106163020_AddUsageQuotas.Designer.cs": {
-    "mtime": 1793985623.275364,
-    "seen": 1794043628.67245,
-    "ast_hash": "6844fc4efe666a50106efe06d362b4af",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106163020_AddUsageQuotas.cs": {
-    "mtime": 1793985623.275422,
-    "seen": 1794043628.67245,
-    "ast_hash": "f60be6d27e77dcf43f5820e8e482c67d",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106203159_AddIdempotencyUniquenessGuard.Designer.cs": {
-    "mtime": 1793997119.1114993,
-    "seen": 1794043628.67245,
-    "ast_hash": "431badff3b9d36ae2763a16a7bf52084",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106203159_AddIdempotencyUniquenessGuard.cs": {
-    "mtime": 1793997373.3671007,
-    "seen": 1794043628.672451,
-    "ast_hash": "f19b959026b13f1ff645fe1ca557dbac",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106204228_DropIdempotencyDuplicateIndex.Designer.cs": {
-    "mtime": 1793997748.542175,
-    "seen": 1794043628.672451,
-    "ast_hash": "b0a0430b212fb2a354d11924627196a7",
-    "semantic_hash": ""
-  },
-  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261106204228_DropIdempotencyDuplicateIndex.cs": {
-    "mtime": 1793997874.4185958,
-    "seen": 1794043628.672451,
-    "ast_hash": "6e58cdbcc2a932302a557876c1b09301",
-    "semantic_hash": ""
-  },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/IdempotencyStore.cs": {
     "mtime": 1794001097.8628473,
     "seen": 1794043628.6724532,
@@ -7170,21 +7038,33 @@
     "semantic_hash": ""
   },
   "FIX-PROGRESS.md": {
-    "mtime": 1794045868.330188,
-    "seen": 1794046631.311368,
-    "ast_hash": "a159431a5bf5258a306d69c583dab670",
+    "mtime": 1794048870.7048922,
+    "seen": 1794051086.932639,
+    "ast_hash": "e06d2015fb73493128a3bc37c8812bfc",
     "semantic_hash": ""
   },
   "PR6-PRETEST-REPORT.md": {
-    "mtime": 1793997566.3878434,
-    "seen": 1794043628.672699,
-    "ast_hash": "d9a4d74f9374d408b40fac143343424c",
+    "mtime": 1794048836.420936,
+    "seen": 1794051086.93264,
+    "ast_hash": "d684ad84446e6c2a3387bcb34782f287",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/admin-pages.test.tsx": {
     "mtime": 1794045407.4811068,
     "seen": 1794046631.311172,
     "ast_hash": "7610e83e1946019cf81c393172611812",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261107112658_InitialCreate.Designer.cs": {
+    "mtime": 1794050818.4222398,
+    "seen": 1794051086.932378,
+    "ast_hash": "ccbfb359e2acc2f96fe665529f8d64e2",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261107112658_InitialCreate.cs": {
+    "mtime": 1794051012.8024511,
+    "seen": 1794051086.932378,
+    "ast_hash": "38588f865e8f11c4e705adf0564e1a48",
     "semantic_hash": ""
   }
 }
