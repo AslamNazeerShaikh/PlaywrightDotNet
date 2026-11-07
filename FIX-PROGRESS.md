@@ -1,11 +1,11 @@
 # Fix program state (resume file)
 
-Branch: `fix/pr6-pretest-findings` (cut from PR6 head 5ce242c). Checkpoint commit `5d28200`.
+Branch: `fix/pr6-pretest-findings` (cut from PR6 head 5ce242c). Checkpoint commit `2ca6743` (cookie wave `dbb05e9` plus pstack swap).
 Report: `PR6-PRETEST-REPORT.md` (68 findings plus 6-item fix list).
 Servers: backend `https://localhost:5208` on fresh DB `/tmp/jobscrape-test/jobscrape.db`, seed admin@example.com. Cockpit `https://127.0.0.1:3000` HTTPS only.
 
 ## Model routing (pstack-models.md, exact values)
-- Beam codegen: `opencode-go/beam-free#max`
+- Inkling codegen: `opencode/inkling-2-small-free#max` (swapped from Beam per operator, smoke-tested PASS)
 - DeepSeek review/gameplan: `opencode-go/deepseek-v4.1-flash#max`
 - Muse orchestration: this thread
 
@@ -27,8 +27,8 @@ Go plan snapshot 2026-11-07: monthly 21% (pace 51%), weekly 25%, rolling 4%. Mus
 - Commits: conventional format, hook validator on. Deslop plus no-comments deferred to final pre-PR pass.
 
 ## Wave tracker
-- CLOSED: Wave 0 gameplan, operator calls (unify 401, BFF cookie, Viewer default, seed plus dropdown), Wave 4 bearer plane, Wave 1 identity, W1r3, backend cleanup, equal-cost.
+- CLOSED: Wave 0 gameplan, operator calls (unify 401, BFF cookie, Viewer default, seed plus dropdown), Wave 4 bearer plane, Wave 1 identity, W1r3, backend cleanup, equal-cost, Wave 3 seed/roles (`1aa2c80`), BFF cookie wave C2 plus R1 (`dbb05e9`, DeepSeek PASS 1-4 plus R1, 154 frontend pass).
 - RUNNING: W2a fix round (escalation, limiter, tests), W2b fix round (reservation protocol, refund), W2b round-2 verify.
-- QUEUED: Wave 3 seed plus roles, BFF cookie wave (includes setup reload survival), Wave 5 polish, Wave 6 test pins, Phase E live verify.
+- QUEUED: Wave 5 polish, Wave 6 test pins, Phase E live verify.
 - ACCEPTED without rework: completed-409 vs unknown-401 split (operator call), setup-success 2-verify cost, compare early exits.
 - VETO WINDOW: granular users/roles policies shipped as Admin-or-grant; user may still veto.
