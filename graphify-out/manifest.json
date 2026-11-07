@@ -2718,27 +2718,27 @@
     "semantic_hash": ""
   },
   ".opencode/skills/build-parallelism/SKILL.md": {
-    "mtime": 1793276894.7417178,
-    "seen": 1793614405.753154,
-    "ast_hash": "c3698c8da6a6540f3ef215a060cc53d8",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891099,
+    "ast_hash": "5ac61620ce9008d4306c3f31b1552863",
     "semantic_hash": ""
   },
   ".opencode/skills/build-perf-baseline/SKILL.md": {
-    "mtime": 1793457083.6773415,
-    "seen": 1793614405.753154,
-    "ast_hash": "d8f9bdd9d8c8a86c8119270f35842e9c",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911,
+    "ast_hash": "f189c0ed9e514e5fb14cd6982e27edf2",
     "semantic_hash": ""
   },
   ".opencode/skills/build-perf-diagnostics/SKILL.md": {
-    "mtime": 1793276894.7397223,
-    "seen": 1793614405.753155,
-    "ast_hash": "8b8d8a55aaf02971a2ac67dce41a60ee",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911,
+    "ast_hash": "aa685e3ef3d6c24306f10e689517cd70",
     "semantic_hash": ""
   },
   ".opencode/skills/check-bin-obj-clash/SKILL.md": {
-    "mtime": 1793457083.67753,
-    "seen": 1793614405.753155,
-    "ast_hash": "22b6a0d5ea238c3ddfd220cc8424d24f",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911,
+    "ast_hash": "cd00a67a69e515d8b793cfe28fa1092e",
     "semantic_hash": ""
   },
   ".opencode/skills/code-testing-agent/SKILL.md": {
@@ -2796,15 +2796,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/csharp-expert/SKILL.md": {
-    "mtime": 1793457083.6830037,
-    "seen": 1793614405.75316,
-    "ast_hash": "c7f2ef7c462b2ab5464cd798d657c23e",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911161,
+    "ast_hash": "dbf560b296e7825f63dd07cde4f1f37c",
     "semantic_hash": ""
   },
   ".opencode/skills/csharp-refactoring/SKILL.md": {
-    "mtime": 1793457083.683326,
-    "seen": 1793614405.753161,
-    "ast_hash": "65ff8cabe4218b05143c761c088d8c90",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891117,
+    "ast_hash": "676523515f799326863e7ba87ab35b3c",
     "semantic_hash": ""
   },
   ".opencode/skills/design-system/SKILL.md": {
@@ -2862,9 +2862,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/eval-performance/SKILL.md": {
-    "mtime": 1793457083.6859636,
-    "seen": 1793614405.7531662,
-    "ast_hash": "4ffd159a6c449f57f0ab431fc0cf868a",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891139,
+    "ast_hash": "6d0485cf8f4d4b663a5ebd5af3f3e27f",
     "semantic_hash": ""
   },
   ".opencode/skills/extension-points/SKILL.md": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/incremental-build/SKILL.md": {
-    "mtime": 1793457083.6888325,
-    "seen": 1793614405.753171,
-    "ast_hash": "b9f2c6b493d7d4e670995177b2ca707f",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891149,
+    "ast_hash": "c7a864220b702189d69f554450e3f44c",
     "semantic_hash": ""
   },
   ".opencode/skills/interrogate/SKILL.md": {
@@ -2994,9 +2994,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/SKILL.md": {
-    "mtime": 1793457083.690955,
-    "seen": 1793614405.7531772,
-    "ast_hash": "dfa19342a145629a109317160edceba6",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891158,
+    "ast_hash": "f302e791156f7d2fedbacd54d071ec7f",
     "semantic_hash": ""
   },
   ".opencode/skills/no-comments/SKILL.md": {
@@ -4506,14 +4506,14 @@
     "semantic_hash": ""
   },
   ".opencode/skills/csharp-expert/references/dotnet-skills-marketplace.md": {
-    "mtime": 1793457083.6831636,
-    "seen": 1793614462.8348951,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891117,
     "ast_hash": "cfb52ad28a44b13c86290314ed543dab",
     "semantic_hash": ""
   },
   ".opencode/skills/csharp-refactoring/references/operation-catalog.md": {
-    "mtime": 1793457083.6834893,
-    "seen": 1793614462.8348958,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891117,
     "ast_hash": "9a3b96da8bb253181000cdbcd30f00bb",
     "semantic_hash": ""
   },
@@ -4794,75 +4794,75 @@
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/antipatterns/additional-antipatterns.md": {
-    "mtime": 1793457083.6911273,
-    "seen": 1793614462.8349419,
-    "ast_hash": "6cdf98d367a55352a3e42c3500a78a4d",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891158,
+    "ast_hash": "105d66c68c390e4cec42080cea7df758",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/antipatterns/incremental-build-inputs-outputs.md": {
-    "mtime": 1793276894.7041838,
-    "seen": 1793614462.8349419,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891159,
     "ast_hash": "682aef38b0ca7b98e90b02bc642df659",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/antipatterns/private-assets.md": {
-    "mtime": 1793276894.7038643,
-    "seen": 1793614462.834943,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891159,
     "ast_hash": "f966f76312fa2ee25211526de5d4b4e2",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/binlog-failure-analysis.md": {
-    "mtime": 1793276894.7020445,
-    "seen": 1793614462.834943,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.891159,
     "ast_hash": "32b91a21a0f86d87a8c09a1dddb6ae17",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/binlog-generation.md": {
-    "mtime": 1793276894.7023318,
-    "seen": 1793614462.834944,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.89116,
     "ast_hash": "d5659f19ba2d6b09006cdfc84ff581d6",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/build-perf-baseline.md": {
-    "mtime": 1793457083.691297,
-    "seen": 1793614462.834944,
-    "ast_hash": "8ec95891a2ab1e9a83b7b73a7d4bfa88",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.89116,
+    "ast_hash": "86a9dc5064ac60af9c16d3a63538e444",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/build-perf-diagnostics.md": {
-    "mtime": 1793457083.6914508,
-    "seen": 1793614462.834945,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911612,
     "ast_hash": "5e4ed291081443270bc4af96aa2c952d",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/copy-to-output-directory.md": {
-    "mtime": 1793457083.691584,
-    "seen": 1793614462.834945,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911612,
     "ast_hash": "02f6460c7222145daebc04c37024e9df",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/eval-performance.md": {
-    "mtime": 1793457083.6917336,
-    "seen": 1793614462.8349462,
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911612,
     "ast_hash": "cbdd35a8c8e501a8a46079271466d3dd",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/extension-points.md": {
-    "mtime": 1793457083.691878,
-    "seen": 1793614462.8349462,
-    "ast_hash": "1871b2cc5a1a56d321d75830cd0152c9",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911622,
+    "ast_hash": "46e23a5efe10302de0978f2017a08bb6",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/incremental-build.md": {
-    "mtime": 1793457083.6920447,
-    "seen": 1793614462.834947,
-    "ast_hash": "84519c9c6e974fb992a2a51944bebf3c",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911622,
+    "ast_hash": "89864d81b0c66fe03c7048b5fdf7f09c",
     "semantic_hash": ""
   },
   ".opencode/skills/msbuild/references/msbuild-antipatterns.md": {
-    "mtime": 1793457083.692207,
-    "seen": 1793614462.834947,
-    "ast_hash": "bc417b085344a220a222e13b1b7e234b",
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911622,
+    "ast_hash": "143bca279d8208e4d4ed6c89030493c7",
     "semantic_hash": ""
   },
   ".opencode/skills/platform-detection/references/command-mode.md": {
@@ -7071,6 +7071,12 @@
     "mtime": 1794057084.47214,
     "seen": 1794060761.0601962,
     "ast_hash": "d658c14ec0f65e7010d3d64ab42ec5bb",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/find-repeated-work-within-one-build/SKILL.md": {
+    "mtime": 1794069236.0,
+    "seen": 1794069545.8911412,
+    "ast_hash": "651741754b1cfe21bb6a97ae889eb48c",
     "semantic_hash": ""
   }
 }
