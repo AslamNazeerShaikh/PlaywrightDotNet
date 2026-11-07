@@ -97,7 +97,8 @@ Add your project-specific checks here. Examples:
 ## Post-Review Actions
 
 Since hooks are not available in OpenCode, remember to:
-- Run `prettier --write` on modified files after reviewing
+- Format C# with CSharpier (https://csharpier.com/docs/CLI). From the repo root, run `dotnet tool restore`, then `dotnet csharpier format .`. Confirm with `dotnet csharpier check .`, which exits 1 while any file is still unformatted.
+- Format frontend files with Bun (https://bun.com/docs/format). From `src/frontend`, run `bun run format`, which runs `bun fmt src package.json bunfig.toml` with the `[fmt]` options in `bunfig.toml`. Confirm with `bun run format:check` (`bun fmt --check`), which exits 1 while any file needs formatting.
 - Run `tsc --noEmit` to verify type safety
 - Check for console.log statements and remove them
 - Run tests to verify changes don't break functionality
