@@ -2598,9 +2598,9 @@
     "semantic_hash": ""
   },
   ".opencode/prompts/agents/code-reviewer.txt": {
-    "mtime": 1793613815.8323584,
-    "seen": 1793614405.753144,
-    "ast_hash": "3134ab27df341dfa526787968ca2553a",
+    "mtime": 1794068755.9079213,
+    "seen": 1794068876.760368,
+    "ast_hash": "4c3f350ab13095d68951d221884a1557",
     "semantic_hash": ""
   },
   ".opencode/prompts/agents/doc-updater.txt": {
