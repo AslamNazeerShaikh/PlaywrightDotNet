@@ -1,7 +1,7 @@
 ---
 description: Fix build and TypeScript errors with minimal changes
 agent: build-error-resolver
-subtask: true
+subagent: true
 ---
 
 # Build Fix Command
