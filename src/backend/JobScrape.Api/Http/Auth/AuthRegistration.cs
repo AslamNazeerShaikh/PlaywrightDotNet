@@ -40,6 +40,8 @@ namespace JobScrape.Api.Http.Auth
     /// </summary>
     public static class AuthRegistration
     {
+        internal const string StaleTokenItemKey = "auth.stale";
+
         /// <summary>
         /// The global request ceiling, per client IP.
         /// </summary>
@@ -93,8 +95,12 @@ namespace JobScrape.Api.Http.Auth
                             OnChallenge = context =>
                             {
                                 context.HandleResponse();
-                                return Errors
-                                    .Unauthenticated()
+                                var stale =
+                                    context.HttpContext.Items.TryGetValue(
+                                        StaleTokenItemKey,
+                                        out var value
+                                    ) && value is true;
+                                return (stale ? Errors.SessionRevoked() : Errors.Unauthenticated())
                                     .ToProblem()
                                     .ExecuteAsync(context.HttpContext);
                             },
@@ -137,8 +143,10 @@ namespace JobScrape.Api.Http.Auth
                                         .Equals(version, StringComparison.Ordinal)
                                 )
                                 {
+                                    // OnChallenge reads this to emit SESSION_REVOKED instead of UNAUTHENTICATED.
+                                    context.HttpContext.Items[StaleTokenItemKey] = true;
                                     context.Fail(
-                                        "The token was revoked by a password change or lockout."
+                                        "The token version no longer matches the account."
                                     );
                                 }
                             },

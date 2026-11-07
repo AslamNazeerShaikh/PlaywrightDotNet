@@ -419,3 +419,60 @@ describe("session route guards", () => {
     expect(session).toContain("HttpOnly");
   });
 });
+
+describe("getSession 401 handling", () => {
+  const withCode = (code: string) => {
+    const server = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      fetch: () =>
+        Response.json(
+          {
+            type: "https://jobscrape.local/problems/unauthorized",
+            title: "Unauthorized",
+            status: 401,
+            detail: "x",
+            code,
+          },
+          { status: 401, headers: { "content-type": "application/problem+json" } },
+        ),
+    });
+    upstreams.push(server);
+    return `http://127.0.0.1:${server.port}`;
+  };
+
+  const getSessionWith = async (dotnetApiUrl: string) => {
+    const handler = createHandler({ port: 3000, dotnetApiUrl });
+    const res = await handler.fetch(
+      new Request("http://bff/bff/session", {
+        headers: { cookie: "jobscrape_session=jwt-1; jobscrape_csrf=csrf-1" },
+      }),
+    );
+    return res;
+  };
+
+  test("SESSION_REVOKED clears cookies and reports revoked: true", async () => {
+    const res = await getSessionWith(withCode("SESSION_REVOKED"));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ authenticated: false, expired: true, revoked: true });
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.some((c) => c.startsWith("jobscrape_session=") && c.includes("Max-Age=0"))).toBe(
+      true,
+    );
+    expect(cookies.some((c) => c.startsWith("jobscrape_csrf=") && c.includes("Max-Age=0"))).toBe(
+      true,
+    );
+  });
+
+  test("UNAUTHENTICATED clears cookies and reports no revoked flag", async () => {
+    const res = await getSessionWith(withCode("UNAUTHENTICATED"));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ authenticated: false, expired: true });
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.some((c) => c.startsWith("jobscrape_session=") && c.includes("Max-Age=0"))).toBe(
+      true,
+    );
+  });
+});

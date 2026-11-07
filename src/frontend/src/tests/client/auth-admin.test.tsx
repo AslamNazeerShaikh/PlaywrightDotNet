@@ -272,6 +272,7 @@ describe("auth store", () => {
 
   test("only 401 token codes count as a dead token", () => {
     expect(isTokenFailure({ status: 401, code: "UNAUTHENTICATED" })).toBe(true);
+    expect(isTokenFailure({ status: 401, code: "SESSION_REVOKED" })).toBe(true);
     expect(isTokenFailure({ status: 401, code: "INVALID_CREDENTIALS" })).toBe(false);
     expect(isTokenFailure({ status: 403, code: "ACCESS_DENIED" })).toBe(false);
   });
@@ -454,6 +455,18 @@ describe("auth flow", () => {
     expect(queries.queryByRole("form", { name: "Set password" })).toBeNull();
     expect(queries.getByRole("alert").textContent).toContain("PASSWORD_SETUP_COMPLETE");
     expect(sessionStorage.getItem("jobscrape.setupEmail")).toBeNull();
+  });
+
+  test("first login carries the typed email to the setup screen", async () => {
+    const queries = render(<App client={authBackend()} initialRoute="overview" />);
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
+
+    fireEvent.input(queries.getByLabelText("Email"), { target: { value: "typed@example.com" } });
+    fireEvent.click(queries.getByRole("button", { name: "First login / setup password" }));
+
+    await waitFor(() => expect(queries.getByRole("form", { name: "Set password" })).toBeDefined());
+    expect((queries.getByLabelText("Email") as HTMLInputElement).value).toBe("typed@example.com");
+    expect(sessionStorage.getItem("jobscrape.setupEmail")).toBe("typed@example.com");
   });
 
   test("viewer deep links to a hidden stop get access denied", async () => {
@@ -687,6 +700,25 @@ describe("auth wave 2 proving tests", () => {
 
     await waitFor(() =>
       expect(queries.getByRole("alert").textContent).toContain("Your session ended"),
+    );
+    expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined();
+  });
+
+  test("a revoked restore renders the account-changed notice on the sign-in form", async () => {
+    const fetchImpl: FetchImpl = async (url, init) => {
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "GET") {
+        return reply(200, { authenticated: false, expired: true, revoked: true });
+      }
+      return reply(200, healthy);
+    };
+
+    const queries = render(<App client={createApiClient(fetchImpl)} initialRoute="overview" />);
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("Your account changed"),
     );
     expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined();
   });

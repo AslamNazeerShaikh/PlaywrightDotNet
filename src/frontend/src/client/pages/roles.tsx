@@ -25,7 +25,7 @@ export function RolesPage({
 }: {
   client: ApiClient;
   canWrite: boolean;
-  onUnauthorized: () => void;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("RolesPage");
   const [roles, setRoles] = useState<RoleResponse[] | null>(null);
@@ -41,7 +41,7 @@ export function RolesPage({
 
   async function fail(problem: ApiProblem): Promise<boolean> {
     if (isTokenFailure(problem)) {
-      onUnauthorized();
+      onUnauthorized(problem);
       return true;
     }
     return false;

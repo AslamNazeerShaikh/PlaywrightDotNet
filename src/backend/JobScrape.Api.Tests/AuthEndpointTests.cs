@@ -513,7 +513,7 @@ namespace JobScrape.Api.Tests
             using var stale = await before.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
             var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Equal("UNAUTHENTICATED", staleBody.GetProperty("code").GetString());
+            Assert.Equal("SESSION_REVOKED", staleBody.GetProperty("code").GetString());
 
             using var fresh = await AuthTestHelper.LoginAsync(
                 factory,
@@ -579,7 +579,7 @@ namespace JobScrape.Api.Tests
             using var stale = await before.GetAsync("api/v1/auth/me", Ct);
             Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
             var staleBody = await stale.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Equal("UNAUTHENTICATED", staleBody.GetProperty("code").GetString());
+            Assert.Equal("SESSION_REVOKED", staleBody.GetProperty("code").GetString());
         }
 
         [Fact]

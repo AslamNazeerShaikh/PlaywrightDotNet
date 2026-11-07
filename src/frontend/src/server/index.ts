@@ -6,7 +6,6 @@
  * - `/api/*` — proxied to the .NET data plane (see `proxy.ts`).
  * - `/*` — the React bundle.
  */
-import homepage from "../client/index.html";
 import { type CockpitConfig, parseConfig } from "./config.ts";
 import { proxyRequest } from "./proxy.ts";
 
@@ -378,13 +377,25 @@ async function getSession(req: Request, config: CockpitConfig): Promise<Response
     );
   }
   if (upstream.status === 401) {
+    const text = await upstream.text().catch(() => "");
+    let code: string | undefined;
+    try {
+      const parsed = JSON.parse(text) as { code?: unknown };
+      code = typeof parsed.code === "string" ? parsed.code : undefined;
+    } catch {
+      code = undefined;
+    }
     const secure = isSecure(req, config);
     const headers = new Headers({ "content-type": "application/json" });
     for (const name of ["__Host-jobscrape_session", "jobscrape_session"]) {
       headers.append("set-cookie", clearSetCookie(name, secure, true));
     }
     headers.append("set-cookie", clearSetCookie("jobscrape_csrf", secure, false));
-    return new Response(JSON.stringify({ authenticated: false, expired: true }), {
+    const body =
+      code === "SESSION_REVOKED"
+        ? { authenticated: false, expired: true, revoked: true }
+        : { authenticated: false, expired: true };
+    return new Response(JSON.stringify(body), {
       status: 200,
       headers,
     });
@@ -463,16 +474,15 @@ export function fallbackResponse(pathname: string): Response {
   );
 }
 
-const isProduction = process.env["NODE_ENV"] === "production";
+export type FallbackRoute = import("bun").HTMLBundle | ((req: Request) => Promise<Response>);
 
-if (import.meta.main) {
-  const config = parseConfig(Bun.env as Record<string, string | undefined>);
+export async function startServer(config: CockpitConfig, fallback: FallbackRoute): Promise<void> {
   const routes = {
     "/healthz": () => healthResponse(config),
     "/bff/session": (req: Request) => bffSession(req, config, new URL(req.url)),
     "/bff/session/setup": (req: Request) => bffSession(req, config, new URL(req.url)),
     "/api/*": (req: Request) => apiProxy(req, config),
-    "/*": isProduction ? serveDist : homepage,
+    "/*": fallback,
   };
   const tls = await loadTls(config);
   const scheme = tls === undefined ? "http" : "https";
@@ -483,6 +493,11 @@ if (import.meta.main) {
     routes,
   });
   console.log(`jobscrape-cockpit BFF listening on ${scheme}://127.0.0.1:${config.port}`);
+}
+
+if (import.meta.main) {
+  const config = parseConfig(Bun.env as Record<string, string | undefined>);
+  await startServer(config, serveDist);
 }
 
 async function serveDist(req: Request): Promise<Response> {

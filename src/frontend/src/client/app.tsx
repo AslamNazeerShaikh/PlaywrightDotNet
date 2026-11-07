@@ -424,6 +424,15 @@ export function App({
     detail: "",
     code: "UNAUTHENTICATED",
   };
+  const revokedNotice: ApiProblem = {
+    status: 401,
+    title: "Your account changed. Sign in again.",
+    detail: "",
+    code: "SESSION_REVOKED",
+  };
+  function noticeFor(problem?: ApiProblem): ApiProblem {
+    return problem?.code === "SESSION_REVOKED" ? revokedNotice : sessionNotice;
+  }
 
   // Auth handlers. Session lives in an HttpOnly cookie owned by the BFF.
   async function signOut() {
@@ -450,14 +459,14 @@ export function App({
     }
   }
 
-  // A 401 on a page-level call means the session died.
-  function endSession() {
+  // A page-level 401 with a token code (UNAUTHENTICATED or SESSION_REVOKED) means the session died.
+  function endSession(problem?: ApiProblem) {
     try {
       sessionStorage.removeItem("jobscrape.setupEmail");
     } catch {
       // ignore
     }
-    setAuthState({ kind: "anonymous", email: "", problem: sessionNotice, notice: null });
+    setAuthState({ kind: "anonymous", email: "", problem: noticeFor(problem), notice: null });
   }
 
   async function refreshMe(): Promise<boolean> {
@@ -467,6 +476,7 @@ export function App({
         email?: string;
         authenticated?: boolean;
         expired?: boolean;
+        revoked?: boolean;
         mustChangePassword?: boolean;
       };
       if (value.mustChangePassword) {
@@ -479,7 +489,12 @@ export function App({
         return true;
       }
       if (value.authenticated === false && value.expired) {
-        setAuthState({ kind: "anonymous", email: "", problem: null, notice: sessionNotice });
+        setAuthState({
+          kind: "anonymous",
+          email: "",
+          problem: null,
+          notice: value.revoked ? revokedNotice : sessionNotice,
+        });
         return false;
       }
       const setupEmail = safeSessionStorage("jobscrape.setupEmail");
@@ -491,7 +506,7 @@ export function App({
       return false;
     }
     if (result.problem.status === 401) {
-      endSession();
+      endSession(result.problem);
       return false;
     }
     setAuthState({ kind: "anonymous", email: "", problem: result.problem, notice: null });
@@ -736,13 +751,14 @@ export function App({
             busy={authBusy}
             problem={authProblem}
             onLogin={handleLogin}
-            onFirstLogin={() => {
+            onFirstLogin={(email) => {
+              setLastEmail(email);
               try {
-                sessionStorage.setItem("jobscrape.setupEmail", lastEmail);
+                sessionStorage.setItem("jobscrape.setupEmail", email);
               } catch {
                 // ignore
               }
-              setAuthState({ kind: "setup", email: lastEmail, problem: null });
+              setAuthState({ kind: "setup", email, problem: null });
             }}
           />
         )}

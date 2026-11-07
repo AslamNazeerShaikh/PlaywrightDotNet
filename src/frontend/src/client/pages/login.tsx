@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { CodeTag, Field, Module } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
 import type { ApiProblem } from "../lib/api.ts";
@@ -5,9 +7,10 @@ import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
 
 /**
- * Sign-in and first-login setup. Both forms are uncontrolled (read from FormData on submit,
- * happy-dom-safe); the server is the only validator, so every rule surfaces here verbatim keyed by
- * its JSON field name. Passwords are never stored: they travel one request and the form resets.
+ * Sign-in and first-login setup. Read from FormData on submit (happy-dom-safe); the sign-in email
+ * is mirrored into state so the first-login button can hand it to the setup screen. The server is
+ * the only validator, so every rule surfaces here verbatim keyed by its JSON field name. Passwords
+ * are never stored: they travel one request and the form resets.
  */
 
 /** Looks up field errors tolerating the API's PascalCase keys ("Email") and camelCase names. */
@@ -49,9 +52,10 @@ export function LoginPage({
   busy: boolean;
   problem: ApiProblem | null;
   onLogin: (input: { email: string; password: string }) => Promise<boolean>;
-  onFirstLogin?: () => void;
+  onFirstLogin?: (email: string) => void;
 }) {
   useRenderLog("LoginPage");
+  const [email, setEmail] = useState(initialEmail);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,7 +92,10 @@ export function LoginPage({
               name="email"
               aria-label="Email"
               autoComplete="username"
-              defaultValue={initialEmail}
+              // onInput, not onChange: happy-dom never settles React's change value tracker,
+              // so onChange silently never fires in the test harness.
+              value={email}
+              onInput={(event) => setEmail(event.currentTarget.value)}
             />
           </Field>
           <Field
@@ -120,7 +127,11 @@ export function LoginPage({
         <p className="status-line">
           Pending accounts trade their seeded secret for an operator password here.
         </p>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onFirstLogin?.()}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => onFirstLogin?.(email)}
+        >
           First login / setup password
         </button>
       </Module>
