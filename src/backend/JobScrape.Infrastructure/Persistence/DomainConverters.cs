@@ -209,6 +209,8 @@ namespace JobScrape.Infrastructure.Persistence
         /// </summary>
         public static readonly ValueConverter<List<PermissionKey>, string> PermissionList = new(
             keys => Json.WriteStringList(keys.Select(key => key.Value).ToArray()),
+            // Syntactically invalid stored keys throw at load time via
+            // PermissionKey.From, so only catalog-unknown keys reach LoginHandler.
             json => Json.ReadStringList(json).Select(Domain.Identity.PermissionKey.From).ToList()
         );
 

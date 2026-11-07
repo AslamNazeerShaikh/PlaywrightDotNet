@@ -33,6 +33,7 @@ export function RolesPage({
   const [loading, setLoading] = useState(false);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createName, setCreateName] = useState<string>("");
   const [createProblem, setCreateProblem] = useState<ApiProblem | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [toggleProblem, setToggleProblem] = useState<ApiProblem | null>(null);
@@ -81,10 +82,11 @@ export function RolesPage({
     const form = event.currentTarget;
     setCreating(true);
     try {
-      const { result } = await client.createRole(
-        { name: readText(new FormData(form), "name") },
-        newIdempotencyKey(),
-      );
+      const name = readText(new FormData(form), "name");
+      if (!name) {
+        return;
+      }
+      const { result } = await client.createRole({ name }, newIdempotencyKey());
       if (result.ok) {
         setCreateProblem(null);
         form.reset();
@@ -115,6 +117,18 @@ export function RolesPage({
   }
 
   const selected = roles?.find((r) => r.name === selectedName) ?? null;
+  const existingNames = new Set((roles ?? []).map((r) => r.name));
+  const creatableNames = (["Admin", "Operator", "Viewer"] as const).filter(
+    (name) => !existingNames.has(name),
+  );
+
+  useEffect(() => {
+    setCreateName((current) =>
+      creatableNames.includes(current as (typeof creatableNames)[number])
+        ? current
+        : (creatableNames[0] ?? ""),
+    );
+  }, [creatableNames.join(",")]);
 
   return (
     <>
@@ -174,9 +188,27 @@ export function RolesPage({
         >
           <form onSubmit={submitCreate} aria-label="New role" noValidate>
             <Field label="NAME" name="name" errors={fieldErrorsFor(createProblem?.errors, "name")}>
-              <input className="input" name="name" aria-label="Name" autoComplete="off" />
+              <select
+                className="input"
+                name="name"
+                aria-label="Name"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                disabled={creatableNames.length === 0}
+              >
+                {creatableNames.length === 0 && <option value="">All roles already exist</option>}
+                {creatableNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
             </Field>
-            <button type="submit" className="btn" disabled={creating}>
+            <button
+              type="submit"
+              className="btn"
+              disabled={creating || creatableNames.length === 0}
+            >
               {creating ? "CREATING…" : "CREATE ROLE"}
             </button>
           </form>

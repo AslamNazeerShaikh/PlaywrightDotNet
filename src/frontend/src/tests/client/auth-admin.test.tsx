@@ -227,7 +227,7 @@ describe("auth store", () => {
   });
 });
 
-function authBackend() {
+function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unknown[] }) {
   const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
     const reply = (status: number, body: unknown) => ({
       ok: status >= 200 && status < 300,
@@ -284,8 +284,17 @@ function authBackend() {
       });
     }
     if (url === "/api/v1/roles") {
+      if (init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { name: string };
+        capture?.posts.push(body);
+        return reply(201, { id: "r-new", name: body.name, permissions: [] });
+      }
       return reply(200, {
-        roles: [{ id: "r1", name: "Admin", permissions: ["users.read"] }],
+        roles: seededRoles.map((name) => ({
+          id: name.toLowerCase(),
+          name,
+          permissions: name === "Admin" ? ["users.read"] : [],
+        })),
       });
     }
     if (url === "/api/v1/quotas") {
@@ -418,5 +427,51 @@ describe("auth flow", () => {
     expect(queries.container.textContent).toContain("admin@example.com");
     expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined();
     expect(loadToken()).toBe("tok-1");
+  });
+
+  test("roles dropdown with zero seeded roles submits Operator", async () => {
+    const capture = { posts: [] as unknown[] };
+    const queries = render(
+      <App
+        client={authBackend([], capture)}
+        initialRoute="roles"
+        initialSession={{ me: adminMe }}
+      />,
+    );
+
+    await waitFor(() => expect(queries.getByLabelText("Name")).toBeDefined());
+    fireEvent.change(queries.getByLabelText("Name"), { target: { value: "Operator" } });
+    fireEvent.click(queries.getByRole("button", { name: "CREATE ROLE" }));
+
+    await waitFor(() => expect(capture.posts).toHaveLength(1));
+    expect(capture.posts[0]).toEqual({ name: "Operator" });
+  });
+
+  test("roles dropdown with one seeded role keeps submit enabled", async () => {
+    const queries = render(
+      <App client={authBackend(["Admin"])} initialRoute="roles" initialSession={{ me: adminMe }} />,
+    );
+
+    await waitFor(() => expect(queries.getByLabelText("Name")).toBeDefined());
+    const select = queries.getByLabelText("Name") as HTMLSelectElement;
+    expect(select.disabled).toBe(false);
+  });
+
+  test("roles dropdown with all roles seeded disables select and button with no post", async () => {
+    const capture = { posts: [] as unknown[] };
+    const queries = render(
+      <App
+        client={authBackend(["Admin", "Operator", "Viewer"], capture)}
+        initialRoute="roles"
+        initialSession={{ me: adminMe }}
+      />,
+    );
+
+    await waitFor(() => expect(queries.getByLabelText("Name")).toBeDefined());
+    const select = queries.getByLabelText("Name") as HTMLSelectElement;
+    const button = queries.getByRole("button", { name: "CREATE ROLE" }) as HTMLButtonElement;
+    expect(select.disabled).toBe(true);
+    expect(button.disabled).toBe(true);
+    expect(capture.posts).toHaveLength(0);
   });
 });

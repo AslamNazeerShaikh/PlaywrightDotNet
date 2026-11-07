@@ -22,18 +22,7 @@ namespace JobScrape.Api.Tests
         {
             using var admin = await factory.CreateAdminClientAsync(cancellationToken);
             var email = $"viewer-{Guid.NewGuid():N}@example.com";
-            using (
-                var createdRole = await admin.PostAsJsonAsync(
-                    "api/v1/roles",
-                    new { name = "Viewer" },
-                    cancellationToken
-                )
-            )
-            {
-                createdRole.EnsureSuccessStatusCode();
-            }
 
-            Guid userId;
             using (
                 var created = await admin.PostAsJsonAsync(
                     "api/v1/users",
@@ -43,19 +32,6 @@ namespace JobScrape.Api.Tests
             )
             {
                 created.EnsureSuccessStatusCode();
-                var body = await created.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
-                userId = body.GetProperty("id").GetGuid();
-            }
-
-            using (
-                var assigned = await admin.PostAsJsonAsync(
-                    $"api/v1/users/{userId}/roles",
-                    new { role = "Viewer" },
-                    cancellationToken
-                )
-            )
-            {
-                assigned.EnsureSuccessStatusCode();
             }
 
             using var setupClient = factory.CreateClient();

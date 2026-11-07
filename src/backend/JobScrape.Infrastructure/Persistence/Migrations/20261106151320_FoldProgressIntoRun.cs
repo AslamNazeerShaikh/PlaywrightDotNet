@@ -10,6 +10,10 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // IRREVERSIBLE: the DELETE below permanently removes orphan
+            // progress rows whose run no longer exists. The Down() method
+            // only drops the foreign key and cannot restore those rows, so
+            // rolling this migration back loses that data forever.
             migrationBuilder.Sql(
                 "DELETE FROM scrape_run_progress WHERE id NOT IN (SELECT id FROM scrape_runs)"
             );
