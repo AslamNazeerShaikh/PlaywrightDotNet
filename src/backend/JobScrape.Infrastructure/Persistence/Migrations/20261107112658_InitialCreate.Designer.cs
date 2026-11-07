@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JobScrape.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(JobScrapeDbContext))]
-    [Migration("20261106163020_AddUsageQuotas")]
-    partial class AddUsageQuotas
+    [Migration("20261107112658_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
