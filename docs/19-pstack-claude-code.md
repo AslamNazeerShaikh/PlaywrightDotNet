@@ -13,11 +13,15 @@ is separate and unchanged; see [17-pstack-opencode.md](17-pstack-opencode.md).
    models. It rewrites `.claude/rules/pstack-models.md`, which Claude Code
    loads into every session. The committed sheet tiers roles by cost, all at
    `xhigh`: `haiku` for high-volume fan-out (swarm workers, `how` explorers),
-   `sonnet` for writing code (feature, bug-fix, perf, hillclimb, `why`
-   investigators, `reflect` tooling), and `opus` for planning, review, and
-   judgment (prose, hardest tasks, explainers, synthesizers, panels). Panels
-   pair `opus` with `sonnet`; with no second model family, arena skips the
-   cross-family judge.
+   `sonnet` for code, planning, review, and judgment (every other role), and
+   `opus` for `hardest tasks` and the one-seat panels that guide other
+   agents (`arena runners` compete on candidates the parent picks from;
+   `architect runners` sketch the design `sonnet` implements;
+   `interrogate reviewers` prove bugs without fixing them). With no second
+   model family, arena skips the cross-family judge.
+   The main session is the orchestrator: `.claude/settings.json` pins it to
+   `opus` at `xhigh`, so it reads every prompt, runs the playbooks, and
+   delegates to those roles.
 2. Use `/poteto-mode` at the start of any task that needs rigor. It matches
    your request to one of 23 playbooks, opens a todo list from the playbook's
    steps, and routes to the other skills as the steps need them.
