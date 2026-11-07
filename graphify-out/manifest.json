@@ -1,14 +1,14 @@
 {
   ".opencode/opencode.json": {
-    "mtime": 1793989179.713039,
-    "seen": 1794043628.672224,
-    "ast_hash": "e522e8fc34d5f30bbd6370eb296594ff",
+    "mtime": 1794063485.3263037,
+    "seen": 1794063743.8409731,
+    "ast_hash": "2ffd44a2f418ccf4cd3723a5386e28e7",
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1793614474.2358944,
-    "seen": 1793614525.681397,
-    "ast_hash": "43144eacc8f3d6a0d8cdd03c6d2eedc1",
+    "mtime": 1794063569.57822,
+    "seen": 1794063743.841444,
+    "ast_hash": "2dad83a5e8783c9a468ffd2b8b6f6bed",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2124,386 +2124,386 @@
     "semantic_hash": ""
   },
   ".opencode/agents/comment-sicko.md": {
-    "mtime": 1793964838.285669,
-    "seen": 1793965341.2385821,
-    "ast_hash": "02d888921d46edfe8364babadc940e8f",
+    "mtime": 1794063399.4772801,
+    "seen": 1794063743.841253,
+    "ast_hash": "54501c6415a64772112e3345fac7ffa7",
     "semantic_hash": ""
   },
   ".opencode/agents/poteto-agent.md": {
-    "mtime": 1793964822.118493,
-    "seen": 1793965341.238583,
-    "ast_hash": "8b19a223cf9bd246c2785e3951058e51",
+    "mtime": 1794063387.807743,
+    "seen": 1794063743.841253,
+    "ast_hash": "feaf3b7f0b866062eff8af297e71495f",
     "semantic_hash": ""
   },
   ".opencode/commands/architect.md": {
-    "mtime": 1793612940.3845975,
-    "seen": 1793614405.7531059,
+    "mtime": 1794063493.4383452,
+    "seen": 1794063743.841254,
     "ast_hash": "4c82942105ddf37a0288cd749d53633d",
     "semantic_hash": ""
   },
   ".opencode/commands/arena.md": {
-    "mtime": 1793612940.3847525,
-    "seen": 1793614405.7531068,
+    "mtime": 1794063493.4429655,
+    "seen": 1794063743.841254,
     "ast_hash": "b37317d21f9cd9b09b17bbf18a8af414",
     "semantic_hash": ""
   },
   ".opencode/commands/automate-me.md": {
-    "mtime": 1793612940.3848622,
-    "seen": 1793614405.7531068,
+    "mtime": 1794063493.4465935,
+    "seen": 1794063743.841254,
     "ast_hash": "2c9513e00c72544ab305511cf64b6f4d",
     "semantic_hash": ""
   },
   ".opencode/commands/banner-design.md": {
-    "mtime": 1793613784.9323902,
-    "seen": 1793614405.753108,
+    "mtime": 1794063493.4506361,
+    "seen": 1794063743.841255,
     "ast_hash": "ed8099a4e0ce94b867c8c4ac635dce9c",
     "semantic_hash": ""
   },
   ".opencode/commands/benchmark-checklist.md": {
-    "mtime": 1793612940.3849664,
-    "seen": 1793614405.753108,
+    "mtime": 1794063493.454686,
+    "seen": 1794063743.841255,
     "ast_hash": "af2cd4d0d26a244b0542631c0e05fdb3",
     "semantic_hash": ""
   },
   ".opencode/commands/blast-radius.md": {
-    "mtime": 1793612940.3850565,
-    "seen": 1793614405.753109,
+    "mtime": 1794063493.4585576,
+    "seen": 1794063743.841255,
     "ast_hash": "3fa94d2c17b819b4243889ec1f851c47",
     "semantic_hash": ""
   },
   ".opencode/commands/brand.md": {
-    "mtime": 1793613784.9324863,
-    "seen": 1793614405.753109,
+    "mtime": 1794063493.4625473,
+    "seen": 1794063743.841256,
     "ast_hash": "8d0ccd6e2adbc28c5ef08180c1be8c99",
     "semantic_hash": ""
   },
   ".opencode/commands/bro.md": {
-    "mtime": 1793612940.3851438,
-    "seen": 1793614405.75311,
+    "mtime": 1794063493.4662693,
+    "seen": 1794063743.841256,
     "ast_hash": "53fdc2583bfd8ed04e817859bb53c70e",
     "semantic_hash": ""
   },
   ".opencode/commands/build-fix.md": {
-    "mtime": 1793613815.7963295,
-    "seen": 1793614405.75311,
-    "ast_hash": "9e32cffd916488a2c316f5e463278ad1",
+    "mtime": 1794063493.469923,
+    "seen": 1794063743.8412569,
+    "ast_hash": "4021b75c4d4380fb7de07fe9a6dd1c75",
     "semantic_hash": ""
   },
   ".opencode/commands/checkpoint.md": {
-    "mtime": 1793964874.4297252,
-    "seen": 1793965341.2385888,
+    "mtime": 1794063493.4734142,
+    "seen": 1794063743.8412569,
     "ast_hash": "e9b04ab9b28283cd09f9c31a1726702f",
     "semantic_hash": ""
   },
   ".opencode/commands/code-review.md": {
-    "mtime": 1793877196.2132642,
-    "seen": 1793884357.22948,
-    "ast_hash": "ec20765514adc5b504cba33b10ecd241",
+    "mtime": 1794063493.477157,
+    "seen": 1794063743.8412569,
+    "ast_hash": "929fb30be6f80975309a2789ebf1cb60",
     "semantic_hash": ""
   },
   ".opencode/commands/correct.md": {
-    "mtime": 1793612940.385227,
-    "seen": 1793614405.753112,
+    "mtime": 1794063493.4807491,
+    "seen": 1794063743.841258,
     "ast_hash": "5b2397841b507b873317df729bbe19c9",
     "semantic_hash": ""
   },
   ".opencode/commands/create-formal-verification-skill.md": {
-    "mtime": 1793612940.3853097,
-    "seen": 1793614405.753112,
+    "mtime": 1794063493.4845421,
+    "seen": 1794063743.841258,
     "ast_hash": "f08cbdfd1a0c1f01e5158aa48b04188f",
     "semantic_hash": ""
   },
   ".opencode/commands/create-verification-skill.md": {
-    "mtime": 1793612940.3855343,
-    "seen": 1793614405.753113,
+    "mtime": 1794063493.4880369,
+    "seen": 1794063743.841258,
     "ast_hash": "19cc497b9cb51920405ab2c1e571c27b",
     "semantic_hash": ""
   },
   ".opencode/commands/design-system.md": {
-    "mtime": 1793613784.932088,
-    "seen": 1793614405.753113,
+    "mtime": 1794063493.491651,
+    "seen": 1794063743.841259,
     "ast_hash": "058d677cfbfa8a682dc1b2930a8108f3",
     "semantic_hash": ""
   },
   ".opencode/commands/design.md": {
-    "mtime": 1793613784.9319646,
-    "seen": 1793614405.7531142,
+    "mtime": 1794063493.4956515,
+    "seen": 1794063743.841259,
     "ast_hash": "f7f83cac793fb6b602c9088ccf9e5b21",
     "semantic_hash": ""
   },
   ".opencode/commands/deslop.md": {
-    "mtime": 1793613347.826083,
-    "seen": 1793614405.7531142,
+    "mtime": 1794063493.4988344,
+    "seen": 1794063743.841259,
     "ast_hash": "1b67fd271cf28240cb347a04adb96c93",
     "semantic_hash": ""
   },
   ".opencode/commands/e2e.md": {
-    "mtime": 1793613815.7988265,
-    "seen": 1793614405.753115,
-    "ast_hash": "9182486a330eb6c5ede23acf749c3c50",
+    "mtime": 1794063493.5023139,
+    "seen": 1794063743.84126,
+    "ast_hash": "4087637e4a286930a9883bd1d626c432",
     "semantic_hash": ""
   },
   ".opencode/commands/eval.md": {
-    "mtime": 1793964874.3977365,
-    "seen": 1793965341.238594,
+    "mtime": 1794063493.5061247,
+    "seen": 1794063743.84126,
     "ast_hash": "548f6c18900a47016dd1fed9e9a9b732",
     "semantic_hash": ""
   },
   ".opencode/commands/figure-it-out.md": {
-    "mtime": 1793612940.385715,
-    "seen": 1793614405.753115,
+    "mtime": 1794063493.5098615,
+    "seen": 1794063743.84126,
     "ast_hash": "97f09be64647430d32a0cfffbabd04ea",
     "semantic_hash": ""
   },
   ".opencode/commands/harness-audit.md": {
-    "mtime": 1793613815.8199594,
-    "seen": 1793614405.753116,
+    "mtime": 1794063493.5135531,
+    "seen": 1794063743.8412611,
     "ast_hash": "e1e43d3737bdae9d751be75e9d62928a",
     "semantic_hash": ""
   },
   ".opencode/commands/how.md": {
-    "mtime": 1793612940.3858278,
-    "seen": 1793614405.753116,
+    "mtime": 1794063493.5172195,
+    "seen": 1794063743.8412611,
     "ast_hash": "519e943beab05136dcb3c72c68f93f9f",
     "semantic_hash": ""
   },
   ".opencode/commands/in-your-own-words.md": {
-    "mtime": 1793612940.385993,
-    "seen": 1793614405.7531168,
+    "mtime": 1794063493.5204897,
+    "seen": 1794063743.8412611,
     "ast_hash": "1f40bd0399cf47b346fa47f403b85269",
     "semantic_hash": ""
   },
   ".opencode/commands/interrogate.md": {
-    "mtime": 1793612940.3861556,
-    "seen": 1793614405.7531168,
+    "mtime": 1794063493.5240602,
+    "seen": 1794063743.841262,
     "ast_hash": "1c3d2a02574dc21571fb993c05303314",
     "semantic_hash": ""
   },
   ".opencode/commands/ketchup-video.md": {
-    "mtime": 1793612940.3865042,
-    "seen": 1793614405.753118,
+    "mtime": 1794063493.527394,
+    "seen": 1794063743.841262,
     "ast_hash": "6fd3a46dfbb911c27e55918ae25c8e9b",
     "semantic_hash": ""
   },
   ".opencode/commands/ketchup.md": {
-    "mtime": 1793612940.3864107,
-    "seen": 1793614405.753118,
+    "mtime": 1794063493.5311193,
+    "seen": 1794063743.841262,
     "ast_hash": "f3f81cef13cc1c0f552c75b2c91f6f11",
     "semantic_hash": ""
   },
   ".opencode/commands/learn.md": {
-    "mtime": 1793964874.3634758,
-    "seen": 1793965341.2385988,
+    "mtime": 1794063493.5345893,
+    "seen": 1794063743.841263,
     "ast_hash": "3fa14b720e9fd006c670c6daf307b4a8",
     "semantic_hash": ""
   },
   ".opencode/commands/loop-start.md": {
-    "mtime": 1793964882.6127696,
-    "seen": 1793965341.2385988,
-    "ast_hash": "df95ee084850b3762c22bb633caa5aa7",
+    "mtime": 1794063493.675274,
+    "seen": 1794063743.841263,
+    "ast_hash": "a744605d92a86483031952bd51156b95",
     "semantic_hash": ""
   },
   ".opencode/commands/loop-status.md": {
-    "mtime": 1793613815.8269734,
-    "seen": 1793614405.75312,
-    "ast_hash": "56298f69cbc026c1aa2f68f63701406a",
+    "mtime": 1794063493.6812956,
+    "seen": 1794063743.841263,
+    "ast_hash": "2b0f1528a90b07f7aeb9db53a4e8c769",
     "semantic_hash": ""
   },
   ".opencode/commands/maintain-formal-verification-skill.md": {
-    "mtime": 1793612940.3865948,
-    "seen": 1793614405.75312,
+    "mtime": 1794063493.545274,
+    "seen": 1794063743.841264,
     "ast_hash": "383ee8bdac5a54482b9d4b3ca7f29587",
     "semantic_hash": ""
   },
   ".opencode/commands/maintain-verification-skill.md": {
-    "mtime": 1793612940.3866813,
-    "seen": 1793614405.7531211,
+    "mtime": 1794063493.5488532,
+    "seen": 1794063743.841264,
     "ast_hash": "fc9622e94a510a5635f1a04962d97261",
     "semantic_hash": ""
   },
   ".opencode/commands/make-bot-ui.md": {
-    "mtime": 1793612940.386889,
-    "seen": 1793614405.7531211,
+    "mtime": 1794063493.5519893,
+    "seen": 1794063743.841265,
     "ast_hash": "a3503bd1c2d2633146a1d7671cbf7df5",
     "semantic_hash": ""
   },
   ".opencode/commands/model-route.md": {
-    "mtime": 1793613815.8234024,
-    "seen": 1793614405.753122,
-    "ast_hash": "9fe3ded8ef42d16c0cd052638b4bf275",
+    "mtime": 1794063493.6614997,
+    "seen": 1794063743.841265,
+    "ast_hash": "92513bec950ffde3fe2df25f782deab5",
     "semantic_hash": ""
   },
   ".opencode/commands/no-comments.md": {
-    "mtime": 1793612940.3869987,
-    "seen": 1793614405.753122,
+    "mtime": 1794063493.5587416,
+    "seen": 1794063743.841265,
     "ast_hash": "8c8dfbd2a099d56c323c2b5858f6bb30",
     "semantic_hash": ""
   },
   ".opencode/commands/orchestrate.md": {
-    "mtime": 1793613815.8037753,
-    "seen": 1793614405.753123,
-    "ast_hash": "b33576f772eb96f2aa44b92c5824d1e8",
+    "mtime": 1794063493.5622413,
+    "seen": 1794063743.841266,
+    "ast_hash": "f669c36547926e132f4a4a20b412feec",
     "semantic_hash": ""
   },
   ".opencode/commands/plan.md": {
-    "mtime": 1793613815.7857714,
-    "seen": 1793614405.753123,
-    "ast_hash": "e0a89fbba021f8d8932ca31baea6f65b",
+    "mtime": 1794063493.5655954,
+    "seen": 1794063743.841266,
+    "ast_hash": "387ada53fc611c11b5335691ec7902e4",
     "semantic_hash": ""
   },
   ".opencode/commands/poteto-help.md": {
-    "mtime": 1793612940.3870978,
-    "seen": 1793614405.753124,
+    "mtime": 1794063493.5690823,
+    "seen": 1794063743.841266,
     "ast_hash": "9c3e65929aef776697cee770fbbc2ee3",
     "semantic_hash": ""
   },
   ".opencode/commands/poteto-mode.md": {
-    "mtime": 1793612940.3872025,
-    "seen": 1793614405.753124,
+    "mtime": 1794063493.5725389,
+    "seen": 1794063743.8412669,
     "ast_hash": "729f0cf9fd740b615d63f31c2eeab826",
     "semantic_hash": ""
   },
   ".opencode/commands/quality-gate.md": {
-    "mtime": 1793613815.821694,
-    "seen": 1793614405.7531252,
-    "ast_hash": "e77537dca93814bccd3258298963eb65",
+    "mtime": 1794063493.6680782,
+    "seen": 1794063743.8412669,
+    "ast_hash": "efa0bb4bf4fa1610dd55ff9f70a770de",
     "semantic_hash": ""
   },
   ".opencode/commands/recall.md": {
-    "mtime": 1793612940.3872964,
-    "seen": 1793614405.753126,
+    "mtime": 1794063493.5792623,
+    "seen": 1794063743.8412669,
     "ast_hash": "5dca5221591cd24f162258fbe2873604",
     "semantic_hash": ""
   },
   ".opencode/commands/refactor-clean.md": {
-    "mtime": 1793613815.8013558,
-    "seen": 1793614405.753126,
-    "ast_hash": "8d7d9239b93e576965140226b36e70cc",
+    "mtime": 1794063493.5827267,
+    "seen": 1794063743.841268,
+    "ast_hash": "3176b308ea1c369b425130a1035ac2e8",
     "semantic_hash": ""
   },
   ".opencode/commands/reflect.md": {
-    "mtime": 1793612940.3873823,
-    "seen": 1793614405.753126,
+    "mtime": 1794063493.587059,
+    "seen": 1794063743.841268,
     "ast_hash": "2dc8f952afea2a1fea4fb687e2799e3f",
     "semantic_hash": ""
   },
   ".opencode/commands/security.md": {
-    "mtime": 1793613815.7929666,
-    "seen": 1793614405.7531269,
-    "ast_hash": "55f3716a82f4072f2eb288641c56250c",
+    "mtime": 1794063493.590754,
+    "seen": 1794063743.841269,
+    "ast_hash": "62eb48790133852bc06baccb940bcd92",
     "semantic_hash": ""
   },
   ".opencode/commands/setup-pstack.md": {
-    "mtime": 1793612940.3874674,
-    "seen": 1793614405.7531269,
+    "mtime": 1794063493.5946267,
+    "seen": 1794063743.841269,
     "ast_hash": "28d7b18d14a0788e857c239fb5f5a4a0",
     "semantic_hash": ""
   },
   ".opencode/commands/sharpen.md": {
-    "mtime": 1793612940.3875418,
-    "seen": 1793614405.753128,
+    "mtime": 1794063493.5979383,
+    "seen": 1794063743.841269,
     "ast_hash": "6ed22a6e65cec8bb0051c66354f17560",
     "semantic_hash": ""
   },
   ".opencode/commands/show-me-your-work.md": {
-    "mtime": 1793612940.3876176,
-    "seen": 1793614405.753128,
+    "mtime": 1794063493.601584,
+    "seen": 1794063743.84127,
     "ast_hash": "7ba0c8eefbce952af4aa4d120633c68c",
     "semantic_hash": ""
   },
   ".opencode/commands/skill-create.md": {
-    "mtime": 1793964882.611326,
-    "seen": 1793965341.23861,
+    "mtime": 1794063493.6050873,
+    "seen": 1794063743.84127,
     "ast_hash": "2168c5e9d053b8ac5a789256f0762c44",
     "semantic_hash": ""
   },
   ".opencode/commands/slides.md": {
-    "mtime": 1793613784.932286,
-    "seen": 1793614405.753129,
+    "mtime": 1794063493.6085782,
+    "seen": 1794063743.84127,
     "ast_hash": "854fe0144fc8985b415fb573887f60c9",
     "semantic_hash": ""
   },
   ".opencode/commands/statechart.md": {
-    "mtime": 1793612940.3876956,
-    "seen": 1793614405.75313,
+    "mtime": 1794063493.612234,
+    "seen": 1794063743.841271,
     "ast_hash": "4efe27187b6a9be56d7204d478fdf7bb",
     "semantic_hash": ""
   },
   ".opencode/commands/swarm.md": {
-    "mtime": 1793612940.3878584,
-    "seen": 1793614405.75313,
+    "mtime": 1794063493.6156018,
+    "seen": 1794063743.841271,
     "ast_hash": "cc57470869f4a23f3fe0ebbcec6aedda",
     "semantic_hash": ""
   },
   ".opencode/commands/tdd.md": {
-    "mtime": 1793612940.3880987,
-    "seen": 1793614405.753131,
+    "mtime": 1794063493.6191266,
+    "seen": 1794063743.841271,
     "ast_hash": "5fa5c35cf27412c39ada555418a7d2d2",
     "semantic_hash": ""
   },
   ".opencode/commands/teach.md": {
-    "mtime": 1793612940.388214,
-    "seen": 1793614405.753131,
+    "mtime": 1794063493.6227803,
+    "seen": 1794063743.841272,
     "ast_hash": "297d20ee3405f2163a9d865382f6dc74",
     "semantic_hash": ""
   },
   ".opencode/commands/technical-writing.md": {
-    "mtime": 1793612940.3883684,
-    "seen": 1793614405.753132,
+    "mtime": 1794063493.626107,
+    "seen": 1794063743.841272,
     "ast_hash": "2890a8e9ccc97fd0fc9bf46e26d56ac6",
     "semantic_hash": ""
   },
   ".opencode/commands/test-coverage.md": {
-    "mtime": 1793613815.818177,
-    "seen": 1793614405.753132,
-    "ast_hash": "52466a1495d4396fbb8c9879842cebcc",
+    "mtime": 1794063493.6295402,
+    "seen": 1794063743.841273,
+    "ast_hash": "ef86983a5cc88ed559ad13a514e449cf",
     "semantic_hash": ""
   },
   ".opencode/commands/typescript-best-practices.md": {
-    "mtime": 1793612940.3886514,
-    "seen": 1793614405.753133,
+    "mtime": 1794063493.6330316,
+    "seen": 1794063743.841273,
     "ast_hash": "b7610fe330219528a989fe342ad02d63",
     "semantic_hash": ""
   },
   ".opencode/commands/ui-styling.md": {
-    "mtime": 1793613784.9321933,
-    "seen": 1793614405.753133,
+    "mtime": 1794063493.6362402,
+    "seen": 1794063743.841273,
     "ast_hash": "02ac91d8abe840adfe02a6dfe57e092b",
     "semantic_hash": ""
   },
   ".opencode/commands/ui-ux-pro-max.md": {
-    "mtime": 1793613784.9317899,
-    "seen": 1793614405.753134,
+    "mtime": 1794063493.6393926,
+    "seen": 1794063743.841274,
     "ast_hash": "0321502ffc7c5d99387dbb8c12f3664e",
     "semantic_hash": ""
   },
   ".opencode/commands/unslop.md": {
-    "mtime": 1793612940.3887582,
-    "seen": 1793614405.753134,
+    "mtime": 1794063493.642849,
+    "seen": 1794063743.841274,
     "ast_hash": "009645d4f04aea002e3c0168feac971d",
     "semantic_hash": ""
   },
   ".opencode/commands/update-codemaps.md": {
-    "mtime": 1793613815.8163805,
-    "seen": 1793614405.7531352,
-    "ast_hash": "d5e8c20f19e0349b9fa964536e11a85c",
+    "mtime": 1794063493.6462536,
+    "seen": 1794063743.841274,
+    "ast_hash": "43aaf0311c652af4da8dfde77783288f",
     "semantic_hash": ""
   },
   ".opencode/commands/update-docs.md": {
-    "mtime": 1793613815.8142142,
-    "seen": 1793614405.7531352,
-    "ast_hash": "4dad4d869ea58b33fcdfa2145037f827",
+    "mtime": 1794063493.6494718,
+    "seen": 1794063743.841275,
+    "ast_hash": "4e77be911ca5299b14fa88683e5b4bce",
     "semantic_hash": ""
   },
   ".opencode/commands/verify.md": {
-    "mtime": 1793964874.4158995,
-    "seen": 1793965341.2386189,
+    "mtime": 1794063493.6526668,
+    "seen": 1794063743.841275,
     "ast_hash": "e1a5c50a33a9e5992a378a5cf42a4d4c",
     "semantic_hash": ""
   },
   ".opencode/commands/why.md": {
-    "mtime": 1793612940.3888524,
-    "seen": 1793614405.7531362,
+    "mtime": 1794063493.6557722,
+    "seen": 1794063743.841275,
     "ast_hash": "8fb75b58f9fde40dfa34170dbbae1db7",
     "semantic_hash": ""
   },
@@ -2580,15 +2580,15 @@
     "semantic_hash": ""
   },
   ".opencode/docs/harness/opencode.md": {
-    "mtime": 1793613351.4876258,
-    "seen": 1793614405.753143,
-    "ast_hash": "675e7588d555e63b7087a6a28b748fbb",
+    "mtime": 1794063358.4837847,
+    "seen": 1794063743.841281,
+    "ast_hash": "5b8abee43fc7ae518c3f067f225a4834",
     "semantic_hash": ""
   },
   ".opencode/instructions/INSTRUCTIONS.md": {
-    "mtime": 1793964874.3306763,
-    "seen": 1793965341.238627,
-    "ast_hash": "b60bdc0ef08ee718113219755bacbea0",
+    "mtime": 1794063514.5109134,
+    "seen": 1794063743.841281,
+    "ast_hash": "700ab7d0e15b73a040cb9b5893d5046e",
     "semantic_hash": ""
   },
   ".opencode/prompts/agents/build-error-resolver.txt": {
@@ -2640,9 +2640,9 @@
     "semantic_hash": ""
   },
   ".opencode/pstack-models.md": {
-    "mtime": 1794057084.4322407,
-    "seen": 1794060761.0602398,
-    "ast_hash": "a00e84e9940188555eabd3f13a8fcdb6",
+    "mtime": 1794063599.9324903,
+    "seen": 1794063743.8412852,
+    "ast_hash": "8b65166464b6da2729e811e8f68c5ac2",
     "semantic_hash": ""
   },
   ".opencode/skills/analyzing-dotnet-performance/SKILL.md": {
@@ -2652,15 +2652,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/architect/SKILL.md": {
-    "mtime": 1793612906.6869524,
-    "seen": 1793614405.7531478,
-    "ast_hash": "6bc22429fa754801edb9810ec0bfcc49",
+    "mtime": 1794063465.4309218,
+    "seen": 1794063743.841289,
+    "ast_hash": "3a36e7cfd81fcdc2627cc022e44acd50",
     "semantic_hash": ""
   },
   ".opencode/skills/arena/SKILL.md": {
-    "mtime": 1793612906.6894252,
-    "seen": 1793614405.753149,
-    "ast_hash": "35a31b2b25c8987554f4d5583045d0c4",
+    "mtime": 1794063465.4318388,
+    "seen": 1794063743.84129,
+    "ast_hash": "c6a7893044a4cda5a2a8a211c5965acb",
     "semantic_hash": ""
   },
   ".opencode/skills/assertion-quality/SKILL.md": {
@@ -2670,9 +2670,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/automate-me/SKILL.md": {
-    "mtime": 1793612906.6888196,
-    "seen": 1793614405.75315,
-    "ast_hash": "843933b4505046ba85f32cf80f0bb898",
+    "mtime": 1794063465.4317195,
+    "seen": 1794063743.841294,
+    "ast_hash": "77ff92ddf0a320dbc75390e2f1b9fd32",
     "semantic_hash": ""
   },
   ".opencode/skills/banner-design/SKILL.md": {
@@ -2790,9 +2790,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/create-verification-skill/SKILL.md": {
-    "mtime": 1793612906.6908576,
-    "seen": 1793614405.75316,
-    "ast_hash": "6d3cc800d5caf894ea2fd6f7432674ac",
+    "mtime": 1794063465.4321406,
+    "seen": 1794063743.8413188,
+    "ast_hash": "54514d2914002f060106804b8e01cddd",
     "semantic_hash": ""
   },
   ".opencode/skills/csharp-expert/SKILL.md": {
@@ -2904,9 +2904,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/how/SKILL.md": {
-    "mtime": 1793612906.5670307,
-    "seen": 1793614405.7531688,
-    "ast_hash": "87b440f4269fc1e16061333633f6cd8f",
+    "mtime": 1794063465.4286785,
+    "seen": 1794063743.841353,
+    "ast_hash": "08ff49f144f2990d4e73edf9c5d94852",
     "semantic_hash": ""
   },
   ".opencode/skills/in-your-own-words/SKILL.md": {
@@ -2928,9 +2928,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/interrogate/SKILL.md": {
-    "mtime": 1793612906.554622,
-    "seen": 1793614405.753171,
-    "ast_hash": "14f30fda565b8bd73b033000445bb101",
+    "mtime": 1794059676.3161037,
+    "seen": 1794063743.841356,
+    "ast_hash": "0efbc27c368fdfa5f8ea84b8091e3cb5",
     "semantic_hash": ""
   },
   ".opencode/skills/item-management/SKILL.md": {
@@ -2946,9 +2946,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/ketchup/SKILL.md": {
-    "mtime": 1793612906.6826987,
-    "seen": 1793614405.7531729,
-    "ast_hash": "8d971991042a8aa754356fb625338948",
+    "mtime": 1794059676.3163564,
+    "seen": 1794063743.841357,
+    "ast_hash": "c33cd2cdd20bf0a6484c3decd405f5e5",
     "semantic_hash": ""
   },
   ".opencode/skills/maintain-formal-verification-skill/SKILL.md": {
@@ -2958,9 +2958,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/maintain-verification-skill/SKILL.md": {
-    "mtime": 1793612906.6842449,
-    "seen": 1793614405.753174,
-    "ast_hash": "0b5cb9054ac73644dae59a476525a7f7",
+    "mtime": 1794063465.4305968,
+    "seen": 1794063743.8413582,
+    "ast_hash": "5f4f1d3f883b740cfe5ea8408e38541f",
     "semantic_hash": ""
   },
   ".opencode/skills/make-bot-ui/SKILL.md": {
@@ -3000,9 +3000,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/no-comments/SKILL.md": {
-    "mtime": 1793964830.963528,
-    "seen": 1793965341.238741,
-    "ast_hash": "f3cde10793eaadd287b603ae2bda85a9",
+    "mtime": 1794063415.5409672,
+    "seen": 1794063743.84137,
+    "ast_hash": "c80954deebc77705e6e2023d67b39454",
     "semantic_hash": ""
   },
   ".opencode/skills/optimizing-ef-core-queries/SKILL.md": {
@@ -3018,15 +3018,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-help/SKILL.md": {
-    "mtime": 1793612906.6859891,
-    "seen": 1793614405.7531788,
-    "ast_hash": "6644773335e61f2c3032194118f69969",
+    "mtime": 1794063465.430828,
+    "seen": 1794063743.841372,
+    "ast_hash": "69893d8cbe5600e04266e1077af20db1",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/SKILL.md": {
-    "mtime": 1793964794.1956115,
-    "seen": 1793965341.2387462,
-    "ast_hash": "1233c454d230cc244feb3c45cacca6fe",
+    "mtime": 1794063375.2602549,
+    "seen": 1794063743.841373,
+    "ast_hash": "fe13744077f88262ab15aa9bea3ebce2",
     "semantic_hash": ""
   },
   ".opencode/skills/principle-attack-the-premise/SKILL.md": {
@@ -3180,15 +3180,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/recall/SKILL.md": {
-    "mtime": 1793612906.682406,
-    "seen": 1793614405.753193,
-    "ast_hash": "c47b44bd366d7b707f7fef0334fced00",
+    "mtime": 1794063465.4301405,
+    "seen": 1794063743.841395,
+    "ast_hash": "0e909d1dce9b60ae115eaee61ec3f685",
     "semantic_hash": ""
   },
   ".opencode/skills/reflect/SKILL.md": {
-    "mtime": 1793612906.5723953,
-    "seen": 1793614405.753193,
-    "ast_hash": "a82573611235884095937c001b5ec905",
+    "mtime": 1794063465.4294567,
+    "seen": 1794063743.841395,
+    "ast_hash": "db21b535e78a647a0669100da018cb52",
     "semantic_hash": ""
   },
   ".opencode/skills/resolve-project-references/SKILL.md": {
@@ -3216,9 +3216,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/setup-pstack/SKILL.md": {
-    "mtime": 1793964816.9645119,
-    "seen": 1793965341.238781,
-    "ast_hash": "28e673f206c59eacacea72dc9694df59",
+    "mtime": 1794063506.6735003,
+    "seen": 1794063743.841399,
+    "ast_hash": "3e036356e9b8c3640a5596036fc7bc46",
     "semantic_hash": ""
   },
   ".opencode/skills/sharpen/SKILL.md": {
@@ -3228,9 +3228,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/show-me-your-work/SKILL.md": {
-    "mtime": 1793612906.5742562,
-    "seen": 1793614405.753197,
-    "ast_hash": "8d1d5da5687eca66329aab6599636c05",
+    "mtime": 1794059676.3251595,
+    "seen": 1794063743.8414001,
+    "ast_hash": "1f959346b87f94b838b20c300b087968",
     "semantic_hash": ""
   },
   ".opencode/skills/slides/SKILL.md": {
@@ -3246,9 +3246,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/swarm/SKILL.md": {
-    "mtime": 1793612906.5573497,
-    "seen": 1793614405.7531981,
-    "ast_hash": "71465d614e87dbce4a1aa7379c61b16b",
+    "mtime": 1794063465.4277995,
+    "seen": 1794063743.841419,
+    "ast_hash": "6301cabdb0ff5a9185eaafa4ca11bb0c",
     "semantic_hash": ""
   },
   ".opencode/skills/target-authoring/SKILL.md": {
@@ -3348,21 +3348,21 @@
     "semantic_hash": ""
   },
   ".opencode/skills/why/SKILL.md": {
-    "mtime": 1793612906.564739,
-    "seen": 1793614405.753207,
-    "ast_hash": "949b498d769e832f02ade1310228e320",
+    "mtime": 1794063465.4282115,
+    "seen": 1794063743.841438,
+    "ast_hash": "c8a29e577e9b326a97bae9a6ee32c1c1",
     "semantic_hash": ""
   },
   "docs/17-pstack-opencode.md": {
-    "mtime": 1793613371.612654,
-    "seen": 1793614405.75323,
-    "ast_hash": "74674849e0e6a1e4bba87c50b9dc7f67",
+    "mtime": 1794063557.6108062,
+    "seen": 1794063743.841465,
+    "ast_hash": "352bea5bef73b9ab598ed9b315df79bd",
     "semantic_hash": ""
   },
   "docs/18-harness-packs.md": {
-    "mtime": 1793613932.3164957,
-    "seen": 1793614405.75323,
-    "ast_hash": "28717ebcd5ae6a160ae5f6881c161106",
+    "mtime": 1794063594.2015452,
+    "seen": 1794063743.841465,
+    "ast_hash": "52da66c41f20386e48128180e08b9719",
     "semantic_hash": ""
   },
   ".opencode/docs/guide/images/design.jpg": {
@@ -3666,9 +3666,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/scripts/worktree-audit.sh": {
-    "mtime": 1793612906.586077,
-    "seen": 1793614462.8345559,
-    "ast_hash": "6023959a055401cbbe7935ca8c924636",
+    "mtime": 1794059676.321196,
+    "seen": 1794063743.8409972,
+    "ast_hash": "3a6934972086c33de8f37205cd0e1e89",
     "semantic_hash": ""
   },
   ".opencode/skills/show-me-your-work/scripts/log.sh": {
@@ -3708,9 +3708,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/frontends/dot.ts": {
-    "mtime": 1793612906.6767533,
-    "seen": 1793614462.834559,
-    "ast_hash": "95132e65e53cdaac1eb60d5c905578b5",
+    "mtime": 1794059676.3262362,
+    "seen": 1794063743.8409998,
+    "ast_hash": "46687d6ab0423fe3f56cb87d94e5a7d6",
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/frontends/marks.ts": {
@@ -3822,9 +3822,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/run.ts": {
-    "mtime": 1793612906.6817331,
-    "seen": 1793614462.834569,
-    "ast_hash": "6dca8f20acb5ef5927835957827e3a47",
+    "mtime": 1794059676.3275957,
+    "seen": 1794063743.8410082,
+    "ast_hash": "99cf2a137f7868a90c239228ed48e7b2",
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/statechart": {
@@ -3834,9 +3834,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/statechart.ts": {
-    "mtime": 1793612906.6812005,
-    "seen": 1793614462.8345711,
-    "ast_hash": "f63cb0bff480c0dd3c5b1725dce6a770",
+    "mtime": 1794059676.3277419,
+    "seen": 1794063743.841009,
+    "ast_hash": "4eb8be856627edafb34cc9aa6489d0af",
     "semantic_hash": ""
   },
   ".opencode/skills/statechart/scripts/test/ConfigOracle.java": {
@@ -4884,15 +4884,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/authoring-a-skill.md": {
-    "mtime": 1793612906.5776622,
-    "seen": 1793614462.834953,
-    "ast_hash": "c58c13dbb82d50b3d913c2d4f9bb95bc",
+    "mtime": 1794059676.3176506,
+    "seen": 1794063743.841374,
+    "ast_hash": "d9d69af6a629b5a3450113b5f67ff918",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/autonomous-run.md": {
-    "mtime": 1793612906.577408,
-    "seen": 1793614462.834953,
-    "ast_hash": "c31257c0abc948b0a22617574e4502bb",
+    "mtime": 1794059676.3177264,
+    "seen": 1794063743.841374,
+    "ast_hash": "e0bb6f060942b5210cfd68efabe532b6",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/autopilot-full.md": {
@@ -4920,9 +4920,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/eval.md": {
-    "mtime": 1793612906.5780978,
-    "seen": 1793614462.834956,
-    "ast_hash": "29b9149053667a239f762ccfc1715c11",
+    "mtime": 1794059676.318106,
+    "seen": 1794063743.841376,
+    "ast_hash": "c3d4f1d6eda5f333f8e8bf357c1d6b38",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/feature.md": {
@@ -4956,9 +4956,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/orchestrate.md": {
-    "mtime": 1793612906.580433,
-    "seen": 1793614462.834959,
-    "ast_hash": "93744bb39c2b6afc0d38f102010165d4",
+    "mtime": 1794059676.318631,
+    "seen": 1794063743.8413792,
+    "ast_hash": "ca01d7b2533a07580e6d89a8b53bf848",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/pause-safely.md": {
@@ -4992,9 +4992,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/session-pickup.md": {
-    "mtime": 1793612906.57789,
-    "seen": 1793614462.834962,
-    "ast_hash": "591c6d66ff562c3b9982111118d2e09c",
+    "mtime": 1794059676.3191247,
+    "seen": 1794063743.8413818,
+    "ast_hash": "24bae3b20ec512e4de54b0218e87a56c",
     "semantic_hash": ""
   },
   ".opencode/skills/poteto-mode/playbooks/shipping.md": {
@@ -5028,15 +5028,15 @@
     "semantic_hash": ""
   },
   ".opencode/skills/reflect/references/divergent-reviewer.md": {
-    "mtime": 1793612906.572133,
-    "seen": 1793614462.8349829,
-    "ast_hash": "a784254b1e2986a9e275b8c2420891e9",
+    "mtime": 1794059676.32432,
+    "seen": 1794063743.8413959,
+    "ast_hash": "62e5f35fe6b6f3641add7e89c3df8fe8",
     "semantic_hash": ""
   },
   ".opencode/skills/reflect/references/judgment-reviewer.md": {
-    "mtime": 1793612906.5715888,
-    "seen": 1793614462.8349829,
-    "ast_hash": "a11654670b45b4ae12f52152e6de0eaf",
+    "mtime": 1794059676.324396,
+    "seen": 1794063743.8413959,
+    "ast_hash": "f199dad710b2a088c478cbba3b7911ca",
     "semantic_hash": ""
   },
   ".opencode/skills/reflect/references/synthesizer.md": {
@@ -5046,9 +5046,9 @@
     "semantic_hash": ""
   },
   ".opencode/skills/reflect/references/tooling-reviewer.md": {
-    "mtime": 1793612906.571857,
-    "seen": 1793614462.834985,
-    "ast_hash": "ea2f67b113f08e74ff58ccde321508c8",
+    "mtime": 1794059676.3247664,
+    "seen": 1794063743.841397,
+    "ast_hash": "cf89d83bdb0f4f502ef942b534df09ad",
     "semantic_hash": ""
   },
   ".opencode/skills/slides/references/copywriting-formulas.md": {
@@ -5958,15 +5958,15 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794060712.7873962,
-    "seen": 1794060761.060391,
-    "ast_hash": "ab77f8a15a49faaa51f9777b5b8bbfae",
+    "mtime": 1794063569.6016648,
+    "seen": 1794063743.8414452,
+    "ast_hash": "2e7a36cf85b4729b37a9bc7ebea455ad",
     "semantic_hash": ""
   },
   "docs/19-pstack-claude-code.md": {
-    "mtime": 1794061430.600759,
-    "seen": 1794061443.195486,
-    "ast_hash": "d3ae2c9b870f238c753318df7a024b4c",
+    "mtime": 1794061452.5335944,
+    "seen": 1794063743.8414662,
+    "ast_hash": "0e907a0085dfaf7c9822e864cabb9afe",
     "semantic_hash": ""
   },
   "src/frontend/src/client/lib/format.ts": {
@@ -6438,15 +6438,15 @@
     "semantic_hash": ""
   },
   ".opencode/SYNC-LOG.md": {
-    "mtime": 1793964893.1401222,
-    "seen": 1793965341.238581,
-    "ast_hash": "d0a174ef0cd0d5f034945ac94b29f61d",
+    "mtime": 1794063608.1664798,
+    "seen": 1794063743.841253,
+    "ast_hash": "57a64276a1b8a2fc37126eef679eb19b",
     "semantic_hash": ""
   },
   ".opencode/skills/no-comments/references/comment-sicko.md": {
-    "mtime": 1793964838.279913,
-    "seen": 1793965341.238742,
-    "ast_hash": "84833aaa95c88bb31e6574b559d0d558",
+    "mtime": 1794063399.486418,
+    "seen": 1794063743.84137,
+    "ast_hash": "732856ef166a1cd251b470622478b55a",
     "semantic_hash": ""
   },
   "tools/vscodeprofile/README.md": {
