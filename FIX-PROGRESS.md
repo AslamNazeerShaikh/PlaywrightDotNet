@@ -1,6 +1,6 @@
 # Fix program state (resume file)
 
-Branch: `fix/pr6-pretest-findings` (cut from PR6 head 5ce242c). Checkpoint commit `c1589c7` (wave5 polish, 10 red-green plus 4 guards, 168 frontend pass).
+Branch: `fix/pr6-pretest-findings` (cut from PR6 head 5ce242c). Checkpoint commit `de2a8c7` (wave6 pins, backend 1261 plus frontend 180 pass).
 Report: `PR6-PRETEST-REPORT.md` (68 findings plus 6-item fix list).
 Servers: backend `https://localhost:5208` on fresh DB `/tmp/jobscrape-test/jobscrape.db`, seed admin@example.com. Cockpit `https://127.0.0.1:3000` HTTPS only.
 
@@ -27,7 +27,7 @@ Go plan snapshot 2026-11-07: monthly 21% (pace 51%), weekly 25%, rolling 4%. Mus
 - Commits: conventional format, hook validator on. Deslop plus no-comments deferred to final pre-PR pass.
 
 ## Wave tracker
-- CLOSED: Wave 0 gameplan, operator calls (unify 401, BFF cookie, Viewer default, seed plus dropdown), Wave 4 bearer plane, Wave 1 identity, W1r3, backend cleanup, equal-cost, Wave 3 seed/roles (`1aa2c80`), BFF cookie wave C2 plus R1 (`dbb05e9`, DeepSeek PASS 1-4 plus R1, 154 frontend pass), Wave 5 polish (`c1589c7`, 7 items PASS, 10 red-green plus 4 guards, 168 frontend pass).
+- CLOSED: Wave 0 gameplan, operator calls (unify 401, BFF cookie, Viewer default, seed plus dropdown), Wave 4 bearer plane, Wave 1 identity, W1r3, backend cleanup, equal-cost, Wave 3 seed/roles (`1aa2c80`), BFF cookie wave C2 plus R1 (`dbb05e9`, DeepSeek PASS 1-4 plus R1, 154 frontend pass), Wave 5 polish (`c1589c7`, 7 items PASS, 10 red-green plus 4 guards, 168 frontend pass), Wave 6 pins (`de2a8c7`, docs 24 ports, backend 1261 plus frontend 180 pass).
 - RUNNING: W2a fix round (escalation, limiter, tests), W2b fix round (reservation protocol, refund), W2b round-2 verify.
 - QUEUED: Wave 5 polish, Wave 6 test pins, Phase E live verify.
 - ACCEPTED without rework: completed-409 vs unknown-401 split (operator call), setup-success 2-verify cost, compare early exits.
