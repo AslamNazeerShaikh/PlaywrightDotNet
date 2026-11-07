@@ -14,13 +14,10 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
         {
             var normalized = email.Trim().ToLowerInvariant();
-            return db.Users.Local.FirstOrDefault(user =>
-                    string.Equals(user.Email, normalized, StringComparison.OrdinalIgnoreCase)
-                )
-                ?? await db.Users.FirstOrDefaultAsync(
-                    user => EF.Functions.Collate(user.Email, "NOCASE") == normalized,
-                    cancellationToken
-                );
+            return await db.Users.FirstOrDefaultAsync(
+                user => EF.Functions.Collate(user.Email, "NOCASE") == normalized,
+                cancellationToken
+            );
         }
 
         /// <inheritdoc />

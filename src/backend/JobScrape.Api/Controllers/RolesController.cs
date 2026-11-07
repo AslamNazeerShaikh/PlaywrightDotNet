@@ -11,12 +11,12 @@ namespace JobScrape.Api.Controllers
 {
     /// <summary>
     /// Role administration: list, read, create, and permission grants. Admin
-    /// role only.. Data-annotation failures map to coded validation
-    /// problems below because the automatic 400 is suppressed in Program.
+    /// role or a matching grant. Data-annotation failures map to coded
+    /// validation problems below because the automatic 400 is suppressed in
+    /// Program.
     /// </summary>
     [ApiController]
     [Route("api/v1/roles")]
-    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public sealed class RolesController : ControllerBase
     {
         // Constructor-injected handlers, never mutated.
@@ -61,6 +61,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the roles.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.RolesRead)]
         public async Task<ActionResult<RoleListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
@@ -75,6 +76,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the role; 404 <c>ROLE_NOT_FOUND</c>.</returns>
         [HttpGet("{name}")]
+        [Authorize(Policy = AuthPolicies.RolesRead)]
         public async Task<IResult> GetAsync(string name, CancellationToken cancellationToken)
         {
             if (!TryParseRole(name, out var role))
@@ -96,6 +98,7 @@ namespace JobScrape.Api.Controllers
         /// <c>ROLE_NAME_TAKEN</c> when it exists.
         /// </returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> CreateAsync(
             [FromBody] CreateRoleRequest? request,
             CancellationToken cancellationToken
@@ -151,6 +154,7 @@ namespace JobScrape.Api.Controllers
         /// <c>PERMISSION_ALREADY_GRANTED</c>.
         /// </returns>
         [HttpPost("{name}/permissions")]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> GrantPermissionAsync(
             string name,
             [FromBody] PermissionGrantRequest? request,
@@ -181,6 +185,11 @@ namespace JobScrape.Api.Controllers
                 return Errors.RoleNotFound(name).ToProblem();
             }
 
+            if (role == RoleName.Admin && !User.IsInRole(RoleName.Admin.ToString()))
+            {
+                return Errors.AccessDenied().ToProblem();
+            }
+
             var result = await _grant.HandleAsync(role, request!.Key, cancellationToken);
             return result.IsSuccess ? Results.Ok() : result.Error.ToProblem();
         }
@@ -193,6 +202,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 on success; 404 <c>ROLE_NOT_FOUND</c>.</returns>
         [HttpDelete("{name}/permissions/{key}")]
+        [Authorize(Policy = AuthPolicies.RolesWrite)]
         public async Task<IResult> RevokePermissionAsync(
             string name,
             string key,
@@ -202,6 +212,11 @@ namespace JobScrape.Api.Controllers
             if (!TryParseRole(name, out var role))
             {
                 return Errors.RoleNotFound(name).ToProblem();
+            }
+
+            if (role == RoleName.Admin && !User.IsInRole(RoleName.Admin.ToString()))
+            {
+                return Errors.AccessDenied().ToProblem();
             }
 
             var result = await _revoke.HandleAsync(role, key, cancellationToken);

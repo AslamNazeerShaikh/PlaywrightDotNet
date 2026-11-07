@@ -38,6 +38,16 @@ namespace JobScrape.Api.Tests
             );
         }
 
+        [Fact]
+        public void ShippedPlaceholderSecretFailsStartupWithoutOverride()
+        {
+            using var factory = new ApiFactory { UseShippedJwtSecret = true };
+
+            var error = Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+
+            Assert.NotEmpty(error.Failures);
+        }
+
         [Theory]
         [InlineData("JobScrape:Sources:linkedin:Enabled", "true")]
         [InlineData("JobScrape:Sources:indeed:Enabled", "true")]

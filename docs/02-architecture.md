@@ -101,7 +101,7 @@ flowchart TB
 
     subgraph APP["JobScrape.Application"]
         UC["Use-case handlers<br/>health · profiles (list/get/create/update)<br/>sources · sessions (list/get/create/update)<br/>Start/List/Get/Cancel run · run postings · export<br/>RunScrape"]
-        PORTS["Ports (18)<br/>6 repositories · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer"]
+        PORTS["Ports (24)<br/>9 repositories · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer · ITokenService<br/>IIdempotencyStore · ICallerContext"]
         DTO["DTOs<br/>GetHealthResponse · SearchProfileResponse<br/>RunResponse · RunPostingResponse<br/>SearchPageResult · JobSnapshot · ScrapeRunSummary"]
         RES["Results<br/>Result / Result<T> · ErrorInfo · ErrorKind"]
     end
@@ -330,11 +330,8 @@ PlaywrightDotNet/
 > and `artifacts/`. None of `JobLens.Cli`, `JobLens.TestKit`,
 > `JobLens.E2E.Tests`, or `JobLens.Cli.Tests` exist in the tree above.
 
-Persistence ships five migrations: `20261101074339_InitialCreate`,
-`20261102135052_AddScrapeRunProgress`,
-`20261102181907_AddCaseInsensitiveProfileNames`,
-`20261102193803_AddRunCompanies`, and
-`20261106150345_FoldProgressIntoRun` (current).
+Persistence ships one migration: `20261107112658_InitialCreate`
+(current). History was squashed during development; no downgrade path is kept.
 
 ---
 
@@ -571,11 +568,13 @@ public interface IUnitOfWork
 }
 ```
 
-All 19 ports, grouped (they live beside their features: `Abstractions/` for
-driven ports, the feature folder for read/run/export contracts).
-Implementations are Infrastructure unless noted.
+All 24 ports, grouped (they live beside their features: `Abstractions/` for
+driven ports, the feature folder for read/run/export contracts). The count is
+the number of public interfaces under `src/backend/JobScrape.Application`
+(verified with `grep -rn "interface I" src/backend/JobScrape.Application`,
+which yields 24 names). Implementations are Infrastructure unless noted.
 
-- **Repositories (6)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`) — EF Core repositories. The run's resume position is an owned part of `ScrapeRun`, not a port.
+- **Repositories (9)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`), `IUserRepository` (`GetByEmailAsync`, `GetAsync`, `AddAsync`, `ListAsync`; identity persistence), `IRoleRepository` (`GetAsync`, `GetByNameAsync`, `AddAsync`, `ListAsync`; identity persistence), `IUsageQuotaRepository` (`GetAsync`, `ListAsync`, `AddAsync`; quota definitions) — EF Core repositories. The run's resume position is an owned part of `ScrapeRun`, not a port.
 - **Unit of work (1)** — `IUnitOfWork.SaveChangesAsync` — `JobScrapeDbContext`.
 - **Read stores (3)** — `ISearchProfileStore` (`GetAsync`, `ListAsync`) → `SearchProfileReadStore`; `ISessionStore` (`GetAsync`, `ListAsync`) → `SessionReadStore`; `IRunStore` (`GetAsync`, `ListAsync`, `ListPostingsAsync`, `ListExportPostingsAsync`) → `RunReadStore`. All EF no-tracking reads.
 - **Browser/artifacts (3)** — `IBrowserProfileWorkspace` (`RenameAsync`) → `BrowserProfileWorkspace` (pool-backed); `IArtifactStore.CaptureAsync` → `FileArtifactStore` (see §12.5); `IDelay.WaitAsync` → `TimeProviderDelay`.
@@ -584,6 +583,9 @@ Implementations are Infrastructure unless noted.
 - **Run (1)** — `IRunLauncher` (`StartAsync` → run id once recorded, `TryCancel`) → `RunCoordinator` in the Api host, because a run outlives its request.
 - **Export (1)** — `IPostingExportWriter.WriteAsync` → `CsvPostingWriter`, `ExcelPostingWriter`.
 - **Explorer (1)** — `IDatabaseExplorer` → `SqliteDatabaseExplorer` (Dapper).
+- **Token (1)** — `ITokenService` (`CreateToken` → opaque bearer) → `JwtTokenService` (HS256, Infrastructure/Security).
+- **Idempotency (1)** — `IIdempotencyStore` (`GetAsync`, `SaveAsync`, `TryReserveAsync`, `RemoveAsync`) → `IdempotencyStore` (SQLite, 24-hour retention).
+- **Caller context (1)** — `ICallerContext` (`ActorId`, `Roles`, `Permissions`, `MustChangePassword`) → scoped per request from the bearer token's claims; unauthenticated callers get a denied empty-permission context.
 
 Deliberately absent (no such types exist): `IJobReadModel`, `ISkillDemandReadModel`, `IDiskSpace`, `IClock` (use BCL `TimeProvider`), `Specification<T>`, `BootstrapAsync`/`ProbeAsync` session methods, `SessionStatus`, `UpdateAsync` on `IJobPostingRepository`.
 
@@ -769,8 +771,8 @@ SQLite is the source of truth. CSV/Excel/JSON files are disposable snapshots.
 
 ### 10.4 Schema overview
 
-> Verified against `JobScrapeDbContext`, the seven `IEntityTypeConfiguration`
-> classes (seven tables), and migration `20261102193803_AddRunCompanies`.
+> Verified against `JobScrapeDbContext`, the ten `IEntityTypeConfiguration`
+> classes (eleven tables), and migration `20261107112658_InitialCreate`.
 > Tables and columns
 > are snake_case; every `DateTimeOffset` is stored as UTC ticks
 > (`UtcTicksConverter`). Foreign keys are enforced for
@@ -871,17 +873,14 @@ erDiagram
     }
 ```
 
-`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly one FK (`scrape_runs.profile_id → search_profiles.id`, restrict on delete).
+`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly two FKs (`scrape_runs.profile_id → search_profiles.id`, restrict on delete; `scrape_run_progress.id → scrape_runs.id`, cascade on delete).
 
 Full domain model and invariants: [Domain Model](03-domain-model.md).
 
 ### 10.5 Migrations
 
-- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; four exist:
-  - `20261101074339_InitialCreate`
-  - `20261102135052_AddScrapeRunProgress`
-  - `20261102181907_AddCaseInsensitiveProfileNames`
-  - `20261102193803_AddRunCompanies` (current)
+- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; one exists:
+  - `20261107112658_InitialCreate` (current)
 - The context is registered by `PersistenceServiceCollectionExtensions.AddJobScrapePersistence` (scoped per run/request), called from the API through `DatabaseRegistration.AddJobScrapeDatabase`, which resolves `JobScrape:Storage:DatabasePath` against the content root and creates its directory.
 - Migrations apply automatically **only in Development** (`DatabaseRegistration.MigrateInDevelopment`, used by the `http` launch profile and the API tests). Any other environment applies them explicitly with `dotnet tool run dotnet-ef database update --project src/backend/JobScrape.Infrastructure`.
 - `JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only.

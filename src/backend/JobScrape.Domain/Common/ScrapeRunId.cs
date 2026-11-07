@@ -27,7 +27,7 @@ namespace JobScrape.Domain.Common
         /// <returns>A new, non-empty identifier.</returns>
         public static ScrapeRunId New()
         {
-            return new ScrapeRunId(Guid.NewGuid());
+            return new ScrapeRunId(Guid.CreateVersion7());
         }
 
         /// <summary>

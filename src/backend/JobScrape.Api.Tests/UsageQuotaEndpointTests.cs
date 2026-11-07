@@ -22,18 +22,7 @@ namespace JobScrape.Api.Tests
         {
             using var admin = await factory.CreateAdminClientAsync(cancellationToken);
             var email = $"viewer-{Guid.NewGuid():N}@example.com";
-            using (
-                var createdRole = await admin.PostAsJsonAsync(
-                    "api/v1/roles",
-                    new { name = "Viewer" },
-                    cancellationToken
-                )
-            )
-            {
-                createdRole.EnsureSuccessStatusCode();
-            }
 
-            Guid userId;
             using (
                 var created = await admin.PostAsJsonAsync(
                     "api/v1/users",
@@ -43,19 +32,6 @@ namespace JobScrape.Api.Tests
             )
             {
                 created.EnsureSuccessStatusCode();
-                var body = await created.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
-                userId = body.GetProperty("id").GetGuid();
-            }
-
-            using (
-                var assigned = await admin.PostAsJsonAsync(
-                    $"api/v1/users/{userId}/roles",
-                    new { role = "Viewer" },
-                    cancellationToken
-                )
-            )
-            {
-                assigned.EnsureSuccessStatusCode();
             }
 
             using var setupClient = factory.CreateClient();
@@ -81,6 +57,33 @@ namespace JobScrape.Api.Tests
                 "Final-Password2@@",
                 cancellationToken
             );
+        }
+
+        private static async Task<HttpResponseMessage> PostInitializeAsync(
+            HttpClient client,
+            CancellationToken cancellationToken
+        )
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            {
+                Content = JsonContent.Create(
+                    new
+                    {
+                        jsonrpc = "2.0",
+                        id = 1,
+                        method = "initialize",
+                        @params = new
+                        {
+                            protocolVersion = "2025-06-18",
+                            capabilities = new { },
+                            clientInfo = new { name = "quota-test", version = "1.0.0" },
+                        },
+                    }
+                ),
+            };
+            request.Headers.Accept.ParseAdd("application/json");
+            request.Headers.Accept.ParseAdd("text/event-stream");
+            return await client.SendAsync(request, cancellationToken);
         }
 
         [Fact]
@@ -118,7 +121,7 @@ namespace JobScrape.Api.Tests
             );
             Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
 
-            using var response = await admin.GetAsync("api/v1/quotas", Ct);
+            using var response = await admin.GetAsync("api/v1/users", Ct);
 
             Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
             Assert.Equal(
@@ -146,7 +149,7 @@ namespace JobScrape.Api.Tests
                 Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
             }
 
-            using (var exhausted = await admin.GetAsync("api/v1/quotas", Ct))
+            using (var exhausted = await admin.GetAsync("api/v1/users", Ct))
             {
                 Assert.Equal(HttpStatusCode.TooManyRequests, exhausted.StatusCode);
             }
@@ -210,6 +213,67 @@ namespace JobScrape.Api.Tests
             using var response = await admin.PutAsJsonAsync(
                 "api/v1/quotas/Api",
                 new { limit = 0, window = "00:01:00" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task McpScopeExhaustionIs429()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await factory.CreateAdminClientAsync(Ct);
+            using (
+                var updated = await admin.PutAsJsonAsync(
+                    "api/v1/quotas/Mcp",
+                    new { limit = 1, window = "00:01:00" },
+                    Ct
+                )
+            )
+            {
+                Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+            }
+
+            using var first = await PostInitializeAsync(admin, Ct);
+            Assert.NotEqual(HttpStatusCode.TooManyRequests, first.StatusCode);
+
+            using var second = await PostInitializeAsync(admin, Ct);
+            Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
+            Assert.Equal("application/problem+json", second.Content.Headers.ContentType!.MediaType);
+            Assert.True(second.Headers.Contains("Retry-After"));
+            var body = await second.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("QUOTA_EXCEEDED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task UpdateWithNegativeLimitIs400()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await factory.CreateAdminClientAsync(Ct);
+
+            using var response = await admin.PutAsJsonAsync(
+                "api/v1/quotas/Api",
+                new { limit = -5, window = "00:01:00" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task UpdateWithOver24HourWindowIs400()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await factory.CreateAdminClientAsync(Ct);
+
+            using var response = await admin.PutAsJsonAsync(
+                "api/v1/quotas/Api",
+                new { limit = 5, window = "25:00:00" },
                 Ct
             );
 

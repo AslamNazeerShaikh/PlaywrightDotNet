@@ -473,6 +473,22 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates an unavailable failure for an idempotency reservation
+        /// that is still pending and did not complete within the wait window.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unavailable"/>.</returns>
+        public static ErrorInfo IdempotencyPending()
+        {
+            return new ErrorInfo(
+                "IDEMPOTENCY_IN_PROGRESS",
+                "The request is already in progress.",
+                "A previous attempt reserved this idempotency key and did not complete. Retry with a new key or wait for the reservation to expire.",
+                ErrorKind.Unavailable,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates an authentication failure for a wrong email or password.
         /// The detail never says which one was wrong. Maps to HTTP 401, never
         /// 400: bad credentials are not a validation error.
@@ -507,6 +523,25 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates an authentication failure for a token whose version no longer
+        /// matches the account (a password change, lockout, or admin-driven role
+        /// change bumped it). Returned by the JWT challenge handler, never by
+        /// domain or application code. The detail is neutral: it never says
+        /// which change bumped the version.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo SessionRevoked()
+        {
+            return new ErrorInfo(
+                "SESSION_REVOKED",
+                "Session ended.",
+                "Your account changed. Sign in again.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates an authorization failure for an authenticated caller
         /// missing the required role or permission. Returned by the
         /// authorization handlers, never by domain or application code.
@@ -535,22 +570,6 @@ namespace JobScrape.Application.Results
                 "Too many requests.",
                 "The request rate is too high; retry later.",
                 ErrorKind.RateLimited,
-                new Dictionary<string, object?>()
-            );
-        }
-
-        /// <summary>
-        /// Creates a forbidden failure for a login that must set a new
-        /// password first.
-        /// </summary>
-        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
-        public static ErrorInfo PasswordResetRequired()
-        {
-            return new ErrorInfo(
-                "PASSWORD_RESET_REQUIRED",
-                "A password change is required.",
-                "Set a new password before signing in.",
-                ErrorKind.Forbidden,
                 new Dictionary<string, object?>()
             );
         }

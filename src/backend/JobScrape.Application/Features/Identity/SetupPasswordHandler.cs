@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain;
@@ -16,6 +18,15 @@ namespace JobScrape.Application.Features.Identity
         private readonly IUserRepository _users;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _clock;
+
+        // Fixed hash used to make the unknown-email path pay one PBKDF2
+        // verification, so it cannot be distinguished from a pending account
+        // with a wrong secret by timing.
+        private static readonly PasswordHash DummyHash = PasswordHash.Restore(
+            new byte[16],
+            new byte[32],
+            210_000
+        );
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SetupPasswordHandler"/> class.
@@ -46,11 +57,11 @@ namespace JobScrape.Application.Features.Identity
         /// <param name="newPassword">The operator-chosen password.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>
-        /// Success; <c>PASSWORD_SETUP_COMPLETE</c> when first login already
-        /// finished or the email is unknown (one code closes the account
-        /// enumeration oracle; pending accounts stay rate-limited),
-        /// <c>INVALID_CREDENTIALS</c> for a wrong secret, or
-        /// <c>VALIDATION_FAILED</c> when the new password misses criteria.
+        /// Success; <c>INVALID_CREDENTIALS</c> for an unknown email or a
+        /// wrong secret, <c>PASSWORD_SETUP_COMPLETE</c> when first login
+        /// already finished, <c>ACCOUNT_LOCKED</c> while locked out, or
+        /// <c>VALIDATION_FAILED</c> when the new password misses criteria
+        /// or matches the current secret.
         /// </returns>
         public async Task<Result> HandleAsync(
             string? email,
@@ -64,17 +75,49 @@ namespace JobScrape.Application.Features.Identity
                 : await _users.GetByEmailAsync(email, cancellationToken);
             if (user is null)
             {
-                return Result.Fail(Errors.PasswordSetupComplete());
+                // Cost one verification so the unknown-email path is not
+                // cheaper than a pending account with a wrong secret.
+                DummyHash.Verify(currentSecret);
+                return Result.Fail(Errors.InvalidCredentials());
             }
+
+            // Cost one verification before branching on account state, so a
+            // completed account is not distinguishable from a pending account
+            // with a wrong secret (or an unknown account) by timing.
+            var secretMatches = user.PasswordHash.Verify(currentSecret);
 
             if (!user.MustChangePassword)
             {
                 return Result.Fail(Errors.PasswordSetupComplete());
             }
 
-            if (!user.PasswordHash.Verify(currentSecret))
+            // A wrong secret is always 401, even on a locked account; only a
+            // correct secret on a locked account surfaces ACCOUNT_LOCKED.
+            if (!secretMatches)
             {
                 return Result.Fail(Errors.InvalidCredentials());
+            }
+
+            var now = _clock.GetUtcNow();
+            if (user.IsLockedOut(now))
+            {
+                return Result.Fail(Errors.AccountLocked(user.LockedUntilUtc));
+            }
+
+            if (SecretsEqual(currentSecret, newPassword))
+            {
+                return Result.Fail(
+                    Errors.ValidationFailed(
+                        "The new password must differ from the current password.",
+                        new Dictionary<string, string[]>
+                        {
+                            ["newPassword"] =
+                            [
+                                "The new password must differ from the current password.",
+                            ],
+                        }
+                    )
+                );
             }
 
             PasswordHash hash;
@@ -92,9 +135,26 @@ namespace JobScrape.Application.Features.Identity
                 );
             }
 
-            user.CompleteFirstLogin(hash, _clock.GetUtcNow());
+            user.CompleteFirstLogin(hash, now);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok();
+        }
+
+        private static bool SecretsEqual(string? left, string? right)
+        {
+            if (left is null || right is null)
+            {
+                return left is null && right is null;
+            }
+
+            var leftBytes = Encoding.UTF8.GetBytes(left);
+            var rightBytes = Encoding.UTF8.GetBytes(right);
+            if (leftBytes.Length != rightBytes.Length)
+            {
+                return false;
+            }
+
+            return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
         }
     }
 }

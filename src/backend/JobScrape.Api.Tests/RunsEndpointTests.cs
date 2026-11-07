@@ -365,6 +365,10 @@ namespace JobScrape.Api.Tests
                 new { profileId, browserProfileId = sessionId },
                 Ct
             );
+            Assert.True(
+                second.IsSuccessStatusCode,
+                $"Expected success but got {(int)second.StatusCode}."
+            );
             var run2 = await second.Content.ReadFromJsonAsync<RunResponse>(Ct);
             var done2 = await WaitAsync(client, run2!.Id, r => r.IsTerminal);
             Assert.Equal("Completed", done2.Stage);

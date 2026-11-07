@@ -11,12 +11,12 @@ namespace JobScrape.Api.Controllers
 {
     /// <summary>
     /// User administration: list, read, create, and role assignment. Admin
-    /// role only. Password hashes never leave the store.. Data-annotation failures map to coded validation
-    /// problems below because the automatic 400 is suppressed in Program.
+    /// role or a matching grant. Password hashes never leave the store.
+    /// Data-annotation failures map to coded validation problems below
+    /// because the automatic 400 is suppressed in Program.
     /// </summary>
     [ApiController]
     [Route("api/v1/users")]
-    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public sealed class UsersController : ControllerBase
     {
         // Constructor-injected handlers, never mutated.
@@ -61,6 +61,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the users.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.UsersRead)]
         public async Task<ActionResult<UserListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
@@ -75,6 +76,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the user; 404 <c>USER_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.UsersRead)]
         public async Task<IResult> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             var result = await _get.HandleAsync(id, cancellationToken);
@@ -92,6 +94,7 @@ namespace JobScrape.Api.Controllers
         /// <c>EMAIL_TAKEN</c>; 400 with field errors.
         /// </returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.UsersWrite)]
         public async Task<IResult> CreateAsync(
             [FromBody] CreateUserRequest? request,
             CancellationToken cancellationToken
@@ -137,6 +140,7 @@ namespace JobScrape.Api.Controllers
         /// <c>ROLE_NOT_FOUND</c>; 409 <c>ROLE_ALREADY_ASSIGNED</c>.
         /// </returns>
         [HttpPost("{id:guid}/roles")]
+        [Authorize(Policy = AuthPolicies.UsersWrite)]
         public async Task<IResult> AssignRoleAsync(
             Guid id,
             [FromBody] RoleAssignmentRequest? request,
@@ -190,6 +194,7 @@ namespace JobScrape.Api.Controllers
         /// <c>ROLE_NOT_FOUND</c>; 409 <c>LAST_ADMIN_REQUIRED</c>.
         /// </returns>
         [HttpDelete("{id:guid}/roles/{role}")]
+        [Authorize(Policy = AuthPolicies.UsersWrite)]
         public async Task<IResult> RevokeRoleAsync(
             Guid id,
             string role,

@@ -7,6 +7,7 @@ using JobScrape.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace JobScrape.Infrastructure.Persistence
 {
@@ -32,8 +33,12 @@ namespace JobScrape.Infrastructure.Persistence
             ArgumentNullException.ThrowIfNull(services);
             ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-            services.AddDbContext<JobScrapeDbContext>(options =>
-                options.UseSqlite(connectionString).AddInterceptors(new SqlitePragmaInterceptor())
+            services.AddSingleton<SqlitePragmaInterceptor>();
+            services.AddDbContext<JobScrapeDbContext>(
+                (provider, options) =>
+                    options
+                        .UseSqlite(connectionString)
+                        .AddInterceptors(provider.GetRequiredService<SqlitePragmaInterceptor>())
             );
             services.AddScoped<IUnitOfWork>(provider =>
                 provider.GetRequiredService<JobScrapeDbContext>()

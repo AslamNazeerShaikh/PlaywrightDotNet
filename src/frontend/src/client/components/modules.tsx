@@ -104,7 +104,6 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "DOTNET_UNREACHABLE" ||
     code === "BFF_UNREACHABLE" ||
     code === "ACCOUNT_LOCKED" ||
-    code === "PASSWORD_RESET_REQUIRED" ||
     code === "PASSWORD_SETUP_COMPLETE" ||
     code === "EMAIL_TAKEN" ||
     code === "ROLE_NAME_TAKEN" ||
@@ -123,6 +122,7 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "BFF_NOT_FOUND" ||
     code === "INVALID_CREDENTIALS" ||
     code === "UNAUTHENTICATED" ||
+    code === "SESSION_REVOKED" ||
     code === "ACCESS_DENIED" ||
     code === "USER_NOT_FOUND" ||
     code === "ROLE_NOT_FOUND" ||

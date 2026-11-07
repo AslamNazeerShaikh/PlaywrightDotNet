@@ -42,4 +42,7 @@
     <ProjectReference Include="..\JobScrape.Domain\JobScrape.Domain.csproj" />
     <ProjectReference Include="..\JobScrape.Application\JobScrape.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="JobScrape.Infrastructure.Tests" />
+  </ItemGroup>
 </Project>
