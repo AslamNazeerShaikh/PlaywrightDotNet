@@ -85,6 +85,34 @@ describe("blocked direct auth endpoints", () => {
       expect(upstream.hits()).toBe(0);
     });
   }
+
+  for (const variant of [
+    "/api/v1/Auth/Setup-Password",
+    "/api/v1/auth/%73etup-password",
+    "/api/v1/auth/setup-password/",
+  ]) {
+    test(`POST ${variant} answers 404 without hitting upstream`, async () => {
+      const upstream = hitCountingUpstream();
+      const localHandler = createHandler({ port: 3000, dotnetApiUrl: upstream.url });
+
+      const res = await localHandler.fetch(
+        new Request(`http://bff${variant}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", ...csrfHeaders },
+          body: JSON.stringify({
+            email: "a@x.com",
+            currentSecret: "temp",
+            newPassword: "n3w-password!",
+          }),
+        }),
+      );
+
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as { code: string };
+      expect(body.code).toBe("BFF_NOT_FOUND");
+      expect(upstream.hits()).toBe(0);
+    });
+  }
 });
 
 describe("proxy upstream 401", () => {
@@ -167,6 +195,30 @@ describe("proxy upstream 401", () => {
     expect(retry.status).toBe(204);
   });
 
+  test("401 with an empty, unparseable, or code-less body does not clear the session", async () => {
+    const rawUpstream = (body: string) => {
+      const server = Bun.serve({
+        port: 0,
+        hostname: "127.0.0.1",
+        fetch: () => new Response(body, { status: 401 }),
+      });
+      upstreams.push(server);
+      return `http://127.0.0.1:${server.port}`;
+    };
+
+    for (const body of ["", "not-json-at-all", JSON.stringify({ title: "Unauthorized" })]) {
+      const localHandler = createHandler({
+        port: 3000,
+        dotnetApiUrl: rawUpstream(body),
+      });
+
+      const res = await postChangePassword(localHandler);
+
+      expect(res.status).toBe(401);
+      expect(res.headers.getSetCookie()).toEqual([]);
+    }
+  });
+
   test("401 UNAUTHENTICATED clears session and CSRF cookies with Max-Age=0", async () => {
     const localHandler = createHandler({
       port: 3000,
@@ -238,6 +290,72 @@ describe("session route guards", () => {
     expect(res.status).toBe(403);
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("CSRF_FAILED");
+  });
+
+  const postSetup = (headers: Record<string, string>) =>
+    handler.fetch(
+      new Request("http://bff/bff/session/setup", { method: "POST", headers, body: "{}" }),
+    );
+
+  test("POST /bff/session/setup without Origin answers 403", async () => {
+    const res = await postSetup({ "sec-fetch-site": "same-origin" });
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("ORIGIN_NOT_ALLOWED");
+  });
+
+  test("POST /bff/session/setup with a foreign Origin answers 403", async () => {
+    const res = await postSetup({
+      origin: "https://evil.example",
+      "sec-fetch-site": "same-origin",
+    });
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("ORIGIN_NOT_ALLOWED");
+  });
+
+  test("POST /bff/session/setup without Sec-Fetch-Site answers 403", async () => {
+    const res = await postSetup({ origin: "http://bff" });
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("ORIGIN_NOT_ALLOWED");
+  });
+
+  test("GET /bff/session/setup answers 405 METHOD_NOT_ALLOWED", async () => {
+    const res = await handler.fetch(new Request("http://bff/bff/session/setup", { method: "GET" }));
+
+    expect(res.status).toBe(405);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("METHOD_NOT_ALLOWED");
+  });
+
+  test("GET /bff/session with a foreign Origin answers 403", async () => {
+    const res = await handler.fetch(
+      new Request("http://bff/bff/session", {
+        method: "GET",
+        headers: { origin: "https://evil.example", "sec-fetch-site": "same-origin" },
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("ORIGIN_NOT_ALLOWED");
+  });
+
+  test("GET /bff/session with a cross-site Sec-Fetch-Site answers 403", async () => {
+    const res = await handler.fetch(
+      new Request("http://bff/bff/session", {
+        method: "GET",
+        headers: { origin: "http://bff", "sec-fetch-site": "cross-site" },
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("ORIGIN_NOT_ALLOWED");
   });
 
   const upstreamJson = (payload: unknown) => {

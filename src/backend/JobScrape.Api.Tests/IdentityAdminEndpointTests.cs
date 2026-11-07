@@ -61,6 +61,11 @@ namespace JobScrape.Api.Tests
             );
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+            var errors = body.GetProperty("errors");
+            Assert.True(errors.TryGetProperty("newPassword", out var newPasswordErrors));
+            Assert.NotEmpty(newPasswordErrors.EnumerateArray());
         }
 
         [Fact]
@@ -123,6 +128,8 @@ namespace JobScrape.Api.Tests
             using var response = await admin.GetAsync("api/v1/users", Ct);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
         }
 
         [Fact]

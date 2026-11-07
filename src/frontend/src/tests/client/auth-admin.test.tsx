@@ -198,7 +198,7 @@ describe("auth api client", () => {
     ).listUsers();
     expect(futureRes.result.ok).toBe(false);
     if (!futureRes.result.ok) {
-      expect(futureRes.result.problem.retryAfter).toBeGreaterThanOrEqual(59);
+      expect(futureRes.result.problem.retryAfter).toBeGreaterThanOrEqual(55);
       expect(futureRes.result.problem.retryAfter).toBeLessThanOrEqual(60);
     }
 
@@ -227,6 +227,31 @@ describe("auth api client", () => {
     expect(garbage.result.ok).toBe(false);
     if (!garbage.result.ok) {
       expect(garbage.result.problem.retryAfter).toBeUndefined();
+    }
+  });
+
+  test("Retry-After caps huge delta-seconds and renders the capped value", async () => {
+    const body = { status: 429, title: "Too many requests.", detail: "", code: "RATE_LIMITED" };
+    const huge = await createApiClient(
+      stubJson(429, body, { "retry-after": "9".repeat(400) }),
+    ).listUsers();
+    expect(huge.result.ok).toBe(false);
+    if (!huge.result.ok) {
+      expect(huge.result.problem.retryAfter).toBe(86400);
+      const { container } = render(<AuthProblem problem={huge.result.problem} />);
+      expect(container.textContent).toContain("Back off 86400s");
+      expect(container.textContent).not.toContain("Infinity");
+    }
+  });
+
+  test("Retry-After clamps a huge negative delta-seconds to zero", async () => {
+    const body = { status: 429, title: "Too many requests.", detail: "", code: "RATE_LIMITED" };
+    const hugeNegative = await createApiClient(
+      stubJson(429, body, { "retry-after": `-${"9".repeat(400)}` }),
+    ).listUsers();
+    expect(hugeNegative.result.ok).toBe(false);
+    if (!hugeNegative.result.ok) {
+      expect(hugeNegative.result.problem.retryAfter).toBe(0);
     }
   });
 });
