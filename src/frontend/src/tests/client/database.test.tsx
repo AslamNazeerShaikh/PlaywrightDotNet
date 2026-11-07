@@ -308,6 +308,14 @@ describe("database helpers", () => {
     expect(cards[0]?.getAttribute("style")).toContain("var(--line-hi)");
   });
 
+  test("the empty tables map keeps a readable frame with the empty note", () => {
+    const queries = render(<TablesDiagram tables={[]} selected={null} />);
+    const svg = queries.getByRole("img", { name: "Tables map" });
+    expect(svg.getAttribute("viewBox")).toBe("0 0 360 72");
+    expect(svg.textContent).toContain("No user tables yet.");
+    expect(svg.querySelectorAll("rect.diagram-card").length).toBe(0);
+  });
+
   test("the tables map truncates long names but keeps the full name", () => {
     const long = `table_${"x".repeat(30)}`;
     const queries = render(

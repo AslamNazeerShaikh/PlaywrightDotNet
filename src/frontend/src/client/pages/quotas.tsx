@@ -9,6 +9,85 @@ import { readNumber, readText } from "../lib/forms.ts";
 import { AuthProblem, fieldErrorsFor } from "./login.tsx";
 
 /**
+ * Mirrors the backend's `TimeSpan.TryParse` for the invariant forms it accepts: an optional leading
+ * `-`, bare days, or `[days.]hh:mm[:ss[.fffffff]]`, or `days:hh:mm:ss`. Hours may exceed 23 only
+ * without a days component; minutes and seconds stay within 0-59. Values past TimeSpan.MaxValue are
+ * rejected.
+ */
+function isValidWindow(raw: string): boolean {
+  const text = raw.trim();
+  if (text === "") {
+    return false;
+  }
+  const body = text.startsWith("-") ? text.slice(1) : text;
+  // A bare integer is a whole day count.
+  if (/^\d+$/.test(body)) {
+    return timeSpanWithinMax(Number(body), 0, 0, 0, 0);
+  }
+  let days: number | undefined;
+  let clock = body;
+  const dot = body.indexOf(".");
+  const firstColon = body.indexOf(":");
+  if (dot !== -1 && (firstColon === -1 || dot < firstColon)) {
+    const daysPart = body.slice(0, dot);
+    if (!/^\d+$/.test(daysPart)) {
+      return false;
+    }
+    days = Number(daysPart);
+    clock = body.slice(dot + 1);
+  }
+  const parts = clock.split(":");
+  if (days === undefined && parts.length === 4) {
+    const daysPart = parts[0]!;
+    if (!/^\d+$/.test(daysPart)) {
+      return false;
+    }
+    days = Number(daysPart);
+    parts.shift();
+  }
+  if (parts.length !== 2 && parts.length !== 3) {
+    return false;
+  }
+  const [hoursPart, minutesPart, secondsPart] = parts;
+  if (!/^\d+$/.test(hoursPart!) || !/^\d{1,2}$/.test(minutesPart!)) {
+    return false;
+  }
+  const hours = Number(hoursPart);
+  const minutes = Number(minutesPart);
+  if (minutes > 59 || (days !== undefined && hours > 23)) {
+    return false;
+  }
+  let seconds = 0;
+  let fractionMs = 0;
+  if (secondsPart !== undefined) {
+    const secMatch = /^(\d{1,2})(?:\.(\d{1,7}))?$/.exec(secondsPart);
+    if (secMatch === null) {
+      return false;
+    }
+    seconds = Number(secMatch[1]);
+    if (seconds > 59) {
+      return false;
+    }
+    // Pad the fraction to milliseconds, rounding the tail the way .NET keeps 7 tick digits.
+    fractionMs =
+      Number(secMatch[2] === undefined ? "0" : secMatch[2].padEnd(7, "0").slice(0, 7)) / 10_000;
+  }
+  return timeSpanWithinMax(days ?? 0, hours, minutes, seconds, fractionMs);
+}
+
+function timeSpanWithinMax(
+  days: number,
+  hours: number,
+  minutes: number,
+  seconds: number,
+  fractionMs: number,
+): boolean {
+  const MAX_MS = 10_675_199 * 86_400_000 + 2 * 3_600_000 + 48 * 60_000 + 5_000 + 477.5807;
+  const ms = ((days * 24 + hours) * 60 + minutes) * 60_000 + seconds * 1_000 + fractionMs;
+  return Number.isFinite(ms) && ms <= MAX_MS;
+}
+
+/**
  * Quotas page: every usage quota definition with its per-user limit and fixed window, plus an
  * editor per scope. A 401 with a token code signs out through `onUnauthorized`.
  */
@@ -81,6 +160,20 @@ export function QuotasPage({
           detail: "Enter a positive whole number.",
           code: "VALIDATION_FAILED",
           errors: { limit: ["Enter a positive whole number."] },
+        },
+      }));
+      return;
+    }
+    if (!isValidWindow(window)) {
+      const message = `Window '${window}' is not a valid time span.`;
+      setSaveProblems((s) => ({
+        ...s,
+        [scope]: {
+          status: 400,
+          title: message,
+          detail: message,
+          code: "VALIDATION_FAILED",
+          errors: { window: [message] },
         },
       }));
       return;

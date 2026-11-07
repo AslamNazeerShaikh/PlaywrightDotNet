@@ -26,9 +26,7 @@ export function fieldErrorsFor(
 /** One alert row for an auth/admin failure: stable code first, prose second, backoff when 429. */
 export function AuthProblem({ problem }: { problem: ApiProblem }) {
   const backoff =
-    (problem.code === "RATE_LIMITED" || problem.code === "QUOTA_EXCEEDED") &&
-    problem.retryAfter !== undefined &&
-    problem.retryAfter !== null
+    problem.status === 429 && problem.retryAfter !== undefined && problem.retryAfter !== null
       ? ` Back off ${problem.retryAfter}s, then retry.`
       : "";
   return (
