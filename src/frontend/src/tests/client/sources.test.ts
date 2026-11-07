@@ -22,13 +22,11 @@ describe("sources", () => {
       return { ok: true, status: 200, json: async () => ({ items: [], asOf: "x" }) };
     };
 
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
     const { result } = await client.listSources();
 
     expect(seen).toBe("/api/v1/sources");
-    expect((seenInit?.headers as Record<string, string> | undefined)?.authorization).toBe(
-      "Bearer tok-1",
-    );
+
     expect(result).toEqual({ ok: true, value: { items: [], asOf: "x" } });
   });
 

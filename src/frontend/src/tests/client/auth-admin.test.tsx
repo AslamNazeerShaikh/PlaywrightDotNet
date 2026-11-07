@@ -10,13 +10,7 @@ import {
   type MeResponse,
   PERMISSION_CATALOG,
 } from "../../client/lib/api.ts";
-import {
-  clearToken,
-  hasAnyPermission,
-  isTokenFailure,
-  loadToken,
-  saveToken,
-} from "../../client/lib/auth.ts";
+import { hasAnyPermission, isTokenFailure } from "../../client/lib/auth.ts";
 import { parseRoute } from "../../client/lib/router.ts";
 
 beforeAll(() => {
@@ -49,23 +43,23 @@ const adminMe: MeResponse = {
 };
 
 describe("auth api client", () => {
-  test("login posts credentials and returns the token shape", async () => {
+  test("login posts credentials and returns mustChangePassword", async () => {
     let seen: { url: string; init?: RequestInit } = { url: "" };
     const fetchImpl: FetchImpl = async (url, init) => {
       seen = { url, init };
       return {
         ok: true,
         status: 200,
-        json: async () => ({ token: "t", mustChangePassword: false }),
+        json: async () => ({ mustChangePassword: false }),
       };
     };
     const client = createApiClient(fetchImpl);
 
     const { result } = await client.login({ email: "a@x.com", password: "s3cret" });
 
-    expect(seen.url).toBe("/api/v1/auth/login");
+    expect(seen.url).toBe("/bff/session");
     expect(JSON.parse(String(seen.init?.body))).toEqual({ email: "a@x.com", password: "s3cret" });
-    expect(result).toEqual({ ok: true, value: { token: "t", mustChangePassword: false } });
+    expect(result).toEqual({ ok: true, value: { mustChangePassword: false } });
   });
 
   test("login and setup never attach a bearer token", async () => {
@@ -75,10 +69,10 @@ describe("auth api client", () => {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ token: "t", mustChangePassword: true }),
+        json: async () => ({ mustChangePassword: true }),
       };
     };
-    const client = createApiClient(fetchImpl, { getToken: () => "stored" });
+    const client = createApiClient(fetchImpl);
 
     await client.login({ email: "a@x.com", password: "s3cret" });
     await client.setupPassword({ email: "a@x.com", currentSecret: "old", newPassword: "new" });
@@ -108,17 +102,17 @@ describe("auth api client", () => {
     }
   });
 
-  test("fetchMe attaches the bearer token", async () => {
+  test("fetchMe no longer attaches a bearer token", async () => {
     let header: string | undefined;
     const fetchImpl: FetchImpl = async (_url, init) => {
-      header = (init?.headers as Record<string, string>)["authorization"];
+      header = (init?.headers as Record<string, string> | undefined)?.["authorization"];
       return { ok: true, status: 200, json: async () => adminMe };
     };
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
 
     const { result } = await client.fetchMe();
 
-    expect(header).toBe("Bearer tok-1");
+    expect(header).toBeUndefined();
     expect(result).toEqual({ ok: true, value: adminMe });
   });
 
@@ -128,7 +122,7 @@ describe("auth api client", () => {
       header = (init?.headers as Record<string, string>)["idempotency-key"];
       return { ok: true, status: 201, json: async () => ({ id: "u1" }) };
     };
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
 
     await client.createUser({ email: "n@x.com", temporaryPassword: "Temp-1!!" }, "key-9");
 
@@ -141,7 +135,7 @@ describe("auth api client", () => {
       seen.push(`${init?.method} ${url}`);
       return { ok: true, status: 200, json: async () => ({}) };
     };
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
 
     await client.grantPermission("Operator", "runs.read");
     await client.revokePermission("Operator", "runs.read");
@@ -164,7 +158,7 @@ describe("auth api client", () => {
             json: async () => ({ scope: "Api", limit: 60, window: "00:01:00" }),
           };
     };
-    const client = createApiClient(fetchImpl, { getToken: () => "tok-1" });
+    const client = createApiClient(fetchImpl);
 
     const listed = await client.listQuotas();
     const updated = await client.updateQuota("Api", { limit: 60, window: "00:01:00" });
@@ -197,12 +191,8 @@ describe("auth api client", () => {
 });
 
 describe("auth store", () => {
-  test("token round-trips through storage and clears on sign out", () => {
-    expect(loadToken()).toBeNull();
-    saveToken("tok-1");
-    expect(loadToken()).toBe("tok-1");
-    clearToken();
-    expect(loadToken()).toBeNull();
+  test("auth store helpers remain available", () => {
+    expect(hasAnyPermission(adminMe, "users.read")).toBe(true);
   });
 
   test("nav visibility follows users and roles permissions", () => {
@@ -228,6 +218,7 @@ describe("auth store", () => {
 });
 
 function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unknown[] }) {
+  let authed = false;
   const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
     const reply = (status: number, body: unknown) => ({
       ok: status >= 200 && status < 300,
@@ -237,7 +228,7 @@ function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unkno
     if (url === "/healthz") {
       return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
     }
-    if (url === "/api/v1/auth/login" && init?.method === "POST") {
+    if (url === "/bff/session" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { email: string; password: string };
       if (body.password !== "right") {
         return reply(401, {
@@ -247,10 +238,22 @@ function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unkno
           code: "INVALID_CREDENTIALS",
         });
       }
-      return reply(200, { token: "tok-1", mustChangePassword: false });
+      authed = true;
+      return reply(200, { mustChangePassword: false });
     }
-    if (url === "/api/v1/auth/setup-password") {
-      return reply(200, { token: "tok-2", mustChangePassword: false });
+    if (url === "/bff/session/setup" && init?.method === "POST") {
+      authed = true;
+      return reply(200, { mustChangePassword: false });
+    }
+    if (url === "/bff/session" && init?.method === "GET") {
+      if (!authed) {
+        return reply(200, { authenticated: false });
+      }
+      return reply(200, adminMe);
+    }
+    if (url === "/bff/session" && init?.method === "DELETE") {
+      authed = false;
+      return reply(204, {});
     }
     if (url === "/api/v1/auth/change-password" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { currentPassword: string };
@@ -265,16 +268,7 @@ function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unkno
       return reply(204, {});
     }
     if (url === "/api/v1/auth/me") {
-      const auth = (init?.headers as Record<string, string> | undefined)?.["authorization"];
-      if (auth === "Bearer tok-1" || auth === "Bearer tok-2") {
-        return reply(200, adminMe);
-      }
-      return reply(401, {
-        status: 401,
-        title: "Unauthenticated.",
-        detail: "",
-        code: "UNAUTHENTICATED",
-      });
+      return reply(200, adminMe);
     }
     if (url === "/api/v1/users") {
       return reply(200, {
@@ -302,15 +296,14 @@ function authBackend(seededRoles: string[] = ["Admin"], capture?: { posts: unkno
     }
     return reply(200, { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" });
   };
-  // The shell reads the token live from tab storage, exactly like production.
-  return createApiClient(fetchImpl, { getToken: () => loadToken() });
+  return createApiClient(fetchImpl);
 }
 
 describe("auth flow", () => {
-  test("signed out renders sign in without the tab rail", () => {
+  test("signed out renders sign in without the tab rail", async () => {
     const queries = render(<App client={authBackend()} initialRoute="overview" />);
 
-    expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined();
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
     expect(queries.queryByRole("navigation", { name: "Deck pages" })).toBeNull();
   });
 
@@ -331,7 +324,6 @@ describe("auth flow", () => {
 
     await waitFor(() => expect(queries.container.textContent).toContain("admin@example.com"));
     expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined();
-    expect(loadToken()).toBe("tok-1");
   });
 
   test("wrong password then setup-password finishes signed in", async () => {
@@ -355,7 +347,6 @@ describe("auth flow", () => {
     fireEvent.click(queries.getByRole("button", { name: "SET PASSWORD" }));
 
     await waitFor(() => expect(queries.container.textContent).toContain("admin@example.com"));
-    expect(loadToken()).toBe("tok-2");
   });
 
   test("viewer deep links to a hidden stop get access denied", async () => {
@@ -408,7 +399,6 @@ describe("auth flow", () => {
   });
 
   test("wrong current password on change-password keeps the session", async () => {
-    saveToken("tok-1");
     const queries = render(
       <App client={authBackend()} initialRoute="users" initialSession={{ me: adminMe }} />,
     );
@@ -426,7 +416,6 @@ describe("auth flow", () => {
     );
     expect(queries.container.textContent).toContain("admin@example.com");
     expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined();
-    expect(loadToken()).toBe("tok-1");
   });
 
   test("roles dropdown with zero seeded roles submits Operator", async () => {
@@ -473,5 +462,125 @@ describe("auth flow", () => {
     expect(select.disabled).toBe(true);
     expect(button.disabled).toBe(true);
     expect(capture.posts).toHaveLength(0);
+  });
+});
+
+describe("auth wave 2 proving tests", () => {
+  const healthy = { status: "healthy", timeUtc: "2026-10-31T00:00:00Z" };
+  const reply = (status: number, body: unknown) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  });
+
+  test("reload with a stored setup email and mustChangePassword shows Set password", async () => {
+    sessionStorage.setItem("jobscrape.setupEmail", "seed@example.com");
+    const fetchImpl: FetchImpl = async (url, init) => {
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "GET") {
+        return reply(200, {
+          email: "seed@example.com",
+          roles: ["Viewer"],
+          permissions: ["profiles.read"],
+          mustChangePassword: true,
+        });
+      }
+      return reply(200, healthy);
+    };
+
+    const queries = render(<App client={createApiClient(fetchImpl)} initialRoute="overview" />);
+
+    await waitFor(() => expect(queries.getByRole("form", { name: "Set password" })).toBeDefined());
+    expect((queries.getByLabelText("Email") as HTMLInputElement).value).toBe("seed@example.com");
+  });
+
+  test("sign out keeps the session until the BFF delete resolves", async () => {
+    sessionStorage.setItem("jobscrape.setupEmail", "seed@example.com");
+    let deleteCalls = 0;
+    let releaseDelete: () => void = () => undefined;
+    const deleteGate = new Promise<void>((resolve) => {
+      releaseDelete = resolve;
+    });
+    const fetchImpl: FetchImpl = async (url, init) => {
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "DELETE") {
+        deleteCalls += 1;
+        await deleteGate;
+        return reply(204, {});
+      }
+      return reply(200, healthy);
+    };
+
+    const queries = render(
+      <App
+        client={createApiClient(fetchImpl)}
+        initialSession={{ me: adminMe }}
+        initialRoute="overview"
+      />,
+    );
+    await waitFor(() => expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("button", { name: "SIGN OUT" }));
+
+    expect(deleteCalls).toBe(1);
+    expect(queries.queryByRole("form", { name: "Sign in" })).toBeNull();
+    expect(queries.container.textContent).toContain("admin@example.com");
+
+    releaseDelete();
+
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
+    expect(sessionStorage.getItem("jobscrape.setupEmail")).toBeNull();
+    expect(deleteCalls).toBe(1);
+  });
+
+  test("sign out still clears the local session when the BFF delete fails", async () => {
+    sessionStorage.setItem("jobscrape.setupEmail", "seed@example.com");
+    const fetchImpl: FetchImpl = async (url, init) => {
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "DELETE") {
+        return reply(500, { status: 500, title: "Server error.", detail: "", code: "INTERNAL" });
+      }
+      return reply(200, healthy);
+    };
+
+    const queries = render(
+      <App
+        client={createApiClient(fetchImpl)}
+        initialSession={{ me: adminMe }}
+        initialRoute="overview"
+      />,
+    );
+    await waitFor(() => expect(queries.getByRole("button", { name: "SIGN OUT" })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("button", { name: "SIGN OUT" }));
+
+    await waitFor(() => expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined());
+    expect(sessionStorage.getItem("jobscrape.setupEmail")).toBeNull();
+    expect(queries.getByRole("alert").textContent).toContain("Your session ended");
+  });
+
+  test("an expired restore renders the session-ended notice on the sign-in form", async () => {
+    const fetchImpl: FetchImpl = async (url, init) => {
+      if (url === "/healthz") {
+        return reply(200, { status: "ok", upstream: "http://127.0.0.1:5207" });
+      }
+      if (url === "/bff/session" && init?.method === "GET") {
+        return reply(200, { authenticated: false, expired: true });
+      }
+      return reply(200, healthy);
+    };
+
+    const queries = render(<App client={createApiClient(fetchImpl)} initialRoute="overview" />);
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("Your session ended"),
+    );
+    expect(queries.getByRole("form", { name: "Sign in" })).toBeDefined();
   });
 });

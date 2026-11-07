@@ -80,12 +80,14 @@ describe("proxyRequest", () => {
   test("forwards bearer and idempotency headers without logging them", async () => {
     let seenAuth = "";
     let seenKey = "";
+    let seenCookie: string | null = "x";
     const upstream = Bun.serve({
       port: 0,
       hostname: "127.0.0.1",
       fetch: (req) => {
         seenAuth = req.headers.get("authorization") ?? "";
         seenKey = req.headers.get("idempotency-key") ?? "";
+        seenCookie = req.headers.get("cookie");
         return Response.json({ ok: true });
       },
     });
@@ -96,6 +98,7 @@ describe("proxyRequest", () => {
         method: "POST",
         headers: {
           authorization: "Bearer tok-1",
+          cookie: "jobscrape_session=jwt-9; jobscrape_csrf=csrf-9",
           "idempotency-key": "key-9",
           connection: "keep-alive",
         },
@@ -106,7 +109,8 @@ describe("proxyRequest", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(seenAuth).toBe("Bearer tok-1");
+    expect(seenAuth).toBe("Bearer jwt-9");
+    expect(seenCookie).toBeNull();
     expect(seenKey).toBe("key-9");
   });
 });

@@ -383,29 +383,33 @@ export type FetchImpl = (
   headers?: { get(name: string): string | null };
 }>;
 
-export function createApiClient(
-  fetchImpl: FetchImpl = fetch as unknown as FetchImpl,
-  options?: { getToken?: () => string | null },
-) {
-  const getToken = options?.getToken;
-  // The bearer token travels in exactly one place: this sender. It is never
-  // logged, never rendered, never stored outside the auth store.
+export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
   const authed = <T>(
     method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
     path: string,
     body?: unknown,
     idempotencyKey?: string,
   ): Promise<ApiResult<T>> => {
-    const token = getToken?.() ?? null;
-    return send<T>(fetchImpl, method, path, body, token, idempotencyKey);
+    return send<T>(fetchImpl, method, path, body, idempotencyKey);
   };
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
     login: (input: LoginInput) =>
-      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/login", input)),
+      timed(() => send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session", input)),
     setupPassword: (input: SetupPasswordInput) =>
-      timed(() => send<LoginResponse>(fetchImpl, "POST", "/api/v1/auth/setup-password", input)),
+      timed(() =>
+        send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session/setup", input),
+      ),
+    fetchSession: () =>
+      timed(() =>
+        send<MeResponse | { authenticated: false; expired?: boolean }>(
+          fetchImpl,
+          "GET",
+          "/bff/session",
+        ),
+      ),
+    signOut: () => timed(() => send<void>(fetchImpl, "DELETE", "/bff/session")),
     changePassword: (input: ChangePasswordInput) =>
       timed(() => authed<void>("POST", "/api/v1/auth/change-password", input)),
     fetchMe: () => timed(() => authed<MeResponse>("GET", "/api/v1/auth/me")),
@@ -450,7 +454,7 @@ export function createApiClient(
         ),
       ),
     downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
-      timed(() => downloadExport(fetchImpl, id, format, group, getToken?.() ?? null)),
+      timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
       timed(() => authed<RunPayload>("POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
@@ -510,13 +514,13 @@ async function downloadExport(
   id: string,
   format: ExportFormat,
   group: ExportGroup,
-  token?: string | null,
 ): Promise<ApiResult<{ blob: Blob; filename: string }>> {
   const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
   const path = `/api/v1/runs/${id}/postings/export?${query}`;
   const headers: Record<string, string> = {};
-  if (token) headers["authorization"] = `Bearer ${token}`;
-  const init: RequestInit = { method: "GET" };
+  const csrf = readCsrfToken();
+  if (csrf) headers["x-csrf-token"] = csrf;
+  const init: RequestInit = { method: "GET", credentials: "same-origin" };
   if (Object.keys(headers).length > 0) init.headers = headers;
   let res: Awaited<ReturnType<FetchImpl>>;
   try {
@@ -592,7 +596,6 @@ async function send<T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
-  token?: string | null,
   idempotencyKey?: string,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
@@ -613,14 +616,16 @@ async function send<T>(
     if (body !== undefined) {
       headers["content-type"] = "application/json";
     }
-    if (token !== undefined && token !== null && token !== "") {
-      headers["authorization"] = `Bearer ${token}`;
-    }
     if (idempotencyKey !== undefined && idempotencyKey !== "") {
       headers["idempotency-key"] = idempotencyKey;
     }
+    const unsafe = method !== "GET";
+    if (unsafe) {
+      const csrf = readCsrfToken();
+      if (csrf) headers["x-csrf-token"] = csrf;
+    }
     // No headers on anonymous reads: the wire keeps its old shape exactly.
-    const init: RequestInit = { method };
+    const init: RequestInit = { method, credentials: "same-origin" };
     if (Object.keys(headers).length > 0) {
       init.headers = headers;
     }
@@ -723,6 +728,22 @@ function parseRetryAfter(raw: string | null): number | null {
   }
   const seconds = Number(raw.trim());
   return Number.isInteger(seconds) && seconds >= 0 ? seconds : null;
+}
+
+/** Reads the CSRF double-submit token from the (JS-readable) cookie, or null. */
+function readCsrfToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|; )jobscrape_csrf=([^;]*)/);
+  if (match === null || match[1] === undefined) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 /** Field errors are a map of JSON field name to messages; anything else is ignored. */
