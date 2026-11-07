@@ -2,22 +2,22 @@
 # `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit the task `model`). Alias entries in a panel list still count toward its fan-out.
 # Values are OpenCode model IDs (`provider/model-id`, see `opencode models`). Cursor slugs (claude-opus-5-5-xhigh, grok-4.7-xhigh-fast) are not valid here.
 # budget: large (xhigh)
-# thinking: muse-spark runs #high, beam-free runs #max, deepseek-v4.1-flash runs #max. DeepSeek carries hardest tasks, why synthesizer, architect runners, arena cross-judge pool, and interrogate reviewers.
+# thinking: muse-spark runs #high, inkling-2-small-free runs #max, deepseek-v4.1-flash runs #max. DeepSeek carries hardest tasks, why synthesizer, architect runners, arena cross-judge pool, and interrogate reviewers.
 # parent session: run the interactive session on opencode-go/muse-spark-1.3-contributor#high; role lines below only affect subagents.
-feature, refactoring: opencode-go/beam-free#max
-bug-fix: opencode-go/beam-free#max
-perf-issue: opencode-go/beam-free#max
-hillclimb: opencode-go/beam-free#max
+feature, refactoring: opencode/inkling-2-small-free#max
+bug-fix: opencode/inkling-2-small-free#max
+perf-issue: opencode/inkling-2-small-free#max
+hillclimb: opencode/inkling-2-small-free#max
 judgment and prose: opencode-go/muse-spark-1.3-contributor#high
 hardest tasks: opencode-go/deepseek-v4.1-flash#max
-how explorer: opencode-go/beam-free#max
+how explorer: opencode/inkling-2-small-free#max
 how explainer: opencode-go/muse-spark-1.3-contributor#high
-why investigators: opencode-go/beam-free#max
+why investigators: opencode/inkling-2-small-free#max
 why synthesizer: opencode-go/deepseek-v4.1-flash#max
-reflect tooling: opencode-go/beam-free#max
+reflect tooling: opencode/inkling-2-small-free#max
 reflect judgment, divergent, synthesizer: opencode-go/muse-spark-1.3-contributor#high
-arena runners: opencode-go/beam-free#max, opencode-go/muse-spark-1.3-contributor#high
+arena runners: opencode/inkling-2-small-free#max, opencode-go/muse-spark-1.3-contributor#high
 arena cross-judge pool: opencode-go/muse-spark-1.3-contributor#high, opencode-go/deepseek-v4.1-flash#max
-swarm workers: opencode-go/beam-free#max
+swarm workers: opencode/inkling-2-small-free#max
 architect runners: opencode-go/deepseek-v4.1-flash#max, opencode-go/muse-spark-1.3-contributor#high
 interrogate reviewers: opencode-go/deepseek-v4.1-flash#max, opencode-go/muse-spark-1.3-contributor#high
