@@ -7078,5 +7078,89 @@
     "seen": 1794069545.8911412,
     "ast_hash": "651741754b1cfe21bb6a97ae889eb48c",
     "semantic_hash": ""
+  },
+  ".opencode/agents/build-perf.md": {
+    "mtime": 1794069769.7298632,
+    "seen": 1794069809.62406,
+    "ast_hash": "cf97a417f9501a30960972a9dc676519",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-builder.md": {
+    "mtime": 1794069769.7302706,
+    "seen": 1794069809.62406,
+    "ast_hash": "89bf0392001eb5fe6be2ddac58bf2b1f",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-fixer.md": {
+    "mtime": 1794069769.730369,
+    "seen": 1794069809.6240609,
+    "ast_hash": "1d67e1383bb7053d12e5f8794a25b776",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-implementer.md": {
+    "mtime": 1794069769.7304814,
+    "seen": 1794069809.6240609,
+    "ast_hash": "0a332d020f52c34b35ad2a61f5a284f1",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-linter.md": {
+    "mtime": 1794069769.7305677,
+    "seen": 1794069809.624062,
+    "ast_hash": "9f6e72c269149d3b07cf85589cb1c7a3",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-planner.md": {
+    "mtime": 1794069769.7306643,
+    "seen": 1794069809.624062,
+    "ast_hash": "efc95ee93ecdb29a88f8acc9f3677c80",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-researcher.md": {
+    "mtime": 1794069769.7307665,
+    "seen": 1794069809.624062,
+    "ast_hash": "3e3e2e6f644e66d68bc2d7e1a2a632b7",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/code-testing-tester.md": {
+    "mtime": 1794069769.7308645,
+    "seen": 1794069809.624063,
+    "ast_hash": "4dd103295a1dffb3f30542cc25f2cf5d",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/msbuild-code-review.md": {
+    "mtime": 1794069769.7299945,
+    "seen": 1794069809.624064,
+    "ast_hash": "27a97b29ec07f3191f6b1d68228c7f48",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/msbuild.md": {
+    "mtime": 1794069769.7301073,
+    "seen": 1794069809.624064,
+    "ast_hash": "d41b22f15facb2b3a4b647a6571e3408",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/optimizing-dotnet-performance.md": {
+    "mtime": 1794069769.7296352,
+    "seen": 1794069809.624064,
+    "ast_hash": "3eec647f8610c019615ed0420840a0f0",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/test-engineer.md": {
+    "mtime": 1794069769.7310078,
+    "seen": 1794069809.624065,
+    "ast_hash": "3002f0954874cc5b21524ca05dbacf14",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/test-quality-auditor.md": {
+    "mtime": 1794069769.731107,
+    "seen": 1794069809.624066,
+    "ast_hash": "71ee74e5fbb046af4af37b2f9b70d713",
+    "semantic_hash": ""
+  },
+  ".opencode/agents/testability-migration.md": {
+    "mtime": 1794069769.7312012,
+    "seen": 1794069809.624066,
+    "ast_hash": "880dcdbc544322f7e56f87e6c003651d",
+    "semantic_hash": ""
   }
 }
