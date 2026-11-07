@@ -723,7 +723,7 @@ flowchart TB
 ```
 
 - The page comes from `BrowserSessionPool.Find(browserProfileId)`, opened earlier by `PlaywrightSessionManager`.
-- Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported and the handler's repeated-page guard stops.
+- Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported; the handler's repeated-page guard re-requests it once, then fails the run with a named reason.
 - `PlaywrightException` / `TimeoutException` (unless cancelled) → `TransientError`, which only the handler may retry.
 
 **`IndeedJobSource`:** page 1 navigates to `IndeedUrlBuilder.SearchUrl`; later pages navigate directly with the cursor's `start` offset. A null cursor derives the offset from the absolute page number, so windowed runs start at their own offset. Cards are semantic DOM (`div.job_seen_beacon` / `data-testid`); details read JSON-LD first, then DOM. It is restricted-tier and disabled by default.
@@ -738,7 +738,7 @@ flowchart TB
 | Query param `start` | Indeed, LinkedIn | Implemented: page 1 has no `start`; each next page adds 10 (Indeed) or 25 (LinkedIn) to the cursor's offset; stop on empty/repeated page or cap. |
 | Cursor/API token | Naukri API fast path (not enabled) | Design target only; no adapter uses it. |
 
-Every page result includes a **fingerprint** (first card ID/href + result range text) so a loop cannot silently re-read the same page.
+Every page result includes a **fingerprint** (first card ID/href + result range text) so a repeated page is re-requested once and, while Next stays live, fails the run with a named reason.
 
 ### 9.2 Extraction priority (implemented)
 

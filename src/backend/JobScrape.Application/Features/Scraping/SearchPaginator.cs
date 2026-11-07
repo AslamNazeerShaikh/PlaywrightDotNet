@@ -17,12 +17,13 @@ namespace JobScrape.Application.Features.Scraping
         /// </summary>
         /// <param name="scope">The running run.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
-        /// <returns>True when a wall or changed page ended the run; false when searching simply finished.</returns>
+        /// <returns>True when a wall, changed page, or pagination stall ended the run; false when searching simply finished.</returns>
         private async Task<bool> SearchAsync(RunScope scope, CancellationToken cancellationToken)
         {
             var run = scope.Run;
             var politeness = new PolitenessPolicy(run.Limits, _random);
             var seenPages = new HashSet<PageFingerprint>();
+            var retriedPages = new HashSet<int>();
             string? cursor = null;
 
             // A saved position is normally absent: each run gets a fresh id.
@@ -55,7 +56,7 @@ namespace JobScrape.Application.Features.Scraping
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached");
+                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached", "before");
                     break;
                 }
 
@@ -69,7 +70,8 @@ namespace JobScrape.Application.Features.Scraping
                         _logger,
                         run.Id.Value,
                         absolute,
-                        "daily page quota exhausted"
+                        "daily page quota exhausted",
+                        "before"
                     );
                     break;
                 }
@@ -99,7 +101,7 @@ namespace JobScrape.Application.Features.Scraping
                     // (searching just began), so Fail cannot throw.
                     var outOfRange =
                         $"start page {ex.StartPage} is past the last page {ex.MaxPage}";
-                    LogPaginationStopped(_logger, run.Id.Value, page, outOfRange);
+                    LogPaginationStopped(_logger, run.Id.Value, page, outOfRange, "before");
                     run.RecordFailure();
                     run.Fail(ex.Message, _clock.GetUtcNow());
                     await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
@@ -115,7 +117,7 @@ namespace JobScrape.Application.Features.Scraping
                     // Retries are exhausted: skip the page and stop paginating.
                     run.RecordFailure();
                     await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
-                    LogPaginationStopped(_logger, run.Id.Value, page, "transient errors");
+                    LogPaginationStopped(_logger, run.Id.Value, page, "transient errors", "at");
                     break;
                 }
 
@@ -125,10 +127,40 @@ namespace JobScrape.Application.Features.Scraping
                     return true;
                 }
 
-                if (result.Fingerprint is not null && !seenPages.Add(result.Fingerprint))
+                // A repeated fingerprint only stalls when Next is live: the
+                // click did not advance. A missing Next ends the run through
+                // the null cursor path below, so it is not a failure.
+                if (
+                    result.Fingerprint is not null
+                    && result.NextCursor is not null
+                    && !seenPages.Add(result.Fingerprint)
+                )
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, page, "repeated page");
-                    break;
+                    if (retriedPages.Add(page))
+                    {
+                        // The site sometimes serves stale content under the
+                        // page URL; re-request the same page once through the
+                        // loop top. The for increment restores absolute.
+                        LogPageRetried(_logger, run.Id.Value, page);
+                        absolute--;
+                        continue;
+                    }
+
+                    // A repeated pre-window page is a stale re-serve, not a
+                    // stall: fall through to the pre-window advance below,
+                    // which keeps nothing.
+                    if (page >= firstPage)
+                    {
+                        var range = result.Fingerprint.ResultRange;
+                        var stalled = range is null
+                            ? $"page {page} repeated an earlier page without advancing"
+                            : $"page {page} repeated an earlier page without advancing ({range})";
+                        LogPaginationStopped(_logger, run.Id.Value, page, stalled, "at");
+                        run.RecordFailure();
+                        run.Fail(stalled, _clock.GetUtcNow());
+                        await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
+                        return true;
+                    }
                 }
 
                 if (page < firstPage)
@@ -141,7 +173,8 @@ namespace JobScrape.Application.Features.Scraping
                             _logger,
                             run.Id.Value,
                             page,
-                            "no further pages before the window"
+                            "no further pages before the window",
+                            "before"
                         );
                         break;
                     }
@@ -303,12 +336,14 @@ namespace JobScrape.Application.Features.Scraping
         }
 
         /// <summary>
-        /// Tests a card against the profile's recency window.
+        /// Tests a card against the profile's recency window at day
+        /// granularity: card parsers stamp midnight UTC, so the window
+        /// compares UTC dates, not instants.
         /// </summary>
         /// <param name="criteria">The profile's search criteria.</param>
         /// <param name="snapshot">The card snapshot.</param>
         /// <param name="now">The sighting time.</param>
-        /// <returns>True when the card is older than the window allows.</returns>
+        /// <returns>True when the card's UTC date is before today minus the window.</returns>
         private static bool IsStale(
             SearchCriteria criteria,
             JobSnapshot snapshot,
@@ -327,7 +362,9 @@ namespace JobScrape.Application.Features.Scraping
                 return false;
             }
 
-            return postedAt < now.AddDays(-days);
+            // Card parsers stamp midnight UTC, so an instant comparison would
+            // stale every card from the previous UTC day on a 1 day window.
+            return postedAt.UtcDateTime.Date < now.UtcDateTime.Date.AddDays(-days);
         }
 
         /// <summary>

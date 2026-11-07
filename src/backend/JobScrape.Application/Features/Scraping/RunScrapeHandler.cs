@@ -294,14 +294,21 @@ namespace JobScrape.Application.Features.Scraping
 
         [LoggerMessage(
             Level = LogLevel.Information,
-            Message = "Run {RunId} stopped paginating before page {Page}: {Reason}"
+            Message = "Run {RunId} stopped paginating {Preposition} page {Page}: {Reason}"
         )]
         private static partial void LogPaginationStopped(
             ILogger logger,
             Guid runId,
             int page,
-            string reason
+            string reason,
+            string preposition
         );
+
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Run {RunId} retrying page {Page} once: repeated page fingerprint with a live Next cursor"
+        )]
+        private static partial void LogPageRetried(ILogger logger, Guid runId, int page);
 
         [LoggerMessage(
             Level = LogLevel.Information,
