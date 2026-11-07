@@ -63,7 +63,9 @@ describe("api client", () => {
 
   test("downloadRunExport returns the blob with the server filename", async () => {
     const blob = new Blob(["a,b"], { type: "text/csv" });
-    const fetchImpl: FetchImpl = async (url) => {
+    let seenInit: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (url, init) => {
+      seenInit = init;
       expect(url).toBe("/api/v1/runs/r1/postings/export?format=csv&group=only");
       return {
         ok: true,
@@ -80,11 +82,14 @@ describe("api client", () => {
     const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv", "only");
 
     expect(result).toEqual({ ok: true, value: { blob, filename: "custom.csv" } });
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport falls back to run-postings-{id}.{format} without a header", async () => {
     const blob = new Blob(["x"], { type: "text/csv" });
-    const fetchImpl: FetchImpl = async (url) => {
+    let seenInit: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (url, init) => {
+      seenInit = init;
       expect(url).toBe("/api/v1/runs/r1/postings/export?format=xlsx");
       return { ok: true, status: 200, json: async () => ({}), blob: async () => blob };
     };
@@ -95,10 +100,15 @@ describe("api client", () => {
     if (result.ok) {
       expect(result.value.filename).toBe("run-postings-r1.xlsx");
     }
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport maps a missing blob to BAD_RESPONSE", async () => {
-    const fetchImpl: FetchImpl = async () => ({ ok: true, status: 200, json: async () => ({}) });
+    let seenInit: RequestInit | undefined;
+    const fetchImpl: FetchImpl = async (_url, init) => {
+      seenInit = init;
+      return { ok: true, status: 200, json: async () => ({}) };
+    };
 
     const { result } = await createApiClient(fetchImpl).downloadRunExport("r1", "csv");
 
@@ -106,6 +116,7 @@ describe("api client", () => {
     if (!result.ok) {
       expect(result.problem.code).toBe("BAD_RESPONSE");
     }
+    expect(seenInit?.headers).toBeUndefined();
   });
 
   test("downloadRunExport surfaces export problem codes", async () => {

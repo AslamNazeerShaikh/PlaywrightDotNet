@@ -34,8 +34,11 @@ describe("ruler tabs", () => {
       "06RUNS",
       "07TOPOLOGY",
       "08DATABASE",
+      "09USERS",
+      "10ROLES",
+      "11QUOTAS",
     ]);
-    expect(queries.getByText("NAV // 08 STOPS")).toBeDefined();
+    expect(queries.getByText("NAV // 11 STOPS")).toBeDefined();
     expect(
       queries.getByRole("link", { name: "02 ENGINE HEALTH" }).getAttribute("aria-current"),
     ).toBe("page");
@@ -43,11 +46,21 @@ describe("ruler tabs", () => {
 
   test("blip sits on the active stop with section digits", () => {
     const first = render(<RulerTabs route="overview" />);
-    expect(first.getByText("01/08")).toBeDefined();
+    expect(first.getByText("01/11")).toBeDefined();
     cleanup();
 
-    const last = render(<RulerTabs route="database" />);
-    expect(last.getByText("08/08")).toBeDefined();
+    const last = render(<RulerTabs route="quotas" />);
+    expect(last.getByText("11/11")).toBeDefined();
+  });
+
+  test("visible hides stops the caller may not see", () => {
+    const queries = render(
+      <RulerTabs route="overview" visible={new Set(["overview", "health"])} />,
+    );
+
+    const stops = queries.getAllByRole("link");
+    expect(stops.map((s) => s.textContent)).toEqual(["01OVERVIEW", "02ENGINE HEALTH"]);
+    expect(queries.getByText("NAV // 02 STOPS")).toBeDefined();
   });
 
   test("selecting a stop navigates", () => {

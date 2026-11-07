@@ -14,6 +14,7 @@ namespace JobScrape.Mcp.Tools
     {
         private readonly ListSessionsHandler _list;
         private readonly GetSessionHandler _get;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SessionsTools"/> class.
@@ -21,8 +22,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="list">The session list handler. Must not be null.</param>
         /// <param name="get">The single-session handler. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Read tools ignore it; the parameter exists so
-        /// future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>sessions.read</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public SessionsTools(ListSessionsHandler list, GetSessionHandler get, ICallerContext caller)
@@ -32,6 +32,7 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(caller);
             _list = list;
             _get = get;
+            _caller = caller;
         }
 
         /// <summary>
@@ -45,6 +46,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "sessions.read");
             return _list.HandleAsync(cancellationToken);
         }
 
@@ -61,6 +63,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "sessions.read");
             var sessionId = McpErrors.ParseIdOrThrow(id, "A session id is required.");
             return McpErrors.OrThrow(await _get.HandleAsync(sessionId, cancellationToken));
         }

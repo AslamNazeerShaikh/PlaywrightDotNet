@@ -20,7 +20,7 @@ namespace JobScrape.Api.Tests
         public async Task ListsTheShippedSourcesWithPolicyGateQuotaAndCircuit()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var response = await client.GetAsync("api/v1/sources", Ct);
             var body = await response.Content.ReadFromJsonAsync<SourceListResponse>(Ct);
@@ -52,7 +52,7 @@ namespace JobScrape.Api.Tests
             using var configured = factory.WithWebHostBuilder(builder =>
                 builder.UseSetting("JobScrape:Compliance:AcknowledgeSourceRisk", "true")
             );
-            using var client = configured.CreateClient();
+            using var client = await configured.CreateAdminClientAsync(Ct);
 
             var body = await client.GetFromJsonAsync<SourceListResponse>("api/v1/sources", Ct);
 

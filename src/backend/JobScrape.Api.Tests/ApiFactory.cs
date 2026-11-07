@@ -27,6 +27,13 @@ namespace JobScrape.Api.Tests
         public bool DeleteLogsOnDispose { get; init; } = true;
 
         /// <summary>
+        /// When true, the shipped JWT placeholder in appsettings.json stands
+        /// instead of the disposable test signing key, so startup validation
+        /// must refuse the host.
+        /// </summary>
+        public bool UseShippedJwtSecret { get; init; }
+
+        /// <summary>
         /// Replaces services after the app registered its own (fakes for the
         /// browser-facing ports, for example).
         /// </summary>
@@ -35,6 +42,12 @@ namespace JobScrape.Api.Tests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
+            // The shipped secret is a demo placeholder the startup
+            // validator refuses; tests run with a disposable signing key.
+            if (!UseShippedJwtSecret)
+            {
+                builder.UseSetting("JobScrape:Jwt:Secret", AuthTestHelper.TestJwtSecret);
+            }
             builder.UseSetting("JobScrape:Logging:Directory", LogDirectory);
             builder.UseSetting("JobScrape:Storage:DatabasePath", DatabasePath);
             builder.UseSetting("JobScrape:Storage:ArtifactsRoot", Path.Combine(_root, "data"));

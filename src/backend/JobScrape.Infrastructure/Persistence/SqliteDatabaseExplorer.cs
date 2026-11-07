@@ -8,11 +8,25 @@ namespace JobScrape.Infrastructure.Persistence
     /// <summary>
     /// Dapper-backed <see cref="IDatabaseExplorer"/> over the SQLite file.
     /// Table/column identifiers are validated against the live schema and
-    /// quoted; values are always parameterized.
+    /// quoted; values are always parameterized. Identity tables
+    /// (<c>users</c>, <c>roles</c>) are never exposed, so password hashes
+    /// cannot be read back through this API.
     /// </summary>
     public sealed class SqliteDatabaseExplorer(string connectionString) : IDatabaseExplorer
     {
         private readonly string _connectionString = connectionString;
+
+        /// <summary>
+        /// Tables the explorer never lists, describes, or touches.
+        /// </summary>
+        private static readonly HashSet<string> BlockedTables = new(
+            StringComparer.OrdinalIgnoreCase
+        )
+        {
+            "users",
+            "roles",
+            "idempotency_keys",
+        };
 
         private static bool IsValidIdentifier(string name) =>
             !string.IsNullOrWhiteSpace(name)
@@ -63,6 +77,11 @@ namespace JobScrape.Infrastructure.Persistence
                 throw new ArgumentException("Invalid table name.", nameof(tableName));
             }
 
+            if (BlockedTables.Contains(tableName))
+            {
+                throw new TableNotFoundException(tableName);
+            }
+
             var tables = await GetUserTablesAsync(connection, ct);
             if (!tables.Contains(tableName))
             {
@@ -80,7 +99,7 @@ namespace JobScrape.Infrastructure.Persistence
             var result = new List<DatabaseTableInfo>();
             foreach (var table in tables.OrderBy(t => t, StringComparer.Ordinal))
             {
-                if (!IsValidIdentifier(table))
+                if (!IsValidIdentifier(table) || BlockedTables.Contains(table))
                 {
                     continue;
                 }

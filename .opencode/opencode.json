@@ -19,193 +19,187 @@
       },
       "ui-skills": {
         "type": "remote",
-        "url": "https://www.ui-skills.com/mcp",
-        "enabled": true
+        "url": "https://www.ui-skills.com/mcp"
       }
     }
   },
-  "agent": {
+  "agents": {
     "planner": {
       "description": "Expert planning specialist for complex features and refactoring. Use for implementation planning, architectural changes, or complex refactoring.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/planner.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "deny"
-      }
+      "system": "{file:prompts/agents/planner.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "deny"
+        }
+      ]
     },
     "code-reviewer": {
       "description": "Expert code review specialist. Reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/code-reviewer.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "deny"
-      }
+      "model": "opencode-go/deepseek-v4.1-flash#max",
+      "system": "{file:prompts/agents/code-reviewer.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "deny"
+        }
+      ]
     },
     "security-reviewer": {
       "description": "Security vulnerability detection and remediation specialist. Use after writing code that handles user input, authentication, API endpoints, or sensitive data.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/security-reviewer.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
+      "system": "{file:prompts/agents/security-reviewer.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     },
     "tdd-guide": {
       "description": "Test-Driven Development specialist enforcing write-tests-first methodology. Use when writing new features, fixing bugs, or refactoring. Ensures 80%+ test coverage.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/tdd-guide.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
+      "system": "{file:prompts/agents/tdd-guide.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     },
     "build-error-resolver": {
       "description": "Build and TypeScript error resolution specialist. Use when build fails or type errors occur. Fixes build/type errors only with minimal diffs.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/build-error-resolver.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
+      "system": "{file:prompts/agents/build-error-resolver.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     },
     "e2e-runner": {
       "description": "End-to-end testing specialist using Playwright. Generates, maintains, and runs E2E tests for critical user flows.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/e2e-runner.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
+      "system": "{file:prompts/agents/e2e-runner.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     },
     "doc-updater": {
       "description": "Documentation and codemap specialist. Use for updating codemaps and documentation.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/doc-updater.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
+      "system": "{file:prompts/agents/doc-updater.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     },
     "refactor-cleaner": {
       "description": "Dead code cleanup and consolidation specialist. Use for removing unused code, duplicates, and refactoring.",
       "mode": "subagent",
-      "prompt": "{file:prompts/agents/refactor-cleaner.txt}",
-      "permission": {
-        "read": "allow",
-        "bash": "allow",
-        "edit": "allow"
-      }
-    }
-  },
-  "command": {
-    "plan": {
-      "description": "Create a detailed implementation plan for complex features",
-      "template": "{file:commands/plan.md}\n\n$ARGUMENTS",
-      "agent": "planner",
-      "subtask": true
-    },
-    "code-review": {
-      "description": "Review code for quality, security, and maintainability",
-      "template": "{file:commands/code-review.md}\n\n$ARGUMENTS",
-      "agent": "code-reviewer",
-      "subtask": true
-    },
-    "security": {
-      "description": "Run comprehensive security review",
-      "template": "{file:commands/security.md}\n\n$ARGUMENTS",
-      "agent": "security-reviewer",
-      "subtask": true
-    },
-    "build-fix": {
-      "description": "Fix build and TypeScript errors with minimal changes",
-      "template": "{file:commands/build-fix.md}\n\n$ARGUMENTS",
-      "agent": "build-error-resolver",
-      "subtask": true
-    },
-    "e2e": {
-      "description": "Generate and run E2E tests with Playwright",
-      "template": "{file:commands/e2e.md}\n\n$ARGUMENTS",
-      "agent": "e2e-runner",
-      "subtask": true
-    },
-    "refactor-clean": {
-      "description": "Remove dead code and consolidate duplicates",
-      "template": "{file:commands/refactor-clean.md}\n\n$ARGUMENTS",
-      "agent": "refactor-cleaner",
-      "subtask": true
-    },
-    "orchestrate": {
-      "description": "Orchestrate multiple agents for complex tasks",
-      "template": "{file:commands/orchestrate.md}\n\n$ARGUMENTS",
-      "agent": "planner",
-      "subtask": true
-    },
-    "learn": {
-      "description": "Extract patterns and learnings from session",
-      "template": "{file:commands/learn.md}\n\n$ARGUMENTS"
-    },
-    "checkpoint": {
-      "description": "Save verification state and progress",
-      "template": "{file:commands/checkpoint.md}\n\n$ARGUMENTS"
-    },
-    "verify": {
-      "description": "Run verification loop",
-      "template": "{file:commands/verify.md}\n\n$ARGUMENTS"
-    },
-    "eval": {
-      "description": "Run evaluation against criteria",
-      "template": "{file:commands/eval.md}\n\n$ARGUMENTS"
-    },
-    "update-docs": {
-      "description": "Update documentation",
-      "template": "{file:commands/update-docs.md}\n\n$ARGUMENTS",
-      "agent": "doc-updater",
-      "subtask": true
-    },
-    "update-codemaps": {
-      "description": "Update codemaps",
-      "template": "{file:commands/update-codemaps.md}\n\n$ARGUMENTS",
-      "agent": "doc-updater",
-      "subtask": true
-    },
-    "test-coverage": {
-      "description": "Analyze test coverage",
-      "template": "{file:commands/test-coverage.md}\n\n$ARGUMENTS",
-      "agent": "tdd-guide",
-      "subtask": true
-    },
-    "skill-create": {
-      "description": "Generate skills from git history",
-      "template": "{file:commands/skill-create.md}\n\n$ARGUMENTS"
-    },
-    "harness-audit": {
-      "description": "Run a deterministic repository harness audit and return a prioritized scorecard.",
-      "template": "{file:commands/harness-audit.md}\n\n$ARGUMENTS"
-    },
-    "model-route": {
-      "description": "Recommend the best model tier for the current task by complexity and budget.",
-      "template": "{file:commands/model-route.md}\n\n$ARGUMENTS"
-    },
-    "quality-gate": {
-      "description": "Run the ECC quality pipeline on demand for a file or project scope.",
-      "template": "{file:commands/quality-gate.md}\n\n$ARGUMENTS"
-    },
-    "loop-start": {
-      "description": "Start a managed autonomous loop pattern with safety defaults.",
-      "template": "{file:commands/loop-start.md}\n\n$ARGUMENTS"
-    },
-    "loop-status": {
-      "description": "Inspect active loop state, progress, and failure signals.",
-      "template": "{file:commands/loop-status.md}\n\n$ARGUMENTS"
+      "system": "{file:prompts/agents/refactor-cleaner.txt}",
+      "permissions": [
+        {
+          "action": "read",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ]
     }
   }
 }

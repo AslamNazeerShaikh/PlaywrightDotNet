@@ -1,6 +1,8 @@
 using JobScrape.Api.Http;
+using JobScrape.Api.Http.Auth;
 using JobScrape.Infrastructure.Composition;
 using JobScrape.Mcp.Tools;
+using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -35,6 +37,12 @@ namespace JobScrape.Api
             // endpoint stays greppable and block-namespaced (no minimal-API
             // lambdas hidden in this method).
             builder.Services.AddControllers();
+            // Validation failures map to coded problems inside the actions
+            // (see the auth controllers): the framework's automatic 400 is
+            // off so every 400 carries the stable code and trace id.
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+                options.SuppressModelStateInvalidFilter = true
+            );
 
             // OpenAPI feeds Scalar locally and the cockpit codegen; served only
             // in Development (see the MapOpenApi guard below).
@@ -55,13 +63,20 @@ namespace JobScrape.Api
             );
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-            // One list, shared with the stdio host: clock, caller, handlers,
+            // One list for the single host: clock, caller, handlers,
             // export writers, and the background run coordinator.
+            builder.Services.AddMemoryCache();
             builder.Services.AddJobScrapeUseCases();
 
             // Bound and validated once; bad caps or consent flags fail
             // startup instead of running unsafely.
             builder.Services.AddJobScrapeOptions();
+
+            // HS256 bearer tokens, the admin and per-permission policies
+            // with a fallback requiring an authenticated user, and the
+            // fixed-window rate limiters.
+            builder.Services.AddJobScrapeAuth();
+            builder.Services.AddJobScrapeRateLimiting();
 
             // Serilog owns sinks and enrichers; app code logs through ILogger<T>.
             builder.Services.AddJobScrapeLogging(
@@ -116,17 +131,23 @@ namespace JobScrape.Api
             DatabaseRegistration.MigrateInDevelopment(app);
 
             app.UseMiddleware<CorrelationMiddleware>();
+            app.UseMiddleware<LoginIpRateLimitMiddleware>();
+            app.UseRateLimiter();
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseExceptionHandler();
             // One completion event per request, written through this host's
             // logger rather than the static Log.Logger.
             app.UseSerilogRequestLogging(options =>
                 options.Logger = app.Services.GetRequiredService<Serilog.ILogger>()
             );
+            app.UseMiddleware<IdempotencyMiddleware>();
+            app.UseMiddleware<UsageQuotaMiddleware>();
             app.MapControllers();
 
             // MCP lives beside the controllers on /mcp; loopback only, like
-            // every other endpoint in this host.
-            app.MapMcp("/mcp");
+            // every other endpoint in this host, and bearer-authorized.
+            app.MapMcp("/mcp").RequireAuthorization();
 
             // Run disposes the host on every exit path; that disposes the
             // container-owned Serilog logger and flushes the async file sink

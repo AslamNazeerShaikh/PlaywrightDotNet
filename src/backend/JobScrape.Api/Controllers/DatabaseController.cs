@@ -1,16 +1,20 @@
 using JobScrape.Api.Http;
+using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
 {
     /// <summary>
     /// Database explorer: list tables, inspect schema, browse rows, and
-    /// perform CRUD on allow-listed tables (docs/12-web-cockpit.md).
+    /// perform CRUD on allow-listed tables (docs/12-web-cockpit.md). Admin
+    /// role only; identity tables are never listed.
     /// </summary>
     [ApiController]
     [Route("api/v1/db")]
+    [Authorize(Policy = AuthPolicies.RequireAdmin)]
     public sealed class DatabaseController : ControllerBase
     {
         private readonly IDatabaseExplorer _explorer;

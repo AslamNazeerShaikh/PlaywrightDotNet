@@ -281,6 +281,71 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void JwtDefaultsAreValidAndShortSecretsAreRejected()
+        {
+            static bool IsValid(object options)
+            {
+                return Validator.TryValidateObject(
+                    options,
+                    new ValidationContext(options),
+                    null,
+                    true
+                );
+            }
+
+            Assert.False(IsValid(new JwtOptions()));
+            Assert.False(IsValid(new JwtOptions { Secret = "too-short" }));
+            Assert.True(
+                IsValid(new JwtOptions { Secret = "a-demo-secret-of-at-least-32-characters" })
+            );
+            Assert.False(
+                IsValid(
+                    new JwtOptions
+                    {
+                        Secret = "a-demo-secret-of-at-least-32-characters",
+                        TokenLifetimeMinutes = 0,
+                    }
+                )
+            );
+        }
+
+        [Fact]
+        public void JwtValidatorRejectsTheDemoPlaceholder()
+        {
+            var validator = new JwtOptionsValidator();
+
+            var result = validator.Validate(
+                null,
+                new JwtOptions { Secret = JwtOptionsValidator.DemoPlaceholder }
+            );
+
+            Assert.False(result.Succeeded);
+            Assert.Contains(
+                result.Failures!,
+                failure => failure.Contains("demo placeholder", StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        [Fact]
+        public void JwtValidatorCountsBytesNotCharacters()
+        {
+            var validator = new JwtOptionsValidator();
+
+            Assert.False(
+                validator.Validate(null, new JwtOptions { Secret = new string('a', 31) }).Succeeded
+            );
+            Assert.True(
+                validator.Validate(null, new JwtOptions { Secret = new string('a', 32) }).Succeeded
+            );
+            Assert.True(
+                validator.Validate(null, new JwtOptions { Secret = new string('é', 16) }).Succeeded
+            );
+            Assert.False(
+                validator.Validate(null, new JwtOptions { Secret = new string('é', 15) }).Succeeded
+            );
+        }
+
+        [Fact]
         public void SystemRandomSourceStaysInRange()
         {
             var random = new SystemRandomSource();

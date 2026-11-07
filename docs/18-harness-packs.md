@@ -1,6 +1,6 @@
-# Additional harness packs: ui-ux-pro-max, ECC, caveman
+# Additional harness packs: ui-ux-pro-max, ECC
 
-Three packs installed alongside pstack ([docs/17](17-pstack-opencode.md)).
+Two packs installed alongside pstack ([docs/17](17-pstack-opencode.md)).
 Conventions match: official installer first, project-local where the tool
 allows it, verbatim copies, deltas recorded here.
 
@@ -31,24 +31,26 @@ allows it, verbatim copies, deltas recorded here.
   - 20 commands in `.opencode/commands/` (see AGENTS.md list). `learn`,
     `checkpoint`, `verify`, `eval`, `quality-gate`, `harness-audit`,
     `model-route`, `loop-start`, `loop-status` run on the current agent;
-    the rest bind to an ECC subagent via `command` entries in
-    `.opencode/opencode.json` (`subtask: true`).
-  - 8 agents in `.opencode/opencode.json` with prompts in
-    `.opencode/prompts/agents/`. Their deprecated `tools` blocks were
-    converted to `permission` (`write`/`edit` to `edit`, `read` to `read`,
-    `bash` to `bash`); the plugin-only `changed-files` custom tool was
-    dropped (no plugin installed).
+    the rest bind to an ECC subagent through their own frontmatter
+    (`agent: <name>`, `subagent: true`). Commands are defined only as
+    Markdown: OpenCode V2 lets a Markdown command replace a same-named JSON
+    entry, so JSON `commands` entries would be dead config.
+  - 8 agents under `agents` in `.opencode/opencode.json` (V2 shape:
+    `system: "{file:prompts/agents/<name>.txt}"` and an ordered
+    `permissions` array using V2 actions `read`, `shell`, `edit`). Prompts
+    live in `.opencode/prompts/agents/`; `{file:...}` resolves from
+    `.opencode/`. The plugin-only `changed-files` custom tool was dropped
+    (no plugin installed).
   - `.opencode/instructions/INSTRUCTIONS.md`, wired via `instructions`
     (project-root-relative paths; verified loaded).
 - Skipped, with reasons:
   - `/tdd` name collision: owned by the pstack skill. ECC's `tdd-guide`
     agent stays reachable via `/test-coverage`.
-  - Plugin (`plugins/`, `tools/`, hooks, custom tools): needs
-    `npm install` + `tsc` build inside `.opencode/` (`@opencode-ai/plugin`
-    peer). Follow-up: build it, add `"plugin": ["./plugins"]` — or
-    `npm install ecc-universal` + `"plugin": ["ecc-universal"]` per their
-    npm path. Until then, hook-gated behavior is absent and agents degrade
-    to prompting.
+  - Plugin (`plugins/`, `tools/`, hooks, custom tools): written for the
+    V1 plugin API (`@opencode-ai/plugin`), which OpenCode V2 does not run.
+    It needs a port to the V2 `@opencode/plugin` API before it can load.
+    Until then, hook-gated behavior is absent and agents degrade to
+    prompting.
   - Instinct system (`instinct-*`, `evolve`, `promote`, `projects`):
     requires the plugin runtime (`continuous-learning-v2`).
   - Language reviewers/builders for go/rust/java/kotlin/cpp/php/ruby,
@@ -64,32 +66,21 @@ allows it, verbatim copies, deltas recorded here.
   1:1: `commands/`, `prompts/agents/`, `instructions/`), re-run the
   validation below.
 
-## Caveman (global install, repo pointer only)
+## Caveman (removed)
 
-- Source: <https://github.com/JuliusBrussee/caveman>. Installed with
-  `node installer/install.js --only opencode` (no `--with-init`, so the repo
-  was untouched): plugin + server in `~/.config/opencode/plugins/caveman/`
-  (confirmed in `opencode plugin list`), 9 skills + 8 commands + 3
-  `cavecrew-*` agents in global config, `plugin` entry patched into global
-  `opencode.jsonc` (backup at `/tmp` is ephemeral — reinstall replays it),
-  Tier-3 ruleset appended to global `AGENTS.md`.
-- Scope: only `openai`/`anthropic`/`opencode-go` provider traffic is routed
-  through caveman (this repo's sessions qualify via `opencode-go`). Other
-  providers bypass it; `caveman doctor opencode` warns when the model uses
-  one.
-- The repo carries no caveman files by design (machine-global tool). The
-  AGENTS.md section above is the standing instruction for sessions here.
-- Update/uninstall: `npx -y github:JuliusBrussee/caveman -- --only opencode`
-  (re-run), `--uninstall` to remove.
+Caveman was a machine-global OpenCode install (`~/.config/opencode/`). It was
+removed with the rest of the global OpenCode config on 2026-11-07 so this
+repo's OpenCode setup is project-local only. The repo never carried caveman
+files.
 
-## Validation (all three)
+## Validation (both)
 
 - `python3` frontmatter sweep: every `.opencode/skills/*/SKILL.md` has
   `name` == directory (lowercase hyphenated) and `description` 1–1024 chars.
 - Every `.opencode/commands/*.md` resolves: pstack/ui-ux-pro-max loaders
-  name an installed skill; ECC `command` entries reference existing
-  `commands/*.md` + registered agents; agent `prompt` files exist.
+  name an installed skill; each ECC command's frontmatter `agent` names a
+  registered agent; every agent's `{file:prompts/agents/*.txt}` exists.
 - `python3 -c "import json; json.load(open('.opencode/opencode.json'))"`,
-  `opencode debug config` loads, `opencode plugin list` shows caveman.
+  `opencode debug config` loads with no warnings.
 - `python3 .opencode/skills/ui-ux-pro-max/scripts/search.py --help` runs
   (stdlib only).

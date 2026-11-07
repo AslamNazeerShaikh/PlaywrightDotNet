@@ -1,8 +1,10 @@
 using System.Text;
 using JobScrape.Application.Abstractions;
 using JobScrape.Domain.Access;
+using JobScrape.Domain.Identity;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Persistence.Configurations;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobScrape.Infrastructure.Persistence
@@ -37,14 +39,14 @@ namespace JobScrape.Infrastructure.Persistence
         public DbSet<JobPosting> JobPostings => Set<JobPosting>();
 
         /// <summary>
-        /// Gets the run resume positions.
-        /// </summary>
-        public DbSet<ScrapeRunProgress> ScrapeRunProgress => Set<ScrapeRunProgress>();
-
-        /// <summary>
         /// Gets the browser profiles.
         /// </summary>
         public DbSet<BrowserProfile> BrowserProfiles => Set<BrowserProfile>();
+
+        /// <summary>
+        /// Gets the usage quota definitions.
+        /// </summary>
+        public DbSet<UsageQuota> UsageQuotas => Set<UsageQuota>();
 
         /// <summary>
         /// Gets the daily source quotas.
@@ -55,6 +57,47 @@ namespace JobScrape.Infrastructure.Persistence
         /// Gets the source circuit breakers.
         /// </summary>
         public DbSet<SourceCircuitBreaker> SourceCircuitBreakers => Set<SourceCircuitBreaker>();
+
+        /// <summary>
+        /// Gets the login accounts.
+        /// </summary>
+        public DbSet<User> Users => Set<User>();
+
+        /// <summary>
+        /// Gets the named roles.
+        /// </summary>
+        public DbSet<Role> Roles => Set<Role>();
+
+        private const int SqlitePrimaryKeyConstraintExtendedCode = 1555;
+        private const int SqliteUniqueConstraintExtendedCode = 2067;
+
+        /// <inheritdoc />
+        public bool IsUniqueViolation(Exception exception)
+        {
+            var current = exception;
+            while (current is not null)
+            {
+                if (
+                    current is SqliteException sqlite
+                    && (
+                        sqlite.SqliteExtendedErrorCode == SqlitePrimaryKeyConstraintExtendedCode
+                        || sqlite.SqliteExtendedErrorCode == SqliteUniqueConstraintExtendedCode
+                    )
+                )
+                {
+                    return true;
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the stored idempotency responses.
+        /// </summary>
+        internal DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
         /// <summary>
         /// Stores every <see cref="DateTimeOffset"/> as UTC ticks.
@@ -76,11 +119,14 @@ namespace JobScrape.Infrastructure.Persistence
             ArgumentNullException.ThrowIfNull(modelBuilder);
             modelBuilder.ApplyConfiguration(new SearchProfileConfiguration());
             modelBuilder.ApplyConfiguration(new ScrapeRunConfiguration());
-            modelBuilder.ApplyConfiguration(new ScrapeRunProgressConfiguration());
             modelBuilder.ApplyConfiguration(new JobPostingConfiguration());
             modelBuilder.ApplyConfiguration(new BrowserProfileConfiguration());
             modelBuilder.ApplyConfiguration(new SourceQuotaConfiguration());
+            modelBuilder.ApplyConfiguration(new UsageQuotaConfiguration());
             modelBuilder.ApplyConfiguration(new SourceCircuitBreakerConfiguration());
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new RoleConfiguration());
+            modelBuilder.ApplyConfiguration(new IdempotencyRecordConfiguration());
 
             foreach (
                 var property in modelBuilder

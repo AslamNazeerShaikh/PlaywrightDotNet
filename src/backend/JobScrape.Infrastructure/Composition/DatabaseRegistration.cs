@@ -77,8 +77,7 @@ namespace JobScrape.Infrastructure.Composition
 
         /// <summary>
         /// Registers the raw SQLite explorer against the same database file
-        /// as Entity Framework Core. Only web hosts call this: the cockpit
-        /// database page needs it, and the stdio host has no such surface.
+        /// as Entity Framework Core. The cockpit database page needs it.
         /// Table and column names stay validated at the edge.
         /// </summary>
         /// <param name="services">The service collection.</param>

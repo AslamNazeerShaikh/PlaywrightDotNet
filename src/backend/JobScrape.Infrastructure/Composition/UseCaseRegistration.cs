@@ -1,13 +1,19 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Health;
+using JobScrape.Application.Features.Identity;
+using JobScrape.Application.Features.Quotas;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Features.SearchProfiles;
 using JobScrape.Application.Features.Sessions;
 using JobScrape.Application.Features.Sources;
+using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Export;
 using JobScrape.Infrastructure.Runtime;
+using JobScrape.Infrastructure.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace JobScrape.Infrastructure.Composition
 {
@@ -34,9 +40,43 @@ namespace JobScrape.Infrastructure.Composition
             // TimeProvider so tests can substitute a fake.
             services.AddSingleton(TimeProvider.System);
 
-            // Loopback only and no auth in this repo, so every MCP call
-            // runs as the local operator.
-            services.AddScoped<ICallerContext>(_ => CallerContext.LocalOperator);
+            // The bearer token owns the identity: sub is the actor, role
+            // claims are the roles. Unauthenticated callers get a denied
+            // (empty-permission) context instead of the local operator, so a
+            // missing auth gate can never silently run as a trusted actor.
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICallerContext>(provider =>
+            {
+                var user = provider.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    return new CallerContext(
+                        "unauthenticated",
+                        Array.Empty<string>(),
+                        Array.Empty<string>()
+                    );
+                }
+
+                var mustChange = user.HasClaim(claim =>
+                    claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
+                );
+                var actor =
+                    user.FindFirst(IdentityClaimTypes.Subject)?.Value
+                    ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
+                    ?? CallerContext.LocalOperator.ActorId;
+                var roles = user.FindAll(IdentityClaimTypes.Role)
+                    .Select(claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                var permissions = user.FindAll(IdentityClaimTypes.Permission)
+                    .Select(claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                return new CallerContext(actor, roles, permissions)
+                {
+                    MustChangePassword = mustChange,
+                };
+            });
 
             services.AddTransient<GetHealthHandler>();
             services.AddTransient<GetSearchProfileHandler>();
@@ -56,6 +96,39 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<ExportRunPostingsHandler>();
             services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
             services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
+            // Identity: the token service is stateless, so it shares the
+            // validated options snapshot; the policy record keeps JwtOptions
+            // out of the application layer.
+            services.AddSingleton<ITokenService, JwtTokenService>();
+            services.AddSingleton(provider =>
+            {
+                var jwt = provider.GetRequiredService<IOptions<JwtOptions>>().Value;
+                return new LoginPolicy(
+                    jwt.MaxFailedAttempts,
+                    TimeSpan.FromMinutes(jwt.LockoutMinutes)
+                );
+            });
+            services.AddTransient<ListUsageQuotasHandler>();
+            services.AddTransient<UpdateUsageQuotaHandler>();
+            services.AddTransient<LoginHandler>();
+            services.AddTransient<SetupPasswordHandler>();
+            services.AddTransient<ChangePasswordHandler>();
+            services.AddTransient<CreateUserHandler>(provider => new CreateUserHandler(
+                provider.GetRequiredService<IUserRepository>(),
+                provider.GetRequiredService<IRoleRepository>(),
+                provider.GetRequiredService<IUnitOfWork>(),
+                provider.GetRequiredService<TimeProvider>()
+            ));
+            services.AddTransient<GetUserHandler>();
+            services.AddTransient<ListUsersHandler>();
+            services.AddTransient<AssignRoleHandler>();
+            services.AddTransient<RevokeRoleHandler>();
+            services.AddTransient<CreateRoleHandler>();
+            services.AddTransient<GetRoleHandler>();
+            services.AddTransient<ListRolesHandler>();
+            services.AddTransient<GrantPermissionHandler>();
+            services.AddTransient<RevokePermissionHandler>();
+            services.AddHostedService<AdminSeedHostedService>();
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             services.AddScoped<RunScrapeHandler>();

@@ -471,5 +471,350 @@ namespace JobScrape.Application.Results
                 new Dictionary<string, object?>()
             );
         }
+
+        /// <summary>
+        /// Creates an unavailable failure for an idempotency reservation
+        /// that is still pending and did not complete within the wait window.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unavailable"/>.</returns>
+        public static ErrorInfo IdempotencyPending()
+        {
+            return new ErrorInfo(
+                "IDEMPOTENCY_IN_PROGRESS",
+                "The request is already in progress.",
+                "A previous attempt reserved this idempotency key and did not complete. Retry with a new key or wait for the reservation to expire.",
+                ErrorKind.Unavailable,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authentication failure for a wrong email or password.
+        /// The detail never says which one was wrong. Maps to HTTP 401, never
+        /// 400: bad credentials are not a validation error.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo InvalidCredentials()
+        {
+            return new ErrorInfo(
+                "INVALID_CREDENTIALS",
+                "Invalid email or password.",
+                "The email or password is incorrect.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authentication failure for a request with no usable
+        /// bearer token. Returned by the JWT challenge handler, never by
+        /// domain or application code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo Unauthenticated()
+        {
+            return new ErrorInfo(
+                "UNAUTHENTICATED",
+                "Authentication is required.",
+                "Sign in and retry with a bearer token.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authentication failure for a token whose version no longer
+        /// matches the account (a password change, lockout, or admin-driven role
+        /// change bumped it). Returned by the JWT challenge handler, never by
+        /// domain or application code. The detail is neutral: it never says
+        /// which change bumped the version.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Unauthorized"/>.</returns>
+        public static ErrorInfo SessionRevoked()
+        {
+            return new ErrorInfo(
+                "SESSION_REVOKED",
+                "Session ended.",
+                "Your account changed. Sign in again.",
+                ErrorKind.Unauthorized,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates an authorization failure for an authenticated caller
+        /// missing the required role or permission. Returned by the
+        /// authorization handlers, never by domain or application code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo AccessDenied()
+        {
+            return new ErrorInfo(
+                "ACCESS_DENIED",
+                "Access is denied.",
+                "The account lacks the required role or permission.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a rate-limit failure for HTTP throttling. Returned by
+        /// the rate-limiter rejection handler, never by domain code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.RateLimited"/>.</returns>
+        public static ErrorInfo TooManyRequests()
+        {
+            return new ErrorInfo(
+                "RATE_LIMITED",
+                "Too many requests.",
+                "The request rate is too high; retry later.",
+                ErrorKind.RateLimited,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a forbidden failure for a login while the account is locked.
+        /// </summary>
+        /// <param name="lockedUntil">When the lockout ends, if known.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo AccountLocked(DateTimeOffset? lockedUntil)
+        {
+            return new ErrorInfo(
+                "ACCOUNT_LOCKED",
+                "The account is locked.",
+                "Too many failed sign-in attempts; try again later.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?> { ["retryAfter"] = lockedUntil }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for a password setup on an account
+        /// that already completed first login.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo PasswordSetupComplete()
+        {
+            return new ErrorInfo(
+                "PASSWORD_SETUP_COMPLETE",
+                "The password is already set.",
+                "First login is already complete; use the change-password flow instead.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for an idempotency key reused with a
+        /// different request body. The first response is never replayed for
+        /// a different request: the caller must send a fresh key.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo IdempotencyKeyReused()
+        {
+            return new ErrorInfo(
+                "IDEMPOTENCY_KEY_REUSED",
+                "Idempotency key was reused with a different request.",
+                "The idempotency key was already used with a different request body; retry with a fresh key.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing user.
+        /// </summary>
+        /// <param name="email">The requested email, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo UserNotFound(string email)
+        {
+            ArgumentNullException.ThrowIfNull(email);
+            return new ErrorInfo(
+                "USER_NOT_FOUND",
+                "User not found.",
+                $"User '{email}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["email"] = email }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for an email that is already taken.
+        /// </summary>
+        /// <param name="email">The requested email.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo EmailTaken(string email)
+        {
+            ArgumentNullException.ThrowIfNull(email);
+            return new ErrorInfo(
+                "EMAIL_TAKEN",
+                "Email already in use.",
+                $"A user with email '{email}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["email"] = email }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a missing role.
+        /// </summary>
+        /// <param name="name">The requested role name, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo RoleNotFound(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_NOT_FOUND",
+                "Role not found.",
+                $"Role '{name}' does not exist.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for a role name that already exists.
+        /// </summary>
+        /// <param name="name">The requested role name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo RoleNameTaken(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_NAME_TAKEN",
+                "Role already exists.",
+                $"A role named '{name}' already exists.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for assigning a role the user already has.
+        /// </summary>
+        /// <param name="name">The role name.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo RoleAlreadyAssigned(string name)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            return new ErrorInfo(
+                "ROLE_ALREADY_ASSIGNED",
+                "Role already assigned.",
+                $"The user already has role '{name}'.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["name"] = name }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for revoking the last admin assignment.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo LastAdminRequired()
+        {
+            return new ErrorInfo(
+                "LAST_ADMIN_REQUIRED",
+                "At least one admin is required.",
+                "Assign the admin role to another user before revoking it here.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a forbidden failure for stripping a permission from the
+        /// admin role. The admin role keeps the full catalog by definition;
+        /// use role assignment to limit an operator instead.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Forbidden"/>.</returns>
+        public static ErrorInfo RoleProtected()
+        {
+            return new ErrorInfo(
+                "ROLE_PROTECTED",
+                "The admin role cannot lose permissions.",
+                "The admin role keeps every catalog permission; assign a narrower role instead.",
+                ErrorKind.Forbidden,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
+        /// Creates a validation failure for a permission outside the catalog.
+        /// </summary>
+        /// <param name="key">The requested permission key, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
+        public static ErrorInfo UnknownPermission(string key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return new ErrorInfo(
+                "UNKNOWN_PERMISSION",
+                "Unknown permission.",
+                $"Permission '{key}' is not in the v1 catalog.",
+                ErrorKind.Validation,
+                new Dictionary<string, object?> { ["key"] = key }
+            );
+        }
+
+        /// <summary>
+        /// Creates a conflict failure for granting a permission the role already has.
+        /// </summary>
+        /// <param name="key">The permission key.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
+        public static ErrorInfo PermissionAlreadyGranted(string key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return new ErrorInfo(
+                "PERMISSION_ALREADY_GRANTED",
+                "Permission already granted.",
+                $"The role already has permission '{key}'.",
+                ErrorKind.Conflict,
+                new Dictionary<string, object?> { ["key"] = key }
+            );
+        }
+
+        /// <summary>
+        /// Creates a not-found failure for a quota scope outside the
+        /// <see cref="QuotaScope"/> enum.
+        /// </summary>
+        /// <param name="scope">The requested scope, echoed in metadata.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo UnknownQuotaScope(string? scope)
+        {
+            return new ErrorInfo(
+                "UNKNOWN_QUOTA_SCOPE",
+                "Unknown quota scope.",
+                $"Quota scope '{scope}' is unknown. Use 'Api' or 'Mcp'.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?> { ["scope"] = scope }
+            );
+        }
+
+        /// <summary>
+        /// Creates a quota-exceeded failure for a per-user usage quota.
+        /// Enforcement counters stay in memory at the edge; only the
+        /// definition persists, so metadata carries the definition that
+        /// applied, not a counter row.
+        /// </summary>
+        /// <param name="scope">The governed surface.</param>
+        /// <param name="limit">The requests-per-window limit that applied.</param>
+        /// <param name="window">The fixed window that applied.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.QuotaExceeded"/>.</returns>
+        public static ErrorInfo UsageQuotaExceeded(QuotaScope scope, int limit, TimeSpan window)
+        {
+            return new ErrorInfo(
+                "QUOTA_EXCEEDED",
+                "Usage quota exceeded.",
+                $"The {scope.ToString().ToLowerInvariant()} usage quota ({limit} requests per {window}) has been reached; retry when the window resets.",
+                ErrorKind.QuotaExceeded,
+                new Dictionary<string, object?>
+                {
+                    ["scope"] = scope.ToString(),
+                    ["limit"] = limit,
+                    ["window"] = window.ToString(),
+                }
+            );
+        }
     }
 }
