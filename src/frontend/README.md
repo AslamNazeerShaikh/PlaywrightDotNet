@@ -38,6 +38,8 @@
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
 | `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
+| `bun run test:e2e`                        | Playwright suite (`src/tests/e2e/*.e2e.ts`) against the already-running `:3000` + `:5208` — sign-in gate, anonymous features flags, database/runs guards. Needs Google Chrome (`channel: "chrome"`, no download). |
+| `bun run test:flags`                      | Flag-off validation (`src/tests/e2e/validate-flags.ts`): boots the backend twice on temp ports + temp DBs, proves the harness on the default boot, then pins health-404, features payload, and csv-404/xlsx-present with Health + CsvExport off. Cleans up its temp dirs and processes. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
 | `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
 | `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |
@@ -45,6 +47,17 @@
 
 Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
 `DOTNET_API_URL` (default `https://localhost:5208`).
+
+### End-to-end
+
+`bun run test:e2e` drives the live loopback pair — start the API and
+`bun run dev` first; the suite never boots servers itself (`playwright.config.ts`
+sets no `webServer`). Specs stay deterministic on a fresh or shared DB: the
+deck is auth-gated, so database/runs specs pin the sign-in gate plus the
+stable API codes when unsigned, and module/ERD/table-header content only when
+a session already exists. `bun run test:flags` needs only `dotnet` on PATH:
+it boots its own backends on temp ports with temp databases and deletes both
+afterwards, so the shared dev DB is never touched.
 
 ## HTTPS dev loop
 
