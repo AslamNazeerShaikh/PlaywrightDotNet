@@ -105,6 +105,24 @@ Mapped once to a `FeatureFlags` record for the application layer.
   logged error. My call; say so if you want it removed.
 - MCP keeps challenging semantics through the substituted actor. No
   separate MCP switch.
+- Loopback means hostname `localhost`, `127.0.0.1`, or `::1` only.
+  `0.0.0.0`, LAN IPs, and container hostnames refuse startup in
+  anonymous mode. My call; the check is string matching on the bound
+  URLs, and the refusal is logged.
+- The 404 scope is exactly: `/api/v1/auth/login`,
+  `/api/v1/auth/setup-password`, `/api/v1/auth/change-password`,
+  `/api/v1/users/*`, `/api/v1/roles/*`. `/api/v1/auth/me` and
+  `/bff/session` stay and report the anonymous state, since the deck
+  bootstrap reads them. My call.
+- The anonymous actor is the existing local operator: actor id
+  `local-operator`, Admin role, every permission. Audit trails read
+  `local-operator`. My call.
+- Writer lists stay injected as enumerables. A requested format with
+  no registered writer answers 404 feature-disabled. The format-less
+  default resolves against the enabled set. My call.
+- MCP `get_health` stays alive when the HTTP route is off. Readiness
+  probes use the HTTP route. The split is deliberate and documented.
+  My call.
 
 ### Anonymous mode, UI and BFF
 
@@ -123,9 +141,9 @@ Mapped once to a `FeatureFlags` record for the application layer.
 
 - New `QuotaScope.Anonymous` member. String backed, no migration.
 - Remove the authenticated-only guard in the quota middleware. Key
-  anonymous counters by client IP so all localhost traffic does not
-  share one bucket with itself in a misleading way. Single user,
-  single bucket in practice.
+  anonymous counters by client IP. On localhost that is one bucket in
+  practice, and the code stays correct if the bind ever changes.
+  My call.
 - Seed a default anonymous budget next to the existing two. Health
   and auth exemptions stay.
 
