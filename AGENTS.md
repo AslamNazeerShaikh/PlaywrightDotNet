@@ -44,12 +44,13 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - OpenCode configuration for this repo is project-local only: `.opencode/` and this file. There is no global `~/.config/opencode/` config (no global skills, agents, commands, plugins, or instructions), so sessions here see only what the repo ships.
 - Repo rule: responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose.
 
-## Response tables
+## Include tables in responses
 
 - When a reply carries comparable numbers, options, or findings a reader would line up by hand, use one or more detailed tables with multiple columns when the table fits.
 - Number every row with an index column so each item stays referenceable in the surrounding prose.
 - When the content is a single fact, a narrative, or a judgment with no peers, keep prose. Never force content into a table to decorate it.
 - Source: ported from `.opencode/skills/poteto-mode/SKILL.md` section `Writing the reply`. User instructions in this file take precedence over plugin skills.
+- Note this only adds or guides how to include tables in responses and it does not change any skill's or agent's own response format. Means skill's or agent's original response plus this add tables instruction as feasible.
 
 ## graphify
 
