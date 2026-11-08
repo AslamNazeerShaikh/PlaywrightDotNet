@@ -905,7 +905,7 @@ Options are bound and validated once at the composition root, then consumed as i
 - `RunOptions` (`JobScrape:Run`)
 - `BrowserOptions` (`JobScrape:Browser`: `Headless=false` — Naukri blocks headless first contact — and `NavigationTimeoutSeconds=45`, range 5–120; registered by `AddJobScrapeBrowser`)
 - `LoggingOptions` (`JobScrape:Logging`)
-- `FeaturesOptions` (`JobScrape:Features`: `Authentication=true`, `Logging=true`, `Health=true`, `CsvExport=true`, `ExcelExport=true` — every default preserves current behavior; `false` turns the named feature off. `Authentication=false` runs the host anonymous: callers act as the local operator. No cross-field rules; plain bools, validated with the rest at startup)
+- `FeaturesOptions` (`JobScrape:Features`: `Authentication=true`, `Logging=true`, `Health=true`, `CsvExport=true`, `ExcelExport=true` — every default preserves current behavior; `false` turns the named feature off, except `Authentication`, which is reserved for the anonymous-mode follow-up (docs/superpowers/plans/2026-11-08-anonymous-mode.md): the flag exists, defaults `true`, and takes effect there — `false` changes nothing in this branch. No cross-field rules; plain bools, validated with the rest at startup)
 - `SourcesOptions` (`JobScrape`, dictionary keyed by source)
 - `ComplianceOptions`
 - `LoggingOptions`

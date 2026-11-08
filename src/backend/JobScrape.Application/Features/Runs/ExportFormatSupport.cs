@@ -34,6 +34,31 @@ namespace JobScrape.Application.Features.Runs
         }
 
         /// <summary>
+        /// The default format query value: <c>csv</c> when enabled, else
+        /// <c>xlsx</c> when enabled, else null when nothing is served. The
+        /// controller default reads this, so the default and the handler
+        /// copy cannot drift.
+        /// </summary>
+        /// <param name="flags">The feature flags bound at host startup. Must not be null.</param>
+        /// <returns>The default query-string format, or null when both writers are off.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="flags"/> is null.</exception>
+        public static string? Default(FeatureFlags flags)
+        {
+            ArgumentNullException.ThrowIfNull(flags);
+            if (flags.CsvExport)
+            {
+                return "csv";
+            }
+
+            if (flags.ExcelExport)
+            {
+                return "xlsx";
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// True when the format's flag is on. Undefined values answer false.
         /// </summary>
         /// <param name="format">The format to probe.</param>

@@ -4,8 +4,12 @@ namespace JobScrape.Infrastructure.Configuration
     /// The five <c>JobScrape:Features</c> switches
     /// (docs/superpowers/specs/2026-11-08-feature-toggles-design.md). Every
     /// default preserves current behavior; <c>false</c> turns the named
-    /// feature off. Anonymous mode is <c>Authentication: false</c> and
-    /// nothing else. No cross-field rules; plain bools only.
+    /// feature off, except <c>Authentication</c>, which is reserved for the
+    /// anonymous-mode follow-up
+    /// (docs/superpowers/plans/2026-11-08-anonymous-mode.md): the flag
+    /// exists and defaults to <c>true</c>, but setting it <c>false</c>
+    /// changes nothing in this branch. No cross-field rules; plain bools
+    /// only.
     /// </summary>
     public sealed class FeaturesOptions
     {
@@ -15,8 +19,10 @@ namespace JobScrape.Infrastructure.Configuration
         public const string SectionName = "JobScrape:Features";
 
         /// <summary>
-        /// Gets a value indicating whether sign-in is required. When false,
-        /// the host runs anonymous: callers act as the local operator.
+        /// Gets a value indicating whether sign-in is required. Reserved for
+        /// the anonymous-mode follow-up
+        /// (docs/superpowers/plans/2026-11-08-anonymous-mode.md): setting it
+        /// false currently has no effect.
         /// </summary>
         public bool Authentication { get; init; } = true;
 

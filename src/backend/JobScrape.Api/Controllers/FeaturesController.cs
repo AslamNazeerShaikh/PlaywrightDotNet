@@ -13,8 +13,9 @@ namespace JobScrape.Api.Controllers
     [Route("api/v1/features")]
     public sealed class FeaturesController : ControllerBase
     {
-        // Constructor-injected flags, never mutated: concurrent requests
-        // share the controller type but no state flows through this field.
+        // Readonly shared value, never mutated per request: concurrent
+        // requests share the controller type but no state flows through
+        // this field.
         private readonly FeatureFlags _flags;
 
         /// <summary>

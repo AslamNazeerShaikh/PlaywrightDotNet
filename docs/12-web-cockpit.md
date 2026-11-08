@@ -679,6 +679,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/health` | Liveness and version |
+| `GET` | `/api/v1/features` | Anonymous capability report: the five `JobScrape:Features` booleans as camelCase JSON |
 | `GET` | `/api/v1/doctor` | Environment checks, SDK, browsers, DB, migrations |
 | `GET` | `/api/v1/sources` | Source capabilities, compliance tier, enabled state |
 | `PATCH` | `/api/v1/sources/{key}` | Enable/disable within policy (guarded) |
@@ -723,7 +724,13 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
 > run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
 > before the run was recorded); gate refusals keep their own codes
-> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).
+> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …). Feature flags change route
+> behavior: `Health=false` turns `GET /api/v1/health` into the
+> `FEATURE_DISABLED` 404 problem, `CsvExport`/`ExcelExport=false`
+> unregisters that export writer (the export default falls through to the
+> remaining format, or to the same `FEATURE_DISABLED` 404 when both are
+> off), and `Logging=false` registers Serilog with no sinks.
+> `GET /api/v1/features` itself stays anonymous in every flag combination.
 > **Not implemented:** `Idempotency-Key` on `POST /runs`, `/runs/{id}/events`
 > (SSE), `/runs/{id}/resume`, `/runs/{id}/artifacts`, `/artifacts/{id}`, and
 > BFF auth (§13.4). Sources are read-only. Sessions support create and

@@ -170,11 +170,10 @@ namespace JobScrape.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            // No format resolves from the flags: CSV when enabled, else XLSX,
-            // else nothing to serve.
+            // No format resolves from the flags via the shared default.
             if (format is null)
             {
-                format = _flags.CsvExport ? "csv" : _flags.ExcelExport ? "xlsx" : null;
+                format = ExportFormatSupport.Default(_flags);
                 if (format is null)
                 {
                     return Errors.FeatureDisabled().ToProblem();

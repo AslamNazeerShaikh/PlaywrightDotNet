@@ -81,8 +81,6 @@ namespace JobScrape.Infrastructure.Composition
                 {
                     var flags = provider.GetRequiredService<FeatureFlags>();
                     logger
-                        .ReadFrom.Configuration(configuration)
-                        .ReadFrom.Services(provider)
                         .Enrich.FromLogContext()
                         .Enrich.WithMachineName()
                         .Enrich.WithEnvironmentName()
@@ -98,9 +96,12 @@ namespace JobScrape.Infrastructure.Composition
                     if (!flags.Logging)
                     {
                         // No sinks: registration stays so the host owns and
-                        // disposes the logger, but nothing is written.
+                        // disposes the logger, but nothing is written. The
+                        // configuration and service sinks are read only on
+                        // the logging-on path, so off means no sinks, period.
                         return;
                     }
+                    logger.ReadFrom.Configuration(configuration).ReadFrom.Services(provider);
                     var options = provider.GetRequiredService<IOptions<LoggingOptions>>().Value;
                     var directory = Path.GetFullPath(options.Directory, contentRoot);
                     logger.WriteTo.Console(new RenderedCompactJsonFormatter());
