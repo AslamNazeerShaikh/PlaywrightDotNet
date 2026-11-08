@@ -31,6 +31,7 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - pstack is installed project-locally (`.opencode/skills/`, `.opencode/agents/`, `.opencode/commands/`). See [docs/17-pstack-opencode.md](docs/17-pstack-opencode.md).
 - For any non-trivial task, start with `/poteto-mode`: it matches the request to a playbook and routes to the other skills as steps need them.
 - Role-to-model mapping lives in `.opencode/pstack-models.md` (auto-loaded). A step needing a Cursor-only feature (Bugbot, Automations, cloud agents) is skipped with a one-line `Skipped in OpenCode:` note per `.opencode/docs/harness/opencode.md`.
+- Choose the subagent model from `.opencode/pstack-models.md` by role; a role with no line runs on the parent chat model.
 - `deslop` ships from `cursor-team-kit` (`.opencode/skills/deslop/`, `/deslop` command).
 
 ## ECC (secondary workflow pack)
