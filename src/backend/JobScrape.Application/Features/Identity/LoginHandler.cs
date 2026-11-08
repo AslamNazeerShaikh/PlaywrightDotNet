@@ -112,30 +112,83 @@ namespace JobScrape.Application.Features.Identity
                 return Result.Fail<LoginResponse>(Errors.InvalidCredentials());
             }
 
-            var roles = new List<Domain.Identity.Role>();
-            var permissions = new List<PermissionKey>();
             var warnedRoles = new HashSet<RoleId>();
             var warnedPermissions = new HashSet<PermissionKey>();
 
             // Dangling role ids (e.g. a role deleted after it was granted)
             // are pruned here so a deleted role cannot replay through a stale
             // token; the revoke is persisted by the existing login save below.
+            var fetched = new List<(RoleId Id, Role? Role)>();
             foreach (var roleId in user.Roles.ToList())
             {
-                var role = await _roles.GetAsync(roleId, cancellationToken);
+                fetched.Add((roleId, await _roles.GetAsync(roleId, cancellationToken)));
+            }
+
+            var pruning = Prune(fetched);
+
+            foreach (var roleId in pruning.DanglingRoleIds)
+            {
+                if (warnedRoles.Add(roleId) && _logger is not null)
+                {
+                    LogDroppedRole(_logger, roleId, user.Id);
+                }
+
+                user.RevokeRole(roleId);
+            }
+
+            foreach (var (role, key) in pruning.UnknownPermissions)
+            {
+                if (warnedPermissions.Add(key) && _logger is not null)
+                {
+                    LogDroppedPermission(_logger, key, role.Name);
+                }
+
+                role.Revoke(key);
+            }
+
+            var token = _tokens.CreateToken(user, pruning.KeptRoles, pruning.Permissions, now);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Ok(new LoginResponse(token, user.MustChangePassword));
+        }
+
+        /// <summary>
+        /// The decisions of the dangling-role prune, separated from the role
+        /// fetch so they are verifiable without a repository.
+        /// </summary>
+        /// <param name="KeptRoles">Roles found at fetch time, in grant order.</param>
+        /// <param name="DanglingRoleIds">Assigned role ids with no role row.</param>
+        /// <param name="Permissions">Distinct catalog-known keys granted by the kept roles, in grant order.</param>
+        /// <param name="UnknownPermissions">Granted keys outside the catalog, paired with their owning role.</param>
+        private sealed record LoginPruning(
+            IReadOnlyList<Role> KeptRoles,
+            IReadOnlyList<RoleId> DanglingRoleIds,
+            IReadOnlyList<PermissionKey> Permissions,
+            IReadOnlyList<(Role Role, PermissionKey Key)> UnknownPermissions
+        );
+
+        /// <summary>
+        /// Splits fetched roles into kept and pruned, and partitions their
+        /// granted keys into catalog-known and unknown. Pure: no I/O, no
+        /// logging, no mutation of the kept aggregates.
+        /// </summary>
+        /// <param name="fetched">The assigned role ids paired with their fetched role, or null when missing.</param>
+        /// <returns>The prune decisions in fetch order.</returns>
+        private static LoginPruning Prune(IReadOnlyList<(RoleId Id, Role? Role)> fetched)
+        {
+            var keptRoles = new List<Role>();
+            var danglingRoleIds = new List<RoleId>();
+            var permissions = new List<PermissionKey>();
+            var unknownPermissions = new List<(Role Role, PermissionKey Key)>();
+            foreach (var (roleId, role) in fetched)
+            {
                 if (role is null)
                 {
-                    if (warnedRoles.Add(roleId) && _logger is not null)
-                    {
-                        LogDroppedRole(_logger, roleId, user.Id);
-                    }
-
-                    user.RevokeRole(roleId);
+                    danglingRoleIds.Add(roleId);
                     continue;
                 }
 
-                roles.Add(role);
-                foreach (var key in role.PermissionKeys.ToList())
+                keptRoles.Add(role);
+                foreach (var key in role.PermissionKeys)
                 {
                     if (PermissionCatalog.Contains(key))
                     {
@@ -143,20 +196,17 @@ namespace JobScrape.Application.Features.Identity
                     }
                     else
                     {
-                        if (warnedPermissions.Add(key) && _logger is not null)
-                        {
-                            LogDroppedPermission(_logger, key, role.Name);
-                        }
-
-                        role.Revoke(key);
+                        unknownPermissions.Add((role, key));
                     }
                 }
             }
 
-            var distinctPermissions = permissions.Distinct().ToList();
-            var token = _tokens.CreateToken(user, roles, distinctPermissions, now);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Ok(new LoginResponse(token, user.MustChangePassword));
+            return new LoginPruning(
+                keptRoles,
+                danglingRoleIds,
+                permissions.Distinct().ToList(),
+                unknownPermissions
+            );
         }
 
         [LoggerMessage(

@@ -1,4 +1,5 @@
 using JobScrape.Application.Abstractions;
+using JobScrape.Domain.Access;
 using JobScrape.Domain.Identity;
 using Microsoft.AspNetCore.Authorization;
 
@@ -19,8 +20,8 @@ namespace JobScrape.Api.Http.Auth
         public PermissionAuthorizationHandler() { }
 
         /// <summary>
-        /// Succeeds when the token carries the required permission claim and
-        /// first login is complete.
+        /// Succeeds when the token carries the required permission claim (or
+        /// the admin role) and first login is complete.
         /// </summary>
         /// <param name="context">The authorization context.</param>
         /// <param name="requirement">The required permission.</param>
@@ -36,14 +37,17 @@ namespace JobScrape.Api.Http.Auth
             var mustChange = context.User.HasClaim(claim =>
                 claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
             );
-            if (mustChange)
-            {
-                return Task.CompletedTask;
-            }
-
+            var permissionGranted = PermissionDecision.IsAllowed(
+                mustChange,
+                context
+                    .User.FindAll(IdentityClaimTypes.Permission)
+                    .Select(claim => claim.Value)
+                    .ToArray(),
+                requirement.Permission
+            );
             if (
-                context.User.IsInRole(RoleName.Admin.ToString())
-                || context.User.HasClaim(IdentityClaimTypes.Permission, requirement.Permission)
+                permissionGranted
+                || (!mustChange && context.User.IsInRole(RoleName.Admin.ToString()))
             )
             {
                 context.Succeed(requirement);
