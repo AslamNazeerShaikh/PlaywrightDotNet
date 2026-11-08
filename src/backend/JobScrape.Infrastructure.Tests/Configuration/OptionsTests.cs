@@ -278,6 +278,9 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.False(IsValid(new RunOptions { RetryMaxAttempts = 4 }));
             Assert.False(IsValid(new LoggingOptions { RetentionDays = 0 }));
             Assert.False(IsValid(new LoggingOptions { FileSizeLimitBytes = 1024 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextRetentionDays = 0 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextFileSizeLimitBytes = 1024 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextRollingInterval = "99" }));
         }
 
         [Fact]
