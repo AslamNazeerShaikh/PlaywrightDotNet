@@ -50,6 +50,8 @@ namespace JobScrape.Api.Controllers
         /// </returns>
         [HttpGet]
         [AllowAnonymous]
+        [ProducesResponseType(typeof(GetHealthResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IResult> GetAsync(CancellationToken cancellationToken)
         {
             // The disabled route answers the 404 problem with the stable
