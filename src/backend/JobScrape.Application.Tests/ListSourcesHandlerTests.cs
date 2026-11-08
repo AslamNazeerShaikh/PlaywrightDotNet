@@ -75,6 +75,32 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task NeverRanSourceReportsZeroUsageClosedCircuitWithoutWrites()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var quota = SourceQuota.StartDay(SourceKey.Indeed, Now);
+            quota.TryStartRun(2, Now);
+            quota.TryConsumePage(25, Now);
+            store.Quotas.Add(quota);
+            var handler = Create(
+                store,
+                ComplianceConsent.None,
+                Settings(SourceKey.Naukri),
+                Settings(SourceKey.Indeed)
+            );
+
+            var response = await handler.HandleAsync(Ct);
+
+            var neverRan = Assert.Single(response.Items, item => item.Quota.PagesUsed == 0);
+            Assert.Equal("naukri", neverRan.Key);
+            Assert.Equal("Closed", neverRan.Circuit.State);
+            Assert.Null(neverRan.Circuit.OpenUntil);
+            Assert.Equal(0, neverRan.Quota.Challenges);
+            Assert.Single(store.Quotas);
+            Assert.Empty(store.Circuits);
+        }
+
+        [Fact]
         public async Task NullRunCapIsReportedAsNoCap()
         {
             var store = new ScrapeHarness.InMemoryStore();
