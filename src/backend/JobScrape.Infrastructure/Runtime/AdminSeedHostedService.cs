@@ -12,8 +12,10 @@ namespace JobScrape.Infrastructure.Runtime
 {
     /// <summary>
     /// Seeds the default admin on first start. When the users table is
-    /// empty, creates the admin from <c>ADMIN_EMAIL</c> and
-    /// <c>ADMIN_SETUP_SECRET</c>, assigns (creating) the admin role with
+    /// empty, creates the admin from the configured
+    /// <c>JobScrape:AdminSeed</c> values (legacy <c>ADMIN_EMAIL</c> and
+    /// <c>ADMIN_SETUP_SECRET</c> environment variables remain as fallback),
+    /// assigns (creating) the admin role with
     /// every catalog permission, and leaves the account awaiting first
     /// login. A non-empty users table is a no-op. Secrets are never logged.
     /// </summary>
@@ -32,12 +34,16 @@ namespace JobScrape.Infrastructure.Runtime
         /// <param name="clock">The time source. Must not be null.</param>
         /// <param name="logger">The logger. Must not be null.</param>
         /// <param name="adminEmail">
-        /// Optional override for <c>ADMIN_EMAIL</c>. When null the process
-        /// environment is consulted, preserving production behavior.
+        /// Optional override for the seed admin email. When null the
+        /// composition root resolves it from <c>JobScrape:AdminSeed</c>
+        /// configuration with the legacy <c>ADMIN_EMAIL</c> environment
+        /// variable as fallback.
         /// </param>
         /// <param name="adminSetupSecret">
-        /// Optional override for <c>ADMIN_SETUP_SECRET</c>. When null the process
-        /// environment is consulted, preserving production behavior.
+        /// Optional override for the seed admin setup secret. When null the
+        /// composition root resolves it from <c>JobScrape:AdminSeed</c>
+        /// configuration with the legacy <c>ADMIN_SETUP_SECRET</c>
+        /// environment variable as fallback.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public AdminSeedHostedService(
@@ -303,7 +309,7 @@ namespace JobScrape.Infrastructure.Runtime
 
         [LoggerMessage(
             Level = LogLevel.Warning,
-            Message = "No users exist and ADMIN_EMAIL or ADMIN_SETUP_SECRET is missing; skipping admin seed"
+            Message = "No users exist and JobScrape:AdminSeed (or legacy ADMIN_EMAIL / ADMIN_SETUP_SECRET) is missing; skipping admin seed"
         )]
         private static partial void LogSeedSkipped(ILogger logger);
 

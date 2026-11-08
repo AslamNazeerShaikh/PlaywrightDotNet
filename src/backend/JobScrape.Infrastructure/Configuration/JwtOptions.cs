@@ -5,9 +5,10 @@ namespace JobScrape.Infrastructure.Configuration
     /// <summary>
     /// HS256 bearer settings plus account lockout policy. Bound once at the
     /// composition root and validated on startup. The secret comes from the
-    /// <c>JobScrape__Jwt__Secret</c> environment variable in real
-    /// deployments; the appsettings placeholder is a demo value only and is
-    /// never logged.
+    /// <c>JobScrape:Jwt:Secret</c> configuration value (appsettings carries
+    /// a dev-only secret that boots; secret store via CI/CD in production).
+    /// The <c>DemoPlaceholder</c> constant is still refused if configured.
+    /// The secret is never logged.
     /// </summary>
     public sealed class JwtOptions
     {

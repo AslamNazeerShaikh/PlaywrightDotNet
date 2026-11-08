@@ -28,6 +28,10 @@ namespace JobScrape.Api.Tests
             object,
             Task<string>
         > Tokens = new();
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+            object,
+            System.Runtime.CompilerServices.StrongBox<Guid>
+        > AdminIds = new();
 
         /// <summary>
         /// Seeds an active admin with every catalog permission and returns a
@@ -99,6 +103,10 @@ namespace JobScrape.Api.Tests
                 await provider
                     .GetRequiredService<IUnitOfWork>()
                     .SaveChangesAsync(cancellationToken);
+                AdminIds.Add(
+                    factory,
+                    new System.Runtime.CompilerServices.StrongBox<Guid>(user.Id.Value)
+                );
             }
 
             using var client = factory.CreateClient();
@@ -110,6 +118,22 @@ namespace JobScrape.Api.Tests
             response.EnsureSuccessStatusCode();
             var login = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken);
             return login!.Token;
+        }
+
+        /// <summary>
+        /// Returns the id of the admin user seeded by
+        /// <see cref="CreateAdminClientAsync"/> for this factory. Call after
+        /// the client exists so the seed has run.
+        /// </summary>
+        /// <param name="factory">The app under test.</param>
+        /// <returns>The seeded admin's user id.</returns>
+        internal static Guid GetSeededAdminId(this WebApplicationFactory<Program> factory)
+        {
+            return AdminIds.TryGetValue(factory, out var id)
+                ? id.Value
+                : throw new InvalidOperationException(
+                    "The admin client has not been created for this factory yet."
+                );
         }
 
         /// <summary>
