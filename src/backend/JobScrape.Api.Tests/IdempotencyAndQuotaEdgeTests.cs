@@ -19,6 +19,9 @@ namespace JobScrape.Api.Tests
     {
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+        private static readonly string[] ScopedLocations = ["Pune"];
+        private static readonly string[] ScopedSkills = ["C#"];
+
         [Fact]
         public async Task ParallelSameKeyPostsExecuteOnce()
         {
@@ -104,6 +107,70 @@ namespace JobScrape.Api.Tests
                 Ct
             );
             Assert.Equal(HttpStatusCode.Unauthorized, anonResponse.StatusCode);
+        }
+
+        [Fact]
+        public async Task IdempotencyKeyIsScopedToTheRoute()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await factory.CreateAdminClientAsync(Ct);
+            var key = Guid.NewGuid().ToString("N");
+            var email = $"scoped-{Guid.NewGuid():N}@example.com";
+            var profileName = $"scoped-profile-{Guid.NewGuid():N}";
+
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = admin.DefaultRequestHeaders.Authorization;
+            client.DefaultRequestHeaders.Add("Idempotency-Key", key);
+
+            using var user = await client.PostAsJsonAsync(
+                "api/v1/users",
+                new { email, temporaryPassword = "Temp-Secret1!!" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, user.StatusCode);
+
+            // The same key on another route must not replay the stored 201
+            // (which would be a 409 for a differing body): the key is scoped
+            // to method + path + query.
+            using var profile = await client.PostAsJsonAsync(
+                "api/v1/search-profiles",
+                new
+                {
+                    name = profileName,
+                    sourceKey = "naukri",
+                    keywords = "asp.net core c#",
+                    locations = ScopedLocations,
+                    experienceYears = 6,
+                    postedWithinDays = 7,
+                    remoteOnly = false,
+                    requiredSkills = ScopedSkills,
+                    companies = Array.Empty<string>(),
+                },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Created, profile.StatusCode);
+
+            using var users = await admin.GetAsync("api/v1/users", Ct);
+            users.EnsureSuccessStatusCode();
+            var userBody = await users.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Contains(
+                email,
+                userBody
+                    .GetProperty("users")
+                    .EnumerateArray()
+                    .Select(item => item.GetProperty("email").GetString())
+            );
+
+            using var profiles = await admin.GetAsync("api/v1/search-profiles", Ct);
+            profiles.EnsureSuccessStatusCode();
+            var profileBody = await profiles.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Contains(
+                profileName,
+                profileBody
+                    .GetProperty("items")
+                    .EnumerateArray()
+                    .Select(item => item.GetProperty("name").GetString())
+            );
         }
 
         [Fact]

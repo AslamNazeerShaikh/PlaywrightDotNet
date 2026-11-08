@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace JobScrape.Infrastructure.Tests.Persistence
@@ -178,6 +179,57 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             {
                 await provider.DisposeAsync();
             }
+        }
+
+        [Fact]
+        public async Task ExpiredEntryReadsAsAbsentAndIsReplacedOnReserve()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            await using var scope = database.Scope();
+            var clock = new FakeTimeProvider(
+                new DateTimeOffset(2026, 11, 8, 0, 0, 0, TimeSpan.Zero)
+            );
+            var store = new IdempotencyStore(scope.Db, clock);
+            const string endpoint = "POST /api/v1/users";
+            const string key = "ttl-key";
+
+            var entry = new IdempotencyEntry(
+                "owner",
+                endpoint,
+                key,
+                "hash",
+                201,
+                "application/json",
+                [1, 2, 3],
+                clock.GetUtcNow()
+            );
+            Assert.True(await store.TryReserveAsync(entry, Ct));
+            await store.SaveAsync(entry, Ct);
+            Assert.NotNull(await store.GetAsync("owner", endpoint, key, Ct));
+
+            // Past the 24-hour retention the completed row reads as absent.
+            clock.Advance(TimeSpan.FromHours(25));
+            Assert.Null(await store.GetAsync("owner", endpoint, key, Ct));
+
+            // A retry after expiry wins a fresh reservation, replacing the
+            // stale row rather than reporting a conflict.
+            var fresh = new IdempotencyEntry(
+                "owner",
+                endpoint,
+                key,
+                "hash-2",
+                0,
+                "application/json",
+                [],
+                clock.GetUtcNow()
+            );
+            Assert.True(await store.TryReserveAsync(fresh, Ct));
+
+            var reloaded = await store.GetAsync("owner", endpoint, key, Ct);
+            Assert.NotNull(reloaded);
+            Assert.Equal(0, reloaded!.StatusCode);
+            Assert.Equal("hash-2", reloaded.RequestHash);
+            Assert.Equal(1, await scope.Db.IdempotencyRecords.CountAsync(Ct));
         }
 
         private sealed class BusyInterceptor : SaveChangesInterceptor
