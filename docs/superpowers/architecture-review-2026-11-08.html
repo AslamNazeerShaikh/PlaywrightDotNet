@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Architecture review for PlaywrightDotNet</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+<style>
+.seam { stroke-dasharray: 4 4; }
+.leak { stroke: #dc2626; }
+.deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+</style>
+</head>
+<body class="bg-stone-50 text-slate-900 font-sans">
+<main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+<header>
+<h1 class="text-3xl font-serif">Architecture review — PlaywrightDotNet backend</h1>
+<p class="text-sm text-slate-500">2026-11-08 · scrape path + auth slice + infra slice · no GLOSSARY.md · ADRs in docs/10-adr/ respected, none reopened</p>
+<div class="mt-3 flex gap-4 text-xs uppercase tracking-wider text-slate-500">
+<span><span class="inline-block w-3 h-3 border border-slate-700 align-middle"></span> module</span>
+<span><span class="inline-block w-6 border-t-2 border-dashed border-slate-500 align-middle"></span> seam</span>
+<span class="text-red-700">→ red arrow = leakage</span>
+<span><span class="inline-block w-3 h-3 deep align-middle"></span> deep module</span>
+</div>
+</header>
+<section id="candidates" class="space-y-10">
+
+<article class="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
+<h2 class="text-xl font-semibold">1. Concentrate RunScrapeHandler partials into one deep module</h2>
+<div class="flex gap-2">
+<span class="text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Strong</span>
+<span class="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+</div>
+<p class="font-mono text-sm text-slate-600">Application/Features/Scraping/RunScrapeHandler.cs · RunGate.cs · SearchPaginator.cs · DetailEnricher.cs · WallAndRetry.cs · ScrapeStores.cs · SourceRunContext.cs</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="rounded-lg border border-slate-200 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
+<pre class="mermaid">flowchart LR
+H[HandleAsync] --> P[Paginator]
+H --> E[Enricher]
+H --> G[Gate]
+H --> W[WallAndRetry]
+P <-.->|shared mutable RunScope| E
+E <-.->|shared mutable RunScope| G
+classDef leak stroke:#dc2626,stroke-width:2px;
+class P,E,G,W leak</pre>
+</div>
+<div class="rounded-lg border border-slate-700 deep text-slate-100 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After</p>
+<div class="border-2 border-slate-100 rounded p-3 text-center text-sm">Run module — one deep interface</div>
+<div class="grid grid-cols-2 gap-2 mt-2 text-xs text-center">
+<div class="border border-slate-500 rounded p-2">IsStale<br/>predicate</div>
+<div class="border border-slate-500 rounded p-2">IsSkillMismatch<br/>predicate</div>
+</div>
+<p class="text-xs text-slate-400 mt-2 text-center">pagination + enrichment + wall handling inside; only pure predicates outside</p>
+</div>
+</div>
+<p><strong>Problem:</strong> One run requires bouncing between 4 partial modules while real behavior lives in RunScope mutation order, not in the pure helpers.</p>
+<p><strong>Solution:</strong> Own RunScope transitions in one deep module; leave only small predicates outside.</p>
+<ul class="list-disc pl-5 text-sm space-y-1">
+<li>locality: ordering bugs concentrate in one module</li>
+<li>leverage: one interface covers paginate, enrich, wall-handle</li>
+<li>tests hit one seam instead of four partials</li>
+</ul>
+</article>
+
+<article class="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
+<h2 class="text-xl font-semibold">2. Redraw the browser session seam per source</h2>
+<div class="flex gap-2">
+<span class="text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Strong</span>
+<span class="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">ports-and-adapters</span>
+</div>
+<p class="font-mono text-sm text-slate-600">Infrastructure/Browser/BrowserSessionPool.cs · IBrowserSessionPool.cs · PlaywrightSessionManager.cs · Runtime/RunCoordinator.cs · Application/Abstractions/ISessionManager.cs · IBrowserProfileWorkspace.cs</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="rounded-lg border border-slate-200 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
+<pre class="mermaid">flowchart LR
+C[Coordinator] --> M[SessionManager]
+M -- "if source != Naukri return Clear" -.leak.-> N[Naukri classifier]
+M --> P[Pool]
+classDef leak stroke:#dc2626,stroke-width:2px;
+class M,N leak</pre>
+</div>
+<div class="rounded-lg border border-slate-700 deep text-slate-100 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After</p>
+<div class="border-2 border-slate-100 rounded p-3 text-center text-sm">Session module: open / verify / release</div>
+<div class="grid grid-cols-3 gap-2 mt-2 text-xs text-center">
+<div class="border border-slate-500 rounded p-2">Naukri<br/>adapter</div>
+<div class="border border-slate-500 rounded p-2">Indeed<br/>adapter</div>
+<div class="border border-slate-500 rounded p-2">LinkedIn<br/>adapter</div>
+</div>
+<p class="text-xs text-slate-400 mt-2 text-center">warm-up verification lives in each adapter</p>
+</div>
+</div>
+<p><strong>Problem:</strong> Generic session module hardcodes one adapter's warm-up rule while importing its classifier, leaking across the seam.</p>
+<p><strong>Solution:</strong> Move warm-up verification into each adapter behind one deep open/verify/release interface.</p>
+<ul class="list-disc pl-5 text-sm space-y-1">
+<li>locality: per-source quirks live with their adapter</li>
+<li>leverage: coordinator learns one interface, not three special cases</li>
+<li>two adapters justify the seam: pooled browser, fresh verify</li>
+</ul>
+</article>
+
+<article class="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
+<h2 class="text-xl font-semibold">3. Deepen or dissolve SearchPageDriver</h2>
+<div class="flex gap-2">
+<span class="text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-1 rounded">Worth exploring</span>
+<span class="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">ports-and-adapters</span>
+</div>
+<p class="font-mono text-sm text-slate-600">Infrastructure/Sources/SearchPageDriver.cs · Naukri/NaukriJobSource.cs · Indeed/IndeedJobSource.cs · LinkedIn/LinkedInJobSource.cs · Browser/PageText.cs</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="rounded-lg border border-slate-200 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
+<pre class="mermaid">flowchart LR
+I[Indeed adapter] --> S["SearchOffsetPageAsync\n13 params"]
+L[LinkedIn adapter] --> S
+N[Naukri adapter] --> S
+S -.leak.-> I
+S -.leak.-> L
+classDef leak stroke:#dc2626,stroke-width:2px;
+class S,I,L leak</pre>
+</div>
+<div class="rounded-lg border border-slate-700 deep text-slate-100 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — option A deepen</p>
+<div class="border-2 border-slate-100 rounded p-3 text-center text-sm">Fetch → classify → parse → log, one module</div>
+<p class="text-xs text-slate-400 mt-2 text-center">option B: delete driver, three explicit adapters</p>
+</div>
+</div>
+<p><strong>Problem:</strong> Shared driver interface nearly as complex as its implementation while detail-fetch and Next-click vs offset logic stay duplicated in each adapter.</p>
+<p><strong>Solution:</strong> Own the full fetch path in the driver, or delete it and accept three explicit adapters.</p>
+<ul class="list-disc pl-5 text-sm space-y-1">
+<li>locality: fetch policy lives in one place or in each adapter, not both</li>
+<li>leverage: either one deep fetch interface or zero shallow params</li>
+<li>interface is the test surface either way</li>
+</ul>
+</article>
+
+<article class="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
+<h2 class="text-xl font-semibold">4. One permission-decision module for both edges</h2>
+<div class="flex gap-2">
+<span class="text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-1 rounded">Worth exploring</span>
+<span class="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">local-substitutable</span>
+</div>
+<p class="font-mono text-sm text-slate-600">Api/Http/Auth/AuthPolicies.cs · PermissionAuthorizationHandler.cs · AdminAuthorizationHandler.cs · Mcp/Tools/McpAuth.cs · McpErrors.cs · Application/Features/Identity/LoginHandler.cs · Domain/Identity/PermissionCatalog.cs</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="rounded-lg border border-slate-200 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
+<pre class="mermaid">flowchart LR
+H[HTTP edge] --> K[catalog loop]
+M[MCP edge] -- raw string -.leak.-> K
+L[LoginHandler pruning] -.leak.-> H
+L -.leak.-> M
+classDef leak stroke:#dc2626,stroke-width:2px;
+class M,L leak</pre>
+</div>
+<div class="rounded-lg border border-slate-700 deep text-slate-100 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After</p>
+<div class="border-2 border-slate-100 rounded p-3 text-center text-sm">Permission module over catalog keys</div>
+<div class="grid grid-cols-2 gap-2 mt-2 text-xs text-center">
+<div class="border border-slate-500 rounded p-2">HTTP edge<br/>leans on module</div>
+<div class="border border-slate-500 rounded p-2">MCP edge<br/>leans on module</div>
+</div>
+</div>
+</div>
+<p><strong>Problem:</strong> MCP edge takes a raw string while HTTP edge loops the catalog, so a rename drifts across the seam and login pruning stays untestable.</p>
+<p><strong>Solution:</strong> Decide permissions in one small module over catalog keys; move pruning out of the login path.</p>
+<ul class="list-disc pl-5 text-sm space-y-1">
+<li>locality: rename-proof keys in one module</li>
+<li>leverage: both edges share one decision interface</li>
+<li>pruning gains a direct test seam</li>
+</ul>
+</article>
+
+<article class="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
+<h2 class="text-xl font-semibold">5. Collapse source-status records into one query module</h2>
+<div class="flex gap-2">
+<span class="text-xs font-bold uppercase tracking-wider bg-slate-200 text-slate-700 px-2 py-1 rounded">Speculative</span>
+<span class="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+</div>
+<p class="font-mono text-sm text-slate-600">Application/Features/Sources/ListSourcesHandler.cs · SourcePolicy.cs · SourceGate.cs · SourceQuotaUsage.cs · SourceCircuit.cs · SourceStatusResponse.cs · Scraping/SourceSettingsCatalog.cs · SourceSettings.cs · Infrastructure/Configuration/SourceSettingsMapper.cs</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="rounded-lg border border-slate-200 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
+<div class="space-y-1 text-xs">
+<div class="border-l-4 border-slate-300 pl-2 h-8">catalog → policy → quota → circuit</div>
+<div class="border-l-4 border-slate-300 pl-2 h-8">four single-use record modules</div>
+<div class="border-l-4 border-red-500 pl-2 h-8">one question, five hops</div>
+</div>
+</div>
+<div class="rounded-lg border border-slate-700 deep text-slate-100 p-4">
+<p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After</p>
+<div class="border-2 border-slate-100 rounded p-3 text-center text-sm">Source status: one deep query interface</div>
+<p class="text-xs text-slate-400 mt-2 text-center">catalog stays the retained seam; single-use records fold in</p>
+</div>
+</div>
+<p><strong>Problem:</strong> Answering "can this source run?" bounces between catalog, policy, quota, circuit, and four single-use records.</p>
+<p><strong>Solution:</strong> Fold status records into one module with a single deep query interface.</p>
+<ul class="list-disc pl-5 text-sm space-y-1">
+<li>locality: run-readiness logic in one module</li>
+<li>fewer modules, same knowledge</li>
+<li>one query interface to test</li>
+</ul>
+</article>
+
+</section>
+<section id="top-recommendation" class="rounded-lg border-2 border-emerald-600 bg-white p-6">
+<h2 class="text-xl font-semibold">Top recommendation</h2>
+<p class="mt-2"><strong>Candidate 1 — RunScrapeHandler partials.</strong> In-process so deepening is safe, strongest deletion-test signal (split adds seams without depth), and it sits on the hottest path where RunScope ordering already caused real stall bugs.</p>
+<p class="mt-1 text-sm"><a href="#candidates" class="text-emerald-700 underline">Back to candidates ↑</a></p>
+</section>
+</main>
+</body>
+</html>

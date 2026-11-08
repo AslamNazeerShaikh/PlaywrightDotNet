@@ -8,7 +8,7 @@
 
 **Tech Stack:** .NET 10, xUnit v3 native MTP, EF Core SQLite, Playwright, explicit `HandleAsync` use-case handlers (ADR-0011), block-scoped namespaces + `Program.Main` (ADR-0015).
 
-**Spec:** Architecture review `/var/folders/9c/bv2r2tms5v94sxwfcv_fxqrc0000gn/T/architecture-review-20261108-0835.html` (5 candidates, top recommendation candidate 1), narrator's map `docs/superpowers/specs/2026-11-08-handler-map-design.md` (approved — approach (b) first, refactors guided by it), plus this plan. Executors read all three.
+**Spec:** Architecture review `docs/superpowers/architecture-review-2026-11-08.html` (5 candidates, top recommendation candidate 1), narrator's map `docs/superpowers/specs/2026-11-08-handler-map-design.md` (approved — approach (b) first, refactors guided by it), plus this plan. Executors read all three.
 
 ## Global Constraints
 
@@ -204,7 +204,8 @@ git commit -m "refactor(sources): dissolve generic SearchOffsetPageAsync into ad
 
 **Interfaces:**
 - Consumes: `PermissionCatalog` keys (e.g. `runs.write`), `ICallerContext.Permissions`, `MustChangePassword`.
-- Produces: `PermissionDecision.IsAllowed(ICallerContext caller, string permission) -> bool`; `McpAuth.RequirePermission(caller, permission)` and HTTP handler both delegate to it; no raw-string drift.
+- Produces: `PermissionDecision.IsAllowed(bool mustChangePassword, IReadOnlyCollection<string> permissions, string permission) -> bool`; no raw-string drift.
+- Both edges delegate to the decision with caller-derived values (layer rule: Domain cannot reference Application): `McpAuth.RequirePermission(caller, permission)` passes `caller.MustChangePassword` / `caller.Permissions`, and the HTTP handler does the same from its caller context.
 
 - [ ] **Step 1: Write the failing decision test**
 
