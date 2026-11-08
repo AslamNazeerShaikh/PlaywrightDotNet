@@ -112,15 +112,9 @@ namespace JobScrape.Api.Tests
                 "Second-Password2@@",
                 Ct
             );
-            using var users = await admin.GetAsync("api/v1/users", Ct);
-            users.EnsureSuccessStatusCode();
-            var list = await users.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            var firstId = list.GetProperty("users")
-                .EnumerateArray()
-                .Select(user => user.GetProperty("id").GetGuid())
-                .First(id => id != secondId);
+            var callerId = factory.GetSeededAdminId();
             using var revoked = await secondFresh.SendAsync(
-                new HttpRequestMessage(HttpMethod.Delete, $"api/v1/users/{firstId:D}/roles/Admin"),
+                new HttpRequestMessage(HttpMethod.Delete, $"api/v1/users/{callerId:D}/roles/Admin"),
                 Ct
             );
             revoked.EnsureSuccessStatusCode();

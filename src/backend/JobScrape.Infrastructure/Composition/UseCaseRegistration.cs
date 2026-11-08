@@ -13,6 +13,7 @@ using JobScrape.Infrastructure.Runtime;
 using JobScrape.Infrastructure.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace JobScrape.Infrastructure.Composition
@@ -128,7 +129,28 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<ListRolesHandler>();
             services.AddTransient<GrantPermissionHandler>();
             services.AddTransient<RevokePermissionHandler>();
-            services.AddHostedService<AdminSeedHostedService>();
+            services.AddHostedService(provider =>
+            {
+                // Config-first admin seed: appsettings carries the local
+                // development defaults so plain `dotnet run` seeds the first
+                // admin with no extra CLI parameters. Hierarchical env vars
+                // (JobScrape__AdminSeed__*) override the file via the
+                // configuration provider. The legacy flat names (ADMIN_EMAIL /
+                // ADMIN_SETUP_SECRET) apply only when the JobScrape:AdminSeed
+                // section values are absent, e.g. when that section is
+                // removed from the production configuration.
+                var seed = provider.GetRequiredService<IOptions<AdminSeedOptions>>().Value;
+                var email = seed.Email ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+                var secret =
+                    seed.SetupSecret ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
+                return new AdminSeedHostedService(
+                    provider.GetRequiredService<IServiceScopeFactory>(),
+                    provider.GetRequiredService<TimeProvider>(),
+                    provider.GetRequiredService<ILogger<AdminSeedHostedService>>(),
+                    email,
+                    secret
+                );
+            });
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             services.AddScoped<RunScrapeHandler>();

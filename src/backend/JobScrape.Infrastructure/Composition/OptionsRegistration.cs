@@ -54,6 +54,10 @@ namespace JobScrape.Infrastructure.Composition
                 .ValidateOnStart();
             services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
             services
+                .AddOptions<AdminSeedOptions>()
+                .BindConfiguration(AdminSeedOptions.SectionName)
+                .ValidateOnStart();
+            services
                 .AddOptions<SourcesOptions>()
                 .BindConfiguration(SourcesOptions.SectionName)
                 .ValidateOnStart();

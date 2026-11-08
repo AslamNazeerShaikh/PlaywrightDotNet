@@ -5,15 +5,18 @@ namespace JobScrape.Infrastructure.Configuration
 {
     /// <summary>
     /// Rejects bearer secrets that cannot sign safely. The shipped
-    /// appsettings placeholder is a scanner-quiet demo value only: startup
-    /// refuses it, and any secret under 32 UTF-8 bytes (byte count, not
+    /// appsettings value is a dev-only secret that boots; the
+    /// <see cref="DemoPlaceholder"/> constant is still refused if
+    /// configured, and any secret under 32 UTF-8 bytes (byte count, not
     /// character count) is rejected so multi-byte secrets cannot slip under
-    /// the HS256 floor.
+    /// the HS256 floor. The secret is never logged.
     /// </summary>
     public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
     {
         /// <summary>
-        /// The demo placeholder shipped in appsettings. Never accepted.
+        /// The demo placeholder. Still refused if configured, even though
+        /// the shipped appsettings now carries a dev-only secret that boots.
+        /// Never logged.
         /// </summary>
         public const string DemoPlaceholder = "CHANGE-ME-TO-A-SECRET-OF-AT-LEAST-32-CHARS";
 
@@ -34,7 +37,7 @@ namespace JobScrape.Infrastructure.Configuration
             if (options.Secret == DemoPlaceholder)
             {
                 return ValidateOptionsResult.Fail(
-                    $"{JwtOptions.SectionName}:{nameof(JwtOptions.Secret)} still holds the demo placeholder; set the JobScrape__Jwt__Secret environment variable."
+                    $"{JwtOptions.SectionName}:{nameof(JwtOptions.Secret)} still holds the demo placeholder; set the JobScrape:Jwt:Secret configuration value (JobScrape__Jwt__Secret environment variable)."
                 );
             }
 

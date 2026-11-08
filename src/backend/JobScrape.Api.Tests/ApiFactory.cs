@@ -1,3 +1,4 @@
+using JobScrape.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -27,9 +28,9 @@ namespace JobScrape.Api.Tests
         public bool DeleteLogsOnDispose { get; init; } = true;
 
         /// <summary>
-        /// When true, the shipped JWT placeholder in appsettings.json stands
-        /// instead of the disposable test signing key, so startup validation
-        /// must refuse the host.
+        /// When true, the demo placeholder is injected in place of the
+        /// shipped development secret, so startup validation must refuse
+        /// the host.
         /// </summary>
         public bool UseShippedJwtSecret { get; init; }
 
@@ -42,11 +43,16 @@ namespace JobScrape.Api.Tests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
-            // The shipped secret is a demo placeholder the startup
-            // validator refuses; tests run with a disposable signing key.
+            // The shipped appsettings now carries a working development
+            // secret; tests run with a disposable signing key, or with the
+            // demo placeholder when exercising startup rejection.
             if (!UseShippedJwtSecret)
             {
                 builder.UseSetting("JobScrape:Jwt:Secret", AuthTestHelper.TestJwtSecret);
+            }
+            else
+            {
+                builder.UseSetting("JobScrape:Jwt:Secret", JwtOptionsValidator.DemoPlaceholder);
             }
             builder.UseSetting("JobScrape:Logging:Directory", LogDirectory);
             builder.UseSetting("JobScrape:Storage:DatabasePath", DatabasePath);
