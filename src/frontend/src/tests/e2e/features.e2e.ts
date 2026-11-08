@@ -1,13 +1,15 @@
 import { expect, request, test } from "@playwright/test";
 
+import { BASE_URL } from "./support.ts";
+
 /**
  * Anonymous capability report, pinned at the wire (not the DOM): exactly the five shipped camelCase
- * flags, all on in the default dev boot. A dedicated API context carries `ignoreHTTPSErrors`
- * explicitly because the BFF serves self-signed TLS.
+ * flags, all on in the default dev boot. A dedicated API context carries the self-contained suite's
+ * BFF base URL.
  */
 test("features endpoint reports the five flags all true", async () => {
   const api = await request.newContext({
-    baseURL: "https://127.0.0.1:3000",
+    baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
   });
   try {
