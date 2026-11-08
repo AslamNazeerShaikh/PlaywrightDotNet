@@ -1,7 +1,7 @@
 ---
 description: Run comprehensive security review
 agent: security-reviewer
-subtask: true
+subagent: true
 ---
 
 # Security Review Command

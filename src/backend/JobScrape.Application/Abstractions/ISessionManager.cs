@@ -5,7 +5,8 @@ namespace JobScrape.Application.Abstractions
 {
     /// <summary>
     /// Owns persistent browser sessions. Login is always manual; this port
-    /// never automates credentials.
+    /// never automates credentials. Per-source warm-up lives in the
+    /// source adapters, behind this seam.
     /// </summary>
     public interface ISessionManager
     {
@@ -17,8 +18,9 @@ namespace JobScrape.Application.Abstractions
         /// <param name="profileId">The browser profile to launch.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>
-        /// <see cref="ChallengeAssessment.Clear"/> when the session is ready;
-        /// otherwise the wall that blocks it (e.g. login required).
+        /// <see cref="ChallengeAssessment.Clear"/> when the session is ready
+        /// (or the source has no warm-up to run); otherwise the wall that
+        /// blocks it (e.g. login required).
         /// </returns>
         Task<ChallengeAssessment> EnsureSessionAsync(
             SourceKey source,

@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Settings.Configuration" />
@@ -40,5 +41,8 @@
   <ItemGroup>
     <ProjectReference Include="..\JobScrape.Domain\JobScrape.Domain.csproj" />
     <ProjectReference Include="..\JobScrape.Application\JobScrape.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="JobScrape.Infrastructure.Tests" />
   </ItemGroup>
 </Project>

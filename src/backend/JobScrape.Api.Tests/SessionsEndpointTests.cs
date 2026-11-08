@@ -26,7 +26,7 @@ namespace JobScrape.Api.Tests
         public async Task CreateThenGetAndListRoundTripThroughSqlite()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var created = await client.PostAsJsonAsync(
                 "api/v1/sessions",
@@ -59,7 +59,7 @@ namespace JobScrape.Api.Tests
         public async Task InvalidFieldsAreKeyedByJsonName()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var response = await client.PostAsJsonAsync(
                 "api/v1/sessions",
@@ -88,7 +88,7 @@ namespace JobScrape.Api.Tests
         public async Task DuplicateNameConflictsAndUnknownIdIsNotFound()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var first = await client.PostAsJsonAsync(
                 "api/v1/sessions",
                 new { name = "dup", sourceKey = "naukri" },
@@ -122,7 +122,7 @@ namespace JobScrape.Api.Tests
         public async Task PatchRenamesTheProfileAndMovesItsDirectory()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var created = await client.PostAsJsonAsync(
                 "api/v1/sessions",
                 new { name = "before", sourceKey = "naukri" },
@@ -159,7 +159,7 @@ namespace JobScrape.Api.Tests
         public async Task PatchToAnotherProfilesNameIsAConflict()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var first = await client.PostAsJsonAsync(
                 "api/v1/sessions",
                 new { name = "taken", sourceKey = "naukri" },
@@ -200,7 +200,7 @@ namespace JobScrape.Api.Tests
                 TestServices = services =>
                     services.AddSingleton<IBrowserProfileWorkspace>(new BusyWorkspace()),
             };
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var created = await client.PostAsJsonAsync(
                 "api/v1/sessions",
                 new { name = "before", sourceKey = "naukri" },
@@ -231,7 +231,7 @@ namespace JobScrape.Api.Tests
         public async Task PatchRejectsInvalidNamesAndMissingProfiles()
         {
             await using var factory = new ApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             using var created = await client.PostAsJsonAsync(
                 "api/v1/sessions",
                 new { name = "valid", sourceKey = "naukri" },

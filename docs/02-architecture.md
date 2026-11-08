@@ -101,7 +101,7 @@ flowchart TB
 
     subgraph APP["JobScrape.Application"]
         UC["Use-case handlers<br/>health · profiles (list/get/create/update)<br/>sources · sessions (list/get/create/update)<br/>Start/List/Get/Cancel run · run postings · export<br/>RunScrape"]
-        PORTS["Ports (19)<br/>6 repositories · progress · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer"]
+        PORTS["Ports (24)<br/>9 repositories · IUnitOfWork<br/>SearchProfile/Session/Run stores · IRunLauncher<br/>IJobSource · ISessionManager · export writer<br/>IBrowserProfileWorkspace · IArtifactStore · IDelay<br/>IDatabaseExplorer · ITokenService<br/>IIdempotencyStore · ICallerContext"]
         DTO["DTOs<br/>GetHealthResponse · SearchProfileResponse<br/>RunResponse · RunPostingResponse<br/>SearchPageResult · JobSnapshot · ScrapeRunSummary"]
         RES["Results<br/>Result / Result<T> · ErrorInfo · ErrorKind"]
     end
@@ -268,7 +268,7 @@ flowchart LR
 | Runs | `POST /api/v1/runs` (`{ profileId, browserProfileId, enrich = true }`), `GET /api/v1/runs`, `GET /api/v1/runs/{id:guid}`, `POST /api/v1/runs/{id:guid}/cancel`, `GET /api/v1/runs/{id:guid}/postings` | `StartRunHandler(IRunLauncher, IRunStore, ComplianceConsent)`, `ListRunsHandler(IRunStore)`, `GetRunHandler(IRunStore)`, `CancelRunHandler(IRunLauncher, IScrapeRunRepository, IUnitOfWork, IRunStore, TimeProvider)`, `ListRunPostingsHandler(IRunStore)` | `RunReadStore` (EF no-tracking). Start → `202` + `Location` with the recorded run, or the gate's problem; `409 RUN_IN_PROGRESS` while another run executes; `503 RUN_NOT_STARTED` when the host stops before the run is recorded. List: newest 50 (`ListRunsHandler.Limit`). Cancel is idempotent: an executing run is signalled, a paused run that is not executing is cancelled directly, a terminal run is returned unchanged. Postings: the run's source postings whose `LastSeenAt` falls in `[StartedAt, FinishedAt ?? now]`, max 200 — valid because runs execute one at a time. `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Export postings | `GET /api/v1/runs/{id:guid}/postings/export?format=csv\|xlsx&group=all\|only\|exclude` | `ExportRunPostingsHandler(IRunStore, IEnumerable<IPostingExportWriter>)` | `RunReadStore.ListExportPostingsAsync` (max 20,000), then `CsvPostingWriter` or `ExcelPostingWriter`; company groups filter against the run's captured `companies`; `400 EXPORT_FORMAT_UNSUPPORTED` / `EXPORT_GROUP_UNSUPPORTED` / `EXPORT_COMPANIES_MISSING`, `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Database explorer | `GET /api/v1/db/tables`, `GET /api/v1/db/tables/{table}/schema`, `GET/POST/PUT /api/v1/db/tables/{table}/rows`, `DELETE /api/v1/db/tables/{table}/rows/{primaryKeyValue}` | none — `DatabaseController` calls `IDatabaseExplorer` directly | `SqliteDatabaseExplorer` (Dapper) over the same SQLite file; identifiers validated against the live schema and quoted, values parameterized; `400 INVALID_TABLE` / `INVALID_INPUT` / `DB_ERROR`, `404 TABLE_NOT_FOUND` / `ROW_NOT_FOUND`, `204` on writes | Live, tested; cockpit `#/database` |
-| Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 domain repositories, the progress repository, and `IUnitOfWork` via `ScrapeStores`; `PlaywrightSessionManager`, `FileArtifactStore`, and the adapter `JobSourceRegistry` returns. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
+| Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 domain repositories and `IUnitOfWork` via `ScrapeStores`; `PlaywrightSessionManager`, `FileArtifactStore`, and the adapter `JobSourceRegistry` returns. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
 
 ---
 
@@ -292,7 +292,7 @@ PlaywrightDotNet/
 │   │   │   ├── Access/                 (BrowserProfile, quotas, circuit breaker, policies)
 │   │   │   └── Abstractions/           (DomainEvent, AggregateRoot, IRandomSource)
 │   │   ├── JobScrape.Application/
-│   │   │   ├── Abstractions/           (driven ports: 6 repositories, progress, UoW, browser workspace, artifacts, delay, explorer)
+│   │   │   ├── Abstractions/           (driven ports: 6 repositories, UoW, browser workspace, artifacts, delay, explorer)
 │   │   │   ├── Features/Health/        (GetHealthHandler, GetHealthResponse)
 │   │   │   ├── Features/SearchProfiles/ (Get/List/Create/Update handlers, store port, request/response DTOs)
 │   │   │   ├── Features/Sources/       (ListSourcesHandler, source status read model)
@@ -302,7 +302,7 @@ PlaywrightDotNet/
 │   │   │   └── Results/                (Result, Result{T}, ErrorInfo, ErrorKind, Errors)
 │   │   ├── JobScrape.Infrastructure/
 │   │   │   ├── Configuration/          (Storage/Run/Compliance/Logging/Browser/Sources options)
-│   │   │   ├── Persistence/            (DbContext, 7 configurations, 6 repositories, progress repository, 3 read stores, SqliteDatabaseExplorer, 4 migrations)
+│   │   │   ├── Persistence/            (DbContext, 6 configurations, 6 repositories, 3 read stores, SqliteDatabaseExplorer, 5 migrations)
 │   │   │   ├── Export/                 (CsvPostingWriter, ExcelPostingWriter, ExportColumns)
 │   │   │   ├── Browser/                (BrowserSessionPool, BrowserProfileWorkspace, PlaywrightSessionManager, FileArtifactStore, PageText)
 │   │   │   ├── Sources/Naukri/         (NaukriJobSource, URL builder, search/detail parsers, challenge classifier)
@@ -330,10 +330,8 @@ PlaywrightDotNet/
 > and `artifacts/`. None of `JobLens.Cli`, `JobLens.TestKit`,
 > `JobLens.E2E.Tests`, or `JobLens.Cli.Tests` exist in the tree above.
 
-Persistence ships four migrations: `20261101074339_InitialCreate`,
-`20261102135052_AddScrapeRunProgress`,
-`20261102181907_AddCaseInsensitiveProfileNames`, and
-`20261102193803_AddRunCompanies` (current).
+Persistence ships one migration: `20261107112658_InitialCreate`
+(current). History was squashed during development; no downgrade path is kept.
 
 ---
 
@@ -570,12 +568,13 @@ public interface IUnitOfWork
 }
 ```
 
-All 19 ports, grouped (they live beside their features: `Abstractions/` for
-driven ports, the feature folder for read/run/export contracts).
-Implementations are Infrastructure unless noted.
+All 24 ports, grouped (they live beside their features: `Abstractions/` for
+driven ports, the feature folder for read/run/export contracts). The count is
+the number of public interfaces under `src/backend/JobScrape.Application`
+(verified with `grep -rn "interface I" src/backend/JobScrape.Application`,
+which yields 24 names). Implementations are Infrastructure unless noted.
 
-- **Repositories (6)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`) — EF Core repositories.
-- **Progress (1)** — `IScrapeRunProgressRepository` (`GetAsync`, `SaveAsync`) — EF Core.
+- **Repositories (9)** — `ISearchProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `IScrapeRunRepository` (`GetAsync`, `AddAsync`, `ListExecutingAsync`; used on host start to fail interrupted runs), `IJobPostingRepository` (`FindAsync`, `AddAsync`), `IBrowserProfileRepository` (`GetAsync`, `NameExistsAsync`, `AddAsync`), `ISourceQuotaRepository` (`FindAsync`, `AddAsync`), `ISourceCircuitBreakerRepository` (`FindAsync`, `AddAsync`), `IUserRepository` (`GetByEmailAsync`, `GetAsync`, `AddAsync`, `ListAsync`; identity persistence), `IRoleRepository` (`GetAsync`, `GetByNameAsync`, `AddAsync`, `ListAsync`; identity persistence), `IUsageQuotaRepository` (`GetAsync`, `ListAsync`, `AddAsync`; quota definitions) — EF Core repositories. The run's resume position is an owned part of `ScrapeRun`, not a port.
 - **Unit of work (1)** — `IUnitOfWork.SaveChangesAsync` — `JobScrapeDbContext`.
 - **Read stores (3)** — `ISearchProfileStore` (`GetAsync`, `ListAsync`) → `SearchProfileReadStore`; `ISessionStore` (`GetAsync`, `ListAsync`) → `SessionReadStore`; `IRunStore` (`GetAsync`, `ListAsync`, `ListPostingsAsync`, `ListExportPostingsAsync`) → `RunReadStore`. All EF no-tracking reads.
 - **Browser/artifacts (3)** — `IBrowserProfileWorkspace` (`RenameAsync`) → `BrowserProfileWorkspace` (pool-backed); `IArtifactStore.CaptureAsync` → `FileArtifactStore` (see §12.5); `IDelay.WaitAsync` → `TimeProviderDelay`.
@@ -584,6 +583,9 @@ Implementations are Infrastructure unless noted.
 - **Run (1)** — `IRunLauncher` (`StartAsync` → run id once recorded, `TryCancel`) → `RunCoordinator` in the Api host, because a run outlives its request.
 - **Export (1)** — `IPostingExportWriter.WriteAsync` → `CsvPostingWriter`, `ExcelPostingWriter`.
 - **Explorer (1)** — `IDatabaseExplorer` → `SqliteDatabaseExplorer` (Dapper).
+- **Token (1)** — `ITokenService` (`CreateToken` → opaque bearer) → `JwtTokenService` (HS256, Infrastructure/Security).
+- **Idempotency (1)** — `IIdempotencyStore` (`GetAsync`, `SaveAsync`, `TryReserveAsync`, `RemoveAsync`) → `IdempotencyStore` (SQLite, 24-hour retention).
+- **Caller context (1)** — `ICallerContext` (`ActorId`, `Roles`, `Permissions`, `MustChangePassword`) → scoped per request from the bearer token's claims; unauthenticated callers get a denied empty-permission context.
 
 Deliberately absent (no such types exist): `IJobReadModel`, `ISkillDemandReadModel`, `IDiskSpace`, `IClock` (use BCL `TimeProvider`), `Specification<T>`, `BootstrapAsync`/`ProbeAsync` session methods, `SessionStatus`, `UpdateAsync` on `IJobPostingRepository`.
 
@@ -591,7 +593,7 @@ Deliberately absent (no such types exist): `IJobReadModel`, `ISkillDemandReadMod
 
 `RunScrapeHandler` is the application-level orchestrator (registered scoped, executed by `RunCoordinator` — see §7.1). It coordinates, but does not replace, the domain policies and infrastructure ports:
 
-- `SearchProfile`, `ScrapeRun`, and `ScrapeRunProgress` (domain state) via `ScrapeStores` (6 domain repositories + progress repository + `IUnitOfWork`, grouped so the 10-parameter constructor stays readable)
+- `SearchProfile`, `ScrapeRun` (with its owned resume position), and `JobPosting` (domain state) via `ScrapeStores` (6 domain repositories + `IUnitOfWork`, grouped so the 8-parameter constructor stays readable)
 - `SourceSettingsCatalog` and `JobSourceRegistry` (settings/adapters by source; holds `NaukriJobSource`, `IndeedJobSource`, and `LinkedInJobSource`)
 - `ISessionManager` (`PlaywrightSessionManager`) and the `IJobSource` the registry returns for the run's source (one of three adapters)
 - `IArtifactStore.CaptureAsync` (`FileArtifactStore`)
@@ -721,7 +723,7 @@ flowchart TB
 ```
 
 - The page comes from `BrowserSessionPool.Find(browserProfileId)`, opened earlier by `PlaywrightSessionManager`.
-- Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported and the handler's repeated-page guard stops.
+- Later pages never navigate to `-N` URLs. If Next is absent/disabled or the fingerprint does not change, the same page is reported; the handler's repeated-page guard re-requests it once, then fails the run with a named reason.
 - `PlaywrightException` / `TimeoutException` (unless cancelled) → `TransientError`, which only the handler may retry.
 
 **`IndeedJobSource`:** page 1 navigates to `IndeedUrlBuilder.SearchUrl`; later pages navigate directly with the cursor's `start` offset. A null cursor derives the offset from the absolute page number, so windowed runs start at their own offset. Cards are semantic DOM (`div.job_seen_beacon` / `data-testid`); details read JSON-LD first, then DOM. It is restricted-tier and disabled by default.
@@ -736,7 +738,7 @@ flowchart TB
 | Query param `start` | Indeed, LinkedIn | Implemented: page 1 has no `start`; each next page adds 10 (Indeed) or 25 (LinkedIn) to the cursor's offset; stop on empty/repeated page or cap. |
 | Cursor/API token | Naukri API fast path (not enabled) | Design target only; no adapter uses it. |
 
-Every page result includes a **fingerprint** (first card ID/href + result range text) so a loop cannot silently re-read the same page.
+Every page result includes a **fingerprint** (first card ID/href + result range text) so a repeated page is re-requested once and, while Next stays live, fails the run with a named reason.
 
 ### 9.2 Extraction priority (implemented)
 
@@ -769,13 +771,14 @@ SQLite is the source of truth. CSV/Excel/JSON files are disposable snapshots.
 
 ### 10.4 Schema overview
 
-> Verified against `JobScrapeDbContext`, the seven `IEntityTypeConfiguration`
-> classes (seven tables), and migration `20261102193803_AddRunCompanies`.
+> Verified against `JobScrapeDbContext`, the ten `IEntityTypeConfiguration`
+> classes (eleven tables), and migration `20261107112658_InitialCreate`.
 > Tables and columns
 > are snake_case; every `DateTimeOffset` is stored as UTC ticks
-> (`UtcTicksConverter`). The **only enforced foreign key** is
-> `scrape_runs → search_profiles`; cross-aggregate links (quota, circuit
-> breaker, browser profile, run progress) are by convention, not constraint.
+> (`UtcTicksConverter`). Foreign keys are enforced for
+> `scrape_runs → search_profiles` (restrict) and
+> `scrape_run_progress → scrape_runs` (cascade); cross-aggregate links (quota, circuit
+> breaker, browser profile) are by convention, not constraint.
 
 ```mermaid
 erDiagram
@@ -870,17 +873,14 @@ erDiagram
     }
 ```
 
-`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly one FK (`scrape_runs.profile_id → search_profiles.id`, restrict on delete).
+`JobSkill` is an owned value inside `JOB_POSTING.skills` (dedupe key `NormalizedName`) — not a table. `scrape_runs.companies` is a JSON string-list column captured from the profile at run creation; exports filter against it. `scrape_run_progress` holds at most one row per run: the run id, pages completed, next cursor, seen external ids, and update time, replaced after every fetched page. There are no `RUN_EVENT` / `RUN_POSTING` tables. `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, `SCRAPE_RUN_PROGRESS`'s logical link, and postings-vs-runs links that older revisions drew are logical relationships only; the database enforces exactly two FKs (`scrape_runs.profile_id → search_profiles.id`, restrict on delete; `scrape_run_progress.id → scrape_runs.id`, cascade on delete).
 
 Full domain model and invariants: [Domain Model](03-domain-model.md).
 
 ### 10.5 Migrations
 
-- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; four exist:
-  - `20261101074339_InitialCreate`
-  - `20261102135052_AddScrapeRunProgress`
-  - `20261102181907_AddCaseInsensitiveProfileNames`
-  - `20261102193803_AddRunCompanies` (current)
+- EF Core migrations live in `JobScrape.Infrastructure/Persistence/Migrations`; one exists:
+  - `20261107112658_InitialCreate` (current)
 - The context is registered by `PersistenceServiceCollectionExtensions.AddJobScrapePersistence` (scoped per run/request), called from the API through `DatabaseRegistration.AddJobScrapeDatabase`, which resolves `JobScrape:Storage:DatabasePath` against the content root and creates its directory.
 - Migrations apply automatically **only in Development** (`DatabaseRegistration.MigrateInDevelopment`, used by the `http` launch profile and the API tests). Any other environment applies them explicitly with `dotnet tool run dotnet-ef database update --project src/backend/JobScrape.Infrastructure`.
 - `JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only.
@@ -905,6 +905,7 @@ Options are bound and validated once at the composition root, then consumed as i
 - `RunOptions` (`JobScrape:Run`)
 - `BrowserOptions` (`JobScrape:Browser`: `Headless=false` — Naukri blocks headless first contact — and `NavigationTimeoutSeconds=45`, range 5–120; registered by `AddJobScrapeBrowser`)
 - `LoggingOptions` (`JobScrape:Logging`)
+- `FeaturesOptions` (`JobScrape:Features`: `Authentication=true`, `Logging=true`, `Health=true`, `CsvExport=true`, `ExcelExport=true` — every default preserves current behavior; `false` turns the named feature off, except `Authentication`, which is reserved for the anonymous-mode follow-up (docs/superpowers/plans/2026-11-08-anonymous-mode.md): the flag exists, defaults `true`, and takes effect there — `false` changes nothing in this branch. No cross-field rules; plain bools, validated with the rest at startup)
 - `SourcesOptions` (`JobScrape`, dictionary keyed by source)
 - `ComplianceOptions`
 - `LoggingOptions`

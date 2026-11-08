@@ -14,7 +14,8 @@ namespace JobScrape.Infrastructure.Composition
     /// (docs/14-application-patterns.md §4). Invalid configuration fails the
     /// host instead of running with unsafe caps. The application layer gets
     /// plain values (<see cref="SourceSettingsCatalog"/>,
-    /// <see cref="RetryPolicy"/>), never <c>IOptions</c>.
+    /// <see cref="RetryPolicy"/>,
+    /// <see cref="FeatureFlags"/>), never <c>IOptions</c>.
     /// </summary>
     public static class OptionsRegistration
     {
@@ -47,6 +48,22 @@ namespace JobScrape.Infrastructure.Composition
                 .BindConfiguration(LoggingOptions.SectionName)
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<LoggingOptions>, LoggingOptionsValidator>();
+            services
+                .AddOptions<FeaturesOptions>()
+                .BindConfiguration(FeaturesOptions.SectionName)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services
+                .AddOptions<JwtOptions>()
+                .BindConfiguration(JwtOptions.SectionName)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+            services
+                .AddOptions<AdminSeedOptions>()
+                .BindConfiguration(AdminSeedOptions.SectionName)
+                .ValidateOnStart();
             services
                 .AddOptions<SourcesOptions>()
                 .BindConfiguration(SourcesOptions.SectionName)
@@ -58,6 +75,17 @@ namespace JobScrape.Infrastructure.Composition
                     provider.GetRequiredService<IOptions<SourcesOptions>>().Value
                 )
             );
+            services.AddSingleton(provider =>
+            {
+                var features = provider.GetRequiredService<IOptions<FeaturesOptions>>().Value;
+                return new FeatureFlags(
+                    features.Authentication,
+                    features.Logging,
+                    features.Health,
+                    features.CsvExport,
+                    features.ExcelExport
+                );
+            });
             // Configured consent only: interactive confirmation is a per-run
             // operator act, so it is never true in configuration.
             services.AddSingleton(provider =>

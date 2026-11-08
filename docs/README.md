@@ -45,6 +45,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 15 | [Runtime Hardening](15-runtime-hardening.md) | How do structured logs, global errors, Polly resilience, async/cancellation, and resource cleanup work? |
 | 16 | [Library Usage Policy](16-library-usage-policy.md) | How should third-party/first-party libraries be configured, and why is AOT not a design constraint? |
 | 17 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
+| 18 | [Feature toggles](21-feature-toggles.md) | Which flags exist, what on/off does to each subsystem, and the edge rules? |
 
 ---
 

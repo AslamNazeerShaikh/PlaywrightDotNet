@@ -33,10 +33,16 @@ describe("profiles api", () => {
       return { ok: true, status: 200, json: async () => ({ items: [profile], total: 1 }) };
     };
 
-    const { result } = await createApiClient(fetchImpl).listProfiles();
+    const client = createApiClient(fetchImpl);
+    const { result } = await client.listProfiles();
 
     expect(result).toEqual({ ok: true, value: { items: [profile], total: 1 } });
-    expect(calls).toEqual([{ url: "/api/v1/search-profiles", init: { method: "GET" } }]);
+    expect(calls).toEqual([
+      {
+        url: "/api/v1/search-profiles",
+        init: { method: "GET", credentials: "same-origin" },
+      },
+    ]);
   });
 
   test("createProfile POSTs JSON and returns the created profile", async () => {
@@ -61,7 +67,9 @@ describe("profiles api", () => {
 
     expect(result).toEqual({ ok: true, value: profile });
     expect(seen?.method).toBe("POST");
-    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(seen?.headers).toEqual({
+      "content-type": "application/json",
+    });
     expect(JSON.parse(String(seen?.body))).toEqual(input);
   });
 
@@ -93,7 +101,9 @@ describe("profiles api", () => {
 
     expect(result).toEqual({ ok: true, value: profile });
     expect(seen?.method).toBe("PUT");
-    expect(seen?.headers).toEqual({ "content-type": "application/json" });
+    expect(seen?.headers).toEqual({
+      "content-type": "application/json",
+    });
     expect(JSON.parse(String(seen?.body))).toEqual(input);
   });
 

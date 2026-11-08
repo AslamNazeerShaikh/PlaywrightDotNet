@@ -137,6 +137,99 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.ToTable("source_quotas", (string)null);
                 });
 
+            modelBuilder.Entity("JobScrape.Domain.Access.UsageQuota", b =>
+                {
+                    b.Property<string>("Scope")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("scope");
+
+                    b.Property<int>("Limit")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("limit");
+
+                    b.Property<long>("Window")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("window_ticks");
+
+                    b.HasKey("Scope");
+
+                    b.ToTable("usage_quotas", (string)null);
+                });
+
+            modelBuilder.Entity("JobScrape.Domain.Identity.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("_permissions")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("permission_keys");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("roles", (string)null);
+                });
+
+            modelBuilder.Entity("JobScrape.Domain.Identity.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("email")
+                        .UseCollation("NOCASE");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("failed_attempts");
+
+                    b.Property<long?>("LockedUntilUtc")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("locked_until_utc");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password_hash");
+
+                    b.Property<int>("TokenVersion")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("token_version");
+
+                    b.Property<string>("_roles")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("role_ids");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
+                });
+
             modelBuilder.Entity("JobScrape.Domain.Sourcing.JobPosting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -328,34 +421,6 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.ToTable("scrape_runs", (string)null);
                 });
 
-            modelBuilder.Entity("JobScrape.Domain.Sourcing.ScrapeRunProgress", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<string>("NextCursor")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("next_cursor");
-
-                    b.Property<int>("PagesCompleted")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("pages_completed");
-
-                    b.Property<string>("SeenExternalIds")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("seen_external_ids");
-
-                    b.Property<long>("UpdatedAt")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("scrape_run_progress", (string)null);
-                });
-
             modelBuilder.Entity("JobScrape.Domain.Sourcing.SearchProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -403,6 +468,48 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                     b.ToTable("search_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("JobScrape.Infrastructure.Persistence.IdempotencyRecord", b =>
+                {
+                    b.Property<string>("OwnerKey")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("owner_key");
+
+                    b.Property<string>("Endpoint")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("endpoint");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("key");
+
+                    b.Property<byte[]>("Body")
+                        .IsRequired()
+                        .HasColumnType("BLOB")
+                        .HasColumnName("body");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_type");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("request_hash");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("status_code");
+
+                    b.HasKey("OwnerKey", "Endpoint", "Key");
+
+                    b.ToTable("idempotency_keys", (string)null);
+                });
+
             modelBuilder.Entity("JobScrape.Domain.Sourcing.ScrapeRun", b =>
                 {
                     b.HasOne("JobScrape.Domain.Sourcing.SearchProfile", null)
@@ -410,6 +517,39 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsOne("JobScrape.Domain.Sourcing.ScrapeRunProgress", "Progress", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("TEXT")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("NextCursor")
+                                .HasColumnType("TEXT")
+                                .HasColumnName("next_cursor");
+
+                            b1.Property<int>("PagesCompleted")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("pages_completed");
+
+                            b1.Property<string>("SeenExternalIds")
+                                .IsRequired()
+                                .HasColumnType("TEXT")
+                                .HasColumnName("seen_external_ids");
+
+                            b1.Property<long>("UpdatedAt")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("updated_at");
+
+                            b1.HasKey("Id");
+
+                            b1.ToTable("scrape_run_progress", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("Id");
+                        });
+
+                    b.Navigation("Progress");
                 });
 #pragma warning restore 612, 618
         }

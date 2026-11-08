@@ -1,7 +1,7 @@
 ---
 description: Create implementation plan with risk assessment
 agent: planner
-subtask: true
+subagent: true
 ---
 
 # Plan Command

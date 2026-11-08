@@ -28,6 +28,20 @@ namespace JobScrape.Application.Tests.Scraping
             return result.Error;
         }
 
+        private static SearchPageResult RangedPage(
+            string? next,
+            string range,
+            params JobSnapshot[] jobs
+        )
+        {
+            return new SearchPageResult(
+                jobs,
+                next,
+                new PageFingerprint(jobs[0].ExternalJobId, range),
+                ChallengeAssessment.Clear
+            );
+        }
+
         // ---- happy path ----
 
         [Fact]
@@ -169,16 +183,139 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
-        public async Task RepeatedPageStopsPagination()
+        public async Task RepeatedPageFailsTheRunAsAStall()
         {
+            // Next is live and the page did not change: the run re-requests
+            // the page once, then fails when the retry repeats too. The
+            // fingerprint keys on the first card, so the repeated page keeps
+            // Job("1") and adds a never-seen card that must be discarded.
             var harness = new ScrapeHarness();
-            harness.Source.Then(Page("p2", Job("1")), Page("p3", Job("1")));
+            harness.Source.Then(
+                RangedPage("p2", "1 - 20 of 54", Job("1")),
+                RangedPage("p3", "1 - 20 of 54", Job("1"), Job("2")),
+                RangedPage("p3", "1 - 20 of 54", Job("1"), Job("2"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Failed, summary.Stage);
+            Assert.Equal(1, summary.Stats.Failures);
+            Assert.Equal(1, summary.Stats.PostingsFound);
+            Assert.Contains("page 2", summary.FailureReason, StringComparison.Ordinal);
+            Assert.Contains("1 - 20 of 54", summary.FailureReason, StringComparison.Ordinal);
+            Assert.Equal(
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(2, "p2"),
+                ],
+                harness.Source.Requests
+            );
+            var retry = Assert.Single(
+                harness.Logger.Entries,
+                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            );
+            Assert.Equal(summary.RunId, retry.Properties["RunId"]);
+            Assert.Equal(2, retry.Properties["Page"]);
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "2");
+            var progress = Assert.Single(harness.Store.Runs).Progress;
+            Assert.NotNull(progress);
+            Assert.Equal("p2", progress.NextCursor);
+        }
+
+        [Fact]
+        public async Task RetriedPageAdvancesAndTheRunContinues()
+        {
+            // The stuck page serves page 1 content under the page 2 URL; the
+            // one retry gets the real page 2, and the run continues past it.
+            var harness = new ScrapeHarness();
+            harness.Source.Then(
+                RangedPage("p2", "1 - 20 of 54", Job("1")),
+                RangedPage("p3", "1 - 20 of 54", Job("1"), Job("2")),
+                RangedPage("p4", "21 - 40 of 54", Job("3"), Job("4")),
+                RangedPage(null, "41 - 54 of 54", Job("5"))
+            );
 
             var summary = await RunOkAsync(harness);
 
             Assert.Equal(RunStage.Completed, summary.Stage);
-            Assert.Equal(1, summary.Stats.PagesFetched);
-            Assert.Equal(2, harness.Source.Requests.Count);
+            Assert.Equal(0, summary.Stats.Failures);
+            Assert.Equal(4, summary.Stats.PostingsFound);
+            Assert.Equal(
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(3, "p4"),
+                ],
+                harness.Source.Requests
+            );
+            Assert.Single(
+                harness.Logger.Entries,
+                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            );
+            Assert.Equal(
+                ["1", "3", "4", "5"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
+        }
+
+        [Fact]
+        public async Task RepeatedFinalPageWithoutNextCompletesCleanly()
+        {
+            // Naukri re-reports the last page with Next absent when the
+            // listing ends: a repeated fingerprint without a live Next is
+            // the clean end of the run, not a stall.
+            var harness = new ScrapeHarness();
+            harness.Source.Then(Page("p2", Job("1")), Page(null, Job("1")));
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(0, summary.Stats.Failures);
+            Assert.Equal(1, summary.Stats.PostingsFound);
+            Assert.Null(summary.FailureReason);
+        }
+
+        [Fact]
+        public async Task RepeatedPreWindowPageRetriesOnceThenAdvancesWithoutKeepingItsCards()
+        {
+            // StartPage above 1 visits bare pages first; the stuck page 2
+            // serves page 1 content with a live Next, so the run re-requests
+            // it once, then advances past it instead of failing or keeping
+            // its cards.
+            var harness = new ScrapeHarness(startPage: 3, maxPages: 2);
+            harness.Source.Then(
+                RangedPage("p2", "1 - 20 of 54", Job("1")),
+                RangedPage("p3", "1 - 20 of 54", Job("1")),
+                RangedPage("p3", "1 - 20 of 54", Job("1")),
+                RangedPage("p4", "21 - 40 of 54", Job("3")),
+                RangedPage(null, "41 - 54 of 54", Job("4"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(0, summary.Stats.Failures);
+            Assert.Equal(
+                [
+                    new SearchPageRequest(1, null),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(2, "p2"),
+                    new SearchPageRequest(3, "p3"),
+                    new SearchPageRequest(4, "p4"),
+                ],
+                harness.Source.Requests
+            );
+            Assert.Single(
+                harness.Logger.Entries,
+                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "1");
+            Assert.Equal(
+                ["3", "4"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
+            );
         }
 
         [Fact]
@@ -488,6 +625,26 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Equal(1, Assert.Single(harness.Store.Quotas).Challenges);
             Assert.Equal(1, Assert.Single(harness.Store.Circuits).ConsecutiveFailures);
             Assert.Equal(2, harness.Source.Requests.Count);
+        }
+
+        [Fact]
+        public async Task WallBeforePage3RecordsOutcomeWithoutThrowing()
+        {
+            // Pins the pre-refactor ordering: a wall on page 2 ends pagination
+            // before page 3 is requested, the earlier page stays saved, and the
+            // paused run is a recorded success rather than an exception.
+            var harness = new ScrapeHarness();
+            harness.Source.Then(Page("p2", Job("1"), Job("2")), Wall(ChallengeKind.Captcha));
+
+            var result = await harness
+                .Build()
+                .HandleAsync(harness.Request, TestContext.Current.CancellationToken);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
+            Assert.True(harness.Store.Saves > 0);
+            Assert.Equal(2, harness.Source.Requests.Count);
+            Assert.Equal(2, harness.Store.Postings.Count);
         }
 
         [Fact]

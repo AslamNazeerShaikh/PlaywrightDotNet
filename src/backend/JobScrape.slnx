@@ -9,6 +9,5 @@
   <Project Path="JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj" />
   <Project Path="JobScrape.Infrastructure/JobScrape.Infrastructure.csproj" />
   <Project Path="JobScrape.Mcp/JobScrape.Mcp.csproj" />
-  <Project Path="JobScrape.Mcp.Host/JobScrape.Mcp.Host.csproj" />
   <Project Path="JobScrape.Mcp.Tests/JobScrape.Mcp.Tests.csproj" />
 </Solution>

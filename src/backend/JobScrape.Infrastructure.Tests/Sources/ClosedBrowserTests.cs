@@ -3,6 +3,7 @@ using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Browser;
+using JobScrape.Infrastructure.Runtime;
 using JobScrape.Infrastructure.Sources.Indeed;
 using JobScrape.Infrastructure.Sources.LinkedIn;
 using JobScrape.Infrastructure.Sources.Naukri;
@@ -53,7 +54,9 @@ namespace JobScrape.Infrastructure.Tests.Sources
             var source = new NaukriJobSource(
                 Pool(),
                 new FakeTimeProvider(Now),
-                NullLogger<NaukriJobSource>.Instance
+                NullLogger<NaukriJobSource>.Instance,
+                new TimeProviderDelay(new FakeTimeProvider(Now)),
+                new SystemRandomSource()
             );
 
             var result = await source.SearchPageAsync(
@@ -72,7 +75,9 @@ namespace JobScrape.Infrastructure.Tests.Sources
             var source = new NaukriJobSource(
                 Pool(),
                 new FakeTimeProvider(Now),
-                NullLogger<NaukriJobSource>.Instance
+                NullLogger<NaukriJobSource>.Instance,
+                new TimeProviderDelay(new FakeTimeProvider(Now)),
+                new SystemRandomSource()
             );
 
             var result = await source.GetDetailAsync(

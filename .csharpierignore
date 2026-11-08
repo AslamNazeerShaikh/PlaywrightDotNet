@@ -1,0 +1,3 @@
+# Vendored agent tooling (pstack, dotnet skill packs): kept verbatim with upstream.
+.opencode/
+.claude/

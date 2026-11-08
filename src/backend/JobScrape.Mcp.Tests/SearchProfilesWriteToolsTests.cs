@@ -312,6 +312,18 @@ namespace JobScrape.Mcp.Tests
             public string ActorId => "tests";
 
             public IReadOnlyCollection<string> Roles => [];
+
+            public bool MustChangePassword => false;
+
+            public IReadOnlyCollection<string> Permissions { get; init; } =
+            [
+                "profiles.read",
+                "profiles.write",
+                "runs.read",
+                "runs.write",
+                "sessions.read",
+                "sources.read",
+            ];
         }
 
         private sealed class FixedClock(DateTimeOffset now) : TimeProvider
@@ -352,6 +364,11 @@ namespace JobScrape.Mcp.Tests
             public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
             {
                 return Task.FromResult(0);
+            }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
             }
         }
     }

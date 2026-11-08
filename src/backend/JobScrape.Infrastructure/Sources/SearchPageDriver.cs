@@ -1,9 +1,6 @@
 using System.Globalization;
-using JobScrape.Application.Abstractions;
-using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
-using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Browser;
 using Microsoft.Playwright;
 
@@ -11,11 +8,10 @@ namespace JobScrape.Infrastructure.Sources
 {
     /// <summary>
     /// The verbatim-shared search-page driver for the source adapters:
-    /// page lookup, card wait, reader scroll, transient evidence, cursor
-    /// parsing, and the offset-search core (goto, classify, parse, dropped
-    /// log). Per-source data (card selector, hidden-mark script, search URL,
-    /// classifier, parser, next-cursor rule) stays in the adapters and
-    /// arrives as arguments. Composition only; no base class, no hooks.
+    /// page lookup, card wait, reader scroll, transient evidence, and cursor
+    /// parsing. Per-source data (card selector, hidden-mark script, search URL,
+    /// classifier, parser, next-cursor rule) stays in the adapters.
+    /// Composition only; no base class, no hooks.
     /// </summary>
     internal static class SearchPageDriver
     {
@@ -105,83 +101,6 @@ namespace JobScrape.Infrastructure.Sources
         internal static ChallengeAssessment Transient(string evidence)
         {
             return new ChallengeAssessment(ChallengeKind.TransientError, 0.5, evidence);
-        }
-
-        /// <summary>
-        /// Runs one offset-based search page: goto, card wait, scroll, hidden
-        /// marking, challenge classification, parsing, and the dropped-cards
-        /// log. Navigation failures propagate; the adapter logs and reports
-        /// them with its own messages.
-        /// </summary>
-        /// <typeparam name="TPage">The source's parsed search-page type.</typeparam>
-        /// <param name="page">The run's page.</param>
-        /// <param name="searchUrl">The absolute search URL.</param>
-        /// <param name="cardSelector">The source's result-card selector.</param>
-        /// <param name="markHiddenScript">The source's hidden-marking script.</param>
-        /// <param name="start">The zero-based result offset.</param>
-        /// <param name="classify">The source's challenge classifier.</param>
-        /// <param name="parse">The source's search parser.</param>
-        /// <param name="jobs">Reads the parsed jobs.</param>
-        /// <param name="droppedCards">Reads the parsed dropped-card count.</param>
-        /// <param name="fingerprint">Builds the page fingerprint, or null.</param>
-        /// <param name="nextCursor">The source's next-cursor rule.</param>
-        /// <param name="logDropped">Logs a positive dropped-card count.</param>
-        /// <param name="now">The time source reading for relative dates.</param>
-        /// <param name="cancellationToken">Token to observe.</param>
-        /// <returns>The fetched page.</returns>
-        internal static async Task<SearchPageResult> SearchOffsetPageAsync<TPage>(
-            IPage page,
-            string searchUrl,
-            string cardSelector,
-            string markHiddenScript,
-            int start,
-            Func<Uri, int?, string, string, bool, ChallengeAssessment> classify,
-            Func<string, string, DateTimeOffset, TPage> parse,
-            Func<TPage, IReadOnlyList<JobSnapshot>> jobs,
-            Func<TPage, int> droppedCards,
-            Func<TPage, PageFingerprint?> fingerprint,
-            Func<TPage, int, string?> nextCursor,
-            Action<int> logDropped,
-            DateTimeOffset now,
-            CancellationToken cancellationToken
-        )
-        {
-            var response = await page.GotoAsync(
-                searchUrl,
-                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
-            );
-            int? status = response?.Status;
-
-            cancellationToken.ThrowIfCancellationRequested();
-            var hasCards = await WaitForCardsAsync(page, cardSelector);
-            await ScrollAsync(page, cancellationToken);
-            await page.EvaluateAsync(markHiddenScript);
-
-            var challenge = classify(
-                new Uri(page.Url),
-                status,
-                await page.TitleAsync(),
-                await PageText.BodyAsync(page),
-                hasCards
-            );
-            if (challenge.Kind != ChallengeKind.None)
-            {
-                return SearchPageResult.Blocked(challenge);
-            }
-
-            var parsed = parse(await page.ContentAsync(), page.Url, now);
-            var dropped = droppedCards(parsed);
-            if (dropped > 0)
-            {
-                logDropped(dropped);
-            }
-
-            return new SearchPageResult(
-                jobs(parsed),
-                nextCursor(parsed, start),
-                fingerprint(parsed),
-                ChallengeAssessment.Clear
-            );
         }
     }
 }

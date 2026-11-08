@@ -15,6 +15,7 @@ namespace JobScrape.Mcp.Tools
     {
         private readonly CreateSearchProfileHandler _create;
         private readonly UpdateSearchProfileHandler _update;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SearchProfilesWriteTools"/> class.
@@ -22,8 +23,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="create">The profile creator. Must not be null.</param>
         /// <param name="update">The profile updater. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Writes ignore it today; the parameter exists
-        /// so future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>profiles.write</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public SearchProfilesWriteTools(
@@ -37,6 +37,7 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(caller);
             _create = create;
             _update = update;
+            _caller = caller;
         }
 
         /// <summary>
@@ -86,6 +87,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "profiles.write");
             return McpErrors.OrThrow(
                 await _create.HandleAsync(
                     new CreateSearchProfileRequest(
@@ -160,6 +162,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "profiles.write");
             var profileId = McpErrors.ParseIdOrThrow(id, "A profile id is required.");
             return McpErrors.OrThrow(
                 await _update.HandleAsync(

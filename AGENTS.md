@@ -38,11 +38,10 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - ECC commands live in `.opencode/commands/` (`/plan`, `/code-review`, `/security`, `/build-fix`, `/e2e`, `/refactor-clean`, `/orchestrate`, `/learn`, `/checkpoint`, `/verify`, `/eval`, `/update-docs`, `/test-coverage`, `/harness-audit`, `/quality-gate`, `/model-route`, `/loop-start`, `/loop-status`, `/skill-create`) backed by 8 agents in `.opencode/opencode.json` (`planner`, `code-reviewer`, `security-reviewer`, `tdd-guide`, `build-error-resolver`, `e2e-runner`, `doc-updater`, `refactor-cleaner`) and consolidated rules in `.opencode/instructions/INSTRUCTIONS.md` (auto-loaded). No plugin hooks/tools (not built); instinct system, language-specific agents/reviewers (go/rust/java/kotlin/cpp/php/ruby), `setup-pm`, `security-scan` (needs AgentShield), and ECC `/tdd` (name owned by pstack) are skipped. See [docs/18-harness-packs.md](docs/18-harness-packs.md).
 - `/tdd` is the pstack skill; ECC's TDD agent is reachable via `/test-coverage` and the `tdd-guide` subagent.
 
-## Caveman (token saver, global install)
+## OpenCode config scope
 
-- Caveman is installed globally (`~/.config/opencode/plugins/caveman`, skills, commands, 3 `cavecrew` agents), not in this repo. It routes `openai`/`anthropic`/`opencode-go` provider traffic through its compressor; other providers bypass it.
-- Repo rule: responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose. This matches the project's existing tone rules.
-- `/caveman-stats` measures savings. `caveman off <rock>` disables a rock globally. Never commit machine-specific caveman state; repo carries no caveman files.
+- OpenCode configuration for this repo is project-local only: `.opencode/` and this file. There is no global `~/.config/opencode/` config (no global skills, agents, commands, plugins, or instructions), so sessions here see only what the repo ships.
+- Repo rule: responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose.
 
 ## graphify
 

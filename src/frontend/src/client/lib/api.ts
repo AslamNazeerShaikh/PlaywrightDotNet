@@ -217,15 +217,118 @@ export type ExportFormat = "csv" | "xlsx";
 /** Which postings an export covers: everything, only the profile companies, or all but them. */
 export type ExportGroup = "all" | "only" | "exclude";
 
+/** A successful sign-in: the bearer token plus whether first login is still pending. */
+export interface LoginResponse {
+  token: string;
+  mustChangePassword: boolean;
+}
+
+/** The signed-in caller as the token describes them. */
+export interface MeResponse {
+  email: string;
+  roles: string[];
+  permissions: string[];
+}
+
+/** One user for the admin surface: identity plus assigned role names. */
+export interface UserResponse {
+  id: string;
+  email: string;
+  mustChangePassword: boolean;
+  roles: string[];
+}
+
+export interface UserListResponse {
+  users: UserResponse[];
+}
+
+/** One role for the admin surface: name plus granted permission keys. */
+export interface RoleResponse {
+  id: string;
+  name: string;
+  permissions: string[];
+}
+
+export interface RoleListResponse {
+  roles: RoleResponse[];
+}
+
+/** One usage quota definition: the governed scope plus limit and window. */
+export interface QuotaResponse {
+  scope: string;
+  limit: number;
+  /** Fixed window as the API renders it, e.g. "00:01:00". */
+  window: string;
+}
+
+export interface QuotaListResponse {
+  quotas: QuotaResponse[];
+}
+
+/** The stable v1 permission set, in catalog order (see PermissionCatalog). */
+export const PERMISSION_CATALOG = [
+  "profiles.read",
+  "profiles.write",
+  "runs.read",
+  "runs.write",
+  "users.read",
+  "users.write",
+  "roles.read",
+  "roles.write",
+  "sessions.read",
+  "sessions.write",
+  "sources.read",
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_CATALOG)[number];
+
+/** Body of POST /api/v1/auth/login. */
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+/** Body of POST /api/v1/auth/setup-password. */
+export interface SetupPasswordInput {
+  email: string;
+  currentSecret: string;
+  newPassword: string;
+}
+
+/** Body of POST /api/v1/auth/change-password. */
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** Body of POST /api/v1/users. */
+export interface CreateUserInput {
+  email: string;
+  temporaryPassword: string;
+}
+
+/** Body of POST /api/v1/roles. */
+export interface CreateRoleInput {
+  name: string;
+}
+
+/** Body of PUT /api/v1/quotas/{scope}. */
+export interface UpdateQuotaInput {
+  limit: number;
+  window: string;
+}
+
 import { renderDebugEnabled } from "./debug.ts";
 
-/** RFC 9457 problem body plus the stable `code` and optional field `errors` extensions. */
+/** RFC 9457 problem body plus the stable `code`, optional field `errors`, and 429 backoff. */
 export interface ApiProblem {
   status: number;
   title: string;
   detail: string;
   code: string;
   errors?: Record<string, string[]>;
+  /** Seconds from the upstream `Retry-After` header on 429 answers, else null. */
+  retryAfter?: number | null;
 }
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
@@ -254,6 +357,8 @@ export interface DbForeignKeyInfo {
   column: string;
   referencedTable: string;
   referencedColumn: string;
+  /** Wire value from PRAGMA foreign_key_list on_delete, trimmed. Absent on older payloads. */
+  onDelete?: string | null;
 }
 
 export interface DbTableSchema {
@@ -281,70 +386,107 @@ export type FetchImpl = (
 }>;
 
 export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
+  const authed = <T>(
+    method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
+    path: string,
+    body?: unknown,
+    idempotencyKey?: string,
+  ): Promise<ApiResult<T>> => {
+    return send<T>(fetchImpl, method, path, body, idempotencyKey);
+  };
   return {
     fetchMeta: () => timed(() => get<{ status: string; upstream: string }>(fetchImpl, "/healthz")),
     fetchHealth: () => timed(() => get<HealthPayload>(fetchImpl, "/api/v1/health")),
-    listProfiles: () => timed(() => get<SearchProfileList>(fetchImpl, "/api/v1/search-profiles")),
-    listSources: () => timed(() => get<SourceList>(fetchImpl, "/api/v1/sources")),
-    listSessions: () => timed(() => get<SessionList>(fetchImpl, "/api/v1/sessions")),
-    createSession: (input: CreateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "POST", "/api/v1/sessions", input)),
-    updateSession: (id: string, input: UpdateSessionInput) =>
-      timed(() => send<SessionPayload>(fetchImpl, "PATCH", `/api/v1/sessions/${id}`, input)),
-    createProfile: (input: CreateProfileInput) =>
-      timed(() => send<SearchProfilePayload>(fetchImpl, "POST", "/api/v1/search-profiles", input)),
-    updateProfile: (id: string, input: UpdateProfileInput) =>
+    login: (input: LoginInput) =>
+      timed(() => send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session", input)),
+    setupPassword: (input: SetupPasswordInput) =>
       timed(() =>
-        send<SearchProfilePayload>(fetchImpl, "PUT", `/api/v1/search-profiles/${id}`, input),
+        send<{ mustChangePassword: boolean }>(fetchImpl, "POST", "/bff/session/setup", input),
       ),
+    fetchSession: () =>
+      timed(() =>
+        send<MeResponse | { authenticated: false; expired?: boolean }>(
+          fetchImpl,
+          "GET",
+          "/bff/session",
+        ),
+      ),
+    signOut: () => timed(() => send<void>(fetchImpl, "DELETE", "/bff/session")),
+    changePassword: (input: ChangePasswordInput) =>
+      timed(() => authed<void>("POST", "/api/v1/auth/change-password", input)),
+    fetchMe: () => timed(() => authed<MeResponse>("GET", "/api/v1/auth/me")),
+    listUsers: () => timed(() => authed<UserListResponse>("GET", "/api/v1/users")),
+    getUser: (id: string) => timed(() => authed<UserResponse>("GET", `/api/v1/users/${id}`)),
+    createUser: (input: CreateUserInput, idempotencyKey?: string) =>
+      timed(() => authed<{ id: string }>("POST", "/api/v1/users", input, idempotencyKey)),
+    assignRole: (id: string, role: string) =>
+      timed(() => authed<void>("POST", `/api/v1/users/${id}/roles`, { role })),
+    revokeRole: (id: string, role: string) =>
+      timed(() => authed<void>("DELETE", `/api/v1/users/${id}/roles/${role}`)),
+    listRoles: () => timed(() => authed<RoleListResponse>("GET", "/api/v1/roles")),
+    getRole: (name: string) => timed(() => authed<RoleResponse>("GET", `/api/v1/roles/${name}`)),
+    createRole: (input: CreateRoleInput, idempotencyKey?: string) =>
+      timed(() => authed<{ id: string }>("POST", "/api/v1/roles", input, idempotencyKey)),
+    grantPermission: (name: string, key: string) =>
+      timed(() => authed<void>("POST", `/api/v1/roles/${name}/permissions`, { key })),
+    revokePermission: (name: string, key: string) =>
+      timed(() => authed<void>("DELETE", `/api/v1/roles/${name}/permissions/${key}`)),
+    listQuotas: () => timed(() => authed<QuotaListResponse>("GET", "/api/v1/quotas")),
+    updateQuota: (scope: string, input: UpdateQuotaInput) =>
+      timed(() => authed<QuotaResponse>("PUT", `/api/v1/quotas/${scope}`, input)),
+    listProfiles: () => timed(() => authed<SearchProfileList>("GET", "/api/v1/search-profiles")),
+    listSources: () => timed(() => authed<SourceList>("GET", "/api/v1/sources")),
+    listSessions: () => timed(() => authed<SessionList>("GET", "/api/v1/sessions")),
+    createSession: (input: CreateSessionInput) =>
+      timed(() => authed<SessionPayload>("POST", "/api/v1/sessions", input)),
+    updateSession: (id: string, input: UpdateSessionInput) =>
+      timed(() => authed<SessionPayload>("PATCH", `/api/v1/sessions/${id}`, input)),
+    createProfile: (input: CreateProfileInput) =>
+      timed(() => authed<SearchProfilePayload>("POST", "/api/v1/search-profiles", input)),
+    updateProfile: (id: string, input: UpdateProfileInput) =>
+      timed(() => authed<SearchProfilePayload>("PUT", `/api/v1/search-profiles/${id}`, input)),
     listRuns: (offset = 0, limit = 50) =>
-      timed(() => get<RunList>(fetchImpl, `/api/v1/runs?offset=${offset}&limit=${limit}`)),
-    getRun: (id: string) => timed(() => get<RunPayload>(fetchImpl, `/api/v1/runs/${id}`)),
+      timed(() => authed<RunList>("GET", `/api/v1/runs?offset=${offset}&limit=${limit}`)),
+    getRun: (id: string) => timed(() => authed<RunPayload>("GET", `/api/v1/runs/${id}`)),
     listRunPostings: (id: string, offset = 0, limit = 200) =>
       timed(() =>
-        get<RunPostingList>(
-          fetchImpl,
+        authed<RunPostingList>(
+          "GET",
           `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
         ),
       ),
     downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
       timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", "/api/v1/runs", input)),
+      timed(() => authed<RunPayload>("POST", "/api/v1/runs", input)),
     cancelRun: (id: string) =>
-      timed(() => send<RunPayload>(fetchImpl, "POST", `/api/v1/runs/${id}/cancel`, {})),
-    listDbTables: () => timed(() => get<{ items: DbTableInfo[] }>(fetchImpl, "/api/v1/db/tables")),
+      timed(() => authed<RunPayload>("POST", `/api/v1/runs/${id}/cancel`, {})),
+    listDbTables: () => timed(() => authed<{ items: DbTableInfo[] }>("GET", "/api/v1/db/tables")),
     getDbSchema: (table: string) =>
       timed(() =>
-        get<DbTableSchema>(fetchImpl, `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
+        authed<DbTableSchema>("GET", `/api/v1/db/tables/${encodeURIComponent(table)}/schema`),
       ),
     listDbRows: (table: string, offset: number, limit: number) =>
       timed(() =>
-        get<DbRowsResult>(
-          fetchImpl,
+        authed<DbRowsResult>(
+          "GET",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows?offset=${offset}&limit=${limit}`,
         ),
       ),
     insertDbRow: (table: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
-          "POST",
-          `/api/v1/db/tables/${encodeURIComponent(table)}/rows`,
-          values,
-        ),
+        authed<null>("POST", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, values),
       ),
     updateDbRow: (table: string, pk: string, values: Record<string, unknown>) =>
       timed(() =>
-        send<null>(fetchImpl, "PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
+        authed<null>("PUT", `/api/v1/db/tables/${encodeURIComponent(table)}/rows`, {
           primaryKeyValue: pk,
           values,
         }),
       ),
     deleteDbRow: (table: string, pk: string) =>
       timed(() =>
-        send<null>(
-          fetchImpl,
+        authed<null>(
           "DELETE",
           `/api/v1/db/tables/${encodeURIComponent(table)}/rows/${encodeURIComponent(pk)}`,
         ),
@@ -377,9 +519,14 @@ async function downloadExport(
 ): Promise<ApiResult<{ blob: Blob; filename: string }>> {
   const query = group === "all" ? `format=${format}` : `format=${format}&group=${group}`;
   const path = `/api/v1/runs/${id}/postings/export?${query}`;
+  const headers: Record<string, string> = {};
+  const csrf = readCsrfToken();
+  if (csrf) headers["x-csrf-token"] = csrf;
+  const init: RequestInit = { method: "GET", credentials: "same-origin" };
+  if (Object.keys(headers).length > 0) init.headers = headers;
   let res: Awaited<ReturnType<FetchImpl>>;
   try {
-    res = await fetchImpl(path, { method: "GET" });
+    res = await fetchImpl(path, init);
   } catch {
     return {
       ok: false,
@@ -451,22 +598,43 @@ async function send<T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
+  idempotencyKey?: string,
 ): Promise<ApiResult<T>> {
   if (renderDebugEnabled) {
+    // Method and path only: bodies can carry secrets, tokens never appear here.
     console.debug(`[fetch] ${method} ${path}`);
   }
-  let res: { ok: boolean; status: number; json(): Promise<unknown>; text?(): Promise<string> };
+  let res: {
+    ok: boolean;
+    status: number;
+    json(): Promise<unknown>;
+    text?(): Promise<string>;
+    headers?: { get(name: string): string | null };
+  };
   try {
     // The method always travels, even without a body. A bare
     // `fetchImpl(path)` would silently downgrade DELETE to GET.
+    const headers: Record<string, string> = {};
+    if (body !== undefined) {
+      headers["content-type"] = "application/json";
+    }
+    if (idempotencyKey !== undefined && idempotencyKey !== "") {
+      headers["idempotency-key"] = idempotencyKey;
+    }
+    const unsafe = method !== "GET";
+    if (unsafe) {
+      const csrf = readCsrfToken();
+      if (csrf) headers["x-csrf-token"] = csrf;
+    }
+    // No headers on anonymous reads: the wire keeps its old shape exactly.
+    const init: RequestInit = { method, credentials: "same-origin" };
+    if (Object.keys(headers).length > 0) {
+      init.headers = headers;
+    }
     res =
       body === undefined
-        ? await fetchImpl(path, { method })
-        : await fetchImpl(path, {
-            method,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
-          });
+        ? await fetchImpl(path, init)
+        : await fetchImpl(path, { ...init, body: JSON.stringify(body) });
   } catch {
     return {
       ok: false,
@@ -527,13 +695,19 @@ async function send<T>(
   return { ok: false, problem: await toProblem(res) };
 }
 
-async function toProblem(res: { status: number; json(): Promise<unknown> }): Promise<ApiProblem> {
+async function toProblem(res: {
+  status: number;
+  json(): Promise<unknown>;
+  headers?: { get(name: string): string | null };
+}): Promise<ApiProblem> {
   const fallback: ApiProblem = {
     status: res.status,
     title: "Request failed",
     detail: `The server answered with status ${res.status}.`,
     code: "UNKNOWN",
   };
+  // 429 answers carry Retry-After; the page renders the backoff from this number.
+  const retryAfter = parseRetryAfter(res.headers?.get("retry-after") ?? null);
   try {
     const body = (await res.json()) as Record<string, unknown>;
     return {
@@ -542,9 +716,53 @@ async function toProblem(res: { status: number; json(): Promise<unknown> }): Pro
       detail: typeof body["detail"] === "string" ? body["detail"] : fallback.detail,
       code: typeof body["code"] === "string" ? body["code"] : "UNKNOWN",
       ...(isFieldErrors(body["errors"]) ? { errors: body["errors"] } : {}),
+      ...(retryAfter !== null ? { retryAfter } : {}),
     };
   } catch {
-    return fallback;
+    return retryAfter !== null ? { ...fallback, retryAfter } : fallback;
+  }
+}
+
+/** Backoff renders are capped at a day so absurd header values cannot reach the page. */
+const MAX_RETRY_AFTER_SECONDS = 86400;
+
+/**
+ * Parses a Retry-After header value to whole seconds from now, else null. Accepts delta-seconds and
+ * HTTP-date (RFC 9110 §15.5.3); a negative delta-seconds clamps to 0, a past HTTP-date yields 0,
+ * and any value above MAX_RETRY_AFTER_SECONDS clamps to the cap.
+ */
+function parseRetryAfter(raw: string | null): number | null {
+  if (raw === null) {
+    return null;
+  }
+  const value = raw.trim();
+  if (value === "") {
+    return null;
+  }
+  if (/^-?\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, seconds));
+  }
+  const at = Date.parse(value);
+  if (Number.isNaN(at)) {
+    return null;
+  }
+  return Math.min(MAX_RETRY_AFTER_SECONDS, Math.max(0, Math.ceil((at - Date.now()) / 1000)));
+}
+
+/** Reads the CSRF double-submit token from the (JS-readable) cookie, or null. */
+function readCsrfToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|; )jobscrape_csrf=([^;]*)/);
+  if (match === null || match[1] === undefined) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
   }
 }
 

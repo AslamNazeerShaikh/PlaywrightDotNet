@@ -14,6 +14,7 @@ namespace JobScrape.Mcp.Tools
     {
         private readonly ListSearchProfilesHandler _list;
         private readonly GetSearchProfileHandler _get;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SearchProfilesTools"/> class.
@@ -21,8 +22,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="list">The profile list handler. Must not be null.</param>
         /// <param name="get">The single-profile handler. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Read tools ignore it; the parameter exists so
-        /// future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>profiles.read</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public SearchProfilesTools(
@@ -36,6 +36,7 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(caller);
             _list = list;
             _get = get;
+            _caller = caller;
         }
 
         /// <summary>
@@ -49,6 +50,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "profiles.read");
             return _list.HandleAsync(cancellationToken);
         }
 
@@ -65,6 +67,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "profiles.read");
             var profileId = McpErrors.ParseIdOrThrow(id, "A profile id is required.");
             return McpErrors.OrThrow(await _get.HandleAsync(profileId, cancellationToken));
         }

@@ -294,12 +294,11 @@ interface Repository<T> {
 
 ## OpenCode-Specific Notes
 
-OpenCode supports hooks through its [plugin system](https://opencode.ai/docs/plugins/).
-The ECC plugin automates selected checks when installed and enabled; see the `mcp` section of `.opencode/opencode.json` for the plugin and server configuration.
-Formatting and type checking require the `strict` profile. Type checking runs only for
-qualifying TypeScript edits; check newly written files manually. Confirm which checks
-actually completed in the plugin output, then run any remaining checks below manually.
-Always complete the security review, secret review, and full test suite before committing.
+OpenCode supports hooks through its [plugin system](https://opencode.ai/docs/build/plugins/).
+This repo installs no ECC plugin, so no check runs automatically. The only project plugin
+is `.opencode/plugins/graphify.js`, which adds the knowledge-graph reminder. Run the checks
+below manually, and always complete the security review, secret review, and full test suite
+before committing.
 
 ### After Writing/Editing Code
 - Run `prettier --write <file>` to format JS/TS files

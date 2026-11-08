@@ -97,11 +97,19 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "SESSION_RENAME_BLOCKED" ||
     code === "RUN_IN_PROGRESS" ||
     code === "QUOTA_EXCEEDED" ||
+    code === "RATE_LIMITED" ||
     code === "SOURCE_COOLING_DOWN" ||
     code === "SESSION_COOLING_DOWN" ||
     code === "CANCELLED" ||
     code === "DOTNET_UNREACHABLE" ||
-    code === "BFF_UNREACHABLE"
+    code === "BFF_UNREACHABLE" ||
+    code === "ACCOUNT_LOCKED" ||
+    code === "PASSWORD_SETUP_COMPLETE" ||
+    code === "EMAIL_TAKEN" ||
+    code === "ROLE_NAME_TAKEN" ||
+    code === "ROLE_ALREADY_ASSIGNED" ||
+    code === "LAST_ADMIN_REQUIRED" ||
+    code === "ROLE_PROTECTED"
   ) {
     return "warn";
   }
@@ -111,7 +119,16 @@ export function codeTone(code: string): "ok" | "bad" | "warn" | undefined {
     code === "FAILED" ||
     code === "UNKNOWN" ||
     code === "BAD_RESPONSE" ||
-    code === "BFF_NOT_FOUND"
+    code === "BFF_NOT_FOUND" ||
+    code === "INVALID_CREDENTIALS" ||
+    code === "UNAUTHENTICATED" ||
+    code === "SESSION_REVOKED" ||
+    code === "ACCESS_DENIED" ||
+    code === "USER_NOT_FOUND" ||
+    code === "ROLE_NOT_FOUND" ||
+    code === "UNKNOWN_QUOTA_SCOPE" ||
+    code === "TABLE_NOT_FOUND" ||
+    code === "IDEMPOTENCY_KEY_REUSED"
   ) {
     return "bad";
   }

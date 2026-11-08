@@ -6,6 +6,7 @@ import { Scramble } from "../components/scramble.tsx";
 import type { ApiClient, ApiProblem, DbRowsResult, DbTableSchema } from "../lib/api.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { ErFlowDiagram, TablesDiagram } from "./database-diagram.tsx";
+import { SchemaErd } from "./database-schema-erd.tsx";
 import {
   cellFull,
   cellText,
@@ -251,6 +252,9 @@ export function DatabasePage({ client }: { client: ApiClient }) {
     }
   }
 
+  // Shared by the ERD and the shape map; keys match the schema fetch.
+  const counts = Object.fromEntries(tables.map((t) => [t.name, t.rowCount]));
+
   return (
     <>
       <div className="page-head">
@@ -325,7 +329,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
       <Module
         code="DB-01"
         title={selected !== null ? selected : "Schema"}
-        span="span-12"
+        span="span-6 db-pair"
         note="Columns, types, and keys from PRAGMA table_info."
       >
         {schemaProblem !== null && (
@@ -396,6 +400,15 @@ export function DatabasePage({ client }: { client: ApiClient }) {
 
       <Module
         code="DB-02"
+        title="Relationships"
+        span="span-6 db-pair"
+        note="Column-level ERD of the enforced foreign keys, live from the schema API."
+      >
+        <SchemaErd schemas={schemas} selected={selected} counts={counts} />
+      </Module>
+
+      <Module
+        code="DB-03"
         title="Rows"
         span="span-12"
         note={
@@ -611,7 +624,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
       </Module>
 
       <Module
-        code="DB-03"
+        code="DB-04"
         title="Shape and flow"
         span="span-12"
         note="Live tables and keys above; the real write and read paths below."
@@ -636,7 +649,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
           tables={tables.map((t) => t.name)}
           schemas={schemas}
           selected={selected}
-          counts={Object.fromEntries(tables.map((t) => [t.name, t.rowCount]))}
+          counts={counts}
         />
         <p className="status-line">
           Solid lines are enforced foreign keys from the live schema. Dashed violet lines share one
@@ -656,7 +669,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             {
               abbr: "FK",
               full: "Foreign key",
-              hint: "The one enforced link: scrape_runs.profile_id to search_profiles.id.",
+              hint: "The two enforced links: scrape_runs.profile_id to search_profiles.id, scrape_run_progress.id to scrape_runs.id.",
             },
             {
               abbr: "CRUD",

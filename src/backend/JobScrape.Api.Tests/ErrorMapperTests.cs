@@ -78,6 +78,7 @@ namespace JobScrape.Api.Tests
 
         [Theory]
         [InlineData(ErrorKind.NotFound, StatusCodes.Status404NotFound)]
+        [InlineData(ErrorKind.Unauthorized, StatusCodes.Status401Unauthorized)]
         [InlineData(ErrorKind.Conflict, StatusCodes.Status409Conflict)]
         [InlineData(ErrorKind.Forbidden, StatusCodes.Status403Forbidden)]
         [InlineData(ErrorKind.RateLimited, StatusCodes.Status429TooManyRequests)]
@@ -95,6 +96,18 @@ namespace JobScrape.Api.Tests
             var status = await ExecuteAsync(error.ToProblem());
 
             Assert.Equal(expectedStatus, status);
+        }
+
+        [Fact]
+        public async Task IdempotencyKeyReusedReturns409ProblemWithStableCode()
+        {
+            var error = Errors.IdempotencyKeyReused();
+
+            Assert.Equal(ErrorKind.Conflict, error.Kind);
+            Assert.Equal("IDEMPOTENCY_KEY_REUSED", error.Code);
+            var status = await ExecuteAsync(error.ToProblem());
+
+            Assert.Equal(StatusCodes.Status409Conflict, status);
         }
 
         [Fact]

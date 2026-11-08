@@ -1,5 +1,7 @@
+using System.Globalization;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
+using JobScrape.Domain.Abstractions;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
@@ -20,7 +22,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
     /// the fingerprint to change. Walls are classified, never retried or
     /// solved here.
     /// </summary>
-    public sealed partial class NaukriJobSource : IJobSource
+    public sealed partial class NaukriJobSource : IJobSource, ISourceWarmUpVerifier
     {
         /// <summary>
         /// The opaque cursor meaning "click Next on the current page".
@@ -59,6 +61,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         // All injected and never mutated.
         private readonly IBrowserSessionPool _pool;
         private readonly TimeProvider _clock;
+        private readonly IDelay _delay;
+        private readonly IRandomSource _random;
         private readonly ILogger<NaukriJobSource> _logger;
 
         /// <summary>
@@ -67,19 +71,27 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <param name="pool">Provides the run's page (opened by the session manager).</param>
         /// <param name="clock">The time source for relative posted dates.</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="delay">Waits between warm-up steps.</param>
+        /// <param name="random">Jitters the warm-up pause.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public NaukriJobSource(
             IBrowserSessionPool pool,
             TimeProvider clock,
-            ILogger<NaukriJobSource> logger
+            ILogger<NaukriJobSource> logger,
+            IDelay delay,
+            IRandomSource random
         )
         {
             ArgumentNullException.ThrowIfNull(pool);
             ArgumentNullException.ThrowIfNull(clock);
             ArgumentNullException.ThrowIfNull(logger);
+            ArgumentNullException.ThrowIfNull(delay);
+            ArgumentNullException.ThrowIfNull(random);
             _pool = pool;
             _clock = clock;
             _logger = logger;
+            _delay = delay;
+            _random = random;
         }
 
         /// <inheritdoc />
@@ -87,6 +99,62 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
         /// <inheritdoc />
         public SourceCapabilities Capabilities { get; } = new(SupportsDetails: true);
+
+        /// <summary>
+        /// Warms up the session the way a person would (§3.2): the Naukri
+        /// home page, a pause, one scroll. A clean home page verifies the
+        /// session; a wall is reported for the run handler to act on. The
+        /// home page has no job cards by design, so only the URL, status,
+        /// title, and wall-text signals apply.
+        /// </summary>
+        /// <param name="page">The page the session manager opened.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The home page's assessment; never null for this source.</returns>
+        public async Task<ChallengeAssessment?> VerifyAsync(
+            IPage page,
+            CancellationToken cancellationToken
+        )
+        {
+            ArgumentNullException.ThrowIfNull(page);
+
+            try
+            {
+                var response = await page.GotoAsync(
+                    "https://www.naukri.com/",
+                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
+                );
+                await _delay.WaitAsync(
+                    TimeSpan.FromMilliseconds(_random.NextInt32(1500, 3000)),
+                    cancellationToken
+                );
+                await page.Mouse.WheelAsync(0, 600);
+                return NaukriChallengeClassifier.Classify(
+                    new Uri(page.Url),
+                    response?.Status,
+                    await page.TitleAsync(),
+                    await PageText.BodyAsync(page),
+                    hasJobCards: true
+                );
+            }
+            catch (PlaywrightException ex)
+            {
+                LogWarmUpFailed(_logger, ex, SourceKey.Naukri.Value);
+                return new ChallengeAssessment(
+                    ChallengeKind.TransientError,
+                    0.5,
+                    "Home page did not load."
+                );
+            }
+            catch (TimeoutException ex)
+            {
+                LogWarmUpFailed(_logger, ex, SourceKey.Naukri.Value);
+                return new ChallengeAssessment(
+                    ChallengeKind.TransientError,
+                    0.5,
+                    "Home page timed out."
+                );
+            }
+        }
 
         /// <inheritdoc />
         /// <exception cref="StartPageOutOfRangeException">
@@ -164,6 +232,24 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     // Next vanished or the page did not change: report the
                     // same page so the handler's repeated-page guard stops.
                     LogNextDidNotAdvance(_logger, context.RunId.Value, request.PageNumber);
+                }
+                else if (
+                    !IsExpectedPageUrl(
+                        page.Url,
+                        NaukriUrlBuilder.SearchUrl(context.Criteria),
+                        request.PageNumber
+                    )
+                )
+                {
+                    // A cold -N load bounces to page 1; the fingerprint
+                    // alone cannot tell that from a real advance. Report
+                    // the page so the repeated-page guard stops the run.
+                    LogUnexpectedPageUrl(
+                        _logger,
+                        context.RunId.Value,
+                        request.PageNumber,
+                        page.Url
+                    );
                 }
 
                 return await FinishPageAsync(page, context, request, null, cancellationToken);
@@ -371,6 +457,33 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
+        /// Page 1 is goto-driven and logged by LogLanded; only the Next
+        /// path can land somewhere unexpected. Pages above 1 must carry
+        /// the <c>-N</c> suffix on the page-1 path; the query is free.
+        /// </summary>
+        /// <param name="actualUrl">The address bar after the navigation.</param>
+        /// <param name="page1Url">The page-1 URL built by NaukriUrlBuilder.SearchUrl.</param>
+        /// <param name="pageNumber">The requested absolute page number.</param>
+        /// <returns>True when the URL is the expected page.</returns>
+        internal static bool IsExpectedPageUrl(string actualUrl, Uri page1Url, int pageNumber)
+        {
+            ArgumentNullException.ThrowIfNull(actualUrl);
+            ArgumentNullException.ThrowIfNull(page1Url);
+
+            if (pageNumber == 1)
+            {
+                return true;
+            }
+
+            return Uri.TryCreate(actualUrl, UriKind.Absolute, out var actual)
+                && string.Equals(
+                    actual.AbsolutePath,
+                    page1Url.AbsolutePath + "-" + pageNumber.ToString(CultureInfo.InvariantCulture),
+                    StringComparison.OrdinalIgnoreCase
+                );
+        }
+
+        /// <summary>
         /// Waits for the detail's JSON-LD or description; the parser decides
         /// what is usable.
         /// </summary>
@@ -395,6 +508,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
         }
 
+        // Category moved from ILogger<PlaywrightSessionManager> to ILogger<NaukriJobSource> for log routing; level, message, and template unchanged.
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Session warm-up for {Source} failed")]
+        private static partial void LogWarmUpFailed(
+            ILogger logger,
+            Exception exception,
+            string source
+        );
+
         [LoggerMessage(
             Level = LogLevel.Warning,
             Message = "Naukri navigation for run {RunId} failed at {Target}"
@@ -411,6 +532,17 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Message = "Naukri Next did not advance for run {RunId} on page {Page}"
         )]
         private static partial void LogNextDidNotAdvance(ILogger logger, Guid runId, int page);
+
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Naukri Next landed off-page for run {RunId} on requested page {Page} at {Url}"
+        )]
+        private static partial void LogUnexpectedPageUrl(
+            ILogger logger,
+            Guid runId,
+            int page,
+            string url
+        );
 
         [LoggerMessage(
             Level = LogLevel.Information,

@@ -845,6 +845,20 @@ table.data tr[aria-current="true"] td:first-child {
   box-shadow: inset 2px 0 0 var(--sig);
 }
 
+/* Rank stays one stable width: 4ch fits four tabular digits, +20px covers the 10px side padding (border-box). */
+table.data th.rank-cell,
+table.data td.rank-cell {
+  width: 1%;
+  min-width: calc(4ch + 20px);
+  white-space: nowrap;
+}
+
+/* Dates break mid-string under the table's break-word rules; nowrap pins the 10-char ISO date to one line. */
+table.data th.posted-cell,
+table.data td.posted-cell {
+  white-space: nowrap;
+}
+
 /* Row controls stay compact and reachable when the wide data table scrolls. */
 table.data th.actions-cell,
 table.data td.actions-cell {
@@ -1159,6 +1173,13 @@ abbr.abbr {
 }
 .span-12 {
   grid-column: span 12;
+}
+
+/* The schema table and its ERD pair up half and half; stack them once the half cell cannot fit the 34rem schema table. */
+@media (max-width: 1200px) {
+  .deck > .db-pair {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Right rail for a tall diagram: stack the paired cards instead of stretching one. */

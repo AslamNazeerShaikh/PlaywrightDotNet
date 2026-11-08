@@ -1,4 +1,6 @@
+using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Features.Sources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -31,6 +33,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Token to observe for client disconnect.</param>
         /// <returns>HTTP 200 with the source snapshot.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.SourcesRead)]
         public async Task<ActionResult<SourceListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
