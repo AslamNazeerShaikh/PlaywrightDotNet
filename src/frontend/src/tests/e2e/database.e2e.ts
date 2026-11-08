@@ -1,11 +1,13 @@
 import { expect, request, test } from "@playwright/test";
 
+import { BASE_URL } from "./support.ts";
+
 /**
- * Database page. The page needs the Admin role, and the shared dev backend has its setup already
- * complete (password unknown), so this suite pins the deterministic unauthenticated shape: the auth
- * gate in the DOM plus the 401 UNAUTHENTICATED answer at the API. When a session exists (local
- * operator signed in before the run), the same test instead pins the four modules on empty state
- * and ERD content only if tables are present — the ERD branch never forces rows into existence.
+ * Database page. The page needs the Admin role. The self-contained suite boots a fresh DB and no
+ * browser session starts signed in, so anonymously the test pins the deterministic shape: the auth
+ * gate in the DOM plus the 401 UNAUTHENTICATED answer at the API. When a session exists (a prior
+ * spec signed in), the same test pins the four modules on empty state and ERD content only if
+ * tables are present — the ERD branch never forces rows into existence.
  */
 test("database page: modules on empty state, ERD only when tables exist", async ({ page }) => {
   await page.goto("/#/database");
@@ -18,7 +20,7 @@ test("database page: modules on empty state, ERD only when tables exist", async 
     await expect(page.getByLabel("OPS-DECK // SIGN IN")).toBeVisible();
 
     const api = await request.newContext({
-      baseURL: "https://127.0.0.1:3000",
+      baseURL: BASE_URL,
       ignoreHTTPSErrors: true,
     });
     try {
