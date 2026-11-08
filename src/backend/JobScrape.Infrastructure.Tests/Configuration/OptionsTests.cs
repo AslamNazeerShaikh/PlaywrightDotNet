@@ -258,6 +258,53 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void FeaturesDefaultsAreAllTrue()
+        {
+            static bool IsValid(object options)
+            {
+                return Validator.TryValidateObject(
+                    options,
+                    new ValidationContext(options),
+                    null,
+                    true
+                );
+            }
+
+            var features = new FeaturesOptions();
+
+            Assert.True(features.Authentication);
+            Assert.True(features.Logging);
+            Assert.True(features.Health);
+            Assert.True(features.CsvExport);
+            Assert.True(features.ExcelExport);
+            Assert.Equal("JobScrape:Features", FeaturesOptions.SectionName);
+            Assert.True(IsValid(features));
+        }
+
+        [Fact]
+        public void LoggingOffSkipsDirectoryValidation()
+        {
+            var off = new LoggingOptionsValidator(
+                Options.Create(new FeaturesOptions { Logging = false })
+            );
+            var on = new LoggingOptionsValidator(Options.Create(new FeaturesOptions()));
+
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = null! }).Succeeded);
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
+            var missing = on.Validate(null, new LoggingOptions { Directory = null! });
+            Assert.False(missing.Succeeded);
+            Assert.Contains(
+                missing.Failures!,
+                failure => failure.Contains(
+                    "JobScrape:Logging:Directory",
+                    StringComparison.Ordinal
+                )
+            );
+            Assert.False(on.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
+            Assert.True(on.Validate(null, new LoggingOptions()).Succeeded);
+        }
+
+        [Fact]
         public void StorageRunAndLoggingDefaultsAreValidAndBoundsAreEnforced()
         {
             static bool IsValid(object options)
