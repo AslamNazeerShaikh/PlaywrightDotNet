@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Infrastructure.Composition;
 using JobScrape.Infrastructure.Configuration;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,67 @@ namespace JobScrape.Infrastructure.Tests.Composition
             "probe-marker"
         );
 
+        // Mirrors the composition root: FeaturesOptions in, FeatureFlags
+        // derived from it (OptionsRegistration does the same factory).
+        private static void AddFeatureFlags(IServiceCollection services, FeaturesOptions features)
+        {
+            services.AddSingleton(Options.Create(features));
+            services.AddSingleton(provider =>
+            {
+                var value = provider.GetRequiredService<IOptions<FeaturesOptions>>().Value;
+                return new FeatureFlags(
+                    value.Authentication,
+                    value.Logging,
+                    value.Health,
+                    value.CsvExport,
+                    value.ExcelExport
+                );
+            });
+        }
+
+        [Fact]
+        public void LoggingOffRegistersNoSinks()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), $"jobscrape-logs-{Guid.NewGuid():N}");
+            try
+            {
+                var features = new FeaturesOptions { Logging = false };
+                var services = new ServiceCollection()
+                    .AddLogging()
+                    .AddSingleton(Options.Create(new LoggingOptions { Directory = directory }));
+                AddFeatureFlags(services, features);
+                services.AddJobScrapeLogging(
+                    new ConfigurationBuilder().Build(),
+                    contentRoot: directory,
+                    logFilePrefix: "probe"
+                );
+
+                using (var provider = services.BuildServiceProvider())
+                {
+                    var logger = provider
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("Probe");
+                    ProbeMarker(logger, null);
+                }
+
+                var jsonlFiles = Directory.Exists(directory)
+                    ? Directory.GetFiles(directory, "*.jsonl")
+                    : [];
+                var logFiles = Directory.Exists(directory)
+                    ? Directory.GetFiles(directory, "*.log")
+                    : [];
+                Assert.Empty(jsonlFiles);
+                Assert.Empty(logFiles);
+            }
+            finally
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, recursive: true);
+                }
+            }
+        }
+
         [Fact]
         public void WritesBothSinksFromOneEvent()
         {
@@ -24,12 +86,13 @@ namespace JobScrape.Infrastructure.Tests.Composition
             {
                 var services = new ServiceCollection()
                     .AddLogging()
-                    .AddSingleton(Options.Create(new LoggingOptions { Directory = directory }))
-                    .AddJobScrapeLogging(
-                        new ConfigurationBuilder().Build(),
-                        contentRoot: directory,
-                        logFilePrefix: "probe"
-                    );
+                    .AddSingleton(Options.Create(new LoggingOptions { Directory = directory }));
+                AddFeatureFlags(services, new FeaturesOptions());
+                services.AddJobScrapeLogging(
+                    new ConfigurationBuilder().Build(),
+                    contentRoot: directory,
+                    logFilePrefix: "probe"
+                );
 
                 using (var provider = services.BuildServiceProvider())
                 {
