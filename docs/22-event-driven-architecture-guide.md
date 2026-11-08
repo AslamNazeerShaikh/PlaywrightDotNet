@@ -53,9 +53,9 @@ public sealed class GetUserHandler
 
 You use it by injecting it into an endpoint and calling the method. Tests create it with `new` and a fake store. There is no runtime lookup. The stack trace names the handler. Queries with no failure outcome return the DTO directly instead of a result, such as the list handler in this repo. Registration is explicit, one line per handler, with no assembly scanning.
 
-### An event has two meanings
+### An event has two meanings, and two shapes
 
-The C# `event` keyword is an in-process callback. The publisher owns it. Subscribers attach with `+=`. The publisher fires it with `?.Invoke`. Delivery is synchronous and dies with the process.
+The C# `event` keyword is an in-process callback. The publisher owns it. Subscribers attach with `+=` and detach with `-=`. The publisher fires it with `?.Invoke`. Delivery is synchronous and dies with the process.
 
 ```csharp
 public sealed class Order
@@ -67,15 +67,88 @@ public sealed class Order
         Placed?.Invoke(this, EventArgs.Empty);
     }
 }
+
+var order = new Order();
+order.Placed += (sender, args) => Console.WriteLine("Order placed.");
+order.Place();
 ```
 
-A domain event is different. It is a plain immutable record that carries data about the past. You create it after state changes and pass it as a method argument. You never inject it through a constructor.
+```mermaid
+sequenceDiagram
+    participant S as Subscriber
+    participant P as Publisher
+    S->>P: Subscribe with +=
+    P->>P: State change
+    P->>S: Invoke handler synchronously
+    S->>P: Unsubscribe with -=
+```
+
+A domain event is different. It is a plain object that carries data about the past. You create it after state changes and pass it as a method argument. You never inject it through a constructor. This repo models every domain event this way.
+
+#### Events as records
+
+A record is the default pick. It gives value equality, concise construction, and immutability. Two events with the same data compare equal. That helps tests and dedupe.
 
 ```csharp
-public sealed record UserCreatedEvent(Guid UserId, string Email, DateTimeOffset At);
+public abstract record DomainEvent(DateTimeOffset OccurredAt);
+
+public sealed record UserCreatedEvent(
+    Guid UserId,
+    string Email,
+    DateTimeOffset OccurredAt) : DomainEvent(OccurredAt);
+
+var evt = new UserCreatedEvent(userId, email, DateTimeOffset.UtcNow);
+await bus.PublishAsync(evt, ct);
 ```
 
-Name event records in the past tense. Keep them immutable. Carry data only.
+Points for records. Construction is one line. Properties are init only, so no one mutates a fact after it happened. The `with` keyword copies with a change, which helps versioning. Serialization stays simple because the shape is data only.
+
+Flow with records. The aggregate validates, creates the record, buffers it, persists state, then publishes the record. Each subscriber gets the same immutable copy.
+
+```mermaid
+flowchart LR
+    V["Validate command"] --> C["Create record"]
+    C --> BUF["Buffer on aggregate"]
+    BUF --> SAVE[("Save state")]
+    SAVE --> PUB["Publish record"]
+    PUB --> H1["Handler 1"]
+    PUB --> H2["Handler 2"]
+```
+
+#### Events as sealed classes
+
+A sealed class fits when the event needs more than data. Use it when you need a mutable builder during construction, private setters, extra behavior, or an inheritance chain that records express poorly.
+
+```csharp
+public sealed class UserCreatedEventClass
+{
+    public Guid UserId { get; }
+    public string Email { get; }
+    public DateTimeOffset OccurredAt { get; }
+    public int RetryCount { get; set; }
+
+    public UserCreatedEventClass(Guid userId, string email, DateTimeOffset at)
+    {
+        UserId = userId;
+        Email = email;
+        OccurredAt = at;
+    }
+
+    public bool IsHighPriority() => Email.EndsWith("@vip.example");
+}
+```
+
+| # | Question | Record | Sealed class |
+|---|---|---|---|
+| 1 | Equality | By value, two same payloads are equal | By reference, unless you override it |
+| 2 | Mutability | Init only by default | You control every setter |
+| 3 | Verbosity | One line declaration | Full constructor and properties |
+| 4 | Behavior | Data only, no methods expected | Methods and helpers are natural |
+| 5 | Best fit | Facts that travel, tests, dedupe | Builder steps, retry counters, rich logic |
+
+Rule of thumb. Start with a sealed record. Move to a sealed class only when you add behavior or controlled mutability that a record hides. Name both in the past tense. Keep both free of services, contexts, and HTTP types.
+
+This repo picks records. `DomainEvent` is an abstract record with `OccurredAt`. Each concrete event, such as `SearchProfileCreated`, is a sealed record that carries ids and counts only.
 
 ### Commands change, queries read
 
@@ -88,6 +161,47 @@ A command says "do this". It has exactly one handler. It returns a result, an id
 | 3 | Handler count | Exactly one | Exactly one | Zero or more |
 | 4 | Return | Result, id, or nothing | DTO | Nothing |
 | 5 | Caller knows | The handler | The handler | Only the bus |
+
+```mermaid
+flowchart TB
+    CMD["Command: CreateUser"] --> CH["One command handler"]
+    CH --> ST[("State change")]
+    Q["Query: GetUser"] --> QH["One query handler"]
+    QH --> RD[("Read DTO, no change")]
+    ST --> EV["Event: UserCreated"]
+    EV --> S1["Subscriber 1"]
+    EV --> S2["Subscriber 2"]
+```
+
+A concrete command changes state and returns a result.
+
+```csharp
+public sealed record CreateUserCommand(string Email, string Password);
+
+public async Task<Result<Guid>> HandleAsync(CreateUserCommand cmd, CancellationToken ct)
+{
+    var user = User.Create(cmd.Email, cmd.Password);
+    await _users.AddAsync(user, ct);
+    await _unitOfWork.SaveChangesAsync(ct);
+    return Result.Ok(user.Id);
+}
+```
+
+A concrete query reads state and returns a DTO with no side effects.
+
+```csharp
+public sealed record GetUserQuery(Guid UserId);
+
+public async Task<UserDto?> HandleAsync(GetUserQuery q, CancellationToken ct)
+{
+    var user = await _users.GetAsync(q.UserId, ct);
+    if (user is null)
+    {
+        return null;
+    }
+    return new UserDto(user.Id, user.Email);
+}
+```
 
 ### Delegates are required, reflection is not
 
@@ -137,6 +251,27 @@ UpdateReadModelHandler updates the read model
 
 The publisher never names the subscribers. The bus owns the subscription table. Each subscriber runs its own reaction.
 
+End to end example. A signup creates the user, saves, then publishes. Two subscribers react alone. The controller never learns about mail or read models.
+
+```csharp
+var user = User.Create(request.Email, request.Password);
+await _users.AddAsync(user, ct);
+await _unitOfWork.SaveChangesAsync(ct);
+await _bus.PublishAsync(new UserCreatedEvent(user.Id, user.Email, clock.UtcNow), ct);
+```
+
+```csharp
+public async Task HandleAsync(UserCreatedEvent evt, CancellationToken ct)
+{
+    await _mail.SendWelcomeAsync(evt.Email, ct);
+}
+
+public async Task HandleAsync(UserCreatedEvent evt, CancellationToken ct)
+{
+    await _readModel.UpsertAsync(evt.UserId, evt.Email, ct);
+}
+```
+
 ```mermaid
 flowchart LR
     C["Controller"] --> H["CreateUserHandler"]
@@ -155,6 +290,19 @@ sequenceDiagram
     P->>B: Publish UserCreatedEvent
     B->>S1: HandleAsync event
     B->>S2: HandleAsync event
+```
+
+The router is the step where the bus picks recipients. Type routing matches the exact event type. Topic routing matches wildcard names. Content routing reads the payload.
+
+```mermaid
+flowchart TB
+    IN["Incoming event"] --> TY{"Match by type?"}
+    TY -->|"yes"| HL["Call handler list"]
+    TY -->|"no"| TP{"Match topic pattern?"}
+    TP -->|"orders.*"| TQ["Send to topic queue"]
+    TP -->|"no"| CT{"Amount over 1000?"}
+    CT -->|"yes"| FQ["Send to fraud queue"]
+    CT -->|"no"| DR["Drop or dead-letter"]
 ```
 
 ## Where things live
