@@ -1,4 +1,5 @@
 using JobScrape.Application.Features.Scraping;
+using JobScrape.Domain.Access;
 using JobScrape.Domain.Sourcing;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -77,6 +78,45 @@ namespace JobScrape.Application.Tests.Scraping
                 ["1", "3", "4"],
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
             );
+            var drop = Assert.Single(
+                harness.Logger.Entries,
+                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            );
+            Assert.Equal(LogLevel.Warning, drop.Level);
+        }
+
+        [Fact]
+        public async Task StaleDateGateThenAWallOnTheNextPageRecordedNotThrown()
+        {
+            // A stale card drops while the page is kept; the wall on the
+            // next page ends pagination and the run pauses instead of
+            // crashing. Fresh postings from page one stay stored.
+            var harness = new ScrapeHarness();
+            UseCriteria(harness, Criteria(postedWithinDays: 1));
+            harness.Source.Then(
+                Page(
+                    "next",
+                    Job("1") with
+                    {
+                        PostedAt = Now.AddHours(-2),
+                    },
+                    Job("2") with
+                    {
+                        PostedAt = Now.AddDays(-2),
+                    }
+                ),
+                Wall(ChallengeKind.Captcha)
+            );
+
+            var result = await harness.Build().HandleAsync(harness.Request, Ct);
+
+            Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Code : null);
+            Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
+            Assert.Equal(
+                ["1"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).ToArray()
+            );
+            Assert.Equal(2, harness.Source.Requests.Count);
             var drop = Assert.Single(
                 harness.Logger.Entries,
                 e => e.Message.Contains("stale posted date", StringComparison.Ordinal)

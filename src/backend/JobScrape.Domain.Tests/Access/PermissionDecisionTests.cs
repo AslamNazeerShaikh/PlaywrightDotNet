@@ -63,6 +63,15 @@ namespace JobScrape.Domain.Tests.Access
                     permission: "runs.write"
                 )
             );
+            // "RUNS.WRİTE" (İ = U+0130) case-folds to "runs.write" in a
+            // Turkish (tr-TR) culture-sensitive compare; ordinal must not.
+            Assert.False(
+                PermissionDecision.IsAllowed(
+                    mustChangePassword: false,
+                    permissions: ["RUNS.WR\u0130TE"],
+                    permission: "runs.write"
+                )
+            );
         }
 
         [Fact]
