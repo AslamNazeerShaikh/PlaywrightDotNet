@@ -19,7 +19,7 @@ namespace JobScrape.Infrastructure.Sources.Indeed
     /// <c>AcknowledgeSourceRisk=true</c>, enforced by the run gate before
     /// this adapter is ever called.
     /// </summary>
-    public sealed partial class IndeedJobSource : IJobSource
+    public sealed partial class IndeedJobSource : IJobSource, ISourceWarmUpVerifier
     {
         private const string CardSelector = "div.job_seen_beacon, div[data-testid='slider_item']";
 
@@ -78,6 +78,23 @@ namespace JobScrape.Infrastructure.Sources.Indeed
 
         /// <inheritdoc />
         public SourceCapabilities Capabilities { get; } = new(SupportsDetails: true);
+
+        /// <summary>
+        /// No warm-up: the restricted-tier guest session is reported ready
+        /// without a verification fetch.
+        /// </summary>
+        /// <param name="page">The page the session manager opened.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>Null: there is no warm-up to run for this source.</returns>
+        public Task<ChallengeAssessment?> VerifyAsync(
+            IPage page,
+            CancellationToken cancellationToken
+        )
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            _ = cancellationToken;
+            return Task.FromResult<ChallengeAssessment?>(null);
+        }
 
         /// <inheritdoc />
         public async Task<SearchPageResult> SearchPageAsync(

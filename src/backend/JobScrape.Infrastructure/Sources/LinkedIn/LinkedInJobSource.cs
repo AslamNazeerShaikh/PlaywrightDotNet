@@ -18,7 +18,7 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
     /// adapter is ever called. Detail enrichment is unsupported on the guest
     /// adapter: <see cref="GetDetailAsync"/> is blocked without fetching.
     /// </summary>
-    public sealed partial class LinkedInJobSource : IJobSource
+    public sealed partial class LinkedInJobSource : IJobSource, ISourceWarmUpVerifier
     {
         private const string CardSelector =
             "li.jobs-search-results__list-item, div.job-card-container";
@@ -71,6 +71,23 @@ namespace JobScrape.Infrastructure.Sources.LinkedIn
 
         /// <inheritdoc />
         public SourceCapabilities Capabilities { get; } = new(SupportsDetails: false);
+
+        /// <summary>
+        /// No warm-up: the guest session is reported ready without a
+        /// verification fetch.
+        /// </summary>
+        /// <param name="page">The page the session manager opened.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>Null: there is no warm-up to run for this source.</returns>
+        public Task<ChallengeAssessment?> VerifyAsync(
+            IPage page,
+            CancellationToken cancellationToken
+        )
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            _ = cancellationToken;
+            return Task.FromResult<ChallengeAssessment?>(null);
+        }
 
         /// <inheritdoc />
         public async Task<SearchPageResult> SearchPageAsync(
