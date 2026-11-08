@@ -139,6 +139,7 @@ Read the documentation in this order:
 16. [Runtime hardening](docs/15-runtime-hardening.md)
 17. [Library usage policy](docs/16-library-usage-policy.md)
 18. [ADRs](docs/10-adr/README.md)
+19. [Feature toggles](docs/21-feature-toggles.md)
 
 ## Codebase stats (tokei)
 
