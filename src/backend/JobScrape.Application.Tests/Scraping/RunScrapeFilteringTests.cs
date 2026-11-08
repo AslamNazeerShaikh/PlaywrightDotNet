@@ -1,4 +1,5 @@
 using JobScrape.Application.Features.Scraping;
+using JobScrape.Domain.Access;
 using JobScrape.Domain.Sourcing;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -63,7 +64,8 @@ namespace JobScrape.Application.Tests.Scraping
                     Job("3"),
                     Job("4") with
                     {
-                        PostedAt = Now.AddDays(-1),
+                        // Naukri stamps midnight UTC; this is the Yesterday boundary shape.
+                        PostedAt = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero),
                     }
                 )
             );
@@ -81,6 +83,73 @@ namespace JobScrape.Application.Tests.Scraping
                 e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
             );
             Assert.Equal(LogLevel.Warning, drop.Level);
+        }
+
+        [Fact]
+        public async Task StaleDateGateThenAWallOnTheNextPageRecordedNotThrown()
+        {
+            // A stale card drops while the page is kept; the wall on the
+            // next page ends pagination and the run pauses instead of
+            // crashing. Fresh postings from page one stay stored.
+            var harness = new ScrapeHarness();
+            UseCriteria(harness, Criteria(postedWithinDays: 1));
+            harness.Source.Then(
+                Page(
+                    "next",
+                    Job("1") with
+                    {
+                        PostedAt = Now.AddHours(-2),
+                    },
+                    Job("2") with
+                    {
+                        PostedAt = Now.AddDays(-2),
+                    }
+                ),
+                Wall(ChallengeKind.Captcha)
+            );
+
+            var result = await harness.Build().HandleAsync(harness.Request, Ct);
+
+            Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Code : null);
+            Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
+            Assert.Equal(
+                ["1"],
+                harness.Store.Postings.Select(p => p.ExternalJobId.Value).ToArray()
+            );
+            Assert.Equal(2, harness.Source.Requests.Count);
+            var drop = Assert.Single(
+                harness.Logger.Entries,
+                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            );
+            Assert.Equal(LogLevel.Warning, drop.Level);
+        }
+
+        [Fact]
+        public async Task OneDayProfileKeepsAYesterdayCard()
+        {
+            var harness = new ScrapeHarness();
+            UseCriteria(harness, Criteria(postedWithinDays: 1));
+            harness.Source.Then(
+                Page(
+                    null,
+                    Job("1") with
+                    {
+                        PostedRaw = "1 day ago",
+                        PostedAt = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero),
+                    }
+                )
+            );
+
+            await RunOkAsync(harness);
+
+            var run = Assert.Single(harness.Store.Runs);
+            Assert.Equal(1, run.Stats.PostingsFound);
+            var posting = Assert.Single(harness.Store.Postings);
+            Assert.Equal(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), posting.PostedAt);
+            Assert.DoesNotContain(
+                harness.Logger.Entries,
+                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            );
         }
 
         [Fact]
