@@ -47,9 +47,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         [Fact]
         public void IsExpectedPageUrlFailsRedirectToPage1()
         {
-            Assert.False(
-                NaukriJobSource.IsExpectedPageUrl(Page1Url().AbsoluteUri, Page1Url(), 2)
-            );
+            Assert.False(NaukriJobSource.IsExpectedPageUrl(Page1Url().AbsoluteUri, Page1Url(), 2));
         }
 
         [Fact]

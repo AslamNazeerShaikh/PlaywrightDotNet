@@ -639,7 +639,13 @@ namespace JobScrape.Application.Features.Scraping
             {
                 if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
                 {
-                    LogPaginationStopped(_logger, run.Id.Value, absolute, "job cap reached", "before");
+                    LogPaginationStopped(
+                        _logger,
+                        run.Id.Value,
+                        absolute,
+                        "job cap reached",
+                        "before"
+                    );
                     break;
                 }
 

@@ -244,7 +244,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     // A cold -N load bounces to page 1; the fingerprint
                     // alone cannot tell that from a real advance. Report
                     // the page so the repeated-page guard stops the run.
-                    LogUnexpectedPageUrl(_logger, context.RunId.Value, request.PageNumber, page.Url);
+                    LogUnexpectedPageUrl(
+                        _logger,
+                        context.RunId.Value,
+                        request.PageNumber,
+                        page.Url
+                    );
                 }
 
                 return await FinishPageAsync(page, context, request, null, cancellationToken);
@@ -504,10 +509,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         // Category moved from ILogger<PlaywrightSessionManager> to ILogger<NaukriJobSource> for log routing; level, message, and template unchanged.
-        [LoggerMessage(
-            Level = LogLevel.Warning,
-            Message = "Session warm-up for {Source} failed"
-        )]
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Session warm-up for {Source} failed")]
         private static partial void LogWarmUpFailed(
             ILogger logger,
             Exception exception,

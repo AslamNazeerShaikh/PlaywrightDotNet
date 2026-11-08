@@ -217,10 +217,7 @@ namespace JobScrape.Application.Tests.Scraping
             );
             Assert.Equal(summary.RunId, retry.Properties["RunId"]);
             Assert.Equal(2, retry.Properties["Page"]);
-            Assert.DoesNotContain(
-                harness.Store.Postings,
-                p => p.ExternalJobId.Value == "2"
-            );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "2");
             var progress = Assert.Single(harness.Store.Runs).Progress;
             Assert.NotNull(progress);
             Assert.Equal("p2", progress.NextCursor);
@@ -314,10 +311,7 @@ namespace JobScrape.Application.Tests.Scraping
                 harness.Logger.Entries,
                 e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
             );
-            Assert.DoesNotContain(
-                harness.Store.Postings,
-                p => p.ExternalJobId.Value == "1"
-            );
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "1");
             Assert.Equal(
                 ["3", "4"],
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
@@ -642,10 +636,9 @@ namespace JobScrape.Application.Tests.Scraping
             var harness = new ScrapeHarness();
             harness.Source.Then(Page("p2", Job("1"), Job("2")), Wall(ChallengeKind.Captcha));
 
-            var result = await harness.Build().HandleAsync(
-                harness.Request,
-                TestContext.Current.CancellationToken
-            );
+            var result = await harness
+                .Build()
+                .HandleAsync(harness.Request, TestContext.Current.CancellationToken);
 
             Assert.True(result.IsSuccess);
             Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
