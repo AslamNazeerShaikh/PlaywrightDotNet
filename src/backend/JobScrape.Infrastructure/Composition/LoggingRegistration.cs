@@ -1,4 +1,5 @@
 using System.Globalization;
+using JobScrape.Application.Abstractions;
 using JobScrape.Infrastructure.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,9 @@ namespace JobScrape.Infrastructure.Composition
     /// rendered compact JSON on the console, an async, rolling
     /// compact-JSON <c>.jsonl</c> file sink, and an async, rolling
     /// human-readable <c>.log</c> file sink, both with retention from the
-    /// validated <see cref="LoggingOptions"/>.
+    /// validated <see cref="LoggingOptions"/>. When the <c>Logging</c>
+    /// feature flag is off, Serilog itself is registered but no sinks are
+    /// configured.
     /// </summary>
     public static class LoggingRegistration
     {
@@ -35,7 +38,9 @@ namespace JobScrape.Infrastructure.Composition
         ) => logger.WriteTo.Async(addSink, bufferSize: 10_000, blockWhenFull: true);
 
         /// <summary>
-        /// Registers Serilog as the host's logger.
+        /// Registers Serilog as the host's logger. When the <c>Logging</c>
+        /// feature flag is false, the registration stays (the host owns and
+        /// disposes the logger) but no console or file sinks are configured.
         /// </summary>
         /// <param name="services">The service collection.</param>
         /// <param name="configuration">The app configuration (levels and overrides).</param>
@@ -65,16 +70,16 @@ namespace JobScrape.Infrastructure.Composition
             var application = applicationName ?? ApplicationName;
             var prefix = logFilePrefix ?? "jobscrape-api";
 
-            // Resolving the options here makes an invalid Logging section
-            // fail startup like every other validated section. The static
-            // Log.Logger is preserved: the logger is owned by this host's
-            // container (no process-wide mutable state), and disposing the
-            // host disposes it, which flushes the async file sink.
+            // The static Log.Logger is preserved: the logger is owned by this
+            // host's container (no process-wide mutable state), and disposing
+            // the host disposes it, which flushes the async file sink. The
+            // LoggingOptions are resolved only on the logging-on path, so an
+            // invalid section still fails the host; nothing is written when
+            // the Logging feature flag is off.
             return services.AddSerilog(
                 (provider, logger) =>
                 {
-                    var options = provider.GetRequiredService<IOptions<LoggingOptions>>().Value;
-                    var directory = Path.GetFullPath(options.Directory, contentRoot);
+                    var flags = provider.GetRequiredService<FeatureFlags>();
                     logger
                         .ReadFrom.Configuration(configuration)
                         .ReadFrom.Services(provider)
@@ -89,8 +94,16 @@ namespace JobScrape.Infrastructure.Composition
                         .Enrich.WithAssemblyVersion()
                         .Enrich.WithExceptionDetails()
                         .Enrich.WithDemystifiedStackTraces()
-                        .Enrich.WithProperty("Application", application)
-                        .WriteTo.Console(new RenderedCompactJsonFormatter());
+                        .Enrich.WithProperty("Application", application);
+                    if (!flags.Logging)
+                    {
+                        // No sinks: registration stays so the host owns and
+                        // disposes the logger, but nothing is written.
+                        return;
+                    }
+                    var options = provider.GetRequiredService<IOptions<LoggingOptions>>().Value;
+                    var directory = Path.GetFullPath(options.Directory, contentRoot);
+                    logger.WriteTo.Console(new RenderedCompactJsonFormatter());
                     AddAsyncFileSink(
                         logger,
                         sink =>
