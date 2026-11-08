@@ -526,7 +526,7 @@ export function RunsPage({
               <table className="data" aria-label="Postings">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th className="rank-cell">#</th>
                     <th>Title</th>
                     <th>Company</th>
                     <th>Location</th>
@@ -539,7 +539,7 @@ export function RunsPage({
                 <tbody>
                   {postings.map((p, i) => (
                     <tr key={p.id}>
-                      <td>{postingsOffset + i + 1}</td>
+                      <td className="rank-cell">{postingsOffset + i + 1}</td>
                       <td>
                         <a href={p.url} target="_blank" rel="noopener noreferrer">
                           {p.title}

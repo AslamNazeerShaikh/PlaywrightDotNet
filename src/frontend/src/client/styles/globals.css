@@ -845,6 +845,14 @@ table.data tr[aria-current="true"] td:first-child {
   box-shadow: inset 2px 0 0 var(--sig);
 }
 
+/* Rank stays one stable width: 4ch fits four tabular digits, +20px covers the 10px side padding (border-box). */
+table.data th.rank-cell,
+table.data td.rank-cell {
+  width: 1%;
+  min-width: calc(4ch + 20px);
+  white-space: nowrap;
+}
+
 /* Row controls stay compact and reachable when the wide data table scrolls. */
 table.data th.actions-cell,
 table.data td.actions-cell {
