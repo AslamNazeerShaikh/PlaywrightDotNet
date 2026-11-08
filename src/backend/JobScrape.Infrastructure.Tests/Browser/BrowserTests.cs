@@ -5,6 +5,8 @@ using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Browser;
+using JobScrape.Infrastructure.Sources.Indeed;
+using JobScrape.Infrastructure.Sources.LinkedIn;
 using JobScrape.Infrastructure.Sources.Naukri;
 using JobScrape.Infrastructure.Tests.Sources.Naukri;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -124,10 +126,27 @@ namespace JobScrape.Infrastructure.Tests.Browser
             return new PlaywrightSessionManager(
                 new OneProfile(_profile),
                 _pool,
-                new NoDelay(),
-                new FixedRandom(),
-                new FakeTimeProvider(Now),
-                NullLogger<PlaywrightSessionManager>.Instance
+                Registry(),
+                new FakeTimeProvider(Now)
+            );
+        }
+
+        private JobSourceRegistry Registry()
+        {
+            return new JobSourceRegistry(
+                [
+                    Source(),
+                    new IndeedJobSource(
+                        _pool,
+                        new FakeTimeProvider(Now),
+                        NullLogger<IndeedJobSource>.Instance
+                    ),
+                    new LinkedInJobSource(
+                        _pool,
+                        new FakeTimeProvider(Now),
+                        NullLogger<LinkedInJobSource>.Instance
+                    ),
+                ]
             );
         }
 
@@ -136,7 +155,9 @@ namespace JobScrape.Infrastructure.Tests.Browser
             return new NaukriJobSource(
                 _pool,
                 new FakeTimeProvider(Now),
-                NullLogger<NaukriJobSource>.Instance
+                NullLogger<NaukriJobSource>.Instance,
+                new NoDelay(),
+                new FixedRandom()
             );
         }
 
@@ -198,6 +219,31 @@ namespace JobScrape.Infrastructure.Tests.Browser
             var down = await Sessions().EnsureSessionAsync(SourceKey.Naukri, _profile.Id, Ct);
             Assert.Equal(ChallengeKind.TransientError, down.Kind);
             Assert.Equal(SessionState.New, _profile.State);
+        }
+
+        [Fact]
+        public async Task NonNaukriSourceVerifiesWithoutNaukriClassifier()
+        {
+            // Indeed is never verified by the Naukri classifier: the page
+            // never navigates, the session reports ready, and the profile
+            // is not marked verified.
+            await OpenAsync(Site);
+
+            var assessment = await Sessions()
+                .EnsureSessionAsync(SourceKey.Indeed, _profile.Id, Ct);
+
+            Assert.Equal(ChallengeKind.None, assessment.Kind);
+            Assert.Equal(SessionState.New, _profile.State);
+            Assert.Equal("about:blank", _pool.Find(_profile.Id)?.Url);
+        }
+
+        [Fact]
+        public void NaukriAdapterImplementsTheWarmUpVerifier()
+        {
+            // Composition-level pin: the session manager dispatches warm-up
+            // through ISourceWarmUpVerifier; losing the interface silently
+            // skips warm-up instead of failing the run.
+            Assert.IsAssignableFrom<ISourceWarmUpVerifier>(Source());
         }
 
         [Fact]

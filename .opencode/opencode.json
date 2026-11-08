@@ -1,8 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "plugins": ["superpowers@git+https://github.com/obra/superpowers.git"],
   "experimental": {
     "todo": true
   },
+  "lsp": {},
   "instructions": [
     ".opencode/pstack-models.md",
     ".opencode/instructions/INSTRUCTIONS.md"

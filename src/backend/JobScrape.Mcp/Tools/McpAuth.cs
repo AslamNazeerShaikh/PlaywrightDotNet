@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using JobScrape.Domain.Access;
 using ModelContextProtocol;
 
 namespace JobScrape.Mcp.Tools
@@ -24,8 +25,11 @@ namespace JobScrape.Mcp.Tools
             ArgumentNullException.ThrowIfNull(caller);
             ArgumentNullException.ThrowIfNull(permission);
             if (
-                caller.MustChangePassword
-                || !caller.Permissions.Contains(permission, StringComparer.Ordinal)
+                !PermissionDecision.IsAllowed(
+                    caller.MustChangePassword,
+                    caller.Permissions,
+                    permission
+                )
             )
             {
                 throw McpErrors.From(Errors.AccessDenied());

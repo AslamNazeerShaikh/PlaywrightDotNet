@@ -111,4 +111,67 @@ namespace JobScrape.Application.Features.Sources
             return new SourceListResponse(items, now);
         }
     }
+
+    /// <summary>
+    /// Whether runs against the source can pass the compliance gate.
+    /// </summary>
+    /// <param name="Allowed">True when the configured consent satisfies the tier.</param>
+    /// <param name="Reason">Operator guidance naming what is missing; null when allowed.</param>
+    public sealed record SourceGate(bool Allowed, string? Reason);
+
+    /// <summary>
+    /// The source's policy limits: caps new profiles start with and may only tighten.
+    /// </summary>
+    /// <param name="MaxPages">Result pages per run.</param>
+    /// <param name="MaxJobs">Postings per run.</param>
+    /// <param name="MaxDetails">Detail visits per run.</param>
+    /// <param name="MinDelayMs">Shortest delay between requests.</param>
+    /// <param name="MaxDelayMs">Longest delay between requests.</param>
+    /// <param name="ChallengeCooldownMinutes">Profile cooldown after a wall.</param>
+    public sealed record SourcePolicy(
+        int MaxPages,
+        int MaxJobs,
+        int MaxDetails,
+        int MinDelayMs,
+        int MaxDelayMs,
+        int ChallengeCooldownMinutes
+    );
+
+    /// <summary>
+    /// Today's (UTC) quota usage; zero when no run has touched the day.
+    /// </summary>
+    /// <param name="Date">The UTC day, <c>yyyy-MM-dd</c>.</param>
+    /// <param name="PagesUsed">Result pages fetched today.</param>
+    /// <param name="PageCap">Daily page cap.</param>
+    /// <param name="DetailsUsed">Detail pages visited today.</param>
+    /// <param name="DetailCap">Daily detail cap.</param>
+    /// <param name="RunsUsed">Runs started today.</param>
+    /// <param name="RunCap">Daily run cap, or null for no run cap.</param>
+    /// <param name="Challenges">Walls hit today.</param>
+    public sealed record SourceQuotaUsage(
+        string Date,
+        int PagesUsed,
+        int PageCap,
+        int DetailsUsed,
+        int DetailCap,
+        int RunsUsed,
+        int? RunCap,
+        int Challenges
+    );
+
+    /// <summary>
+    /// The source's circuit breaker; <c>Closed</c> with no failures when it never tripped.
+    /// </summary>
+    /// <param name="State"><c>Closed</c>, <c>Open</c>, or <c>HalfOpen</c>.</param>
+    /// <param name="OpenUntil">When a probe may be attempted, while open.</param>
+    /// <param name="CanProbe">True when open and the cooldown has elapsed.</param>
+    /// <param name="ConsecutiveFailures">Walls in a row since the last success.</param>
+    /// <param name="RecentFailures">Walls inside the 24-hour window.</param>
+    public sealed record SourceCircuit(
+        string State,
+        DateTimeOffset? OpenUntil,
+        bool CanProbe,
+        int ConsecutiveFailures,
+        int RecentFailures
+    );
 }
