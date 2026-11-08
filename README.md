@@ -83,6 +83,33 @@ Browse every user table in the SQLite store. Live schema, paged rows, CRUD, live
 <img src="docs/screenshots/08-database-dark.png" width="49%" alt="Database page in dark theme" />
 </div>
 
+### 09 Users
+
+Signed-in account, password change, plus admin user list, create, and role assignment.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/09-users-light.png" width="49%" alt="Users page in light theme" />
+<img src="docs/screenshots/09-users-dark.png" width="49%" alt="Users page in dark theme" />
+</div>
+
+### 10 Roles
+
+Role catalog with per-role permission grants across the permission keys.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/10-roles-light.png" width="49%" alt="Roles page in light theme" />
+<img src="docs/screenshots/10-roles-dark.png" width="49%" alt="Roles page in dark theme" />
+</div>
+
+### 11 Quotas
+
+Usage quota definitions with per-user limits and fixed windows.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/11-quotas-light.png" width="49%" alt="Quotas page in light theme" />
+<img src="docs/screenshots/11-quotas-dark.png" width="49%" alt="Quotas page in dark theme" />
+</div>
+
 ## Verified stack
 
 Status means In use (referenced by a project today) or Planned (design-matrix version, no package reference yet).
