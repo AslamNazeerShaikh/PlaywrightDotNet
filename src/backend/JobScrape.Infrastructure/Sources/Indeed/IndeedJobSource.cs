@@ -159,9 +159,7 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 return new SearchPageResult(
                     parsed.Jobs,
                     parsed.HasNext
-                        ? (start + IndeedUrlBuilder.PageSize).ToString(
-                            CultureInfo.InvariantCulture
-                        )
+                        ? (start + IndeedUrlBuilder.PageSize).ToString(CultureInfo.InvariantCulture)
                         : null,
                     parsed.FirstJobKey is null && parsed.ResultCount is null
                         ? null

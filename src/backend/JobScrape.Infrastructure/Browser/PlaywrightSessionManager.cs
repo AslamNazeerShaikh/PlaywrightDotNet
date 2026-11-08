@@ -66,10 +66,9 @@ namespace JobScrape.Infrastructure.Browser
 
             // The source adapter owns its warm-up; an adapter without one
             // (or an unregistered source) reports ready without verifying.
-            var assessment =
-                _sources.Find(source) is ISourceWarmUpVerifier verifier
-                    ? await verifier.VerifyAsync(page, cancellationToken)
-                    : null;
+            var assessment = _sources.Find(source) is ISourceWarmUpVerifier verifier
+                ? await verifier.VerifyAsync(page, cancellationToken)
+                : null;
             if (assessment is null)
             {
                 return ChallengeAssessment.Clear;

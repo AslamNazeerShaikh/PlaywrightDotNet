@@ -133,21 +133,19 @@ namespace JobScrape.Infrastructure.Tests.Browser
 
         private JobSourceRegistry Registry()
         {
-            return new JobSourceRegistry(
-                [
-                    Source(),
-                    new IndeedJobSource(
-                        _pool,
-                        new FakeTimeProvider(Now),
-                        NullLogger<IndeedJobSource>.Instance
-                    ),
-                    new LinkedInJobSource(
-                        _pool,
-                        new FakeTimeProvider(Now),
-                        NullLogger<LinkedInJobSource>.Instance
-                    ),
-                ]
-            );
+            return new JobSourceRegistry([
+                Source(),
+                new IndeedJobSource(
+                    _pool,
+                    new FakeTimeProvider(Now),
+                    NullLogger<IndeedJobSource>.Instance
+                ),
+                new LinkedInJobSource(
+                    _pool,
+                    new FakeTimeProvider(Now),
+                    NullLogger<LinkedInJobSource>.Instance
+                ),
+            ]);
         }
 
         private NaukriJobSource Source()
@@ -229,8 +227,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
             // is not marked verified.
             await OpenAsync(Site);
 
-            var assessment = await Sessions()
-                .EnsureSessionAsync(SourceKey.Indeed, _profile.Id, Ct);
+            var assessment = await Sessions().EnsureSessionAsync(SourceKey.Indeed, _profile.Id, Ct);
 
             Assert.Equal(ChallengeKind.None, assessment.Kind);
             Assert.Equal(SessionState.New, _profile.State);
