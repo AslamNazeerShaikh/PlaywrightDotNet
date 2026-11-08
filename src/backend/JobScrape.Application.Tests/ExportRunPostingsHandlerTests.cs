@@ -1,3 +1,4 @@
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Common;
@@ -11,6 +12,14 @@ namespace JobScrape.Application.Tests
         private static readonly DateTimeOffset Now = new(2026, 11, 2, 8, 0, 0, TimeSpan.Zero);
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+        private static FeatureFlags Flags => new(
+            Authentication: true,
+            Logging: true,
+            Health: true,
+            CsvExport: true,
+            ExcelExport: true
+        );
 
         private static RunResponse Run()
         {
@@ -54,7 +63,8 @@ namespace JobScrape.Application.Tests
             var run = Run();
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting("101"), Posting("102")]),
-                [new FakeWriter(ExportFormat.Csv), new FakeWriter(ExportFormat.Xlsx)]
+                [new FakeWriter(ExportFormat.Csv), new FakeWriter(ExportFormat.Xlsx)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -80,7 +90,8 @@ namespace JobScrape.Application.Tests
             var run = Run();
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting("101")]),
-                [new FakeWriter(ExportFormat.Xlsx)]
+                [new FakeWriter(ExportFormat.Xlsx)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -104,7 +115,8 @@ namespace JobScrape.Application.Tests
             var seeded = Run() with { ProfileName = null };
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(seeded, [Posting("101")]),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -128,7 +140,8 @@ namespace JobScrape.Application.Tests
             var run = Run() with { Companies = ["Contoso"] };
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting("101", "Contoso"), Posting("102", "Fabrikam")]),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -151,7 +164,8 @@ namespace JobScrape.Application.Tests
             var run = Run() with { Companies = ["Contoso"] };
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting("101", "Contoso"), Posting("102", "Fabrikam")]),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -178,7 +192,8 @@ namespace JobScrape.Application.Tests
             var run = Run();
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting("101")]),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -198,10 +213,13 @@ namespace JobScrape.Application.Tests
             var store = new FakeExportStore(null, []);
             var writers = new IPostingExportWriter[] { new FakeWriter(ExportFormat.Csv) };
             Assert.Throws<ArgumentNullException>(() =>
-                new ExportRunPostingsHandler(null!, writers)
+                new ExportRunPostingsHandler(null!, writers, Flags)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new ExportRunPostingsHandler(store, (IEnumerable<IPostingExportWriter>)null!)
+                new ExportRunPostingsHandler(store, (IEnumerable<IPostingExportWriter>)null!, Flags)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new ExportRunPostingsHandler(store, writers, null!)
             );
         }
 
@@ -209,7 +227,7 @@ namespace JobScrape.Application.Tests
         public async Task EmptyIdFailsValidationBeforeAnyRead()
         {
             var store = new FakeExportStore(null, []);
-            var handler = new ExportRunPostingsHandler(store, [new FakeWriter(ExportFormat.Csv)]);
+            var handler = new ExportRunPostingsHandler(store, [new FakeWriter(ExportFormat.Csv)], Flags);
 
             var result = await handler.HandleAsync(
                 Guid.Empty,
@@ -228,7 +246,8 @@ namespace JobScrape.Application.Tests
         {
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(null, []),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -248,7 +267,8 @@ namespace JobScrape.Application.Tests
             var run = Run();
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, null),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -262,13 +282,43 @@ namespace JobScrape.Application.Tests
             Assert.Equal("RUN_NOT_FOUND", result.Error.Code);
         }
 
+        // The writer is missing and the requested format's flag is off: the
+        // disabled-format gate answers before the writer lookup runs, so the
+        // store is never read.
         [Fact]
-        public async Task MissingWriterIsUnsupportedFormat()
+        public async Task MissingWriterWithDisabledFormatIsFeatureDisabled()
+        {
+            var run = Run();
+            var store = new FakeExportStore(run, [Posting()]);
+            var flags = Flags with { ExcelExport = false };
+            var handler = new ExportRunPostingsHandler(
+                store,
+                [new FakeWriter(ExportFormat.Csv)],
+                flags
+            );
+
+            var result = await handler.HandleAsync(
+                run.Id,
+                ExportFormat.Xlsx,
+                CompanyExportGroup.All,
+                Ct
+            );
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal("FEATURE_DISABLED", result.Error.Code);
+            Assert.Equal(0, store.Reads);
+        }
+
+        // The writer is missing but the format is enabled: the unsupported-format
+        // error lists the enabled formats.
+        [Fact]
+        public async Task MissingWriterWithEnabledFormatIsUnsupportedFormat()
         {
             var run = Run();
             var handler = new ExportRunPostingsHandler(
                 new FakeExportStore(run, [Posting()]),
-                [new FakeWriter(ExportFormat.Csv)]
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
             );
 
             var result = await handler.HandleAsync(
@@ -280,6 +330,10 @@ namespace JobScrape.Application.Tests
 
             Assert.False(result.IsSuccess);
             Assert.Equal("EXPORT_FORMAT_UNSUPPORTED", result.Error.Code);
+            Assert.Equal(
+                "Export format 'Xlsx' is not supported. Use 'csv' or 'xlsx'.",
+                result.Error.Detail
+            );
         }
 
         private sealed class FakeExportStore(

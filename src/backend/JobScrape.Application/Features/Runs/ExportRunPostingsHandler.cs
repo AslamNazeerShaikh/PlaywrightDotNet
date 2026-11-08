@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Sourcing;
 
@@ -8,7 +9,9 @@ namespace JobScrape.Application.Features.Runs
     /// <summary>
     /// Exports one run's postings to CSV or XLSX. No format string reaches
     /// the writers: the edge parses the query into <see cref="ExportFormat"/>,
-    /// so an unsupported format is rejected here before any store read.
+    /// so an unsupported format is rejected here before any store read, and
+    /// a defined format whose feature flag is off answers
+    /// <c>FEATURE_DISABLED</c> at the same point.
     /// The file is named for the run's source, profile, creation stamp, and
     /// short run id, so downloads sort and identify without opening.
     /// </summary>
@@ -29,19 +32,27 @@ namespace JobScrape.Application.Features.Runs
         // All injected and never mutated.
         private readonly IRunStore _store;
         private readonly IReadOnlyList<IPostingExportWriter> _writers;
+        private readonly FeatureFlags _flags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExportRunPostingsHandler"/> class.
         /// </summary>
         /// <param name="store">The run read store.</param>
         /// <param name="writers">The format writers; at most one per format. Must not be null.</param>
+        /// <param name="flags">The feature flags bound at host startup. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public ExportRunPostingsHandler(IRunStore store, IEnumerable<IPostingExportWriter> writers)
+        public ExportRunPostingsHandler(
+            IRunStore store,
+            IEnumerable<IPostingExportWriter> writers,
+            FeatureFlags flags
+        )
         {
             ArgumentNullException.ThrowIfNull(store);
             ArgumentNullException.ThrowIfNull(writers);
+            ArgumentNullException.ThrowIfNull(flags);
             _store = store;
             _writers = writers.ToArray();
+            _flags = flags;
         }
 
         /// <summary>
@@ -54,8 +65,10 @@ namespace JobScrape.Application.Features.Runs
         /// <returns>
         /// The rendered file; <c>VALIDATION_FAILED</c> for an empty id or a
         /// company slice without a company list, <c>RUN_NOT_FOUND</c> for a
-        /// missing run, or <c>EXPORT_FORMAT_UNSUPPORTED</c> when
-        /// <paramref name="format"/> is undefined or no writer renders it.
+        /// missing run, <c>FEATURE_DISABLED</c> when
+        /// <paramref name="format"/> is turned off, or
+        /// <c>EXPORT_FORMAT_UNSUPPORTED</c> when <paramref name="format"/>
+        /// is undefined or no writer renders it.
         /// </returns>
         public async Task<Result<ExportFile>> HandleAsync(
             Guid runId,
@@ -71,7 +84,12 @@ namespace JobScrape.Application.Features.Runs
 
             if (!Enum.IsDefined(format))
             {
-                return Result.Fail<ExportFile>(Errors.ExportFormatUnsupported(format.ToString()));
+                return Result.Fail<ExportFile>(
+                    Errors.ExportFormatUnsupported(
+                        format.ToString(),
+                        ExportFormatSupport.Enabled(_flags)
+                    )
+                );
             }
 
             if (!Enum.IsDefined(group))
@@ -87,10 +105,23 @@ namespace JobScrape.Application.Features.Runs
                 );
             }
 
+            if (!ExportFormatSupport.IsEnabled(format, _flags))
+            {
+                // Disabled answers the feature-disabled 404 before any writer
+                // lookup or store read: the caller cannot distinguish
+                // "absent" from "off", and no disabled work is constructed.
+                return Result.Fail<ExportFile>(Errors.FeatureDisabled());
+            }
+
             var writer = _writers.FirstOrDefault(candidate => candidate.Format == format);
             if (writer is null)
             {
-                return Result.Fail<ExportFile>(Errors.ExportFormatUnsupported(format.ToString()));
+                return Result.Fail<ExportFile>(
+                    Errors.ExportFormatUnsupported(
+                        format.ToString(),
+                        ExportFormatSupport.Enabled(_flags)
+                    )
+                );
             }
 
             var run = await _store.GetAsync(runId, cancellationToken);
