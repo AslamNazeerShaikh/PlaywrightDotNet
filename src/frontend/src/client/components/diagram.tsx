@@ -30,6 +30,23 @@ export function startMarkerId(prefix: string, tone: DiagramTone): string {
   return `${prefix}-start-${tone}`;
 }
 
+/** Normalizes a PRAGMA on_delete wire value: trims whitespace, uppercases. Null stays null. */
+export function actionLabel(onDelete: string | null | undefined): string | null {
+  return onDelete?.trim().toUpperCase() ?? null;
+}
+
+/** Maps a raw on_delete wire value to its diagram tone. Trims via actionLabel. */
+export function accentTone(onDelete: string | null | undefined): DiagramTone {
+  const action = actionLabel(onDelete);
+  if (action === "CASCADE") {
+    return "red";
+  }
+  if (action === "RESTRICT") {
+    return "green";
+  }
+  return "gray";
+}
+
 /** Notched arrowheads, one per tone. `userSpaceOnUse` keeps them a fixed 8px at any stroke width. */
 export function DiagramDefs({ prefix }: { prefix: string }) {
   return (

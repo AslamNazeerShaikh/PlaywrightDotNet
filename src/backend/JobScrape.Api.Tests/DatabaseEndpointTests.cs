@@ -54,6 +54,34 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task ScrapeRunsSchemaExposesOnDeleteOnTheForeignKey()
+        {
+            using var client = await _factory.CreateAdminClientAsync(
+                TestContext.Current.CancellationToken
+            );
+            using var response = await client.GetAsync(
+                "api/v1/db/tables/scrape_runs/schema",
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(
+                TestContext.Current.CancellationToken
+            );
+            var foreignKeys = body.GetProperty("foreignKeys");
+            var foreignKey = Assert.Single(foreignKeys.EnumerateArray());
+            Assert.Equal("profile_id", foreignKey.GetProperty("column").GetString());
+            Assert.True(
+                foreignKey.TryGetProperty("onDelete", out var onDelete),
+                "FK payload must carry the camelCase onDelete property."
+            );
+            Assert.False(foreignKey.TryGetProperty("OnDelete", out _));
+            Assert.Equal(
+                "RESTRICT",
+                onDelete.GetString()?.Trim().ToUpperInvariant()
+            );
+        }
+
+        [Fact]
         public async Task RowsAndCrudRoundTrip()
         {
             using var client = await _factory.CreateAdminClientAsync(
