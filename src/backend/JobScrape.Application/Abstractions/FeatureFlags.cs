@@ -6,7 +6,9 @@ namespace JobScrape.Application.Abstractions
     /// for the application layer; handlers take this record, never
     /// <c>IOptions&lt;T&gt;</c>.
     /// </summary>
-    /// <param name="Authentication">When false, the host runs anonymous: callers act as the local operator.</param>
+    /// <param name="Authentication">Reserved for the anonymous-mode follow-up
+    /// (docs/superpowers/plans/2026-11-08-anonymous-mode.md): defaults true;
+    /// false currently changes nothing.</param>
     /// <param name="Logging">When false, Serilog registers with no sinks.</param>
     /// <param name="Health">When false, the health route returns the feature-disabled 404.</param>
     /// <param name="CsvExport">When false, the CSV export writer is not registered.</param>

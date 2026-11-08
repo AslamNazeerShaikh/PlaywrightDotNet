@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using JobScrape.Api;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -9,6 +10,15 @@ namespace JobScrape.Api.Tests
 {
     public sealed class FeaturesEndpointTests : IClassFixture<ApiFactory>
     {
+        private static readonly string[] ExpectedKeys =
+        [
+            "authentication",
+            "csvExport",
+            "excelExport",
+            "health",
+            "logging",
+        ];
+
         private readonly ApiFactory _factory;
 
         public FeaturesEndpointTests(ApiFactory factory)
@@ -19,7 +29,11 @@ namespace JobScrape.Api.Tests
         // The brief names these tests with underscores; CA1707 would fail the
         // build, so the rule is suppressed on the two methods, not repo-wide.
         [Fact]
-        [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "Test names fixed by the feature-flags-foundation task brief.")]
+        [SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
         public async Task FeaturesEndpoint_ReturnsShippedDefaults()
         {
             using var client = _factory.CreateClient();
@@ -30,6 +44,16 @@ namespace JobScrape.Api.Tests
             );
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var raw = await response.Content.ReadAsStringAsync(
+                TestContext.Current.CancellationToken
+            );
+            using var document = JsonDocument.Parse(raw);
+            var keys = document
+                .RootElement.EnumerateObject()
+                .Select(property => property.Name)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+            Assert.Equal(ExpectedKeys, keys);
             var payload = await response.Content.ReadFromJsonAsync<FeaturesPayload>(
                 TestContext.Current.CancellationToken
             );
@@ -42,7 +66,11 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
-        [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "Test names fixed by the feature-flags-foundation task brief.")]
+        [SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
         public async Task FeaturesEndpoint_ReflectsOverride()
         {
             using var factory = _factory.WithWebHostBuilder(builder =>

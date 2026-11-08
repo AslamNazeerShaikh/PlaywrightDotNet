@@ -50,13 +50,13 @@ namespace JobScrape.Api.Controllers
         /// </returns>
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IResult> GetAsync(
-            CancellationToken cancellationToken
-        )
+        public async Task<IResult> GetAsync(CancellationToken cancellationToken)
         {
-            // The disabled route reveals nothing: a 404 identical to an
-            // absent route, per the toggle design. The MCP tool and the
-            // handler stay registered on purpose.
+            // The disabled route answers the 404 problem with the stable
+            // FEATURE_DISABLED code the UI routes on — not an absent route:
+            // an absent route answers 401 to anonymous callers under the
+            // auth fallback, while this route stays anonymous by design.
+            // The MCP tool and the handler stay registered on purpose.
             if (!_flags.Health)
             {
                 return Errors.FeatureDisabled().ToProblem();

@@ -1,7 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using JobScrape.Application.Abstractions;
 using JobScrape.Domain.Common;
+using JobScrape.Infrastructure.Composition;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Runtime;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
@@ -260,16 +264,6 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         [Fact]
         public void FeaturesDefaultsAreAllTrue()
         {
-            static bool IsValid(object options)
-            {
-                return Validator.TryValidateObject(
-                    options,
-                    new ValidationContext(options),
-                    null,
-                    true
-                );
-            }
-
             var features = new FeaturesOptions();
 
             Assert.True(features.Authentication);
@@ -278,7 +272,28 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.True(features.CsvExport);
             Assert.True(features.ExcelExport);
             Assert.Equal("JobScrape:Features", FeaturesOptions.SectionName);
-            Assert.True(IsValid(features));
+        }
+
+        [Fact]
+        public void FeaturesBindingMapsOverridesToFeatureFlags()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?> { ["JobScrape:Features:Health"] = "false" }
+                )
+                .Build();
+            var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddJobScrapeOptions();
+            using var provider = services.BuildServiceProvider();
+
+            var flags = provider.GetRequiredService<FeatureFlags>();
+
+            Assert.False(flags.Health);
+            Assert.True(flags.Authentication);
+            Assert.True(flags.Logging);
+            Assert.True(flags.CsvExport);
+            Assert.True(flags.ExcelExport);
         }
 
         [Fact]
@@ -291,14 +306,12 @@ namespace JobScrape.Infrastructure.Tests.Configuration
 
             Assert.True(off.Validate(null, new LoggingOptions { Directory = null! }).Succeeded);
             Assert.True(off.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = "   " }).Succeeded);
             var missing = on.Validate(null, new LoggingOptions { Directory = null! });
             Assert.False(missing.Succeeded);
             Assert.Contains(
                 missing.Failures!,
-                failure => failure.Contains(
-                    "JobScrape:Logging:Directory",
-                    StringComparison.Ordinal
-                )
+                failure => failure.Contains("JobScrape:Logging:Directory", StringComparison.Ordinal)
             );
             Assert.False(on.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
             Assert.True(on.Validate(null, new LoggingOptions()).Succeeded);
