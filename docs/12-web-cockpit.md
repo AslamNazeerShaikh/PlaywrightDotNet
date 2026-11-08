@@ -1001,6 +1001,13 @@ async function sse(req: Request): Promise<Response> {
 - **BFF→API:** `JOBLENS_API_TOKEN` is server-only, never inlined, never logged.
 - **Remote access:** disabled by default. LAN access requires explicit `JOBLENS_ALLOW_REMOTE=1`, TLS, and a trusted network (Tailscale/SSH tunnel preferred).
 
+### 13.4.1 Signing in (local dev)
+
+- **Default admin:** seeded from appsettings `JobScrape:AdminSeed` (`admin@example.com`). The file default is development-only.
+- **First run:** a seeded account completes `setup-password` once, trading the seeded secret for an operator password. Until then sign-in stays locked.
+- **After setup:** sign in at `#/overview` with email + password. The BFF holds the bearer server-side; the deck keeps an `HttpOnly` session cookie and never logs the secret.
+- **Production:** CI/CD replaces the seed values from the secret store at deploy time. Never ship the development defaults.
+
 ### 13.5 Security headers
 
 ```text

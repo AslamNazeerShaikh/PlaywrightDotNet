@@ -17,6 +17,8 @@
 const BFF = process.env["BFF_URL"] ?? "https://127.0.0.1:3000";
 const OUT = process.env["SHOT_OUT"] ?? "docs/screenshots";
 const CDP = process.env["CDP_PORT"] ?? "9222";
+const ADMIN_EMAIL = process.env["ADMIN_EMAIL"] ?? "admin@example.com";
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "AslamAslam@123";
 const routes = [
   ["01-overview", "overview"],
   ["02-health", "health"],
@@ -26,6 +28,9 @@ const routes = [
   ["06-runs", "runs"],
   ["07-topology", "topology"],
   ["08-database", "database"],
+  ["09-users", "users"],
+  ["10-roles", "roles"],
+  ["11-quotas", "quotas"],
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -101,6 +106,26 @@ async function shot(path: string) {
 
 await send("Page.enable");
 await send("Runtime.enable");
+
+// Sign in once: every deck route sits behind the login gate. Fills the
+// React-controlled form via the native value setter so onInput fires,
+// submits, then polls for the deck theme toggle (absent on the login page).
+await send("Page.navigate", { url: `${BFF}/#/overview` });
+await sleep(2500);
+await evalJs(
+  `(() => { const email = ${JSON.stringify(ADMIN_EMAIL)}; const pass = ${JSON.stringify(ADMIN_PASSWORD)}; const set = (el, v) => { const d = Object.getOwnPropertyDescriptor(el.__proto__, 'value') ?? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'); d?.set?.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }; const e = document.querySelector('input[name="email"]'); const p = document.querySelector('input[name="password"]'); if (e) set(e, email); if (p) set(p, pass); return !!(e && p); })()`,
+);
+await evalJs(
+  `document.querySelector('form[aria-label="Sign in"] button[type="submit"]')?.click()`,
+);
+for (let i = 0; i < 40; i++) {
+  const deck = await evalJs(
+    `document.querySelector('[title="Toggle color theme"]') ? "READY" : "WAITING"`,
+  );
+  if (String(deck) === "READY") break;
+  if (i === 39) throw new Error("deck never rendered after sign-in");
+  await sleep(500);
+}
 
 try {
   for (const [slug, route] of routes) {
