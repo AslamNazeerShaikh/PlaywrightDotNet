@@ -634,6 +634,25 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task WallBeforePage3RecordsOutcomeWithoutThrowing()
+        {
+            // Pins the pre-refactor ordering: a wall on page 2 ends pagination
+            // before page 3 is requested, the earlier page stays saved, and the
+            // paused run is a recorded success rather than an exception.
+            var harness = new ScrapeHarness();
+            harness.Source.Then(Page("p2", Job("1"), Job("2")), Wall(ChallengeKind.Captcha));
+
+            var result = await harness.Build().HandleAsync(
+                harness.Request,
+                TestContext.Current.CancellationToken
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
+            Assert.True(harness.Store.Saves > 0);
+        }
+
+        [Fact]
         public async Task AccessDeniedPausesAndOpensTheCircuit()
         {
             var harness = new ScrapeHarness();
