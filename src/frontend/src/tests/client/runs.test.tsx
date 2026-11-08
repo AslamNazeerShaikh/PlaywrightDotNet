@@ -371,6 +371,11 @@ describe("runs page", () => {
     expect(queries.getByRole("columnheader", { name: "#" })).toBeDefined();
     expect(queries.getByRole("columnheader", { name: "#" }).className).toContain("rank-cell");
     const firstDataRow = queries.getByRole("table", { name: "Postings" }).querySelector("tbody tr");
+    expect(queries.getByRole("columnheader", { name: "Posted" }).className).toContain(
+      "posted-cell",
+    );
+    const postedCell = firstDataRow?.children[6];
+    expect(postedCell?.className).toContain("posted-cell");
     expect(firstDataRow?.firstElementChild?.className).toContain("rank-cell");
     expect(firstDataRow?.firstElementChild?.textContent).toBe("1");
     const csv = queries.getByRole("button", { name: "Export all as CSV" });
