@@ -853,6 +853,12 @@ table.data td.rank-cell {
   white-space: nowrap;
 }
 
+/* Dates break mid-string under the table's break-word rules; nowrap pins the 10-char ISO date to one line. */
+table.data th.posted-cell,
+table.data td.posted-cell {
+  white-space: nowrap;
+}
+
 /* Row controls stay compact and reachable when the wide data table scrolls. */
 table.data th.actions-cell,
 table.data td.actions-cell {

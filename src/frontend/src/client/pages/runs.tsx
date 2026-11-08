@@ -532,7 +532,7 @@ export function RunsPage({
                     <th>Location</th>
                     <th>Experience</th>
                     <th>Salary</th>
-                    <th>Posted</th>
+                    <th className="posted-cell">Posted</th>
                     <th>Skills</th>
                   </tr>
                 </thead>
@@ -550,7 +550,9 @@ export function RunsPage({
                       <td>{p.location ?? "—"}</td>
                       <td>{p.experience ?? "—"}</td>
                       <td>{p.salary ?? "—"}</td>
-                      <td>{p.postedAt === null ? "—" : p.postedAt.slice(0, 10)}</td>
+                      <td className="posted-cell">
+                        {p.postedAt === null ? "—" : p.postedAt.slice(0, 10)}
+                      </td>
                       <td>{p.skills.slice(0, 4).join(", ") || "—"}</td>
                     </tr>
                   ))}
