@@ -368,6 +368,9 @@ describe("runs page", () => {
         "Senior .NET Developer",
       ),
     );
+    expect(queries.getByRole("columnheader", { name: "#" })).toBeDefined();
+    const firstDataRow = queries.getByRole("table", { name: "Postings" }).querySelector("tbody tr");
+    expect(firstDataRow?.firstElementChild?.textContent).toBe("1");
     const csv = queries.getByRole("button", { name: "Export all as CSV" });
     expect(csv.textContent).toBe("CSV");
     const xlsx = queries.getByRole("button", { name: "Export all as XLSX" });
