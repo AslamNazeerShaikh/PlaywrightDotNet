@@ -357,6 +357,8 @@ export interface DbForeignKeyInfo {
   column: string;
   referencedTable: string;
   referencedColumn: string;
+  /** Wire value from PRAGMA foreign_key_list on_delete, trimmed. Absent on older payloads. */
+  onDelete?: string | null;
 }
 
 export interface DbTableSchema {

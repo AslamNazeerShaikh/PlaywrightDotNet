@@ -1175,6 +1175,13 @@ abbr.abbr {
   grid-column: span 12;
 }
 
+/* The schema table and its ERD pair up half and half; stack them once the half cell cannot fit the 34rem schema table. */
+@media (max-width: 1200px) {
+  .deck > .db-pair {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Right rail for a tall diagram: stack the paired cards instead of stretching one. */
 .module-stack {
   grid-column: span 5;

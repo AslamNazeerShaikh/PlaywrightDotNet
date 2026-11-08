@@ -193,7 +193,8 @@ namespace JobScrape.Infrastructure.Persistence
                     new DatabaseForeignKeyInfo(
                         GetString(values, "from") ?? string.Empty,
                         GetString(values, "table") ?? string.Empty,
-                        GetString(values, "to") ?? string.Empty
+                        GetString(values, "to") ?? string.Empty,
+                        GetString(values, "on_delete")?.Trim()
                     )
                 );
             }

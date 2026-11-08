@@ -66,12 +66,16 @@ namespace JobScrape.Application.Abstractions
     );
 
     /// <summary>
-    /// Foreign key metadata for one table.
+    /// Foreign key metadata for one table. <see cref="OnDelete"/> carries the
+    /// PRAGMA <c>on_delete</c> action with surrounding whitespace removed. It is
+    /// one of NO ACTION, RESTRICT, SET NULL, SET DEFAULT, or CASCADE; it is null
+    /// when the row exposes none.
     /// </summary>
     public sealed record DatabaseForeignKeyInfo(
         string Column,
         string ReferencedTable,
-        string ReferencedColumn
+        string ReferencedColumn,
+        string? OnDelete
     );
 
     /// <summary>
