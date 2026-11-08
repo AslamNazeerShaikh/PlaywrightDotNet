@@ -526,18 +526,20 @@ export function RunsPage({
               <table className="data" aria-label="Postings">
                 <thead>
                   <tr>
+                    <th className="rank-cell">#</th>
                     <th>Title</th>
                     <th>Company</th>
                     <th>Location</th>
                     <th>Experience</th>
                     <th>Salary</th>
-                    <th>Posted</th>
+                    <th className="posted-cell">Posted</th>
                     <th>Skills</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {postings.map((p) => (
+                  {postings.map((p, i) => (
                     <tr key={p.id}>
+                      <td className="rank-cell">{postingsOffset + i + 1}</td>
                       <td>
                         <a href={p.url} target="_blank" rel="noopener noreferrer">
                           {p.title}
@@ -548,7 +550,9 @@ export function RunsPage({
                       <td>{p.location ?? "—"}</td>
                       <td>{p.experience ?? "—"}</td>
                       <td>{p.salary ?? "—"}</td>
-                      <td>{p.postedAt === null ? "—" : p.postedAt.slice(0, 10)}</td>
+                      <td className="posted-cell">
+                        {p.postedAt === null ? "—" : p.postedAt.slice(0, 10)}
+                      </td>
                       <td>{p.skills.slice(0, 4).join(", ") || "—"}</td>
                     </tr>
                   ))}

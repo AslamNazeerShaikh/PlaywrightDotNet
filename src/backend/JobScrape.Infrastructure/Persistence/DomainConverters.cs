@@ -1,5 +1,6 @@
 using System.Text.Json;
 using JobScrape.Domain.Common;
+using JobScrape.Domain.Identity;
 using JobScrape.Domain.Sourcing;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -154,6 +155,85 @@ namespace JobScrape.Infrastructure.Persistence
         );
 
         /// <summary>
+        /// <see cref="Domain.Identity.UserId"/> as a GUID.
+        /// </summary>
+        public static readonly ValueConverter<UserId, Guid> UserId = new(
+            id => id.Value,
+            value => Domain.Identity.UserId.From(value)
+        );
+
+        /// <summary>
+        /// <see cref="Domain.Identity.RoleId"/> as a GUID.
+        /// </summary>
+        public static readonly ValueConverter<RoleId, Guid> RoleId = new(
+            id => id.Value,
+            value => Domain.Identity.RoleId.From(value)
+        );
+
+        /// <summary>
+        /// <see cref="Domain.Identity.PasswordHash"/> as
+        /// <c>iterations:salt:hash</c> with base64 parts. Reads go back
+        /// through <c>Restore</c> so a corrupt row fails loudly on load.
+        /// </summary>
+        public static readonly ValueConverter<PasswordHash, string> PasswordHash = new(
+            hash => WritePasswordHash(hash),
+            value => ReadPasswordHash(value)
+        );
+
+        /// <summary>
+        /// A user's assigned roles as a JSON array of GUIDs. The aggregate
+        /// mutates the list in place, so the comparer snapshots by value.
+        /// </summary>
+        public static readonly ValueConverter<List<RoleId>, string> RoleIdList = new(
+            ids => Json.WriteGuidList(ids.Select(id => id.Value).ToArray()),
+            json => Json.ReadGuidList(json).Select(Domain.Identity.RoleId.From).ToList()
+        );
+
+        /// <summary>
+        /// Detects role-assignment changes by value, not by list reference.
+        /// </summary>
+        public static readonly ValueComparer<List<RoleId>> RoleIdListComparer = new(
+            (left, right) =>
+                left == null
+                    ? right == null
+                    : right != null
+                        && left.Select(id => id.Value).SequenceEqual(right.Select(id => id.Value)),
+            ids => ids.Aggregate(0, (hash, id) => HashCode.Combine(hash, id.Value.GetHashCode())),
+            ids => ids.ToList()
+        );
+
+        /// <summary>
+        /// A role's granted permissions as a JSON array of key strings. The
+        /// aggregate mutates the list in place, so the comparer snapshots by
+        /// value.
+        /// </summary>
+        public static readonly ValueConverter<List<PermissionKey>, string> PermissionList = new(
+            keys => Json.WriteStringList(keys.Select(key => key.Value).ToArray()),
+            // Syntactically invalid stored keys throw at load time via
+            // PermissionKey.From, so only catalog-unknown keys reach LoginHandler.
+            json => Json.ReadStringList(json).Select(Domain.Identity.PermissionKey.From).ToList()
+        );
+
+        /// <summary>
+        /// Detects permission-grant changes by value, not by list reference.
+        /// </summary>
+        public static readonly ValueComparer<List<PermissionKey>> PermissionListComparer = new(
+            (left, right) =>
+                left == null
+                    ? right == null
+                    : right != null
+                        && left.Select(key => key.Value)
+                            .SequenceEqual(right.Select(key => key.Value)),
+            keys =>
+                keys.Aggregate(
+                    0,
+                    (hash, key) =>
+                        HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(key.Value))
+                ),
+            keys => keys.ToList()
+        );
+
+        /// <summary>
         /// Detects skill changes by normalized name and order, not by list reference.
         /// </summary>
         public static readonly ValueComparer<IReadOnlyList<JobSkill>> SkillsComparer = new(
@@ -174,6 +254,50 @@ namespace JobScrape.Infrastructure.Persistence
                 ),
             skills => skills.ToArray()
         );
+
+        /// <summary>
+        /// Writes a password hash as <c>iterations:salt:hash</c>.
+        /// </summary>
+        /// <param name="hash">The hash.</param>
+        /// <returns>The stored form.</returns>
+        private static string WritePasswordHash(Domain.Identity.PasswordHash hash)
+        {
+            return string.Concat(
+                hash.Iterations.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ":",
+                Convert.ToBase64String(hash.Salt),
+                ":",
+                Convert.ToBase64String(hash.Hash)
+            );
+        }
+
+        /// <summary>
+        /// Reads a stored password hash back through the validating factory.
+        /// </summary>
+        /// <param name="value">The stored form.</param>
+        /// <returns>The rehydrated hash.</returns>
+        private static Domain.Identity.PasswordHash ReadPasswordHash(string value)
+        {
+            var parts = value.Split(':');
+            if (
+                parts.Length != 3
+                || !int.TryParse(
+                    parts[0],
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var iterations
+                )
+            )
+            {
+                throw new System.Text.Json.JsonException("Stored password hash is malformed.");
+            }
+
+            return Domain.Identity.PasswordHash.Restore(
+                Convert.FromBase64String(parts[1]),
+                Convert.FromBase64String(parts[2]),
+                iterations
+            );
+        }
 
         /// <summary>
         /// JSON shapes for multi-field value objects. Private DTOs keep the
@@ -337,6 +461,19 @@ namespace JobScrape.Infrastructure.Persistence
             public static string[] ReadStringList(string json)
             {
                 return Read<string[]>(json);
+            }
+
+            public static string WriteGuidList(Guid[] ids)
+            {
+                return JsonSerializer.Serialize(
+                    ids.Select(id => id.ToString("D")).ToArray(),
+                    Options
+                );
+            }
+
+            public static Guid[] ReadGuidList(string json)
+            {
+                return Read<string[]>(json).Select(Guid.Parse).ToArray();
             }
 
             private static T Read<T>(string json)

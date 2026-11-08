@@ -138,7 +138,7 @@ flowchart LR
 
 | Mode | Process | Port | Notes |
 |---|---|---|---|
-| Development | `bun --hot src/server/index.ts` + Tailwind watch | `5173` | HMR, source maps, detailed errors |
+| Development | `bun --hot src/server/dev.ts` + Tailwind watch | `5173` | HMR, source maps, detailed errors |
 | Development | .NET API (`dotnet run --project src/JobLens.Api`) | `5080` | Loopback only |
 | Production | `bun dist/server/index.js` or compiled binary | `5173` | Prebuilt assets, minified, no HMR |
 | Production | .NET API | `5080` | Loopback only; bearer token required |
@@ -319,7 +319,7 @@ PlaywrightDotNet/
   "trustedDependencies": [],
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "bun --hot src/server/index.ts",
+    "dev:server": "bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
@@ -679,6 +679,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/health` | Liveness and version |
+| `GET` | `/api/v1/features` | Anonymous capability report: the five `JobScrape:Features` booleans as camelCase JSON |
 | `GET` | `/api/v1/doctor` | Environment checks, SDK, browsers, DB, migrations |
 | `GET` | `/api/v1/sources` | Source capabilities, compliance tier, enabled state |
 | `PATCH` | `/api/v1/sources/{key}` | Enable/disable within policy (guarded) |
@@ -723,7 +724,13 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
 > run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
 > before the run was recorded); gate refusals keep their own codes
-> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …).
+> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …). Feature flags change route
+> behavior: `Health=false` turns `GET /api/v1/health` into the
+> `FEATURE_DISABLED` 404 problem, `CsvExport`/`ExcelExport=false`
+> unregisters that export writer (the export default falls through to the
+> remaining format, or to the same `FEATURE_DISABLED` 404 when both are
+> off), and `Logging=false` registers Serilog with no sinks.
+> `GET /api/v1/features` itself stays anonymous in every flag combination.
 > **Not implemented:** `Idempotency-Key` on `POST /runs`, `/runs/{id}/events`
 > (SSE), `/runs/{id}/resume`, `/runs/{id}/artifacts`, `/artifacts/{id}`, and
 > BFF auth (§13.4). Sources are read-only. Sessions support create and
@@ -982,17 +989,24 @@ async function sse(req: Request): Promise<Response> {
 
 ### 13.4 Auth and CSRF
 
-> **Not implemented.** The BFF proxies `/api/*` without a session, CSRF
-> check, or bearer token; both processes bind loopback only.
+> Implemented: the BFF proxies `/api/*` with a server-side session, CSRF
+> check, and no bearer token in the browser; both processes bind loopback only.
 
-- **Bootstrap:** on first run, generate a 32-byte token, print it once, and store only an Argon2id hash in `~/.config/joblens/cockpit.token` (mode `0600`). For automation, `JOBLENS_COCKPIT_TOKEN` may supply the plaintext; the BFF hashes it in memory at startup.
-- **Login:** the operator pastes the token; `Bun.password.verify` checks it against the stored hash, then sets:
-  - `joblens_session` — `HttpOnly; SameSite=Strict; Path=/; Secure` (Secure only with TLS)
-  - `joblens_csrf` — readable, random, same lifetime
-- **Mutations:** require `X-CSRF-Token` to equal the `joblens_csrf` cookie and validate `Origin`/`Sec-Fetch-Site`.
-- **Expiry:** 12 h idle, 7 days absolute; “Sign out” clears both cookies.
-- **BFF→API:** `JOBLENS_API_TOKEN` is server-only, never inlined, never logged.
-- **Remote access:** disabled by default. LAN access requires explicit `JOBLENS_ALLOW_REMOTE=1`, TLS, and a trusted network (Tailscale/SSH tunnel preferred).
+- **Login:** the operator signs in with email + password; the BFF trades them for the backend JWT once, then sets:
+  - session cookie (`__Host-jobscrape_session` over TLS, `jobscrape_session` otherwise) — `HttpOnly; Path=/; SameSite=Strict` (`Secure` with TLS). Holds the backend bearer server-side; the browser never sees a token.
+  - `jobscrape_csrf` — readable, random, same lifetime.
+- **Mutations:** unsafe `/api/*` calls require `x-csrf-token` to equal the `jobscrape_csrf` cookie, plus origin checks.
+- **Expiry:** cookies carry no `Max-Age`; the backend JWT lifetime governs the session. Expired tokens answer 401 with both cookies cleared.
+- **Sign-out:** `DELETE /bff/session` answers 204 with both cookies cleared. Clearing cookies client-side is enough: the next call re-authenticates, and a revoked server-side token fails closed.
+- **BFF→API:** the bearer lives in the BFF process only, injected per proxied request, never inlined, never logged.
+- **Remote access:** both processes bind loopback only.
+
+### 13.4.1 Signing in (local dev)
+
+- **Default admin:** seeded from appsettings `JobScrape:AdminSeed` (`admin@example.com`). The file default is development-only.
+- **First run:** a seeded account completes `setup-password` once, trading the seeded secret for an operator password. Until then sign-in stays locked.
+- **After setup:** sign in at `#/overview` with email + password. The BFF holds the bearer server-side; the deck keeps an `HttpOnly` session cookie and never logs the secret.
+- **Production:** CI/CD replaces the seed values from the secret store at deploy time. Never ship the development defaults.
 
 ### 13.5 Security headers
 

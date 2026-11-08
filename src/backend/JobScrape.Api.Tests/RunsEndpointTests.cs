@@ -12,6 +12,8 @@ using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using JobScrape.Domain.Sourcing;
 using JobScrape.Infrastructure.Runtime;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
@@ -99,7 +101,7 @@ namespace JobScrape.Api.Tests
         public void RejectsNullHandlers()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new RunsController(null!, null!, null!, null!, null!, null!)
+                new RunsController(null!, null!, null!, null!, null!, null!, null!)
             );
         }
 
@@ -107,7 +109,7 @@ namespace JobScrape.Api.Tests
         public async Task StartFollowAndReadPostingsThroughSqlite()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
 
             using var started = await client.PostAsJsonAsync(
@@ -258,7 +260,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Skilled = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var profile = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -322,7 +324,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Skilled = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var profile = await client.PostAsJsonAsync(
                 "api/v1/search-profiles",
@@ -365,6 +367,10 @@ namespace JobScrape.Api.Tests
                 new { profileId, browserProfileId = sessionId },
                 Ct
             );
+            Assert.True(
+                second.IsSuccessStatusCode,
+                $"Expected success but got {(int)second.StatusCode}."
+            );
             var run2 = await second.Content.ReadFromJsonAsync<RunResponse>(Ct);
             var done2 = await WaitAsync(client, run2!.Id, r => r.IsTerminal);
             Assert.Equal("Completed", done2.Stage);
@@ -392,12 +398,134 @@ namespace JobScrape.Api.Tests
             Assert.Contains("C#", stored.Skills);
         }
 
+        // The disabled format answers the feature-disabled 404, never a 200
+        // or the unsupported-format 400. The run id need not exist: the gate
+        // runs before the store read.
+        [Fact]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
+        public async Task ExportCsv_RespectsFlag()
+        {
+            await using var baseFactory = Factory(new FakeSource());
+            using var factory = baseFactory.WithWebHostBuilder(builder =>
+                builder.UseSetting("JobScrape:Features:CsvExport", "false")
+            );
+            using var client = await factory.CreateAdminClientAsync(Ct);
+
+            using var response = await client.GetAsync(
+                $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=csv",
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("FEATURE_DISABLED", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
+        public async Task ExportXlsx_RespectsFlag()
+        {
+            await using var baseFactory = Factory(new FakeSource());
+            using var factory = baseFactory.WithWebHostBuilder(builder =>
+                builder.UseSetting("JobScrape:Features:ExcelExport", "false")
+            );
+            using var client = await factory.CreateAdminClientAsync(Ct);
+
+            using var response = await client.GetAsync(
+                $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=xlsx",
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("FEATURE_DISABLED", body.GetProperty("code").GetString());
+        }
+
+        // A format-less export resolves to XLSX when CSV is turned off: the
+        // caller asked for "whatever the host can serve".
+        [Fact]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
+        public async Task ExportDefault_FallsBackToXlsxWhenCsvOff()
+        {
+            await using var baseFactory = Factory(new FakeSource());
+            using var factory = baseFactory.WithWebHostBuilder(builder =>
+                builder.UseSetting("JobScrape:Features:CsvExport", "false")
+            );
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done.Stage);
+
+            using var response = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export",
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                response.Content.Headers.ContentType!.MediaType
+            );
+            Assert.EndsWith(
+                "-postings.xlsx",
+                response.Content.Headers.ContentDisposition!.FileNameStar!,
+                StringComparison.Ordinal
+            );
+            Assert.True((await response.Content.ReadAsByteArrayAsync(Ct)).Length > 0);
+        }
+
+        // Both formats off and no format given: the export has nothing to serve.
+        [Fact]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Naming",
+            "CA1707:Identifiers should not contain underscores",
+            Justification = "Test names fixed by the feature-flags-foundation task brief."
+        )]
+        public async Task ExportDefault_WithBothFormatsOffIs404()
+        {
+            await using var baseFactory = Factory(new FakeSource());
+            using var factory = baseFactory.WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting("JobScrape:Features:CsvExport", "false");
+                builder.UseSetting("JobScrape:Features:ExcelExport", "false");
+            });
+            using var client = await factory.CreateAdminClientAsync(Ct);
+
+            using var response = await client.GetAsync(
+                $"api/v1/runs/{Guid.NewGuid()}/postings/export",
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("FEATURE_DISABLED", body.GetProperty("code").GetString());
+        }
+
         [Fact]
         public async Task OneRunAtATimeAndCancelKeepsPartialResults()
         {
             var source = new FakeSource { Blocked = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
             var body = new { profileId = profile, browserProfileId = session };
 
@@ -440,7 +568,7 @@ namespace JobScrape.Api.Tests
         {
             var source = new FakeSource { Throws = true };
             await using var factory = Factory(source);
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profile, session) = await SeedAsync(client);
             var body = new { profileId = profile, browserProfileId = session };
 
@@ -475,7 +603,7 @@ namespace JobScrape.Api.Tests
         public async Task GateRefusalsAndUnknownRunsAreProblems()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
 
             using var empty = await client.PostAsJsonAsync(
                 "api/v1/runs",
@@ -519,7 +647,7 @@ namespace JobScrape.Api.Tests
         public async Task StartupFailsRunsAStopLeftExecuting()
         {
             await using var factory = Factory(new FakeSource());
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateAdminClientAsync(Ct);
             var (profileId, _) = await SeedAsync(client);
 
             Guid staleId;

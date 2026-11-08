@@ -86,6 +86,12 @@ namespace JobScrape.Domain.Sourcing
         public RunStats Stats { get; private set; }
 
         /// <summary>
+        /// Gets the resumable fetch position, if any page was recorded.
+        /// Part of this aggregate: loaded and saved only through the run.
+        /// </summary>
+        public ScrapeRunProgress? Progress { get; private set; }
+
+        /// <summary>
         /// Gets when the run was created.
         /// </summary>
         public DateTimeOffset CreatedAt { get; }
@@ -179,6 +185,18 @@ namespace JobScrape.Domain.Sourcing
         {
             EnsureStage(RunStage.StartingSession);
             Stage = RunStage.Searching;
+        }
+
+        /// <summary>
+        /// Returns the resumable fetch position, starting it when no page
+        /// was recorded yet. Progress belongs to this run: the application
+        /// layer never loads or saves it through its own port.
+        /// </summary>
+        /// <param name="now">The time a fresh position starts at.</param>
+        /// <returns>The run's position, never null.</returns>
+        public ScrapeRunProgress ResumeProgress(DateTimeOffset now)
+        {
+            return Progress ??= ScrapeRunProgress.Start(Id, now);
         }
 
         /// <summary>

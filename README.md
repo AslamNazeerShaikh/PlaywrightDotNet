@@ -83,6 +83,33 @@ Browse every user table in the SQLite store. Live schema, paged rows, CRUD, live
 <img src="docs/screenshots/08-database-dark.png" width="49%" alt="Database page in dark theme" />
 </div>
 
+### 09 Users
+
+Signed-in account, password change, plus admin user list, create, and role assignment.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/09-users-light.png" width="49%" alt="Users page in light theme" />
+<img src="docs/screenshots/09-users-dark.png" width="49%" alt="Users page in dark theme" />
+</div>
+
+### 10 Roles
+
+Role catalog with per-role permission grants across the permission keys.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/10-roles-light.png" width="49%" alt="Roles page in light theme" />
+<img src="docs/screenshots/10-roles-dark.png" width="49%" alt="Roles page in dark theme" />
+</div>
+
+### 11 Quotas
+
+Usage quota definitions with per-user limits and fixed windows.
+
+<div style="display:flex;gap:12px;">
+<img src="docs/screenshots/11-quotas-light.png" width="49%" alt="Quotas page in light theme" />
+<img src="docs/screenshots/11-quotas-dark.png" width="49%" alt="Quotas page in dark theme" />
+</div>
+
 ## Verified stack
 
 Status means In use (referenced by a project today) or Planned (design-matrix version, no package reference yet).
@@ -139,6 +166,7 @@ Read the documentation in this order:
 16. [Runtime hardening](docs/15-runtime-hardening.md)
 17. [Library usage policy](docs/16-library-usage-policy.md)
 18. [ADRs](docs/10-adr/README.md)
+19. [Feature toggles](docs/21-feature-toggles.md)
 
 ## Codebase stats (tokei)
 
@@ -148,33 +176,34 @@ Measured with [tokei](https://github.com/xampprocky/tokei) at the repo root. Bui
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  Language              Files        Lines         Code     Comments       Blanks
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- C#                      356        42556        30721         7339         4496
- CSS                       1         1717         1398          100          219
- JSON                      9       409607       409607            0            0
- MSBuild                  14          362          302           37           23
+ C#                      439        56910        41227         9947         5736
+ CSS                       1         1738         1413          103          222
+ JSON                      8       506356       506356            0            0
+ MSBuild                  13          371          313           37           21
  NuGet Config              1            7            7            0            0
  Shell                     1           59           46            2           11
  SVG                       2          211          162            8           41
  TOML                      1           14            9            4            1
- TSX                      26         7420         6217          791          412
- TypeScript               21         2133         1764          154          215
+ TSX                      34        11035         9483          884          668
+ TypeScript               23         3435         2950          144          341
 ─────────────────────────────────────────────────────────────────────────────────
- HTML                     19          831          809            8           14
- |- CSS                    6           41           41            0            0
- |- JavaScript             4          279          264           13            2
- (Total)                             1151         1114           21           16
+ HTML                     20         1042         1018            8           16
+ |- CSS                    7           44           44            0            0
+ |- JavaScript             5          281          266           13            2
+ (Total)                             1367         1328           21           18
 ─────────────────────────────────────────────────────────────────────────────────
- Markdown                 52        15362            0        11987         3375
- |- BASH                   5          261          161           59           41
+ Markdown                 63        17163            0        13352         3811
+ |- BASH                   6          273          173           59           41
  |- CSS                    1           19           11            4            4
  |- Dockerfile             1            8            4            4            0
- |- JSON                   5          256          256            0            0
+ |- JSON                   7          270          270            0            0
  |- PowerShell             2           30           26            1            3
- |- TOML                   1           21           15           4            2
+ |- TOML                   1           21           15            4            2
  |- XML                    3           95           93            0            2
  |- YAML                   2           60           55            2            3
- (Total)                            16112          621        12061         3430
+ (Total)                            17939          647        13426         3866
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- Total                   503       481349       451968        20517         8864
+ Total                   606       599442       563941        24576        10925
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ```

@@ -91,7 +91,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Subagents
 
-**Use `subagent_type: "general"` for editing delegates and `"explore"` for read-only ones inside a playbook step** (code-writing delegates, ad-hoc helpers). The chat that receives `/poteto-mode` runs the playbook. Never spawn a `poteto-agent` to run the playbook itself. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `poteto-agent`.
+**Use `agent: "poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). The chat that receives `/poteto-mode` runs the playbook. Never spawn a `poteto-agent` to run the playbook itself. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own agent for diverse-model review. Respect what the skill prescribes, don't override to `poteto-agent`.
 
 **Defaults for every `Task` call.** `run_in_background: true` (a steer or resume of a running agent too, because a foreground call holds your turn while other reports wait), agent mode (readonly strips MCP), file pointers not inlined context, explicit model per role (configurable via `/setup-pstack`. Defaults `grok-4.7-xhigh-fast` for code, `claude-opus-5-5-xhigh` for prose and judgment). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to your strongest judgment model (`claude-opus-5-5-xhigh`), whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Per-role lines in the `/setup-pstack` rule override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`). A role with no line keeps its default, and a role line of `inherit-parent` or `auto` runs that role on the parent chat model (omit Task `model`). Each code playbook's configured model comes from its line (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`), and the hardest changes read `hardest tasks`. Prose and judgment read `judgment and prose`.
 
@@ -103,13 +103,13 @@ You own every subagent's work. Review the diff and write your own summary, don't
 
 ## Harness
 
-This setup targets OpenCode only. Read any remaining harness-generic wording in this skill, its playbooks, and the routed skills through these mappings.
+This setup targets OpenCode V2 only. Read any remaining harness-generic wording in this skill, its playbooks, and the routed skills through these mappings and `.opencode/docs/harness/opencode.md`.
 
-- **Subagents.** `Task` means the `subagent` tool with an `agent` name: `general` edits, `explore` is read-only and never edits. Drop parameters the tool rejects. Run each agent locally in its own worktree. Without a subagent tool, do each delegated step yourself, one after another.
-- **poteto-agent.** Not registered as a subagent type here. Spawn a `general` subagent whose prompt starts with: "Read <this file's absolute path> in full, including its Principles section, before any work." Then give the task.
-- **Model settings.** `.opencode/pstack-models.md` loads automatically through `opencode.json` instructions. A role set to `inherit-parent` runs on the parent model (omit `model`). If a model name doesn't resolve, use the closest configured chat model.
-- **Transcripts.** Read only the active workspace's sessions, never other projects'. Use `opencode session list` and `opencode session export` on the current workspace.
-- **Skill folders.** Project: `.opencode/skills/`. User: `~/.config/opencode/skills/`, preferred only when the project copy is absent.
+- **Subagents.** `Task` means the `subagent` tool with `agent`, `description`, and `prompt`. `poteto-agent` and `comment-sicko` are registered subagents. `general` edits and keeps MCP. `explore` only reads and has no MCP or skills. `run_in_background: true` becomes `background: true`. Drop parameters the tool rejects. Run each agent locally in its own worktree. Subagents cannot spawn subagents, so run every fan-out from this chat.
+- **`poteto-agent`.** Spawn it with `agent: "poteto-agent"` and put this file's absolute path in the prompt.
+- **Model settings.** `.opencode/pstack-models.md` loads automatically through `opencode.json` instructions. Pass a role's value as the subagent `model`, in `provider/model#variant` form. A role set to `inherit-parent` or `auto` omits `model`. "Match the model to the job" changes only the `#variant`, using a variant that model lists.
+- **Transcripts.** Read only the active workspace's sessions, never other projects'. Use `opencode session list` and `opencode session export <id>` on the current workspace.
+- **Skill folders.** Project: `.opencode/skills/`. This repo keeps no global OpenCode config.
 - **Questions.** `AskQuestion` means the `question` tool. Without it, ask in chat with numbered options.
 - **Tools pstack doesn't ship.** No `create-skill` generator exists. Author `SKILL.md` by hand with `name` plus `description` frontmatter. `deslop` ships in this repo; run `/deslop` before commit and reread the diff yourself either way. `control-cli` and `control-ui` are not installed; verify with `dotnet test` and Playwright. No `/loop` exists. Drive long runs by continuing the session or re-invoking the command until the check passes.
 

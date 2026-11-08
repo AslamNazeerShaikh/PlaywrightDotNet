@@ -2,11 +2,11 @@
 
 ## Claude Code
 
-The project rules in `AGENTS.md` (architecture, commits, UI design, graphify) apply here too. Its pstack, ECC, and Caveman sections describe the OpenCode setup under `.opencode/`; in Claude Code, the pstack section below replaces them.
+The project rules in `AGENTS.md` (architecture, commits, UI design, graphify) apply here too. Its pstack, ECC, and OpenCode config scope sections describe the OpenCode setup under `.opencode/`; in Claude Code, the pstack section below replaces them.
 
 ## Agent workflow (pstack)
 
-- pstack is vendored project-locally from upstream's generated Claude Code tree (`.claude/skills/`, `.claude/agents/`, `.claude/docs/`). See [docs/19-pstack-claude-code.md](docs/19-pstack-claude-code.md).
+- pstack is vendored project-locally from the [backnotprop/pstack](https://github.com/backnotprop/pstack) mirror, laid out like upstream's generated Claude Code tree (`.claude/skills/`, `.claude/agents/`, `.claude/docs/`). See [docs/19-pstack-claude-code.md](docs/19-pstack-claude-code.md).
 - For any non-trivial task, start with `/poteto-mode`: it matches the request to a playbook and routes to the other skills as steps need them. Stuck, or unsure which skill fits? `/poteto-help`.
 - Before following any pstack skill, read `.claude/docs/harness/claude-code.md` once per session. It maps Cursor names to Claude Code. This repo installs pstack as project files, not as the `pstack@cursor-plugins` plugin, so these overrides win over the adapter:
   - `<pstack>` is `.claude/` in this workspace. Run another pstack skill by reading `.claude/skills/<name>/SKILL.md`.

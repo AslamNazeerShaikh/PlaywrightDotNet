@@ -38,6 +38,16 @@ namespace JobScrape.Api.Tests
             );
         }
 
+        [Fact]
+        public void ShippedPlaceholderSecretFailsStartupWithoutOverride()
+        {
+            using var factory = new ApiFactory { UseShippedJwtSecret = true };
+
+            var error = Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+
+            Assert.NotEmpty(error.Failures);
+        }
+
         [Theory]
         [InlineData("JobScrape:Sources:linkedin:Enabled", "true")]
         [InlineData("JobScrape:Sources:indeed:Enabled", "true")]
@@ -46,6 +56,11 @@ namespace JobScrape.Api.Tests
         [InlineData("JobScrape:Storage:MinimumFreeDiskBytes", "0")]
         [InlineData("JobScrape:Run:RetryMaxAttempts", "9")]
         [InlineData("JobScrape:Logging:RetentionDays", "0")]
+        [InlineData("JobScrape:Logging:PlainTextRetentionDays", "0")]
+        [InlineData("JobScrape:Logging:PlainTextFileSizeLimitBytes", "1024")]
+        [InlineData("JobScrape:Logging:PlainTextRollingInterval", "99")]
+        [InlineData("JobScrape:Jwt:Secret", "too-short")]
+        [InlineData("JobScrape:Jwt:Secret", "CHANGE-ME-TO-A-SECRET-OF-AT-LEAST-32-CHARS")]
         public void UnsafeConfigurationFailsStartup(string key, string value)
         {
             using var factory = _factory.WithWebHostBuilder(builder =>

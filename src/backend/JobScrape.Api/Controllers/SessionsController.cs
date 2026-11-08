@@ -1,5 +1,7 @@
 using JobScrape.Api.Http;
+using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Features.Sessions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -49,6 +51,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Token to observe for client disconnect.</param>
         /// <returns>HTTP 200 with the profile list.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.SessionsRead)]
         public async Task<ActionResult<SessionListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
@@ -63,6 +66,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Token to observe for client disconnect.</param>
         /// <returns>HTTP 200, or a problem: 400 for an empty id, 404 when absent.</returns>
         [HttpGet("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.SessionsRead)]
         public async Task<IResult> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             var result = await _get.HandleAsync(id, cancellationToken);
@@ -79,6 +83,7 @@ namespace JobScrape.Api.Controllers
         /// 400 with field errors, 409 when the name is taken.
         /// </returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.SessionsWrite)]
         public async Task<IResult> CreateAsync(
             CreateSessionRequest request,
             CancellationToken cancellationToken
@@ -102,6 +107,7 @@ namespace JobScrape.Api.Controllers
         /// field errors, 404 when absent, 409 on a name or directory conflict.
         /// </returns>
         [HttpPatch("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.SessionsWrite)]
         public async Task<IResult> UpdateAsync(
             Guid id,
             UpdateSessionRequest request,

@@ -1,7 +1,7 @@
 ---
 description: Review code for quality, security, and maintainability
 agent: code-reviewer
-subtask: true
+subagent: true
 ---
 
 # Code Review Command

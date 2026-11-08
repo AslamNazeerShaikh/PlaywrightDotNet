@@ -15,6 +15,7 @@ namespace JobScrape.Mcp.Tools
         private readonly ListRunsHandler _list;
         private readonly GetRunHandler _get;
         private readonly ListRunPostingsHandler _postings;
+        private readonly ICallerContext _caller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RunsTools"/> class.
@@ -23,8 +24,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="get">The single-run handler. Must not be null.</param>
         /// <param name="postings">The run postings handler. Must not be null.</param>
         /// <param name="caller">
-        /// The calling actor. Read tools ignore it; the parameter exists so
-        /// future authorization needs no signature change. Must not be null.
+        /// The calling actor. Must hold <c>runs.read</c>. Must not be null.
         /// </param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunsTools(
@@ -41,6 +41,7 @@ namespace JobScrape.Mcp.Tools
             _list = list;
             _get = get;
             _postings = postings;
+            _caller = caller;
         }
 
         /// <summary>
@@ -58,6 +59,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "runs.read");
             return _list.HandleAsync(offset, limit, cancellationToken);
         }
 
@@ -74,6 +76,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "runs.read");
             var runId = McpErrors.ParseIdOrThrow(id, "A run id is required.");
             return McpErrors.OrThrow(await _get.HandleAsync(runId, cancellationToken));
         }
@@ -95,6 +98,7 @@ namespace JobScrape.Mcp.Tools
             CancellationToken cancellationToken = default
         )
         {
+            McpAuth.RequirePermission(_caller, "runs.read");
             var id = McpErrors.ParseIdOrThrow(runId, "A run id is required.");
             return McpErrors.OrThrow(
                 await _postings.HandleAsync(id, offset, limit, cancellationToken)

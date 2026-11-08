@@ -53,6 +53,20 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void FreshRunHasNoProgressUntilResumed()
+        {
+            var run = ScrapeRun.Create(Profile(), Now);
+
+            Assert.Null(run.Progress);
+            var progress = run.ResumeProgress(Now);
+
+            Assert.NotNull(run.Progress);
+            Assert.Same(progress, run.Progress);
+            Assert.Equal(run.Id, progress.Id);
+            Assert.Same(progress, run.ResumeProgress(Now.AddMinutes(1)));
+        }
+
+        [Fact]
         public void CreateSnapshotsProfileAndStartsPending()
         {
             var profile = Profile();

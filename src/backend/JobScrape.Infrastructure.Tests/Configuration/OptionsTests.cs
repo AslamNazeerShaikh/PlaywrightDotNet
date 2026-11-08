@@ -1,7 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using JobScrape.Application.Abstractions;
 using JobScrape.Domain.Common;
+using JobScrape.Infrastructure.Composition;
 using JobScrape.Infrastructure.Configuration;
 using JobScrape.Infrastructure.Runtime;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
@@ -258,6 +262,62 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void FeaturesDefaultsAreAllTrue()
+        {
+            var features = new FeaturesOptions();
+
+            Assert.True(features.Authentication);
+            Assert.True(features.Logging);
+            Assert.True(features.Health);
+            Assert.True(features.CsvExport);
+            Assert.True(features.ExcelExport);
+            Assert.Equal("JobScrape:Features", FeaturesOptions.SectionName);
+        }
+
+        [Fact]
+        public void FeaturesBindingMapsOverridesToFeatureFlags()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?> { ["JobScrape:Features:Health"] = "false" }
+                )
+                .Build();
+            var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddJobScrapeOptions();
+            using var provider = services.BuildServiceProvider();
+
+            var flags = provider.GetRequiredService<FeatureFlags>();
+
+            Assert.False(flags.Health);
+            Assert.True(flags.Authentication);
+            Assert.True(flags.Logging);
+            Assert.True(flags.CsvExport);
+            Assert.True(flags.ExcelExport);
+        }
+
+        [Fact]
+        public void LoggingOffSkipsDirectoryValidation()
+        {
+            var off = new LoggingOptionsValidator(
+                Options.Create(new FeaturesOptions { Logging = false })
+            );
+            var on = new LoggingOptionsValidator(Options.Create(new FeaturesOptions()));
+
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = null! }).Succeeded);
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
+            Assert.True(off.Validate(null, new LoggingOptions { Directory = "   " }).Succeeded);
+            var missing = on.Validate(null, new LoggingOptions { Directory = null! });
+            Assert.False(missing.Succeeded);
+            Assert.Contains(
+                missing.Failures!,
+                failure => failure.Contains("JobScrape:Logging:Directory", StringComparison.Ordinal)
+            );
+            Assert.False(on.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
+            Assert.True(on.Validate(null, new LoggingOptions()).Succeeded);
+        }
+
+        [Fact]
         public void StorageRunAndLoggingDefaultsAreValidAndBoundsAreEnforced()
         {
             static bool IsValid(object options)
@@ -278,6 +338,74 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.False(IsValid(new RunOptions { RetryMaxAttempts = 4 }));
             Assert.False(IsValid(new LoggingOptions { RetentionDays = 0 }));
             Assert.False(IsValid(new LoggingOptions { FileSizeLimitBytes = 1024 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextRetentionDays = 0 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextFileSizeLimitBytes = 1024 }));
+            Assert.False(IsValid(new LoggingOptions { PlainTextRollingInterval = "99" }));
+        }
+
+        [Fact]
+        public void JwtDefaultsAreValidAndShortSecretsAreRejected()
+        {
+            static bool IsValid(object options)
+            {
+                return Validator.TryValidateObject(
+                    options,
+                    new ValidationContext(options),
+                    null,
+                    true
+                );
+            }
+
+            Assert.False(IsValid(new JwtOptions()));
+            Assert.False(IsValid(new JwtOptions { Secret = "too-short" }));
+            Assert.True(
+                IsValid(new JwtOptions { Secret = "a-demo-secret-of-at-least-32-characters" })
+            );
+            Assert.False(
+                IsValid(
+                    new JwtOptions
+                    {
+                        Secret = "a-demo-secret-of-at-least-32-characters",
+                        TokenLifetimeMinutes = 0,
+                    }
+                )
+            );
+        }
+
+        [Fact]
+        public void JwtValidatorRejectsTheDemoPlaceholder()
+        {
+            var validator = new JwtOptionsValidator();
+
+            var result = validator.Validate(
+                null,
+                new JwtOptions { Secret = JwtOptionsValidator.DemoPlaceholder }
+            );
+
+            Assert.False(result.Succeeded);
+            Assert.Contains(
+                result.Failures!,
+                failure => failure.Contains("demo placeholder", StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        [Fact]
+        public void JwtValidatorCountsBytesNotCharacters()
+        {
+            var validator = new JwtOptionsValidator();
+
+            Assert.False(
+                validator.Validate(null, new JwtOptions { Secret = new string('a', 31) }).Succeeded
+            );
+            Assert.True(
+                validator.Validate(null, new JwtOptions { Secret = new string('a', 32) }).Succeeded
+            );
+            Assert.True(
+                validator.Validate(null, new JwtOptions { Secret = new string('é', 16) }).Succeeded
+            );
+            Assert.False(
+                validator.Validate(null, new JwtOptions { Secret = new string('é', 15) }).Succeeded
+            );
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ---
 description: Update codemaps for codebase navigation
 agent: doc-updater
-subtask: true
+subagent: true
 ---
 
 # Update Codemaps Command

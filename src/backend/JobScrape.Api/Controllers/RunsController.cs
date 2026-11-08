@@ -1,6 +1,9 @@
 using JobScrape.Api.Http;
+using JobScrape.Api.Http.Auth;
+using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -13,13 +16,14 @@ namespace JobScrape.Api.Controllers
     [Route("api/v1/runs")]
     public sealed class RunsController : ControllerBase
     {
-        // Constructor-injected handlers, never mutated.
+        // Constructor-injected handlers and flags, never mutated.
         private readonly StartRunHandler _start;
         private readonly ListRunsHandler _list;
         private readonly GetRunHandler _get;
         private readonly CancelRunHandler _cancel;
         private readonly ListRunPostingsHandler _postings;
         private readonly ExportRunPostingsHandler _export;
+        private readonly FeatureFlags _flags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RunsController"/> class.
@@ -30,6 +34,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancel">Cancels runs.</param>
         /// <param name="postings">Lists a run's postings.</param>
         /// <param name="export">Exports a run's postings.</param>
+        /// <param name="flags">The feature flags bound at host startup.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunsController(
             StartRunHandler start,
@@ -37,7 +42,8 @@ namespace JobScrape.Api.Controllers
             GetRunHandler get,
             CancelRunHandler cancel,
             ListRunPostingsHandler postings,
-            ExportRunPostingsHandler export
+            ExportRunPostingsHandler export,
+            FeatureFlags flags
         )
         {
             ArgumentNullException.ThrowIfNull(start);
@@ -46,12 +52,14 @@ namespace JobScrape.Api.Controllers
             ArgumentNullException.ThrowIfNull(cancel);
             ArgumentNullException.ThrowIfNull(postings);
             ArgumentNullException.ThrowIfNull(export);
+            ArgumentNullException.ThrowIfNull(flags);
             _start = start;
             _list = list;
             _get = get;
             _cancel = cancel;
             _postings = postings;
             _export = export;
+            _flags = flags;
         }
 
         /// <summary>
@@ -62,6 +70,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the runs.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
         public async Task<ActionResult<RunListResponse>> ListAsync(
             [FromQuery] int offset = 0,
             [FromQuery] int limit = ListRunsHandler.Limit,
@@ -78,6 +87,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the run; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
         public async Task<IResult> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             var result = await _get.HandleAsync(id, cancellationToken);
@@ -91,6 +101,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects; the run itself continues.</param>
         /// <returns>202 with the recorded run and its <c>Location</c>; or the gate's problem.</returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.RunsWrite)]
         public async Task<IResult> StartAsync(
             StartRunRequest request,
             CancellationToken cancellationToken
@@ -109,6 +120,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the run as it stands; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpPost("{id:guid}/cancel")]
+        [Authorize(Policy = AuthPolicies.RunsWrite)]
         public async Task<IResult> CancelAsync(Guid id, CancellationToken cancellationToken)
         {
             var result = await _cancel.HandleAsync(id, cancellationToken);
@@ -124,6 +136,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the postings; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}/postings")]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
         public async Task<IResult> PostingsAsync(
             Guid id,
             [FromQuery] int offset = 0,
@@ -139,28 +152,42 @@ namespace JobScrape.Api.Controllers
         /// Exports the postings a run saw as a file.
         /// </summary>
         /// <param name="id">The run identifier.</param>
-        /// <param name="format"><c>csv</c> or <c>xlsx</c>; defaults to <c>csv</c>.</param>
+        /// <param name="format"><c>csv</c> or <c>xlsx</c>; defaults to <c>csv</c>, or <c>xlsx</c> when the CsvExport feature is off.</param>
         /// <param name="group"><c>all</c>, <c>only</c>, or <c>exclude</c>; defaults to <c>all</c>.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>
         /// 200 with the file; 400 <c>EXPORT_FORMAT_UNSUPPORTED</c>,
         /// <c>EXPORT_GROUP_UNSUPPORTED</c>, or <c>EXPORT_COMPANIES_MISSING</c>;
-        /// 404 <c>RUN_NOT_FOUND</c>.
+        /// 404 <c>RUN_NOT_FOUND</c> or <c>FEATURE_DISABLED</c> when the chosen
+        /// format is turned off.
         /// </returns>
         [HttpGet("{id:guid}/postings/export")]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
         public async Task<IResult> ExportAsync(
             Guid id,
-            [FromQuery] string format = "csv",
+            [FromQuery] string? format = null,
             [FromQuery] string group = "all",
             CancellationToken cancellationToken = default
         )
         {
+            // No format resolves from the flags via the shared default.
+            if (format is null)
+            {
+                format = ExportFormatSupport.Default(_flags);
+                if (format is null)
+                {
+                    return Errors.FeatureDisabled().ToProblem();
+                }
+            }
+
             if (
                 !Enum.TryParse<ExportFormat>(format, ignoreCase: true, out var parsed)
                 || !Enum.IsDefined(parsed)
             )
             {
-                return Errors.ExportFormatUnsupported(format).ToProblem();
+                return Errors
+                    .ExportFormatUnsupported(format, ExportFormatSupport.Enabled(_flags))
+                    .ToProblem();
             }
 
             var parsedGroup = (group ?? string.Empty).Trim().ToLowerInvariant() switch

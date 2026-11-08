@@ -53,7 +53,8 @@ namespace JobScrape.Mcp.Tests
             FakeLauncher launcher,
             FakeRunStore store,
             FakeRuns runs,
-            FakeUnitOfWork unitOfWork
+            FakeUnitOfWork unitOfWork,
+            ICallerContext? caller = null
         )
         {
             return new RunActionsTools(
@@ -66,7 +67,7 @@ namespace JobScrape.Mcp.Tests
                     new FixedClock(Now),
                     CallerContext.LocalOperator
                 ),
-                new FakeCaller()
+                caller ?? new FakeCaller()
             );
         }
 
@@ -264,6 +265,44 @@ namespace JobScrape.Mcp.Tests
         }
 
         [Fact]
+        public async Task StartRunWithoutWritePermissionIsDenied()
+        {
+            var viewer = new FakeCaller { Permissions = ["runs.read"] };
+            var tools = Tools(
+                new FakeLauncher(),
+                new FakeRunStore(),
+                new FakeRuns(),
+                new FakeUnitOfWork(),
+                viewer
+            );
+
+            var error = await Assert.ThrowsAsync<McpException>(() =>
+                tools.StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)
+            );
+
+            Assert.StartsWith("ACCESS_DENIED:", error.Message);
+        }
+
+        [Fact]
+        public async Task StartRunWithWritePermissionIsAllowed()
+        {
+            var id = Guid.NewGuid();
+            var launcher = new FakeLauncher { Next = Result.Ok(id) };
+            var store = new FakeRunStore(Run(id));
+            var admin = new FakeCaller { Permissions = ["runs.write"] };
+            var tools = Tools(launcher, store, new FakeRuns(), new FakeUnitOfWork(), admin);
+
+            var response = await tools.StartRunAsync(
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString(),
+                true,
+                Ct
+            );
+
+            Assert.Equal(id, response.Id);
+        }
+
+        [Fact]
         public void RejectsNulls()
         {
             var launcher = new FakeLauncher();
@@ -288,6 +327,18 @@ namespace JobScrape.Mcp.Tests
             public string ActorId => "tests";
 
             public IReadOnlyCollection<string> Roles => [];
+
+            public bool MustChangePassword => false;
+
+            public IReadOnlyCollection<string> Permissions { get; init; } =
+            [
+                "profiles.read",
+                "profiles.write",
+                "runs.read",
+                "runs.write",
+                "sessions.read",
+                "sources.read",
+            ];
         }
 
         private sealed class FixedClock(DateTimeOffset now) : TimeProvider
@@ -357,6 +408,11 @@ namespace JobScrape.Mcp.Tests
             {
                 Saves++;
                 return Task.FromResult(0);
+            }
+
+            public bool IsUniqueViolation(Exception exception)
+            {
+                return false;
             }
         }
 

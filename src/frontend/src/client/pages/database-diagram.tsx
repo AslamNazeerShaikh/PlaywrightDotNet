@@ -1,4 +1,6 @@
 import {
+  accentTone,
+  actionLabel,
   DiagramDefs,
   type DiagramTone,
   markerId,
@@ -54,6 +56,9 @@ function rowsLabel(count: number): string {
 }
 
 const CARD_H = 48;
+// Empty map keeps a readable 5:1 frame instead of collapsing to a sliver of viewBox.
+const EMPTY_VIEW_W = 360;
+const EMPTY_VIEW_H = 72;
 const CARD_GAP = 8;
 const GROUP_COL = 208;
 const GROUP_GAP_X = 12;
@@ -91,9 +96,15 @@ export function TablesDiagram({
     }));
     return { group, x, height, items, cards };
   });
-  const height = Math.max(...layouts.map((layout) => layout.height), 40) + GROUP_ORIGIN_Y * 2;
-  const viewWidth =
-    GROUP_ORIGIN_X * 2 + layouts.length * GROUP_COL + Math.max(layouts.length - 1, 0) * GROUP_GAP_X;
+  const isEmpty = layouts.length === 0;
+  const height = isEmpty
+    ? EMPTY_VIEW_H
+    : Math.max(...layouts.map((layout) => layout.height), 40) + GROUP_ORIGIN_Y * 2;
+  const viewWidth = isEmpty
+    ? EMPTY_VIEW_W
+    : GROUP_ORIGIN_X * 2 +
+      layouts.length * GROUP_COL +
+      Math.max(layouts.length - 1, 0) * GROUP_GAP_X;
 
   return (
     <svg
@@ -102,10 +113,11 @@ export function TablesDiagram({
       role="img"
       aria-label="Tables map"
     >
-      {layouts.length === 0 && (
+      {isEmpty && (
         <text
-          x={GROUP_ORIGIN_X}
-          y={26}
+          x={EMPTY_VIEW_W / 2}
+          y={40}
+          textAnchor="middle"
           style={{ fill: "var(--dim)", fontSize: "var(--text-micro)" }}
         >
           No user tables yet.
@@ -203,8 +215,8 @@ const ER_CARDS: Array<{
 const KNOWN_TABLES = new Set(ER_CARDS.map((card) => card.name));
 
 /**
- * DB-03 shape and flow. The top lane is drawn from the live schema: domain groups, the one enforced
- * FK, the shared source_key identity, the run-progress identity, and the time-window link from a
+ * DB-04 shape and flow. The top lane is drawn from the live schema: domain groups, the two enforced
+ * FKs, the shared source_key identity, the run-progress identity, and the time-window link from a
  * run to its postings. The bottom lanes correct the runtime order: Playwright scrapes inside .NET,
  * SQLite is the only store, and the BFF only proxies the browser's API calls.
  */
@@ -221,6 +233,22 @@ export function ErFlowDiagram({
 }) {
   useRenderLog("ErFlowDiagram");
   const present = new Set(tables);
+  // Labels fall back to the static text only when the schema payload is missing, so a
+  // tables-only render reads the same as before.
+  const profileFk = schemas["scrape_runs"]?.foreignKeys.find(
+    (fk) => fk.column === "profile_id" && fk.referencedTable === "search_profiles",
+  );
+  const progressFk = schemas["scrape_run_progress"]?.foreignKeys.find(
+    (fk) => fk.referencedTable === "scrape_runs",
+  );
+  const profileAction = actionLabel(profileFk?.onDelete);
+  const progressAction = actionLabel(progressFk?.onDelete);
+  const profileTone: DiagramTone =
+    profileFk === undefined ? "green" : accentTone(profileFk.onDelete ?? null);
+  const progressTone: DiagramTone =
+    progressFk === undefined ? "violet" : accentTone(progressFk.onDelete ?? null);
+  const profileLabel = profileFk === undefined ? "RESTRICT" : profileAction;
+  const progressLabel = progressFk === undefined ? "same run id" : progressAction;
   const other = tables.filter((name) => !KNOWN_TABLES.has(name));
   const otherRows = Math.ceil(other.length / 5);
   const otherY = 350;
@@ -253,7 +281,7 @@ export function ErFlowDiagram({
       role="img"
       aria-label="Entity relationships and data flow"
     >
-      <DiagramDefs prefix="db-03" />
+      <DiagramDefs prefix="db-04" />
 
       {busGroups.length > 1 && (
         <g>
@@ -315,26 +343,28 @@ export function ErFlowDiagram({
             y1={107}
             x2={407}
             y2={107}
-            style={{ stroke: "var(--sig)" }}
+            style={{ stroke: TONE[profileTone].stroke }}
             strokeWidth="1.5"
-            markerEnd={`url(#${markerId("db-03", "green")})`}
+            markerEnd={`url(#${markerId("db-04", profileTone)})`}
           />
           <text
             x={364}
             y={97}
             textAnchor="middle"
-            style={{ fill: "var(--sig)", fontSize: "var(--text-fine)" }}
+            style={{ fill: TONE[profileTone].text, fontSize: "var(--text-fine)" }}
           >
             profile_id
           </text>
-          <text
-            x={364}
-            y={121}
-            textAnchor="middle"
-            style={{ fill: "var(--faint)", fontSize: "var(--text-fine)" }}
-          >
-            RESTRICT
-          </text>
+          {profileLabel !== null && (
+            <text
+              x={364}
+              y={121}
+              textAnchor="middle"
+              style={{ fill: "var(--faint)", fontSize: "var(--text-fine)" }}
+            >
+              {profileLabel}
+            </text>
+          )}
         </g>
       )}
 
@@ -345,14 +375,25 @@ export function ErFlowDiagram({
             y1={161}
             x2={547}
             y2={147}
-            strokeDasharray="5 4"
-            style={{ stroke: "var(--brand-3)" }}
+            strokeDasharray={progressFk === undefined ? "5 4" : undefined}
+            style={{
+              stroke: progressFk === undefined ? "var(--brand-3)" : TONE[progressTone].stroke,
+            }}
             strokeWidth="1.3"
-            markerEnd={`url(#${markerId("db-03", "violet")})`}
+            markerEnd={`url(#${markerId("db-04", progressTone)})`}
           />
-          <text x={559} y={158} style={{ fill: "var(--brand-3)", fontSize: "var(--text-fine)" }}>
-            same run id
-          </text>
+          {progressLabel !== null && (
+            <text
+              x={559}
+              y={158}
+              style={{
+                fill: progressFk === undefined ? "var(--brand-3)" : TONE[progressTone].text,
+                fontSize: "var(--text-fine)",
+              }}
+            >
+              {progressLabel}
+            </text>
+          )}
         </g>
       )}
 
@@ -364,7 +405,7 @@ export function ErFlowDiagram({
             strokeDasharray="5 5"
             style={{ stroke: "var(--amber)" }}
             strokeWidth="1.3"
-            markerEnd={`url(#${markerId("db-03", "amber")})`}
+            markerEnd={`url(#${markerId("db-04", "amber")})`}
           />
           <text
             x={727}
@@ -445,8 +486,8 @@ export function ErFlowDiagram({
         y2={writeY + 30}
         style={{ stroke: "var(--amber)" }}
         strokeWidth="1.5"
-        markerStart={`url(#${startMarkerId("db-03", "amber")})`}
-        markerEnd={`url(#${markerId("db-03", "amber")})`}
+        markerStart={`url(#${startMarkerId("db-04", "amber")})`}
+        markerEnd={`url(#${markerId("db-04", "amber")})`}
       />
       <FlowArrow x1={laneX[1]! + boxW} x2={laneX[2]!} y={writeY + 30} tone="violet" />
       <FlowArrow x1={laneX[2]! + boxW} x2={laneX[3]!} y={writeY + 30} tone="green" />
@@ -504,7 +545,7 @@ export function ErFlowDiagram({
         strokeDasharray="5 5"
         style={{ stroke: "var(--brand-2)" }}
         strokeWidth="1.3"
-        markerEnd={`url(#${markerId("db-03", "cyan")})`}
+        markerEnd={`url(#${markerId("db-04", "cyan")})`}
       />
       <text
         x={laneX[3]! + boxW / 2 + 10}
@@ -685,7 +726,7 @@ function FlowArrow({ x1, x2, y, tone }: { x1: number; x2: number; y: number; ton
       y2={y}
       style={{ stroke: TONE[tone].stroke }}
       strokeWidth="1.5"
-      markerEnd={`url(#${markerId("db-03", tone)})`}
+      markerEnd={`url(#${markerId("db-04", tone)})`}
     />
   );
 }

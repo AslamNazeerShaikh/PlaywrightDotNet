@@ -60,6 +60,9 @@ public sealed class LoggingOptions
 {
     public int RetentionDays { get; init; } = 90;
     public long FileSizeLimitBytes { get; init; } = 100 * 1024 * 1024;
+    public string PlainTextRollingInterval { get; init; } = "Hour";
+    public int PlainTextRetentionDays { get; init; } = 14;
+    public long PlainTextFileSizeLimitBytes { get; init; } = 100 * 1024 * 1024;
 }
 ```
 
@@ -96,6 +99,17 @@ Log.Logger = new LoggerConfiguration()
             formatter: new CompactJsonFormatter()),
         bufferSize: 10_000,
         blockWhenFull: true)
+    .WriteTo.Async(
+        configure: sink => sink.File(
+            path: Path.Combine(logRoot, $"joblens-{role}-.log"),
+            rollingInterval: RollingInterval.Hour,
+            retainedFileCountLimit: 336,
+            retainedFileTimeLimit: TimeSpan.FromDays(logOptions.PlainTextRetentionDays),
+            fileSizeLimitBytes: logOptions.PlainTextFileSizeLimitBytes,
+            rollOnFileSizeLimit: true,
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"),
+        bufferSize: 10_000,
+        blockWhenFull: true)
     .CreateLogger();
 
 // Attach the logger to the host:
@@ -107,6 +121,7 @@ builder.Host.UseSerilog();          // IHostBuilder
 - `blockWhenFull: true` makes logging lossless under pressure; the alternative is dropped events. For this low-volume app, backpressure is the safer default. Monitor buffer pressure if it ever changes.
 - `retainedFileCountLimit` and `retainedFileTimeLimit` are applied together: a file is kept while it is within both limits.
 - `rollOnFileSizeLimit` prevents one 100 MB file per day from becoming unbounded.
+- The second sink writes the human-readable `{prefix}-YYYYMMDDHH.log` sibling: rolled hourly (mapping `PlainTextRollingInterval` `Hour`/`Day` to `RollingInterval.Hour`/`Day`, matched exactly: lowercase values fail startup) and at 100 MB, kept 14 days via `PlainTextRetentionDays`, with a count cap of 336 files (14 days x 24 hourly files; the time limit still governs). Size, roll, and retention come from `JobScrape:Logging:PlainTextFileSizeLimitBytes`, `PlainTextRollingInterval`, and `PlainTextRetentionDays`.
 - `Log.CloseAndFlush()` must run on every exit path.
 
 `LoggingOptions` is bound and validated at the composition root ([Solution & Tooling §5.3](04-solution-and-tooling.md#53-options-binding)). `appsettings.json` controls levels and retention; thresholds are not hard-coded:
@@ -127,7 +142,10 @@ builder.Host.UseSerilog();          // IHostBuilder
   "JobLens": {
     "Logging": {
       "RetentionDays": 90,
-      "FileSizeLimitBytes": 104857600
+      "FileSizeLimitBytes": 104857600,
+      "PlainTextRollingInterval": "Hour",
+      "PlainTextRetentionDays": 14,
+      "PlainTextFileSizeLimitBytes": 104857600
     },
     "Storage": {
       "MinimumFreeDiskBytes": 1073741824
@@ -232,9 +250,9 @@ Never put a `RunId` in a static global property; concurrent runs must not share 
 
 ### 2.8 Files, rotation, retention, disk budget
 
-- Path: `artifacts/logs/joblens-{role}-YYYYMMDD.jsonl`.
-- Rotation: daily and at 100 MB; keep at most 200 files and 90 days.
-- Format: `CompactJsonFormatter` (one JSON object per line) for grep/`jq`; console can stay compact JSON for consistency.
+- Path: `artifacts/logs/joblens-{role}-YYYYMMDD.jsonl` and `artifacts/logs/joblens-{role}-YYYYMMDDHH.log` (human-readable).
+- Rotation: `.jsonl` rolls daily and at 100 MB; keep at most 200 files and 90 days. The `.log` sink rolls hourly and at 100 MB; keep at most 336 files (14 days x 24 hourly files) and 14 days, sized by `JobScrape:Logging:PlainTextFileSizeLimitBytes` and retained per `PlainTextRetentionDays`.
+- Format: `CompactJsonFormatter` (one JSON object per line) for grep/`jq`; console can stay compact JSON for consistency. The `.log` file is a rendered one-line template for humans reading `tail -f`.
 - `artifacts/` is gitignored and owner-only.
 - Check free disk before a run or export; fail with `STORAGE_LOW_DISK` when below `JobLens:Storage:MinimumFreeDiskBytes`.
 - Do not delete open/active log files during cleanup; let the sink own its retention.

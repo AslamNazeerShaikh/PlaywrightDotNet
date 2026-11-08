@@ -1,5 +1,7 @@
 using JobScrape.Api.Http;
+using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Features.SearchProfiles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobScrape.Api.Controllers
@@ -49,6 +51,7 @@ namespace JobScrape.Api.Controllers
         /// <param name="cancellationToken">Token to observe for client disconnect.</param>
         /// <returns>HTTP 200 with the profile list.</returns>
         [HttpGet]
+        [Authorize(Policy = AuthPolicies.ProfilesRead)]
         public async Task<ActionResult<SearchProfileListResponse>> ListAsync(
             CancellationToken cancellationToken
         )
@@ -66,6 +69,7 @@ namespace JobScrape.Api.Controllers
         /// <paramref name="id"/> is empty, 404 when absent.
         /// </returns>
         [HttpGet("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.ProfilesRead)]
         public async Task<IResult> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             var result = await _get.HandleAsync(id, cancellationToken);
@@ -82,6 +86,7 @@ namespace JobScrape.Api.Controllers
         /// response: 400 with field errors, 409 when the name is taken.
         /// </returns>
         [HttpPost]
+        [Authorize(Policy = AuthPolicies.ProfilesWrite)]
         public async Task<IResult> CreateAsync(
             CreateSearchProfileRequest request,
             CancellationToken cancellationToken
@@ -106,6 +111,7 @@ namespace JobScrape.Api.Controllers
         /// field errors, 404 when absent, 409 when the new name is taken.
         /// </returns>
         [HttpPut("{id:guid}")]
+        [Authorize(Policy = AuthPolicies.ProfilesWrite)]
         public async Task<IResult> UpdateAsync(
             Guid id,
             UpdateSearchProfileRequest request,

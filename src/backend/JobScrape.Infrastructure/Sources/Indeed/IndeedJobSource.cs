@@ -1,5 +1,4 @@
 using System.Globalization;
-using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Scraping;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
@@ -19,7 +18,7 @@ namespace JobScrape.Infrastructure.Sources.Indeed
     /// <c>AcknowledgeSourceRisk=true</c>, enforced by the run gate before
     /// this adapter is ever called.
     /// </summary>
-    public sealed partial class IndeedJobSource : IJobSource
+    public sealed partial class IndeedJobSource : IJobSource, ISourceWarmUpVerifier
     {
         private const string CardSelector = "div.job_seen_beacon, div[data-testid='slider_item']";
 
@@ -79,6 +78,23 @@ namespace JobScrape.Infrastructure.Sources.Indeed
         /// <inheritdoc />
         public SourceCapabilities Capabilities { get; } = new(SupportsDetails: true);
 
+        /// <summary>
+        /// No warm-up: the restricted-tier guest session is reported ready
+        /// without a verification fetch.
+        /// </summary>
+        /// <param name="page">The page the session manager opened.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>Null: there is no warm-up to run for this source.</returns>
+        public Task<ChallengeAssessment?> VerifyAsync(
+            IPage page,
+            CancellationToken cancellationToken
+        )
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            _ = cancellationToken;
+            return Task.FromResult<ChallengeAssessment?>(null);
+        }
+
         /// <inheritdoc />
         public async Task<SearchPageResult> SearchPageAsync(
             SourceRunContext context,
@@ -103,31 +119,52 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 var start = request.Cursor is null
                     ? (request.PageNumber - 1) * IndeedUrlBuilder.PageSize
                     : SearchPageDriver.CursorOffset(request.Cursor);
-                return await SearchPageDriver.SearchOffsetPageAsync<IndeedSearchPage>(
-                    page,
+                // Read now before the fetch: the parser dates relative
+                // posted marks against the fetch's start, as before.
+                var now = _clock.GetUtcNow();
+                var response = await page.GotoAsync(
                     IndeedUrlBuilder.SearchUrl(context.Criteria, start).AbsoluteUri,
-                    CardSelector,
-                    MarkHiddenScript,
-                    start,
-                    static (url, status, title, body, hasCards) =>
-                        IndeedChallengeClassifier.Classify(url, status, title, body, hasCards),
-                    static (html, url, now) => IndeedSearchParser.Parse(html, url, now),
-                    static parsed => parsed.Jobs,
-                    static parsed => parsed.DroppedCards,
-                    static parsed =>
-                        parsed.FirstJobKey is null && parsed.ResultCount is null
-                            ? null
-                            : new PageFingerprint(parsed.FirstJobKey, parsed.ResultCount),
-                    static (parsed, offset) =>
-                        parsed.HasNext
-                            ? (offset + IndeedUrlBuilder.PageSize).ToString(
-                                CultureInfo.InvariantCulture
-                            )
-                            : null,
-                    dropped =>
-                        LogCardsDropped(_logger, context.RunId.Value, request.PageNumber, dropped),
-                    _clock.GetUtcNow(),
-                    cancellationToken
+                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded }
+                );
+                int? status = response?.Status;
+
+                cancellationToken.ThrowIfCancellationRequested();
+                var hasCards = await SearchPageDriver.WaitForCardsAsync(page, CardSelector);
+                await SearchPageDriver.ScrollAsync(page, cancellationToken);
+                await page.EvaluateAsync(MarkHiddenScript);
+
+                var challenge = IndeedChallengeClassifier.Classify(
+                    new Uri(page.Url),
+                    status,
+                    await page.TitleAsync(),
+                    await PageText.BodyAsync(page),
+                    hasCards
+                );
+                if (challenge.Kind != ChallengeKind.None)
+                {
+                    return SearchPageResult.Blocked(challenge);
+                }
+
+                var parsed = IndeedSearchParser.Parse(await page.ContentAsync(), page.Url, now);
+                if (parsed.DroppedCards > 0)
+                {
+                    LogCardsDropped(
+                        _logger,
+                        context.RunId.Value,
+                        request.PageNumber,
+                        parsed.DroppedCards
+                    );
+                }
+
+                return new SearchPageResult(
+                    parsed.Jobs,
+                    parsed.HasNext
+                        ? (start + IndeedUrlBuilder.PageSize).ToString(CultureInfo.InvariantCulture)
+                        : null,
+                    parsed.FirstJobKey is null && parsed.ResultCount is null
+                        ? null
+                        : new PageFingerprint(parsed.FirstJobKey, parsed.ResultCount),
+                    ChallengeAssessment.Clear
                 );
             }
             catch (PlaywrightException ex) when (!cancellationToken.IsCancellationRequested)

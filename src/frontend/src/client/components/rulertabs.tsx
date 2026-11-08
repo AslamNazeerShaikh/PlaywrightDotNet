@@ -10,23 +10,30 @@ import { type DeckRoute, routeHash, ROUTES } from "../lib/router.ts";
 export function RulerTabs({
   route,
   onSelect,
+  visible,
 }: {
   route: DeckRoute;
   onSelect?: (route: DeckRoute) => void;
+  /** Routes the caller may see; hidden stops keep no tab. Defaults to every stop. */
+  visible?: ReadonlySet<DeckRoute>;
 }) {
   useRenderLog("RulerTabs");
-  const index = ROUTES.findIndex((r) => r.id === route);
-  const stops = ROUTES.length;
-  const left = `${((index * 2 + 1) / (stops * 2)) * 100}%`;
+  const stops = visible === undefined ? ROUTES : ROUTES.filter((r) => visible.has(r.id));
+  const index = Math.max(
+    0,
+    stops.findIndex((r) => r.id === route),
+  );
+  const count = stops.length;
+  const left = `${((index * 2 + 1) / (count * 2)) * 100}%`;
 
   return (
     <nav className="ruler" aria-label="Deck pages">
-      <span className="ruler-code">NAV // {String(stops).padStart(2, "0")} STOPS</span>
+      <span className="ruler-code">NAV // {String(count).padStart(2, "0")} STOPS</span>
       {/* --stops drives both the section ticks and the stop columns. */}
-      <div className="ruler-track" style={{ "--stops": stops } as React.CSSProperties}>
+      <div className="ruler-track" style={{ "--stops": count } as React.CSSProperties}>
         <div className="ruler-ticks" aria-hidden="true" />
         <div className="ruler-stops">
-          {ROUTES.map((r) => (
+          {stops.map((r) => (
             <a
               key={r.id}
               className="ruler-stop"
@@ -45,7 +52,7 @@ export function RulerTabs({
       </div>
       <span className="ruler-pos" aria-hidden="true">
         <strong>
-          {String(index + 1).padStart(2, "0")}/{String(stops).padStart(2, "0")}
+          {String(index + 1).padStart(2, "0")}/{String(count).padStart(2, "0")}
         </strong>
       </span>
     </nav>

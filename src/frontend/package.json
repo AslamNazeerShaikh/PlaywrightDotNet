@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/index.ts",
+    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
@@ -16,6 +16,9 @@
     "format:check": "bun fmt --check src package.json bunfig.toml",
     "test": "bun test",
     "test:watch": "bun test --watch",
+    "test:e2e": "playwright test",
+    "test:flags": "bun ./src/tests/e2e/validate-flags.ts",
+    "test:pretest": "bun ./src/tests/e2e/validate-pretest.ts",
     "api:types": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bunx --bun openapi-typescript@7.13.0 https://localhost:5208/openapi/v1.json -o ./src/shared/contracts.ts",
     "audit": "bun audit"
   },
@@ -25,13 +28,14 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "21.0.4",
-    "@tailwindcss/cli": "4.3.3",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/cli": "4.3.4",
     "@testing-library/react": "16.3.3",
     "@types/bun": "1.4.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "happy-dom": "21.0.4",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.4",
     "typescript": "7.0.2"
   },
   "packageManager": "bun@1.4.4",
