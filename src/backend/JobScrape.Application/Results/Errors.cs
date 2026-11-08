@@ -149,6 +149,24 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a not-found failure for a feature that is turned off.
+        /// Disabled answers 404, never 400 or 403: the caller cannot
+        /// distinguish "absent" from "disabled", and the UI routes off the
+        /// stable <c>FEATURE_DISABLED</c> code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo FeatureDisabled()
+        {
+            return new ErrorInfo(
+                "FEATURE_DISABLED",
+                "Feature disabled.",
+                "The requested feature is turned off.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates a failure for a source with no adapter or no configuration.
         /// </summary>
         /// <param name="source">The source.</param>
