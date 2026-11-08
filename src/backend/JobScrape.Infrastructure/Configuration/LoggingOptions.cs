@@ -13,9 +13,10 @@ namespace JobScrape.Infrastructure.Configuration
         public const string SectionName = "JobScrape:Logging";
 
         /// <summary>
-        /// Gets the directory for rolling JSON log files.
+        /// Gets the directory for rolling JSON log files. Required while
+        /// logging is on (<see cref="LoggingOptionsValidator"/> enforces it);
+        /// skipped when the Logging feature flag is off.
         /// </summary>
-        [Required]
         public string Directory { get; init; } = "artifacts/logs";
 
         /// <summary>

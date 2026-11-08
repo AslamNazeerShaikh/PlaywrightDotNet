@@ -95,8 +95,27 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<CancelRunHandler>();
             services.AddTransient<ListRunPostingsHandler>();
             services.AddTransient<ExportRunPostingsHandler>();
-            services.AddSingleton<IPostingExportWriter, CsvPostingWriter>();
-            services.AddSingleton<IPostingExportWriter, ExcelPostingWriter>();
+            // The export writers: resolve-time factories reading FeaturesOptions,
+            // so a disabled format's writer is never constructed. Registered as
+            // one explicit IEnumerable<IPostingExportWriter>, which replaces the
+            // container's default enumeration for this service type; new export
+            // writers are added inside this factory, not as separate registrations.
+            services.AddSingleton<IEnumerable<IPostingExportWriter>>(provider =>
+            {
+                var features = provider.GetRequiredService<IOptions<FeaturesOptions>>().Value;
+                var writers = new List<IPostingExportWriter>();
+                if (features.CsvExport)
+                {
+                    writers.Add(new CsvPostingWriter());
+                }
+
+                if (features.ExcelExport)
+                {
+                    writers.Add(new ExcelPostingWriter());
+                }
+
+                return writers;
+            });
             // Identity: the token service is stateless, so it shares the
             // validated options snapshot; the policy record keeps JwtOptions
             // out of the application layer.
