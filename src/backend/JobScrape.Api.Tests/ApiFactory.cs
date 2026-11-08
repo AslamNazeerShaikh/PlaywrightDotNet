@@ -14,16 +14,35 @@ namespace JobScrape.Api.Tests
     /// </summary>
     public sealed class ApiFactory : WebApplicationFactory<Program>
     {
-        private readonly string _root = Path.Combine(
+        private readonly string _fallbackRoot = Path.Combine(
             Path.GetTempPath(),
             $"jobscrape-api-{Guid.NewGuid():N}"
         );
 
-        public string LogDirectory => Path.Combine(_root, "logs");
+        /// <summary>
+        /// Gets the storage root backing this factory. Tests that model a
+        /// host restart set the same root on a second factory; the SQLite
+        /// file (with its quota definitions and token versions) survives.
+        /// </summary>
+        public string? StorageRoot { get; init; }
 
-        public string DatabasePath => Path.Combine(_root, "data", "jobscrape.db");
+        /// <summary>
+        /// Gets the effective storage root.
+        /// </summary>
+        public string Root => StorageRoot ?? _fallbackRoot;
 
-        public string ProfilesRoot => Path.Combine(_root, "data", "profiles");
+        /// <summary>
+        /// Gets whether disposing this factory also deletes its storage
+        /// root. Tests that share one root across restarts set this false
+        /// and delete the root themselves.
+        /// </summary>
+        public bool DeleteStorageOnDispose { get; init; } = true;
+
+        public string LogDirectory => Path.Combine(Root, "logs");
+
+        public string DatabasePath => Path.Combine(Root, "data", "jobscrape.db");
+
+        public string ProfilesRoot => Path.Combine(Root, "data", "profiles");
 
         public bool DeleteLogsOnDispose { get; init; } = true;
 
@@ -56,11 +75,8 @@ namespace JobScrape.Api.Tests
             }
             builder.UseSetting("JobScrape:Logging:Directory", LogDirectory);
             builder.UseSetting("JobScrape:Storage:DatabasePath", DatabasePath);
-            builder.UseSetting("JobScrape:Storage:ArtifactsRoot", Path.Combine(_root, "data"));
-            builder.UseSetting(
-                "JobScrape:Storage:ProfilesRoot",
-                Path.Combine(_root, "data", "profiles")
-            );
+            builder.UseSetting("JobScrape:Storage:ArtifactsRoot", Path.Combine(Root, "data"));
+            builder.UseSetting("JobScrape:Storage:ProfilesRoot", ProfilesRoot);
             if (TestServices is not null)
             {
                 builder.ConfigureTestServices(TestServices);
@@ -71,15 +87,20 @@ namespace JobScrape.Api.Tests
         {
             await base.DisposeAsync();
             SqliteConnection.ClearAllPools();
-            var data = Path.Combine(_root, "data");
+            if (!DeleteStorageOnDispose)
+            {
+                return;
+            }
+
+            var data = Path.Combine(Root, "data");
             if (Directory.Exists(data))
             {
                 Directory.Delete(data, recursive: true);
             }
 
-            if (DeleteLogsOnDispose && Directory.Exists(_root))
+            if (DeleteLogsOnDispose && Directory.Exists(Root))
             {
-                Directory.Delete(_root, recursive: true);
+                Directory.Delete(Root, recursive: true);
             }
         }
     }

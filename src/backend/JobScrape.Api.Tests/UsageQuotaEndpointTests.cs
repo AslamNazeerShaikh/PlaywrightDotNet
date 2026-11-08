@@ -298,5 +298,110 @@ namespace JobScrape.Api.Tests
             var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
             Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
         }
+
+        [Fact]
+        public async Task QuotaCountersResetOnRestartWhileDefinitionsPersist()
+        {
+            var root = Path.Combine(
+                Path.GetTempPath(),
+                $"jobscrape-quota-restart-{Guid.NewGuid():N}"
+            );
+            try
+            {
+                string token;
+                await using (
+                    var first = new ApiFactory
+                    {
+                        StorageRoot = root,
+                        DeleteStorageOnDispose = false,
+                    }
+                )
+                {
+                    using var admin = await first.CreateAdminClientAsync(Ct);
+                    token = admin.DefaultRequestHeaders.Authorization!.Parameter!;
+                    using var updated = await admin.PutAsJsonAsync(
+                        "api/v1/quotas/Api",
+                        new { limit = 1, window = "00:01:00" },
+                        Ct
+                    );
+                    Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+                }
+
+                // Same database file, new host: the in-memory counter is gone
+                // while the persisted definition still caps the scope at one.
+                await using (
+                    var second = new ApiFactory
+                    {
+                        StorageRoot = root,
+                        DeleteStorageOnDispose = false,
+                    }
+                )
+                {
+                    using var client = second.CreateClient();
+                    client.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                    using var firstRead = await client.GetAsync("api/v1/users", Ct);
+                    Assert.Equal(HttpStatusCode.OK, firstRead.StatusCode);
+
+                    using var secondRead = await client.GetAsync("api/v1/users", Ct);
+                    Assert.Equal(HttpStatusCode.TooManyRequests, secondRead.StatusCode);
+                    Assert.True(secondRead.Headers.Contains("Retry-After"));
+                    var limitBody = await secondRead.Content.ReadFromJsonAsync<JsonElement>(Ct);
+                    Assert.Equal("QUOTA_EXCEEDED", limitBody.GetProperty("code").GetString());
+
+                    // Definition reads stay exempt even while Api is spent.
+                    using var quotasFirst = await client.GetAsync("api/v1/quotas", Ct);
+                    using var quotasSecond = await client.GetAsync("api/v1/quotas", Ct);
+                    Assert.Equal(HttpStatusCode.OK, quotasFirst.StatusCode);
+                    Assert.Equal(HttpStatusCode.OK, quotasSecond.StatusCode);
+                }
+
+                // A third host resets the counter again; the limit=1
+                // definition survived both restarts.
+                await using (
+                    var third = new ApiFactory
+                    {
+                        StorageRoot = root,
+                        DeleteStorageOnDispose = false,
+                    }
+                )
+                {
+                    using var client = third.CreateClient();
+                    client.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                    using var read = await client.GetAsync("api/v1/users", Ct);
+                    Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+
+                    using var quotas = await client.GetAsync("api/v1/quotas", Ct);
+                    quotas.EnsureSuccessStatusCode();
+                    var body = await quotas.Content.ReadFromJsonAsync<JsonElement>(Ct);
+                    var api = body.GetProperty("quotas")
+                        .EnumerateArray()
+                        .Single(quota => quota.GetProperty("scope").GetString() == "Api");
+                    Assert.Equal(1, api.GetProperty("limit").GetInt32());
+                }
+            }
+            finally
+            {
+                for (var attempt = 0; attempt < 5; attempt++)
+                {
+                    try
+                    {
+                        if (Directory.Exists(root))
+                        {
+                            Directory.Delete(root, recursive: true);
+                        }
+
+                        break;
+                    }
+                    catch (IOException) when (attempt < 4)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+            }
+        }
     }
 }

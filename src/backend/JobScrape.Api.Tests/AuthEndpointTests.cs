@@ -226,6 +226,56 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task DoubleSetupReturns409PasswordSetupComplete()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"double-setup-{Guid.NewGuid():N}@example.com";
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
+            {
+                created.EnsureSuccessStatusCode();
+            }
+
+            using var anonymous = factory.CreateClient();
+            using (
+                var first = await anonymous.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
+            {
+                Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            }
+
+            using var second = await anonymous.PostAsJsonAsync(
+                "api/v1/auth/setup-password",
+                new
+                {
+                    email,
+                    currentSecret = "Final-Password2@@",
+                    newPassword = "Another-Password3##",
+                },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+            var body = await second.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("PASSWORD_SETUP_COMPLETE", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
         public async Task NonAdminCannotReachAdminRoutes()
         {
             await using var factory = new ApiFactory();
@@ -882,6 +932,95 @@ namespace JobScrape.Api.Tests
             Assert.Equal(HttpStatusCode.OK, first.StatusCode);
             Assert.Equal(HttpStatusCode.OK, second.StatusCode);
             Assert.NotEqual(firstLogin!.Token, secondLogin!.Token);
+        }
+
+        [Fact]
+        public async Task MePollingDoesNotConsumeTheLoginBudget()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+            var email = $"me-poll-{Guid.NewGuid():N}@example.com";
+            using (
+                var created = await admin.PostAsJsonAsync(
+                    "api/v1/users",
+                    new { email, temporaryPassword = "Temp-Secret1!!" },
+                    Ct
+                )
+            )
+            {
+                created.EnsureSuccessStatusCode();
+            }
+
+            using var setupClient = factory.CreateClient();
+            using (
+                var setup = await setupClient.PostAsJsonAsync(
+                    "api/v1/auth/setup-password",
+                    new
+                    {
+                        email,
+                        currentSecret = "Temp-Secret1!!",
+                        newPassword = "Final-Password2@@",
+                    },
+                    Ct
+                )
+            )
+            {
+                setup.EnsureSuccessStatusCode();
+            }
+
+            using var meClient = await AuthTestHelper.LoginAsync(
+                factory,
+                email,
+                "Final-Password2@@",
+                Ct
+            );
+            for (var i = 0; i < 11; i++)
+            {
+                using var me = await meClient.GetAsync("api/v1/auth/me", Ct);
+                Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+            }
+
+            // /me is on the global limiter only. If it shared the login
+            // budget the next sign-in would be 429; it must succeed.
+            using var loginClient = factory.CreateClient();
+            using var login = await loginClient.PostAsJsonAsync(
+                "api/v1/auth/login",
+                new { email, password = "Final-Password2@@" },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        }
+
+        [Fact]
+        public async Task AnonymousMcpRequestIs401WithCode()
+        {
+            await using var factory = new ApiFactory();
+            using var client = factory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            {
+                Content = JsonContent.Create(
+                    new
+                    {
+                        jsonrpc = "2.0",
+                        id = 1,
+                        method = "initialize",
+                        @params = new
+                        {
+                            protocolVersion = "2025-06-18",
+                            capabilities = new { },
+                            clientInfo = new { name = "anonymous-mcp-test", version = "1.0.0" },
+                        },
+                    }
+                ),
+            };
+            request.Headers.Accept.ParseAdd("application/json");
+            request.Headers.Accept.ParseAdd("text/event-stream");
+
+            using var response = await client.SendAsync(request, Ct);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("UNAUTHENTICATED", body.GetProperty("code").GetString());
         }
     }
 }
