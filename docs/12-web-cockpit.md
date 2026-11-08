@@ -989,17 +989,17 @@ async function sse(req: Request): Promise<Response> {
 
 ### 13.4 Auth and CSRF
 
-> **Not implemented.** The BFF proxies `/api/*` without a session, CSRF
-> check, or bearer token; both processes bind loopback only.
+> Implemented: the BFF proxies `/api/*` with a server-side session, CSRF
+> check, and no bearer token in the browser; both processes bind loopback only.
 
-- **Bootstrap:** on first run, generate a 32-byte token, print it once, and store only an Argon2id hash in `~/.config/joblens/cockpit.token` (mode `0600`). For automation, `JOBLENS_COCKPIT_TOKEN` may supply the plaintext; the BFF hashes it in memory at startup.
-- **Login:** the operator pastes the token; `Bun.password.verify` checks it against the stored hash, then sets:
-  - `joblens_session` — `HttpOnly; SameSite=Strict; Path=/; Secure` (Secure only with TLS)
-  - `joblens_csrf` — readable, random, same lifetime
-- **Mutations:** require `X-CSRF-Token` to equal the `joblens_csrf` cookie and validate `Origin`/`Sec-Fetch-Site`.
-- **Expiry:** 12 h idle, 7 days absolute; “Sign out” clears both cookies.
-- **BFF→API:** `JOBLENS_API_TOKEN` is server-only, never inlined, never logged.
-- **Remote access:** disabled by default. LAN access requires explicit `JOBLENS_ALLOW_REMOTE=1`, TLS, and a trusted network (Tailscale/SSH tunnel preferred).
+- **Login:** the operator signs in with email + password; the BFF trades them for the backend JWT once, then sets:
+  - session cookie (`__Host-jobscrape_session` over TLS, `jobscrape_session` otherwise) — `HttpOnly; Path=/; SameSite=Strict` (`Secure` with TLS). Holds the backend bearer server-side; the browser never sees a token.
+  - `jobscrape_csrf` — readable, random, same lifetime.
+- **Mutations:** unsafe `/api/*` calls require `x-csrf-token` to equal the `jobscrape_csrf` cookie, plus origin checks.
+- **Expiry:** cookies carry no `Max-Age`; the backend JWT lifetime governs the session. Expired tokens answer 401 with both cookies cleared.
+- **Sign-out:** `DELETE /bff/session` answers 204 with both cookies cleared. Clearing cookies client-side is enough: the next call re-authenticates, and a revoked server-side token fails closed.
+- **BFF→API:** the bearer lives in the BFF process only, injected per proxied request, never inlined, never logged.
+- **Remote access:** both processes bind loopback only.
 
 ### 13.4.1 Signing in (local dev)
 
