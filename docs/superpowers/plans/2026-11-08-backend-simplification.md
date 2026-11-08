@@ -70,7 +70,7 @@ git commit -m "docs(specs): add handler narrator's map and simplification plan"
 
 **Interfaces:**
 - Consumes: `ScrapeStores`, `JobSourceRegistry`, `SourceSettingsCatalog`, `ISessionManager`, existing `RunScope.Touched: List<JobPosting>` + `RunScope.HitWall: bool` semantics.
-- Produces: `RunScrapeHandler.HandleAsync(CancellationToken) -> Result<ScrapeRunSummary>` unchanged; internal `RunScope` transitions owned by one module; `IsStale(...)` and `IsSkillMismatch(...)` remain the only predicates outside.
+- Produces: `RunScrapeHandler.HandleAsync(RunScrapeRequest, CancellationToken) -> Result<ScrapeRunSummary>` unchanged; internal `RunScope` transitions owned by one module; `IsStale(...)` and `IsSkillMismatch(...)` remain the only predicates outside.
 
 - [ ] **Step 1: Pin the ordering behavior with a failing characterization test**
 
@@ -78,7 +78,12 @@ git commit -m "docs(specs): add handler narrator's map and simplification plan"
 [Fact]
 public async Task Wall_before_page3_records_outcome_without_throwing()
 {
-    var result = await _handler.HandleAsync(TestContext.Current.CancellationToken);
+    var harness = new ScrapeHarness();
+    var result = await harness.Build().HandleAsync(
+        harness.Request,
+        TestContext.Current.CancellationToken
+    );
+
     Assert.True(result.IsSuccess);
 }
 ```
@@ -108,29 +113,37 @@ git commit -m "refactor(scrape): concentrate RunScope ownership in RunScrapeHand
 
 **Files:**
 - Modify: `src/backend/JobScrape.Infrastructure/Browser/PlaywrightSessionManager.cs:18,78-99`
-- Modify: `src/backend/JobScrape.Infrastructure/Runtime/RunCoordinator.cs:21-43`
+- Modify: `src/backend/JobScrape.Infrastructure/Runtime/RunCoordinator.cs:21-43` (listed but intentionally unchanged — the warm-up move happens inside the browser layer; the coordinator only calls `ISessionManager` and never knew the Naukri check lived in the manager)
 - Modify: `src/backend/JobScrape.Application/Abstractions/ISessionManager.cs`
 - Test: existing Browser/Runtime tests under `src/backend/JobScrape.Infrastructure.Tests/`
 
 **Interfaces:**
 - Consumes: `IBrowserSessionPool.Find(BrowserProfileId)`, `NaukriChallengeClassifier.Classify(...)` (moves into adapter).
-- Produces: `ISessionManager` keeps its existing method signatures; per-source warm-up lives in its adapter (`NaukriAdapter.VerifyAsync`, `IndeedAdapter.VerifyAsync`, `LinkedInAdapter.VerifyAsync`) behind the existing seam.
+- Produces: `ISessionManager` keeps its existing method signatures (`EnsureSessionAsync(SourceKey, BrowserProfileId, CancellationToken)`); per-source warm-up lives in each adapter behind `ISourceWarmUpVerifier.VerifyAsync(IPage, CancellationToken)` — `NaukriJobSource` verifies the home page, `IndeedJobSource` and `LinkedInJobSource` decline (null) and report ready.
 
-- [ ] **Step 1: Write the failing seam test**
+- [ ] **Step 1: Write the seam pin test**
 
 ```csharp
 [Fact]
 public async Task Non_naukri_source_verifies_without_naukri_classifier()
 {
-    var result = await _sessions.VerifyAsync(SourceKey.Indeed, TestContext.Current.CancellationToken);
-    Assert.True(result.Verified);
+    await OpenAsync(Site);
+
+    var assessment = await Sessions()
+        .EnsureSessionAsync(SourceKey.Indeed, _profile.Id, Ct);
+
+    Assert.Equal(ChallengeKind.None, assessment.Kind);
+    Assert.Equal(SessionState.New, _profile.State);
+    Assert.Equal("about:blank", _pool.Find(_profile.Id)?.Url);
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+The shipped test lives in `src/backend/JobScrape.Infrastructure.Tests/Browser/BrowserTests.cs` (`NonNaukriSourceVerifiesWithoutNaukriClassifier`) and pins the path through `EnsureSessionAsync`, not a session-level `VerifyAsync` — `VerifyAsync` is the adapter half of the seam (`ISourceWarmUpVerifier.VerifyAsync(IPage, CancellationToken)`).
 
-Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Infrastructure.Tests --filter "Non_naukri_source_verifies"`
-Expected: FAIL (classifier still hardcoded in manager)
+- [ ] **Step 2: Run test to verify it pins the current pass-through**
+
+Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Infrastructure.Tests --filter "NonNaukriSourceVerifiesWithoutNaukriClassifier"`
+Expected: PASS (the Indeed path already skipped the Naukri classifier; this pins that behavior before the seam move)
 
 - [ ] **Step 3: Implement per-source `VerifyAsync` adapters and thin `PlaywrightSessionManager` to open/verify/release delegation in `src/backend/JobScrape.Infrastructure/Browser/PlaywrightSessionManager.cs`**
 
@@ -159,7 +172,7 @@ git commit -m "refactor(browser): move warm-up verification into source adapters
 
 **Interfaces:**
 - Consumes: `SearchPageDriver.FindPage(pool, profileId)`, `WaitForCardsAsync(page, cardSelector)`, `ScrollAsync(page, ct)`, `CursorOffset(cursor)`.
-- Produces: each `*JobSource.SearchAsync(...) -> SearchPageResult` owns goto/classify/parse/next-cursor inline; `SearchOffsetPageAsync<TPage>` deleted; small helpers (`FindPage`, `WaitForCardsAsync`, `ScrollAsync`, `CursorOffset`, `Transient`) retained.
+- Produces: each `*JobSource.SearchPageAsync(SourceRunContext, SearchPageRequest, CancellationToken) -> SearchPageResult` owns goto/classify/parse/next-cursor inline; `SearchOffsetPageAsync<TPage>` deleted; small helpers (`FindPage`, `WaitForCardsAsync`, `ScrollAsync`, `CursorOffset`, `Transient`) retained.
 
 - [ ] **Step 1: Write the failing explicit-adapter test**
 
@@ -167,14 +180,20 @@ git commit -m "refactor(browser): move warm-up verification into source adapters
 [Fact]
 public async Task Indeed_search_owns_its_next_cursor_without_generic_driver()
 {
-    var page = await _indeed.SearchAsync("dotnet", null, TestContext.Current.CancellationToken);
+    var page = await _indeed.SearchPageAsync(
+        Context(),
+        new SearchPageRequest(1, null),
+        TestContext.Current.CancellationToken
+    );
     Assert.NotNull(page.NextCursor);
 }
 ```
 
+The shipped test is `IndeedSearchOwnsItsNextCursorWithoutGenericDriver` in `src/backend/JobScrape.Infrastructure.Tests/Sources/Indeed/IndeedJobSourceTests.cs` (Indeed served from the synthetic fixture; asserts the next cursor is `"10"`).
+
 - [ ] **Step 2: Run test to verify current pass-through**
 
-Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Infrastructure.Tests --filter "Indeed_search_owns"`
+Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Infrastructure.Tests --filter "IndeedSearchOwnsItsNextCursorWithoutGenericDriver"`
 Expected: PASS (pins behavior before dissolve)
 
 - [ ] **Step 3: Implement inline fetch in each `*JobSource.cs`: delete `SearchOffsetPageAsync<TPage>` calls, keep `FindPage`/`WaitForCardsAsync`/`ScrollAsync` helpers**
@@ -200,7 +219,7 @@ git commit -m "refactor(sources): dissolve generic SearchOffsetPageAsync into ad
 - Modify: `src/backend/JobScrape.Mcp/Tools/McpAuth.cs:22`
 - Modify: `src/backend/JobScrape.Api/Http/Auth/PermissionAuthorizationHandler.cs`
 - Modify: `src/backend/JobScrape.Application/Features/Identity/LoginHandler.cs` (move dangling-role pruning out)
-- Test: `src/backend/JobScrape.Domain.Tests/Access/PermissionDecisionTests.cs` (new) + `src/backend/JobScrape.Api.Tests/AuthEndpointTests.cs`
+- Test: `src/backend/JobScrape.Domain.Tests/Access/PermissionDecisionTests.cs` (new) + `src/backend/JobScrape.Api.Tests/AuthEndpointTests.cs` (listed but intentionally unchanged — the pre-existing endpoint pins already cover the must-change-password denial outside auth; the decision itself is pinned in `PermissionDecisionTests.cs`)
 
 **Interfaces:**
 - Consumes: `PermissionCatalog` keys (e.g. `runs.write`), `ICallerContext.Permissions`, `MustChangePassword`.
@@ -213,16 +232,22 @@ git commit -m "refactor(sources): dissolve generic SearchOffsetPageAsync into ad
 [Fact]
 public void Must_change_password_denies_even_with_permission()
 {
-    Assert.False(PermissionDecision.IsAllowed(_callerWithMustChange, "runs.write"));
+    Assert.False(
+        PermissionDecision.IsAllowed(
+            mustChangePassword: true,
+            permissions: ["runs.write"],
+            permission: "runs.write"
+        )
+    );
 }
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Domain.Tests --filter "Must_change_password_denies"`
+Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Domain.Tests --filter "MustChangePasswordDeniesEvenWithPermission"`
 Expected: FAIL with "PermissionDecision not defined"
 
-- [ ] **Step 3: Implement `PermissionDecision.IsAllowed(ICallerContext, string) -> bool` in `src/backend/JobScrape.Domain/Access/PermissionDecision.cs`**
+- [ ] **Step 3: Implement `PermissionDecision.IsAllowed(bool mustChangePassword, IReadOnlyCollection<string> permissions, string permission) -> bool` in `src/backend/JobScrape.Domain/Access/PermissionDecision.cs`**
 
 Deny when `MustChangePassword` or permission absent (ordinal compare); rewire `McpAuth.RequirePermission` and HTTP handler to call it; extract login pruning to a pure function.
 
@@ -246,7 +271,7 @@ git commit -m "refactor(auth): share one permission decision across HTTP and MCP
 - Modify: `src/backend/JobScrape.Application/Features/Sources/SourcePolicy.cs`
 - Modify: `src/backend/JobScrape.Application/Features/Sources/SourceQuotaUsage.cs`
 - Modify: `src/backend/JobScrape.Application/Features/Sources/SourceCircuit.cs`
-- Modify: `src/backend/JobScrape.Application/Features/Sources/SourceStatusResponse.cs`
+- Modify: `src/backend/JobScrape.Application/Features/Sources/SourceStatusResponse.cs` (listed but intentionally unchanged — kept by design as the response contract; only the single-use status records folded into the handler)
 - Test: existing Sources handler tests under `src/backend/JobScrape.Application.Tests/`
 
 **Interfaces:**
@@ -260,13 +285,13 @@ git commit -m "refactor(auth): share one permission decision across HTTP and MCP
 public async Task Never_ran_source_reports_zero_usage_closed_circuit_without_writes()
 {
     var response = await _handler.HandleAsync(TestContext.Current.CancellationToken);
-    Assert.Contains(response.Items, i => i.Quota.PagesFetched == 0);
+    Assert.Contains(response.Items, i => i.Quota.PagesUsed == 0);
 }
 ```
 
 - [ ] **Step 2: Run test to verify baseline**
 
-Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Application.Tests --filter "Never_ran_source"`
+Run: `dotnet test --solution src/backend/JobScrape.slnx --project JobScrape.Application.Tests --filter "NeverRanSourceReportsZeroUsageClosedCircuitWithoutWrites"`
 Expected: PASS (pins read-only contract)
 
 - [ ] **Step 3: Implement folded status construction inside `ListSourcesHandler.cs:59-112`; delete single-use record files that add no seam**

@@ -22,7 +22,7 @@
 
 A handler is an ordinary sealed C# class that does one user-visible job and exposes it as one public method, `HandleAsync`. Whatever it needs — database access, settings, the browser — arrives through its constructor (plain constructor injection; the app's composition root in `JobScrape.Infrastructure/Composition/UseCaseRegistration.cs` wires these up). There is no bus, no message dispatch, no base class: the caller names the handler and awaits the method, e.g. `UsersController` holds a `ListUsersHandler` and runs `await _list.HandleAsync(cancellationToken)`. If you know MediatR's request-handler idea, this is that idea with the middleman deleted on purpose, so "find usages" always shows the whole story.
 
-A narration therefore always has three beats: (1) an entry names a job and calls its handler (`RunsController` → `StartRunHandler`), (2) the handler runs its steps top to bottom using domain rules plus infrastructure behind interfaces, (3) it returns a `Result` the entry maps to HTTP/MCP output. The one exception to "top to bottom in one file": `RunScrapeHandler` spreads its story across 5 partial files sharing one mutable per-run state (`RunScope`) — read it as one class in five sheets, not five classes.
+A narration therefore always has three beats: (1) an entry names a job and calls its handler (`RunsController` → `StartRunHandler`), (2) the handler runs its steps top to bottom using domain rules plus infrastructure behind interfaces, (3) it returns a `Result` the entry maps to HTTP/MCP output. The exception the map used to carry is gone: `RunScrapeHandler` also tells its whole story in one file — there is no spread across sheets. The mutable per-run state (`RunScope`) is owned by that one file, and `partial` remains only for the `[LoggerMessage]` source generator, not for behavior.
 
 ## The map
 
@@ -30,7 +30,9 @@ A narration therefore always has three beats: (1) an entry names a job and calls
 
 | Handler | One job | Called by | Needs |
 |---|---|---|---|
-| `RunScrapeHandler` (`Features/Scraping/`, 5 partial files) | Executes one search profile end to end: gates, session check, pagination, upsert, outcome | `RunCoordinator` (Infrastructure; the only handler not called from entries) | `ScrapeStores`, `JobSourceRegistry`, `SourceSettingsCatalog`, `ISessionManager`, `IArtifactStore`, `IDelay`, `RetryPolicy`, `IRandomSource`, `TimeProvider`, `ILogger` (10 — the widest) |
+| `RunScrapeHandler` (`Features/Scraping/`, one file) | Executes one search profile end to end: gates, session check, pagination, upsert, outcome | `RunCoordinator` (Infrastructure; the only handler not called from entries) | `ScrapeStores`, `JobSourceRegistry`, `SourceSettingsCatalog`, `ISessionManager`, `IArtifactStore`, `IDelay`, `RetryPolicy`, `IRandomSource`, `TimeProvider`, `ILogger` (10 — the widest) |
+
+`RunScrapeHandler` is the one intentional exception to the ~800-line file guideline (roughly 1,326 lines): a single deep module by plan decision, because `RunScope` ownership has to stay in exactly one place. Do not split it while that single-ownership rule holds — a split would recreate the cross-file state drift the simplification removed.
 
 ### Runs (6)
 
@@ -41,7 +43,7 @@ A narration therefore always has three beats: (1) an entry names a job and calls
 | `GetRunHandler` | Gets one run by id | `RunsController`, `RunsTools` (MCP) | `IRunStore` |
 | `ListRunsHandler` | Lists recent runs, newest first | `RunsController`, `RunsTools` | `IRunStore` |
 | `ListRunPostingsHandler` | Lists the postings one run saw | `RunsController`, `RunsTools` | `IRunStore` |
-| `ExportRunPostingsHandler` | Exports one run's postings to CSV/XLSX | `RunsController` | `IRunStore`, export writers |
+| `ExportRunPostingsHandler` | Exports one run's postings to CSV/XLSX | `RunsController` | `IRunStore`, `IEnumerable<IPostingExportWriter>` |
 
 ### Identity (13)
 
@@ -51,7 +53,7 @@ A narration therefore always has three beats: (1) an entry names a job and calls
 | `SetupPasswordHandler` | Completes first login with a new password | `AuthController` | `IUserRepository`, `IUnitOfWork`, `TimeProvider` |
 | `ChangePasswordHandler` | Changes password past first login | `AuthController` | `IUserRepository`, `IUnitOfWork` |
 | `CreateUserHandler` | Creates a user with a temporary password | `UsersController` | `IUserRepository`, `IRoleRepository`, `IUnitOfWork`, `TimeProvider` |
-| `GetUserHandler` / `ListUsersHandler` | Reads one user / lists users | `UsersController` | repos (`IRoleRepository` for role names) |
+| `GetUserHandler` / `ListUsersHandler` | Reads one user / lists users | `UsersController` | `IUserRepository`, `IRoleRepository` (role names) |
 | `AssignRoleHandler` / `RevokeRoleHandler` | Assigns / revokes a user's role (last-admin guard on revoke) | `UsersController` | `IUserRepository`, `IRoleRepository`, `IUnitOfWork`, `ICallerContext` |
 | `CreateRoleHandler` / `GetRoleHandler` / `ListRolesHandler` | Creates / reads one / lists roles | `RolesController` | `IRoleRepository` (+ `IUnitOfWork` on create) |
 | `GrantPermissionHandler` / `RevokePermissionHandler` | Grants / revokes a catalog permission on a role | `RolesController` | `IRoleRepository`, `IUserRepository`, `IUnitOfWork` |
@@ -75,7 +77,7 @@ A narration therefore always has three beats: (1) an entry names a job and calls
 
 | Handler | One job | Called by | Needs |
 |---|---|---|---|
-| `ListSourcesHandler` | Snapshots every source: policy, gate, quota, circuit | `SourcesController`, `SourcesTools` (MCP) | `SourceSettingsCatalog`, `ComplianceConsent`, quota + circuit repos, `TimeProvider` |
+| `ListSourcesHandler` | Snapshots every source: policy, gate, quota, circuit | `SourcesController`, `SourcesTools` (MCP) | `SourceSettingsCatalog`, `ComplianceConsent`, `ISourceQuotaRepository`, `ISourceCircuitBreakerRepository`, `TimeProvider` |
 | `ListUsageQuotasHandler` / `UpdateUsageQuotaHandler` | Lists / changes quota definitions | `UsageQuotasController` | `IUsageQuotaRepository` (+ `IUnitOfWork` on update) |
 | `GetHealthHandler` | Liveness check | `HealthController`, `HealthTools` (MCP) | `TimeProvider` |
 

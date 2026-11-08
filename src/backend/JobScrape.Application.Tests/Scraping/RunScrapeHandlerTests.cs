@@ -650,6 +650,8 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.True(result.IsSuccess);
             Assert.Equal(RunStage.PausedForChallenge, result.Value.Stage);
             Assert.True(harness.Store.Saves > 0);
+            Assert.Equal(2, harness.Source.Requests.Count);
+            Assert.Equal(2, harness.Store.Postings.Count);
         }
 
         [Fact]

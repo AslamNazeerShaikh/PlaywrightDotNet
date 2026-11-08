@@ -503,6 +503,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
         }
 
+        // Category moved from ILogger<PlaywrightSessionManager> to ILogger<NaukriJobSource> for log routing; level, message, and template unchanged.
         [LoggerMessage(
             Level = LogLevel.Warning,
             Message = "Session warm-up for {Source} failed"

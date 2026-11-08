@@ -238,6 +238,15 @@ namespace JobScrape.Infrastructure.Tests.Browser
         }
 
         [Fact]
+        public void NaukriAdapterImplementsTheWarmUpVerifier()
+        {
+            // Composition-level pin: the session manager dispatches warm-up
+            // through ISourceWarmUpVerifier; losing the interface silently
+            // skips warm-up instead of failing the run.
+            Assert.IsAssignableFrom<ISourceWarmUpVerifier>(Source());
+        }
+
+        [Fact]
         public async Task OtherSourcesOpenTheBrowserWithoutAWarmUp()
         {
             var assessment = await Sessions().EnsureSessionAsync(SourceKey.Indeed, _profile.Id, Ct);
