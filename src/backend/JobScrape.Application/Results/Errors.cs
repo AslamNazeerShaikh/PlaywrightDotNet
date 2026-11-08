@@ -149,6 +149,24 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a not-found failure for a feature that is turned off.
+        /// Disabled answers 404, never 400 or 403: the caller cannot
+        /// distinguish "absent" from "disabled", and the UI routes off the
+        /// stable <c>FEATURE_DISABLED</c> code.
+        /// </summary>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.NotFound"/>.</returns>
+        public static ErrorInfo FeatureDisabled()
+        {
+            return new ErrorInfo(
+                "FEATURE_DISABLED",
+                "Feature disabled.",
+                "The requested feature is turned off.",
+                ErrorKind.NotFound,
+                new Dictionary<string, object?>()
+            );
+        }
+
+        /// <summary>
         /// Creates a failure for a source with no adapter or no configuration.
         /// </summary>
         /// <param name="source">The source.</param>
@@ -404,16 +422,42 @@ namespace JobScrape.Application.Results
 
         /// <summary>
         /// Creates a validation failure for an export format no writer renders.
+        /// The detail lists only the enabled formats, so a client never reads
+        /// about a format the host has turned off.
         /// </summary>
         /// <param name="format">The requested format, echoed in metadata.</param>
+        /// <param name="enabledFormats">
+        /// Query-string names of the enabled formats, in csv-to-xlsx order.
+        /// Empty when every export format is turned off.
+        /// </param>
         /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Validation"/>.</returns>
-        public static ErrorInfo ExportFormatUnsupported(string format)
+        public static ErrorInfo ExportFormatUnsupported(
+            string format,
+            IReadOnlyList<string> enabledFormats
+        )
         {
             ArgumentNullException.ThrowIfNull(format);
+            ArgumentNullException.ThrowIfNull(enabledFormats);
+            string hint;
+            if (enabledFormats.Count == 0)
+            {
+                hint = "No export format is enabled.";
+            }
+            else
+            {
+                var quoted = new List<string>(enabledFormats.Count);
+                foreach (var enabled in enabledFormats)
+                {
+                    quoted.Add($"'{enabled}'");
+                }
+
+                hint = $"Use {string.Join(" or ", quoted)}.";
+            }
+
             return new ErrorInfo(
                 "EXPORT_FORMAT_UNSUPPORTED",
                 "Export format is not supported.",
-                $"Export format '{format}' is not supported. Use 'csv' or 'xlsx'.",
+                $"Export format '{format}' is not supported. {hint}",
                 ErrorKind.Validation,
                 new Dictionary<string, object?> { ["format"] = format }
             );
