@@ -51,7 +51,7 @@ public sealed class GetUserHandler
 }
 ```
 
-You use it by injecting it into an endpoint and calling the method. Tests create it with `new` and a fake store. There is no runtime lookup. The stack trace names the handler.
+You use it by injecting it into an endpoint and calling the method. Tests create it with `new` and a fake store. There is no runtime lookup. The stack trace names the handler. Queries with no failure outcome return the DTO directly instead of a result, such as the list handler in this repo. Registration is explicit, one line per handler, with no assembly scanning.
 
 ### An event has two meanings
 
