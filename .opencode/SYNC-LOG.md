@@ -5,6 +5,18 @@ Source of truth: https://github.com/backnotprop/pstack (standalone mirror of `cu
 Vendor packs (dotnet, testing, UI, graphify) and ECC are synced separately; see `docs/18-harness-packs.md`.
 The `.claude/` tree is a separate port checkout and is never touched by these syncs.
 
+## 2026-11-08 — harness freshness audit: mattpocock re-vendor, other packs checked (no changes)
+
+Full audit of all four harness packs against upstream (2026-11-08; design `docs/superpowers/specs/2026-11-08-harness-freshness-design.md`, plan `docs/superpowers/plans/2026-11-08-harness-freshness-plan.md`):
+
+- mattpocock/skills (main, raw.githubusercontent fetch 2026-11-08, HTTP 200): re-vendored 2 files, local MIT attribution (`license: MIT` frontmatter, `Source:` lines, pre-`Source:` blank lines) preserved; no `disable-model-invocation` flags present or dropped.
+  - `skills/domain-modeling/ADR-FORMAT.md`: upstream added the "Constraints not visible in the code." bullet under "What qualifies".
+  - `skills/codebase-design/SKILL.md`: upstream reworked "Deep vs shallow" (ASCII box diagrams for deep/shallow modules) and added two TypeScript testability examples (`processOrder(order, paymentGateway)`, `calculateDiscount(cart): Discount`) under "Designing for testability".
+- superpowers (`superpowers@git+https://github.com/obra/superpowers.git`): installed `22f0b46` equals upstream main HEAD `22f0b463e7a5e579904dd6211a520321035526f7`; `opencode plugin check` reports current. No update.
+- ECC (`affaan-m/ECC` @ `d2ef2680`, VERSION `2.2.3`): all 29 installed files byte-identical to install base `ce42a22`; upstream drift zero. Local-vs-upstream diffs are all local V2/pstack adaptations; no merge.
+- pstack (`backnotprop/pstack` @ `a6342ded43a2437e3c664b46c2cff103787773fd`, 0.15.36): one commit since last sync (`f104aa8`) touching only the mirror's own SYNC-LOG.md; zero commits in `skills/`, `agents/`, `commands/`, `prompts/`. No merge.
+- ECC `architect.txt` and `python-reviewer.txt` remain uninstalled (flagged in task-3 report; no decision to install).
+
 ## 2026-11-07 — mirror f104aa8 (0.15.36), OpenCode V2 (2.2.6) audit
 
 - Global OpenCode config removed (`~/.config/opencode/`, backed up to `~/opencode-global-config-backup-2026-11-07.tar.gz`). Config is repo-only now.

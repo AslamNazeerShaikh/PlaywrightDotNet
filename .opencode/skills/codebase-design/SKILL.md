@@ -30,9 +30,27 @@ Use these terms exactly: don't substitute "component," "service," "API," or "bou
 
 ## Deep vs shallow
 
-**Deep module** = small interface + lots of implementation.
+**Deep module** = small interface + lots of implementation:
 
-**Shallow module** = large interface + little implementation (avoid).
+```
+┌─────────────────────┐
+│   Small Interface   │  ← Few methods, simple params
+├─────────────────────┤
+│                     │
+│  Deep Implementation│  ← Complex logic hidden
+│                     │
+└─────────────────────┘
+```
+
+**Shallow module** = large interface + little implementation (avoid):
+
+```
+┌─────────────────────────────────┐
+│       Large Interface           │  ← Many methods, complex params
+├─────────────────────────────────┤
+│  Thin Implementation            │  ← Just passes through
+└─────────────────────────────────┘
+```
 
 When designing an interface, ask:
 
@@ -52,7 +70,29 @@ When designing an interface, ask:
 Good interfaces make testing natural:
 
 1. **Accept dependencies, don't create them.**
+
+   ```typescript
+   // Testable
+   function processOrder(order, paymentGateway) {}
+
+   // Hard to test
+   function processOrder(order) {
+     const gateway = new StripeGateway();
+   }
+   ```
+
 2. **Return results, don't produce side effects.**
+
+   ```typescript
+   // Testable
+   function calculateDiscount(cart): Discount {}
+
+   // Hard to test
+   function applyDiscount(cart): void {
+     cart.total -= discount;
+   }
+   ```
+
 3. **Small surface area.** Fewer methods = fewer tests needed. Fewer params = simpler test setup.
 
 ## Relationships
