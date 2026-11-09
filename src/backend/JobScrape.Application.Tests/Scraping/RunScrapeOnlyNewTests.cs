@@ -62,6 +62,20 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task KnownRowsOnTheSamePageDoNotConsumeThePageBudget()
+        {
+            var harness = new ScrapeHarness(maxJobs: 2) { OnlyNew = true };
+            SeedKnown(harness, "1");
+            harness.Source.Then(Page(null, Job("1"), Job("2"), Job("3")));
+
+            var result = await harness.Build().HandleAsync(harness.Request, Ct);
+
+            Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Code : null);
+            Assert.Equal(2, result.Value.Stats.PostingsNew);
+            Assert.Equal(2, harness.Store.Postings.Count(p => p.FirstSeenAt == Start));
+        }
+
+        [Fact]
         public async Task CompletesWithZeroNewAndRefreshesKnownRows()
         {
             var harness = new ScrapeHarness { OnlyNew = true };
