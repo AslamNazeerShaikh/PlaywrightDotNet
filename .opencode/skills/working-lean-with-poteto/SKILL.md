@@ -29,26 +29,27 @@ One slash carries style; persistence replaces the second.
 - Feature or plan means brainstorming first, smallest only.
 - Every behavior change means RED first: one failing test, watched fail, then pass.
 - Done means verification-before-completion on real artifact.
-- Spawn poteto-agent delegates, general for MCP edits, explore read-only. Model is the role line as `provider/model#variant`; omit when missing, `inherit-parent`, or `auto`.
+- Spawn poteto-agent delegates, general for MCP, explore read-only. Model is role line `provider/model#variant`; omit when missing/`inherit-parent`/`auto`.
 
 ## Quick Reference
 
 | Poteto step | Required gate |
 |-------------|---------------|
-| Feature, Bug fix, Perf issue matched | state data shape first, architect only across a function boundary |
-| Bug or flake | systematic-debugging trace, fix once in shared code |
+| Feature/Bug/Perf matched | state data shape first, architect only across boundary |
+| Bug/flake | trace to first wrong state, fix once shared |
 | Prototype fork | sketch decides, never AskQuestion |
-| Diff shaping | ponytail smallest change: reuse helper, stdlib, installed dep, else minimum code |
-| Commit or review | deslop then no-comments, then verification run |
+| Diff | smallest reuse: helper, stdlib, dep, else minimum |
+| Commit/review | deslop, no-comments, verification run |
 | Models | hardest/deepseek#max; bug-fix/inkling#max; chores/beam-free#max; missing omits model |
-| Fix loop | Critical/Important/spec-miss: resume 1-3, fresh+bump 4-5, max 5, tests+report+re-review each; contested: one fresh bakeoff + owner verdict; Minor: ledger deferred |
+| Fix loop | Critical/Important/spec-miss: resume 1-3, fresh+bump 4-5, max 5, tests+report+re-review; contested: one bakeoff + verdict; Minor: deferred |
+| Plan gate | 2+ tasks, vague, or shared names: write names + Consumes/Produces + test per task first; one-line skips plan; coupled runs sequential, never fan out |
 
 ## Implementation
 
-1. Match playbook. Open steps verbatim as todos.
+1. Match playbook. Open steps verbatim as todos. If Plan gate fires, write the names + tests before code; conflicts go in ledger as `Ruling: <decided> — <why>`.
 2. Bug or flake: trace to first wrong state, grep callers first.
-3. Build smallest reuse-first diff. Deletion beats addition.
-4. Leave one test for non-trivial logic. Mark limits `shortcut: <limit>, <when to upgrade>`.
+3. Smallest reuse-first diff; deletion wins.
+4. One test for non-trivial logic; mark `shortcut: <limit>, <when to upgrade>`.
 5. Verify on real harness. End with skipped items and risks.
 
 ## Common Mistakes
