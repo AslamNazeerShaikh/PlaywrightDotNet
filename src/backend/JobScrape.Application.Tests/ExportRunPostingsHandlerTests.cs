@@ -13,13 +13,14 @@ namespace JobScrape.Application.Tests
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-        private static FeatureFlags Flags => new(
-            Authentication: true,
-            Logging: true,
-            Health: true,
-            CsvExport: true,
-            ExcelExport: true
-        );
+        private static FeatureFlags Flags =>
+            new(
+                Authentication: true,
+                Logging: true,
+                Health: true,
+                CsvExport: true,
+                ExcelExport: true
+            );
 
         private static RunResponse Run()
         {
@@ -227,7 +228,11 @@ namespace JobScrape.Application.Tests
         public async Task EmptyIdFailsValidationBeforeAnyRead()
         {
             var store = new FakeExportStore(null, []);
-            var handler = new ExportRunPostingsHandler(store, [new FakeWriter(ExportFormat.Csv)], Flags);
+            var handler = new ExportRunPostingsHandler(
+                store,
+                [new FakeWriter(ExportFormat.Csv)],
+                Flags
+            );
 
             var result = await handler.HandleAsync(
                 Guid.Empty,

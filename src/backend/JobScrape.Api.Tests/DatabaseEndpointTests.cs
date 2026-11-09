@@ -75,10 +75,7 @@ namespace JobScrape.Api.Tests
                 "FK payload must carry the camelCase onDelete property."
             );
             Assert.False(foreignKey.TryGetProperty("OnDelete", out _));
-            Assert.Equal(
-                "RESTRICT",
-                onDelete.GetString()?.Trim().ToUpperInvariant()
-            );
+            Assert.Equal("RESTRICT", onDelete.GetString()?.Trim().ToUpperInvariant());
         }
 
         [Fact]

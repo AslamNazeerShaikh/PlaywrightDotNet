@@ -34,10 +34,7 @@ namespace JobScrape.Infrastructure.Configuration
         public ValidateOptionsResult Validate(string? name, LoggingOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            if (
-                _features.Logging
-                && string.IsNullOrWhiteSpace(options.Directory)
-            )
+            if (_features.Logging && string.IsNullOrWhiteSpace(options.Directory))
             {
                 return ValidateOptionsResult.Fail(
                     $"{LoggingOptions.SectionName}:{nameof(LoggingOptions.Directory)} is required when Features:Logging is true; set JobScrape:Logging:Directory."

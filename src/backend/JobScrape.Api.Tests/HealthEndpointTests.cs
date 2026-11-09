@@ -19,13 +19,14 @@ namespace JobScrape.Api.Tests
             _factory = factory;
         }
 
-        private static FeatureFlags Flags => new(
-            Authentication: true,
-            Logging: true,
-            Health: true,
-            CsvExport: true,
-            ExcelExport: true
-        );
+        private static FeatureFlags Flags =>
+            new(
+                Authentication: true,
+                Logging: true,
+                Health: true,
+                CsvExport: true,
+                ExcelExport: true
+            );
 
         [Fact]
         public void RejectsNullHandler()
@@ -63,14 +64,9 @@ namespace JobScrape.Api.Tests
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             using var body = JsonDocument.Parse(
-                await response.Content.ReadAsStringAsync(
-                    TestContext.Current.CancellationToken
-                )
+                await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)
             );
-            Assert.Equal(
-                "FEATURE_DISABLED",
-                body.RootElement.GetProperty("code").GetString()
-            );
+            Assert.Equal("FEATURE_DISABLED", body.RootElement.GetProperty("code").GetString());
         }
 
         [Fact]
