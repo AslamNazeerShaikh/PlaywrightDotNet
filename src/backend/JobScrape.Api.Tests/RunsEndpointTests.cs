@@ -475,10 +475,7 @@ namespace JobScrape.Api.Tests
             var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
             Assert.Equal("Completed", done.Stage);
 
-            using var response = await client.GetAsync(
-                $"api/v1/runs/{run.Id}/postings/export",
-                Ct
-            );
+            using var response = await client.GetAsync($"api/v1/runs/{run.Id}/postings/export", Ct);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal(
