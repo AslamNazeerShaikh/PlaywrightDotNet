@@ -14,7 +14,9 @@ To start a task, type `/poteto-mode` plus the word `lean` and the task:
 /poteto-mode lean fix the flaky login retry
 ```
 
-The word `lean` loads ponytail at full before any other step. Do not type `/ponytail` as well. OpenCode reads only the first word as a command. A second `/name` becomes plain text.
+The word `lean` loads ponytail at full before any other step. Do not type `/ponytail` as well. OpenCode reads only the first word as a command. A second `/name` becomes plain text. The trigger matches anywhere in the request, not just on the first line.
+
+No code in the task (git moves, deletes, status checks, one-shot shell): skip the gates below. Run it inline with no subagent and confirm in two lines.
 
 ## Follow the gates
 
