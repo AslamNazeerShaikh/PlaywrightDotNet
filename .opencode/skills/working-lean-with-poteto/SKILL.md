@@ -7,14 +7,14 @@ description: Use when a /poteto-mode prompt says lean or yagni, or a task involv
 
 ## Overview
 
-Poteto routes. Ponytail bounds diff. Superpowers gates quality. Gates are superpowers-plugin skills; `ponytail` is repo-local. The agent loads by ID.
+Poteto routes. Ponytail bounds diff. Superpowers gates quality. Gates are superpowers-plugin skills, `ponytail` repo-local; the agent loads by ID.
 
-**REQUIRED:** poteto-mode; `ponytail` full first, then each fired gate by ID; TDD every change; model from `pstack-models.md`.
+**REQUIRED:** poteto-mode; `ponytail` full first, each fired gate by ID; TDD every change; model from `pstack-models.md`.
 
 ## When to Use
 
 - `/poteto-mode` plus bug, flake, or timing.
-- 2+ call sites, or tempts abstraction/wrapper/dependency.
+- 2+ call sites, or tempts abstraction/dependency.
 - Demo/deadline pressure.
 - Prompt says `lean`, `yagni`, or debugging.
 
@@ -24,9 +24,9 @@ Not: read-only investigation, one-line edit.
 
 - `lean` means invoke `ponytail` full first.
 - Trivial no-code ops (git moves, deletes, status, one-shot shell): skip playbook opens; run inline, no subagent; two-line confirm.
-- Bug or flake means invoke `systematic-debugging` first.
+- Bug/flake: invoke `systematic-debugging` first.
 - Feature/plan: invoke `brainstorming`, smallest only.
-- Every behavior change means RED first per `test-driven-development`, one watched fail-pass test.
+- Every change: RED first per `test-driven-development`, one watched fail-pass test.
 - Done: invoke `verification-before-completion` on artifact.
 - Spawn poteto-agent delegates, general for MCP, explore read-only. Briefs carry this file path + role model. Model is role line `provider/model#variant`; omit when missing/`inherit-parent`/`auto`.
 
@@ -41,15 +41,16 @@ Not: read-only investigation, one-line edit.
 | Commit/review | deslop, no-comments, verification run |
 | Models (delegated) | hardest/deepseek#max; feature, bug-fix, perf-issue/inkling#max; chores/beam-free#max; one-shot shell runs inline; missing omits model |
 | Fix loop | Critical/Important/spec-miss: resume 1-3, fresh+bump 4-5, max 5, tests+report+re-review; contested: one bakeoff; unclear: decide+ledger or ask once; Minor: deferred |
-| Plan gate | 2+ tasks/vague/shared names: names + Consumes/Produces + test first; one-line skips; coupled runs sequential |
+| Plan gate | 2+ tasks/vague/shared names: names + Consumes/Produces + test first; one-line skips; coupled sequential |
 
 ## Implementation
 
-1. Match playbook; open steps as todos. Plan gate: names + tests first; conflicts as `Ruling: <decided> — <why>`.
+1. Match playbook; open steps. Plan gate: names + tests first; conflicts as `Ruling: <decided> — <why>`.
 2. Bug/flake: trace to first wrong state, grep callers.
 3. Smallest reuse-first diff; deletion wins.
 4. One test for non-trivial logic; mark `shortcut: <limit>, <when to upgrade>`.
 5. Verify on real harness. End with skipped items and risks.
+6. Numbers carry commands: every number in a reply comes from a command run this session; remote claims need a fetch plus the API read-back.
 
 ## Common Mistakes
 
@@ -62,12 +63,12 @@ Not: read-only investigation, one-line edit.
 
 | Excuse | Reality |
 |--------|---------|
-| "Only poteto was asked" | Sequence, not waiver. |
+| "Only poteto asked" | Sequence, not waiver. |
 | "Demo urgency justifies ship now" | Urgency shrinks change, never skips gates. |
-| "Big abstraction is safer" | Speculation. Reuse plus test wins. |
-| "Tests after is fine" | Memory, not proof. RED finds gaps. |
+| "Big abstraction is safer" | Speculation. Reuse wins. |
+| "Tests after is fine" | Memory, not proof. |
 
 ## Red Flags - STOP
 
-- "ship as-is", "clean later", "only poteto was asked", "just this once", "spirit not letter"
-- New dep for lines, wrapper for later
+- "ship as-is", "clean later", "only poteto was asked", "spirit not letter"
+- New dep for lines
