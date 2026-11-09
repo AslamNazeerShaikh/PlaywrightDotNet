@@ -59,5 +59,25 @@ test("runs page: headers on empty view, rank/posted only when postings render", 
       .first()
       .evaluate((node) => getComputedStyle(node).whiteSpace);
     expect(whiteSpace).toBe("nowrap");
+
+    // Posting links open the source posting in a new, untracked tab.
+    const firstLink = postings.locator("tbody a").first();
+    await expect(firstLink).toHaveAttribute("target", "_blank");
+    await expect(firstLink).toHaveAttribute("rel", /noopener/);
+    const href = await firstLink.getAttribute("href");
+    expect(href).toMatch(/^https?:\/\//);
+
+    // Unvisited posting links wear the signal color; --sig flips hex per theme,
+    // so compare against a probe element instead of a literal.
+    const sigColor = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--sig)";
+      document.body.appendChild(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    const linkColor = await firstLink.evaluate((node) => getComputedStyle(node).color);
+    expect(linkColor).toBe(sigColor);
   }
 });
