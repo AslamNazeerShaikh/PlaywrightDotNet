@@ -101,9 +101,11 @@ namespace JobScrape.Application.Tests.Scraping
 
         public ComplianceConsent Consent { get; set; }
 
+        public bool OnlyNew { get; set; }
+
         public bool RegisterSource { get; set; } = true;
 
-        public RunScrapeRequest Request => new(Profile.Id, Browser.Id, Consent);
+        public RunScrapeRequest Request => new(Profile.Id, Browser.Id, Consent, OnlyNew: OnlyNew);
 
         public RunScrapeHandler Build()
         {
