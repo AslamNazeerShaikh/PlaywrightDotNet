@@ -135,12 +135,14 @@ namespace JobScrape.Infrastructure.Persistence
 
             var until = run.FinishedAt ?? _clock.GetUtcNow();
             var source = run.Source;
+            var onlyNew = run.OnlyNew;
             var postings = await _db
                 .JobPostings.AsNoTracking()
                 .Where(posting =>
                     posting.Source == source
                     && posting.LastSeenAt >= from
                     && posting.LastSeenAt <= until
+                    && (!onlyNew || posting.FirstSeenAt >= from)
                 )
                 .OrderByDescending(posting => posting.LastSeenAt)
                 .Skip(offset)
@@ -152,7 +154,8 @@ namespace JobScrape.Infrastructure.Persistence
                     posting =>
                         posting.Source == source
                         && posting.LastSeenAt >= from
-                        && posting.LastSeenAt <= until,
+                        && posting.LastSeenAt <= until
+                        && (!onlyNew || posting.FirstSeenAt >= from),
                     cancellationToken
                 );
             return new RunPostings(from, postings, total);
