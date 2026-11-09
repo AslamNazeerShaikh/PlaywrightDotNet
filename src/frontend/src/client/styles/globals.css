@@ -874,6 +874,13 @@ table.data td.actions-cell {
   background: var(--panel);
 }
 
+/* Visited postings read as violet so a scanned table shows which links you opened.
+   Color-only: scripts cannot see visited state, so this is the one hint browsers expose. */
+.tbl-wrap .data a:visited,
+table.data a:visited {
+  color: var(--brand-3);
+}
+
 /* ---- code + raw payloads ---- */
 
 .json {
