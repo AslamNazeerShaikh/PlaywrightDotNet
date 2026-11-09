@@ -9,14 +9,14 @@ description: Use when a poteto-mode task involves a bug, flake, multi-call-site 
 
 Poteto routes. Ponytail bounds diff. Superpowers gates quality.
 
-**REQUIRED:** poteto-mode triggers; superpowers:test-driven-development for every change; model from `.opencode/pstack-models.md` role line.
+**REQUIRED:** poteto-mode; TDD every change; model from `pstack-models.md` role line.
 
 ## When to Use
 
 - `/poteto-mode` plus bug, flake, or timing.
 - 2+ call sites, or tempts abstraction, wrapper, dependency.
 - Demo, deadline, or manager pressure to ship as-is.
-- Prompt has `lean`, `ponytail`, `be lazy`, `yagni`, or names systematic debugging.
+- Prompt has `lean`, `yagni`, or names debugging.
 
 Not: read-only investigation, one-line edit.
 
@@ -28,7 +28,7 @@ One slash carries style; persistence replaces the second.
 - Bug or flake means systematic-debugging first.
 - Feature or plan means brainstorming first, smallest only.
 - Every behavior change means RED first: one failing test, watched fail, then pass.
-- Done claim means superpowers:verification-before-completion on the real artifact (`dotnet test`, Playwright MCP).
+- Done means verification-before-completion on real artifact.
 - Spawn poteto-agent delegates, general for MCP edits, explore read-only. Model is the role line as `provider/model#variant`; omit when missing, `inherit-parent`, or `auto`.
 
 ## Quick Reference
@@ -37,15 +37,16 @@ One slash carries style; persistence replaces the second.
 |-------------|---------------|
 | Feature, Bug fix, Perf issue matched | state data shape first, architect only across a function boundary |
 | Bug or flake | systematic-debugging trace, fix once in shared code |
-| Prototype fork (which approach, what should this do) | Prototype sketch decides, never AskQuestion for observables |
+| Prototype fork | sketch decides, never AskQuestion |
 | Diff shaping | ponytail smallest change: reuse helper, stdlib, installed dep, else minimum code |
 | Commit or review | deslop then no-comments, then verification run |
-| Model routing | hardest/deepseek#max; feature, bug-fix, perf-issue/inkling#max; chores/beam-free#max; missing line omits model |
+| Models | hardest/deepseek#max; bug-fix/inkling#max; chores/beam-free#max; missing omits model |
+| Fix loop | Critical/Important/spec-miss: resume 1-3, fresh+bump 4-5, max 5, tests+report+re-review each; contested: one fresh bakeoff + owner verdict; Minor: ledger deferred |
 
 ## Implementation
 
 1. Match playbook. Open steps verbatim as todos.
-2. If bug or flake, trace to first wrong state. Grep every caller before editing.
+2. Bug or flake: trace to first wrong state, grep callers first.
 3. Build smallest reuse-first diff. Deletion beats addition.
 4. Leave one test for non-trivial logic. Mark limits `shortcut: <limit>, <when to upgrade>`.
 5. Verify on real harness. End with skipped items and risks.
@@ -53,9 +54,9 @@ One slash carries style; persistence replaces the second.
 ## Common Mistakes
 
 - Two slashes. Fix: `/poteto-mode` plus prose `lean`.
-- Scope excuse ("only poteto was asked"). Fix: scope bounds deliverable, never verification. Urgency narrows change, never skips gates.
+- Scope excuse. Fix: scope bounds deliverable, never verification; urgency narrows change.
 - Future-proofing abstraction. Fix: duplication-first, extract on second reuse.
-- Tests after. Fix: delete untested code, restart RED. Manually tested still means untested.
+- Tests after. Fix: delete, restart RED; manual still means untested.
 
 ## Rationalizations
 
@@ -69,4 +70,4 @@ One slash carries style; persistence replaces the second.
 ## Red Flags - STOP
 
 - "ship as-is", "clean later", "only poteto was asked", "just this once", "spirit not letter"
-- New dep for lines, wrapper for later, unasked option
+- New dep for lines, wrapper for later
