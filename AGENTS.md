@@ -31,7 +31,12 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - pstack is installed project-locally (`.opencode/skills/`, `.opencode/agents/`, `.opencode/commands/`). See [docs/17-pstack-opencode.md](docs/17-pstack-opencode.md).
 - For any non-trivial task, start with `/poteto-mode`: it matches the request to a playbook and routes to the other skills as steps need them.
 - Role-to-model mapping lives in `.opencode/pstack-models.md` (auto-loaded). A step needing a Cursor-only feature (Bugbot, Automations, cloud agents) is skipped with a one-line `Skipped in OpenCode:` note per `.opencode/docs/harness/opencode.md`.
-- Choose the subagent model from `.opencode/pstack-models.md` by role; a role with no line runs on the parent chat model.
+- Choose the subagent model from `.opencode/pstack-models.md` by role; a role with no line runs on the parent chat model, and the brief says so explicitly with `inherit-parent` — no brief leaves it blank.
+- Execution defaults (binding): plan spec-first with `writing-plans` (investigation → spec → caveats → task list with one test per task; or the lean plan gate in `working-lean-with-poteto`); then execute with SDD — `subagent-driven-development` — when tasks are independent (`executing-plans` inline when they are coupled); implement with TDD — `test-driven-development` — inside each task brief, RED-first per behavior change; state the role and its model — or `inherit-parent` — in every brief; read-only reviews and next-task setup may overlap, but implementers run one at a time per plan. Full ceremony only where it earns its place; trivial edits go direct.
+- Pre-dispatch check (binding — answer before every execution; record in the brief, or in reply for direct work): role and model from `.opencode/pstack-models.md`, or explicit `inherit-parent`. Never dispatch on an unnamed default.
+- SDD task with brief, or trivial edit going direct — and if direct, one-line why. No third path: another planning flow (`superpowers` brainstorming/plans, ad-hoc planning) does not substitute for `writing-plans` plus a task brief.
+- For dispatched work: name what runs in parallel with this step and what waits on it.
+- Any of the three missing — role/model, execution route, parallel plan — stop and resolve it before executing.
 - `deslop` ships from `cursor-team-kit` (`.opencode/skills/deslop/`, `/deslop` command).
 
 ## ECC (secondary workflow pack)
