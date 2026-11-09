@@ -33,6 +33,7 @@ namespace JobScrape.Infrastructure.Persistence.Configurations
                 .Property(run => run.Companies)
                 .HasConversion(DomainConverters.StringList)
                 .IsRequired();
+            builder.Property(run => run.OnlyNew);
             builder.Property(run => run.Stage).HasConversion<string>();
             builder.Property(run => run.Stats).HasConversion(DomainConverters.RunStats);
             builder.Property(run => run.CreatedAt);
