@@ -377,6 +377,10 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("limits");
 
+                    b.Property<bool>("OnlyNew")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("only_new");
+
                     b.Property<string>("PauseReason")
                         .HasColumnType("TEXT")
                         .HasColumnName("pause_reason");
