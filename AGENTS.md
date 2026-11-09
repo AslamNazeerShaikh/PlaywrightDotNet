@@ -32,6 +32,7 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - For any non-trivial task, start with `/poteto-mode`: it matches the request to a playbook and routes to the other skills as steps need them.
 - Role-to-model mapping lives in `.opencode/pstack-models.md` (auto-loaded). A step needing a Cursor-only feature (Bugbot, Automations, cloud agents) is skipped with a one-line `Skipped in OpenCode:` note per `.opencode/docs/harness/opencode.md`.
 - Choose the subagent model from `.opencode/pstack-models.md` by role; a role with no line runs on the parent chat model.
+- Execution defaults (binding): plan spec-first with `writing-plans` (investigation → spec → caveats → task list with one test per task; or the lean plan gate in `working-lean-with-poteto`); then execute with SDD — `subagent-driven-development` — when tasks are independent (`executing-plans` inline when they are coupled); implement with TDD — `test-driven-development` — inside each task brief, RED-first per behavior change; state the role and its model — or `inherit-parent` — in every brief; read-only reviews and next-task setup may overlap, but implementers run one at a time per plan. Full ceremony only where it earns its place; trivial edits go direct.
 - `deslop` ships from `cursor-team-kit` (`.opencode/skills/deslop/`, `/deslop` command).
 
 ## ECC (secondary workflow pack)
