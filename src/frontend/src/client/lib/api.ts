@@ -153,6 +153,7 @@ export interface RunPayload {
   sourceKey: string;
   stage: string;
   isTerminal: boolean;
+  onlyNew: boolean;
   pagesFetched: number;
   postingsFound: number;
   postingsNew: number;
@@ -209,6 +210,7 @@ export interface StartRunInput {
   profileId: string;
   browserProfileId: string;
   enrich: boolean;
+  onlyNew: boolean;
 }
 
 /** Export file shape: csv streams text, xlsx is a workbook. */

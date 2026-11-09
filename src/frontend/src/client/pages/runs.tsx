@@ -195,6 +195,7 @@ export function RunsPage({
       profileId,
       browserProfileId: String(data.get("browserProfileId") ?? ""),
       enrich: data.get("enrich") !== null,
+      onlyNew: data.get("onlyNew") !== null,
     });
     setStarting(false);
     if (!result.ok) {
@@ -331,6 +332,9 @@ export function RunsPage({
             <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked /> VISIT DETAIL
             PAGES (DESCRIPTION, SKILLS)
           </label>
+          <label className="check">
+            <input type="checkbox" name="onlyNew" aria-label="New only" /> NEW ONLY
+          </label>
           <button
             type="submit"
             className="btn"
@@ -449,7 +453,11 @@ export function RunsPage({
         code="RUN-04"
         title="Postings"
         span="span-12"
-        note="What the selected run saw, most recent first. Titles open the posting on the source."
+        note={
+          selected?.onlyNew
+            ? "New only: the list holds postings first seen in this run, most recent first. Titles open the posting on the source."
+            : "What the selected run saw, most recent first. Titles open the posting on the source."
+        }
       >
         {selected !== null && postings !== null && postings.length > 0 && (
           <>
@@ -611,6 +619,11 @@ function RunDetail({
         {reached === -1 && (
           <span role="listitem">
             <CodeTag code={constantCase(run.stage)} tone={stageTone(run.stage)} />
+          </span>
+        )}
+        {run.onlyNew && (
+          <span role="listitem">
+            <CodeTag code="NEW ONLY" tone="ok" />
           </span>
         )}
       </div>
