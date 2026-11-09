@@ -367,7 +367,7 @@ namespace JobScrape.Application.Features.Scraping
                 quota.RecordRunStart(now);
             }
 
-            var run = ScrapeRun.Create(profile, now);
+            var run = ScrapeRun.Create(profile, now, request.OnlyNew);
             await _stores.Runs.AddAsync(run, cancellationToken);
             run.Start(now);
             browser.MarkUsed(now);
@@ -390,7 +390,8 @@ namespace JobScrape.Application.Features.Scraping
                     quota,
                     circuit,
                     context,
-                    request.Enrich
+                    request.Enrich,
+                    request.OnlyNew
                 )
             );
         }
@@ -597,6 +598,10 @@ namespace JobScrape.Application.Features.Scraping
         /// <summary>
         /// Fetches pages until a cap, the last page, a repeated page, an
         /// exhausted quota, or a wall.
+        /// <para>
+        /// In new-only runs the cap binds new postings, so
+        /// <see cref="RunStats.PostingsFound"/> may exceed the job cap.
+        /// </para>
         /// </summary>
         /// <param name="scope">The running run.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
@@ -637,7 +642,8 @@ namespace JobScrape.Application.Features.Scraping
             }
             for (; absolute <= lastPage; absolute++)
             {
-                if (run.Stats.PostingsFound >= run.Limits.MaxJobs)
+                var collected = scope.OnlyNew ? run.Stats.PostingsNew : run.Stats.PostingsFound;
+                if (collected >= run.Limits.MaxJobs)
                 {
                     LogPaginationStopped(
                         _logger,
@@ -775,7 +781,7 @@ namespace JobScrape.Application.Features.Scraping
                 var stats = await UpsertAsync(
                     scope,
                     result.Jobs,
-                    run.Limits.MaxJobs - run.Stats.PostingsFound,
+                    run.Limits.MaxJobs - collected,
                     seenJobs,
                     now,
                     cancellationToken
@@ -819,7 +825,7 @@ namespace JobScrape.Application.Features.Scraping
         /// </summary>
         /// <param name="scope">The running run.</param>
         /// <param name="jobs">The page's snapshots.</param>
-        /// <param name="remaining">Postings still allowed by the job cap.</param>
+        /// <param name="remaining">Postings still allowed by the job cap; in new-only runs, new postings.</param>
         /// <param name="seenJobs">External ids already counted in this run.</param>
         /// <param name="now">The sighting time.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
@@ -841,7 +847,10 @@ namespace JobScrape.Application.Features.Scraping
 
             foreach (var snapshot in jobs)
             {
-                if (found >= remaining)
+                // New-only runs bind the cap to new postings: refreshed known
+                // rows do not count against it.
+                var counted = scope.OnlyNew ? added : found;
+                if (counted >= remaining)
                 {
                     break;
                 }
@@ -904,6 +913,7 @@ namespace JobScrape.Application.Features.Scraping
                     if (before is null)
                     {
                         added++;
+                        scope.FreshExternalIds.Add(posting.ExternalJobId);
                     }
                     else
                     {
@@ -977,8 +987,10 @@ namespace JobScrape.Application.Features.Scraping
         /// <summary>
         /// Postings worth a detail visit: touched in this run, never enriched
         /// (no description yet), in discovery order, up to the run's detail
-        /// cap. Empty when enrichment is off, unsupported, or disabled by a
-        /// zero cap, or when no page was fetched.
+        /// cap. New-only runs enrich fresh postings first (added this run, in
+        /// discovery order), then refreshed known rows. Empty when enrichment
+        /// is off, unsupported, or disabled by a zero cap, or when no page was
+        /// fetched.
         /// </summary>
         /// <param name="scope">The running run.</param>
         /// <returns>The postings to enrich.</returns>
@@ -995,10 +1007,17 @@ namespace JobScrape.Application.Features.Scraping
                 return [];
             }
 
-            return scope
-                .Touched.Where(posting => posting.Description is null)
-                .Take(run.Limits.MaxDetails)
-                .ToList();
+            var pending = scope.Touched.Where(posting => posting.Description is null);
+            if (scope.OnlyNew)
+            {
+                // OrderBy is stable: discovery order survives within each
+                // fresh-first group.
+                pending = pending.OrderBy(posting =>
+                    scope.FreshExternalIds.Contains(posting.ExternalJobId) ? 0 : 1
+                );
+            }
+
+            return pending.Take(run.Limits.MaxDetails).ToList();
         }
 
         /// <summary>
@@ -1303,7 +1322,8 @@ namespace JobScrape.Application.Features.Scraping
             SourceQuota quota,
             SourceCircuitBreaker circuit,
             SourceRunContext context,
-            bool enrich
+            bool enrich,
+            bool onlyNew
         )
         {
             public ScrapeRun Run { get; } = run;
@@ -1321,6 +1341,11 @@ namespace JobScrape.Application.Features.Scraping
             public SourceRunContext Context { get; } = context;
 
             public bool Enrich { get; } = enrich;
+
+            public bool OnlyNew { get; } = onlyNew;
+
+            // External ids added this run, used to order enrichment fresh-first.
+            public HashSet<ExternalJobId> FreshExternalIds { get; } = [];
 
             public List<JobPosting> Touched { get; } = [];
 

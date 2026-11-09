@@ -14,6 +14,7 @@ namespace JobScrape.Application.Features.Scraping
     /// <param name="RetryAt">When a rate-limited run may resume, if rate limited.</param>
     /// <param name="FailureReason">Why the run failed, if failed.</param>
     /// <param name="ArtifactDirectory">Captured evidence, relative to the artifacts root, if any.</param>
+    /// <param name="OnlyNew">True when the run fetched only new postings.</param>
     public sealed record ScrapeRunSummary(
         Guid RunId,
         string Source,
@@ -22,7 +23,8 @@ namespace JobScrape.Application.Features.Scraping
         string? PauseReason,
         DateTimeOffset? RetryAt,
         string? FailureReason,
-        string? ArtifactDirectory
+        string? ArtifactDirectory,
+        bool OnlyNew
     )
     {
         /// <summary>
@@ -43,7 +45,8 @@ namespace JobScrape.Application.Features.Scraping
                 run.PauseReason?.ToString(),
                 run.RetryAt,
                 run.FailureReason,
-                artifactDirectory
+                artifactDirectory,
+                run.OnlyNew
             );
         }
     }
