@@ -4,7 +4,7 @@
 >
 > **Status:** Research and planning complete. No implementation code yet.
 >
-> **Last updated:** 2026-10-29
+> **Last updated:** 2026-11-09
 >
 > **Target stack:** .NET 10 (LTS) · xUnit.net v3 · Playwright for .NET · SQLite/EF Core 10 · React 19/Bun 1.4 cockpit (v2)
 
@@ -46,6 +46,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 16 | [Library Usage Policy](16-library-usage-policy.md) | How should third-party/first-party libraries be configured, and why is AOT not a design constraint? |
 | 17 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
 | 18 | [Feature toggles](21-feature-toggles.md) | Which flags exist, what on/off does to each subsystem, and the edge rules? |
+| 19 | [Lean workflow](23-lean-workflow.md) | How do you run poteto-mode, ponytail, and superpowers gates from one slash, and what does each pack own? |
 
 ---
 
@@ -151,3 +152,4 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Added the runtime-hardening guide (Serilog enrichers/file retention, global exceptions, Polly HTTP resilience, async/disposal/resource rules) and ADR-0012. |
 | 2026-10-29 | Replaced the AOT-driven policy with the library-usage policy, restored standard Serilog configuration/enrichers, DataAnnotations, ClosedXML, and Scalar defaults, and added ADR-0014. |
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |
+| 2026-11-09 | Added the lean-workflow guide (one-slash poteto-mode plus ponytail plus superpowers gates) and the `working-lean-with-poteto` skill. |
