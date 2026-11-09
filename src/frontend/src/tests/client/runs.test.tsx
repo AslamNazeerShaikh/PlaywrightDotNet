@@ -569,6 +569,6 @@ describe("runs page", () => {
         within(queries.getByRole("list", { name: "Run stages" })).getByText("NEW ONLY"),
       ).toBeDefined(),
     );
-    expect(queries.getByText(/first seen in this run/)).toBeDefined();
+    expect(queries.getByText(/the list holds postings first seen in this run/)).toBeDefined();
   });
 });

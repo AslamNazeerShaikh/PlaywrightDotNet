@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { InfoTip } from "../components/info-tip.tsx";
 import { Abbr } from "../components/legend.tsx";
 import {
   CodeTag,
@@ -330,10 +331,12 @@ export function RunsPage({
           {profile !== null && <p className="status-line">{profileInputs(profile)}</p>}
           <label className="check">
             <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked /> VISIT DETAIL
-            PAGES (DESCRIPTION, SKILLS)
+            PAGES (DESCRIPTION, SKILLS){" "}
+            <InfoTip text="Opens each detail page to fill description and skills." />
           </label>
           <label className="check">
-            <input type="checkbox" name="onlyNew" aria-label="New only" /> NEW ONLY
+            <input type="checkbox" name="onlyNew" aria-label="New only" /> NEW ONLY{" "}
+            <InfoTip text="Keeps only postings first seen in this run." />
           </label>
           <button
             type="submit"
@@ -454,9 +457,12 @@ export function RunsPage({
         title="Postings"
         span="span-12"
         note={
-          selected?.onlyNew
-            ? "New only: the list holds postings first seen in this run, most recent first. Titles open the posting on the source."
-            : "What the selected run saw, most recent first. Titles open the posting on the source."
+          <>
+            {selected?.onlyNew
+              ? "New only: the list holds postings first seen in this run, most recent first. Titles open the posting on the source."
+              : "What the selected run saw, most recent first. Titles open the posting on the source."}{" "}
+            <InfoTip text="NEW marks first-seen rows; exports write the rows shown." />
+          </>
         }
       >
         {selected !== null && postings !== null && postings.length > 0 && (
@@ -624,6 +630,7 @@ function RunDetail({
         {run.onlyNew && (
           <span role="listitem">
             <CodeTag code="NEW ONLY" tone="ok" />
+            <InfoTip text="This run kept only postings first seen in its window." />
           </span>
         )}
       </div>
@@ -639,7 +646,8 @@ function RunDetail({
         <Meter label="Details" used={run.detailsFetched} cap={run.maxDetails} progress />
       </div>
       <p className="status-line">
-        {`${plural(run.postingsNew, "new posting")} · ${plural(run.postingsUpdated, "update")} · ${plural(run.challenges, "wall")} · ${plural(run.failures, "failure")}`}
+        {`${plural(run.postingsNew, "new posting")} · ${plural(run.postingsUpdated, "update")} · ${plural(run.challenges, "wall")} · ${plural(run.failures, "failure")}`}{" "}
+        <InfoTip text="new = first seen in this run · update = seen before · wall = challenge page · failure = broken page" />
       </p>
       {!run.isTerminal && (
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={cancelling}>
