@@ -581,6 +581,7 @@ Maps `ChallengeKind` to `ChallengeDecision` (verbatim from `ChallengePolicy.Deci
 - Content hash over stable fields (`ComputeHash`: title, company, location raw, salary raw, description, normalized skills); volatile fields are never hashed.
 - `FirstSeenAt` preserved; `LastSeenAt` refreshed on every sighting; unchanged re-sightings raise no `JobPostingUpdated`.
 - A posting seen in multiple runs keeps one row; skipped cards are dropped with a named warning, never stored.
+- **New-only runs.** A run started with `OnlyNew = true` keeps the same write path (add or refresh every card, stats keep their meaning) but the job cap binds `PostingsNew` instead of `PostingsFound`, and the run's postings list/export keep only postings whose `FirstSeenAt >= StartedAt`. `FirstSeenAt` is the sighting time of the first run that saw the posting and is never overwritten by a later run, so a refresh preserves it.
 
 ### 8.6 `CompliancePolicy`
 

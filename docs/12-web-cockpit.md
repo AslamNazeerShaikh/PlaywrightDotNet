@@ -710,7 +710,7 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `GET` | `/openapi/v1.json` | OpenAPI 3.1 document |
 
 > **As implemented (runs):** `RunsController` serves
-> `POST /api/v1/runs` (body `{ profileId, browserProfileId, enrich = true }` →
+> `POST /api/v1/runs` (body `{ profileId, browserProfileId, enrich = true, onlyNew = false }` →
 > `202` + `Location` with the recorded run), `GET /api/v1/runs` (newest 50,
 > `{ items, total }`), `GET /api/v1/runs/{id}`, `POST /api/v1/runs/{id}/cancel`
 > (idempotent), and `GET /api/v1/runs/{id}/postings` (not in the table above:
@@ -721,10 +721,21 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > hyperlinks; max 20 000 rows; `400 EXPORT_FORMAT_UNSUPPORTED` for anything
 > else). Add `group=only` or `group=exclude` to split the file by the
 > run's company snapshot; `400 EXPORT_GROUP_UNSUPPORTED` for anything else
-> and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
+> and `400 EXPORT_COMPANIES_MISSING` when the run has no company list. When the
+> run was started with `onlyNew = true`, both the postings list and the export
+> keep only postings whose `FirstSeenAt` is at or after `StartedAt` (the
+> "NEW ONLY" filter); the run detail also carries an `onlyNew` flag. New codes: `404 RUN_NOT_FOUND`, `409 RUN_IN_PROGRESS` (one
 > run at a time; carries `activeRunId`), `503 RUN_NOT_STARTED` (the API stopped
 > before the run was recorded); gate refusals keep their own codes
-> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …). Feature flags change route
+> (`PROFILE_DISABLED`, `QUOTA_EXCEEDED`, …). UI on `#/runs`: the start form
+> carries a `NEW ONLY` checkbox (`name="onlyNew"`, unchecked by default, with an
+> `InfoTip` usage note) beside the enrich checkbox; a flagged run shows a
+> `NEW ONLY` badge (also tipped) and its postings module notes that the list
+> holds postings first seen in this run. Posting title links in data tables turn
+> violet after a visit (`:visited` on `.data a`, dark `#a78bfa` / light
+> `#6d28d9`). The scrape flow and the new-only delta are diagrammed on
+> `#/topology` as modules `TOP-05` and `TOP-06`.
+> Feature flags change route
 > behavior: `Health=false` turns `GET /api/v1/health` into the
 > `FEATURE_DISABLED` 404 problem, `CsvExport`/`ExcelExport=false`
 > unregisters that export writer (the export default falls through to the
