@@ -398,6 +398,113 @@ namespace JobScrape.Api.Tests
             Assert.Contains("C#", stored.Skills);
         }
 
+        [Fact]
+        public async Task SecondRunWithOnlyNewListsOnlyFreshThroughSqlite()
+        {
+            var source = new FakeSource();
+            await using var factory = Factory(source);
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
+            var first = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", first.Stage);
+
+            source.Skilled = true;
+
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session, onlyNew = true },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
+            var flagged = await second.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            Assert.True(flagged!.OnlyNew);
+
+            var done = await WaitAsync(client, flagged.Id, r => r.IsTerminal);
+            Assert.True(done.OnlyNew);
+            Assert.Equal(1, done.PostingsNew);
+
+            var postings = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{flagged.Id}/postings",
+                Ct
+            );
+            var stored = Assert.Single(postings!.Items);
+            Assert.Equal("103", stored.ExternalJobId);
+            Assert.True(stored.IsNew);
+            Assert.Equal(1, postings.Total);
+
+            using var csv = await client.GetAsync(
+                $"api/v1/runs/{flagged.Id}/postings/export?format=csv",
+                Ct
+            );
+            var csvText = await csv.Content.ReadAsStringAsync(Ct);
+            Assert.Contains("https://www.naukri.com/job-listings-dev-103", csvText);
+            Assert.DoesNotContain("job-listings-dev-101", csvText);
+            Assert.DoesNotContain("job-listings-dev-102", csvText);
+        }
+
+        [Fact]
+        public async Task AcceptsMissingOnlyNewAsFalse()
+        {
+            await using var factory = Factory(new FakeSource());
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            Assert.False(run!.OnlyNew);
+
+            var done = await WaitAsync(client, run.Id, r => r.IsTerminal);
+            Assert.False(done.OnlyNew);
+        }
+
+        [Fact]
+        public async Task FlaggedStartDuringActiveRunIs409()
+        {
+            var source = new FakeSource { Blocked = true };
+            await using var factory = Factory(source);
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var first = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            var run = await first.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            await source.Entered.Task.WaitAsync(Ct);
+
+            using var second = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session, onlyNew = true },
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+            Assert.Equal(
+                "RUN_IN_PROGRESS",
+                (await second.Content.ReadFromJsonAsync<JsonElement>(Ct))
+                    .GetProperty("code")
+                    .GetString()
+            );
+
+            source.Blocked = false;
+            using var cancel = await client.PostAsync($"api/v1/runs/{run!.Id}/cancel", null, Ct);
+            Assert.Equal(HttpStatusCode.OK, cancel.StatusCode);
+            await WaitAsync(client, run.Id, r => r.IsTerminal);
+        }
+
         // The disabled format answers the feature-disabled 404, never a 200
         // or the unsupported-format 400. The run id need not exist: the gate
         // runs before the store read.
