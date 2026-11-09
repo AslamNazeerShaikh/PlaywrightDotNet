@@ -86,7 +86,8 @@ namespace JobScrape.Application.Features.Runs
                     SearchProfileId.From(request.ProfileId),
                     BrowserProfileId.From(request.BrowserProfileId),
                     _consent,
-                    request.Enrich
+                    request.Enrich,
+                    request.OnlyNew
                 ),
                 cancellationToken
             );
