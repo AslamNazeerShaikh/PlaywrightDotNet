@@ -201,6 +201,167 @@ export function TopologyPage({ upstream }: { upstream: string }) {
       </div>
 
       <Module
+        code="TOP-05"
+        title="Current scrape flow"
+        span="span-7"
+        note="One pass over the pages; each card is added or refreshed."
+      >
+        <svg className="diagram" viewBox="0 0 720 612" role="img" aria-label="Current scrape flow">
+          <DiagramDefs prefix="top5" />
+          {flowRect("top5", 280, 14, 220, 46, "green", "SearchAsync", "search loop · page N", true)}
+          {flowLine("top5", 280, 60, 280, 82, "green")}
+          {flowDiamond(
+            280,
+            132,
+            200,
+            46,
+            "green",
+            "Per-card gates",
+            "stale · skill mismatch",
+            "foreign source · invalid",
+          )}
+          {flowLabel(491, 122, "drop", "gray", "middle")}
+          {flowLine("top5", 480, 132, 500, 132, "gray")}
+          {flowRect("top5", 601, 109, 198, 46, "gray", "Dropped", "LogCardDropped → skip")}
+          {flowLabel(290, 192, "pass", "green")}
+          {flowLine("top5", 280, 178, 280, 198, "green")}
+          {flowRect("top5", 280, 198, 230, 52, "green", "UpsertAsync", "FindAsync → Add / Refresh")}
+          {flowLine("top5", 280, 250, 280, 274, "green", false)}
+          {flowLine("top5", 140, 274, 420, 274, "green", false)}
+          {flowLabel(148, 290, "new", "green")}
+          {flowLabel(428, 290, "known", "green")}
+          {flowLine("top5", 140, 274, 140, 296, "green")}
+          {flowLine("top5", 420, 274, 420, 296, "green")}
+          {flowRect("top5", 140, 296, 210, 52, "green", "AddAsync", "new row · PostingsNew++")}
+          {flowRect("top5", 420, 296, 210, 52, "green", "Refresh", "known row · refresh fields")}
+          {flowLine("top5", 140, 348, 140, 374, "green", false)}
+          {flowLine("top5", 420, 348, 420, 374, "green", false)}
+          {flowLine("top5", 140, 374, 420, 374, "green", false)}
+          {flowDot(280, 374, "green")}
+          {flowLine("top5", 280, 374, 280, 396, "green")}
+          {flowRect("top5", 280, 396, 230, 52, "green", "RunStats", "PostingsFound · PostingsNew")}
+          {flowLine("top5", 280, 448, 280, 470, "green")}
+          {flowRect(
+            "top5",
+            280,
+            470,
+            260,
+            52,
+            "green",
+            "PendingEnrichment",
+            "no Description · Take(MaxDetails)",
+          )}
+          {flowLine("top5", 280, 522, 280, 544, "green")}
+          {flowRect(
+            "top5",
+            280,
+            544,
+            230,
+            52,
+            "green",
+            "PostingsAsync",
+            "LastSeenAt in run window",
+          )}
+        </svg>
+        <Legend
+          label="Flow key"
+          items={[
+            {
+              key: "focal",
+              swatch: <Wire color="var(--sig)" />,
+              text: "focal path — happy-path write",
+            },
+            {
+              key: "drop",
+              swatch: <Wire color="var(--line-hi)" />,
+              text: "dropped card — a gate rejected it",
+            },
+          ]}
+        />
+      </Module>
+
+      <Module
+        code="TOP-06"
+        title="New-only run delta"
+        span="span-5"
+        note="Three divergences: Δ1 job budget from PostingsNew, Δ2 per-page budget counts added rows, Δ3 listing and export filter to FirstSeenAt >= run start; enrichment keeps running, fresh postings first."
+      >
+        <svg className="diagram" viewBox="0 0 480 600" role="img" aria-label="New-only run delta">
+          <DiagramDefs prefix="top6" />
+          {flowRect(
+            "top6",
+            175,
+            14,
+            250,
+            52,
+            "green",
+            "SearchAsync",
+            "Δ1 · budget from PostingsNew",
+            true,
+          )}
+          {flowLine("top6", 175, 66, 175, 88, "green")}
+          {flowDiamond(175, 132, 110, 44, "green", "Per-card gates", "unchanged")}
+          {flowLabel(298, 122, "drop", "gray", "middle")}
+          {flowLine("top6", 285, 132, 310, 132, "gray")}
+          {flowRect("top6", 391, 109, 146, 46, "gray", "Dropped", "LogCardDropped")}
+          {flowLabel(183, 188, "pass", "green")}
+          {flowLine("top6", 175, 176, 175, 198, "green")}
+          {flowRect(
+            "top6",
+            175,
+            198,
+            250,
+            52,
+            "green",
+            "UpsertAsync",
+            "Δ2 · counted = OnlyNew ? added : found",
+          )}
+          {flowLine("top6", 175, 250, 175, 272, "green", false)}
+          {flowLine("top6", 100, 272, 360, 272, "green", false)}
+          {flowLabel(108, 288, "new", "green")}
+          {flowLabel(368, 288, "known", "green")}
+          {flowLine("top6", 100, 272, 100, 294, "green")}
+          {flowLine("top6", 360, 272, 360, 294, "green")}
+          {flowRect("top6", 100, 294, 190, 52, "green", "AddAsync", "new row · PostingsNew++")}
+          {flowRect("top6", 360, 294, 190, 52, "green", "Refresh", "known row · refresh fields")}
+          {flowLine("top6", 100, 346, 100, 372, "green", false)}
+          {flowLine("top6", 360, 346, 360, 372, "green", false)}
+          {flowLine("top6", 100, 372, 360, 372, "green", false)}
+          {flowDot(230, 372, "green")}
+          {flowLine("top6", 230, 372, 230, 394, "green")}
+          {flowRect("top6", 230, 394, 230, 52, "green", "RunStats", "PostingsFound · PostingsNew")}
+          {flowLine("top6", 230, 446, 230, 464, "green")}
+          {flowRect("top6", 230, 464, 250, 52, "green", "Enrich", "fresh first")}
+          {flowLine("top6", 230, 516, 230, 532, "green")}
+          {flowRect(
+            "top6",
+            230,
+            532,
+            260,
+            52,
+            "green",
+            "PostingsAsync",
+            "Δ3 · FirstSeenAt >= run start",
+          )}
+        </svg>
+        <Legend
+          label="Delta key"
+          items={[
+            {
+              key: "focal",
+              swatch: <Wire color="var(--sig)" />,
+              text: "focal path — new-only rules (Δ1–Δ3)",
+            },
+            {
+              key: "drop",
+              swatch: <Wire color="var(--line-hi)" />,
+              text: "dropped card — a gate rejected it",
+            },
+          ]}
+        />
+      </Module>
+
+      <Module
         code="TOP-04"
         title="Deck glossary"
         span="span-12"
@@ -377,6 +538,159 @@ function message(
         {label}
       </text>
     </g>
+  );
+}
+
+function flowRect(
+  prefix: string,
+  cx: number,
+  y: number,
+  w: number,
+  h: number,
+  tone: DiagramTone,
+  label: string,
+  caption: string,
+  pill = false,
+) {
+  return (
+    <g>
+      <rect
+        x={cx - w / 2}
+        y={y}
+        width={w}
+        height={h}
+        rx={pill ? h / 2 : 6}
+        style={{ fill: TONE[tone].fill, stroke: TONE[tone].stroke }}
+        strokeWidth="1.5"
+        data-tone={tone}
+        data-path={tone === "gray" ? "drop" : "focal"}
+      />
+      <text
+        x={cx}
+        y={y + 22}
+        textAnchor="middle"
+        style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
+        fontWeight="600"
+      >
+        {label}
+      </text>
+      <text
+        x={cx}
+        y={y + 40}
+        textAnchor="middle"
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+      >
+        {caption}
+      </text>
+    </g>
+  );
+}
+
+function flowDiamond(
+  cx: number,
+  cy: number,
+  halfWidth: number,
+  halfHeight: number,
+  tone: DiagramTone,
+  label: string,
+  caption: string,
+  caption2?: string,
+) {
+  const points = `${cx - halfWidth},${cy} ${cx},${cy - halfHeight} ${cx + halfWidth},${cy} ${cx},${cy + halfHeight}`;
+  return (
+    <g>
+      <polygon
+        points={points}
+        strokeLinejoin="round"
+        style={{ fill: TONE[tone].fill, stroke: TONE[tone].stroke }}
+        strokeWidth="1.5"
+        data-tone={tone}
+        data-path={tone === "gray" ? "drop" : "focal"}
+      />
+      <text
+        x={cx}
+        y={caption2 === undefined ? cy - 2 : cy - 12}
+        textAnchor="middle"
+        style={{ fill: "var(--ink)", fontSize: "var(--text-micro)" }}
+        fontWeight="600"
+      >
+        {label}
+      </text>
+      <text
+        x={cx}
+        y={caption2 === undefined ? cy + 15 : cy + 6}
+        textAnchor="middle"
+        style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+      >
+        {caption}
+      </text>
+      {caption2 !== undefined && (
+        <text
+          x={cx}
+          y={cy + 20}
+          textAnchor="middle"
+          style={{ fill: "var(--dim)", fontSize: "var(--text-fine)" }}
+        >
+          {caption2}
+        </text>
+      )}
+    </g>
+  );
+}
+
+function flowLine(
+  prefix: string,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  tone: DiagramTone,
+  withMarker = true,
+) {
+  return (
+    <line
+      x1={x1}
+      y1={y1}
+      x2={x2}
+      y2={y2}
+      strokeWidth="1.5"
+      style={{ stroke: TONE[tone].stroke }}
+      markerEnd={withMarker ? `url(#${markerId(prefix, tone)})` : undefined}
+      data-tone={tone}
+      data-path={tone === "gray" ? "drop" : "focal"}
+    />
+  );
+}
+
+function flowDot(cx: number, cy: number, tone: DiagramTone) {
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r="3.5"
+      style={{ fill: TONE[tone].stroke }}
+      data-tone={tone}
+      data-path={tone === "gray" ? "drop" : "focal"}
+    />
+  );
+}
+
+function flowLabel(
+  x: number,
+  y: number,
+  text: string,
+  tone: DiagramTone,
+  anchor: "start" | "middle" | "end" = "start",
+) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={anchor}
+      style={{ fill: TONE[tone].text, fontSize: "var(--text-fine)" }}
+    >
+      {text}
+    </text>
   );
 }
 
