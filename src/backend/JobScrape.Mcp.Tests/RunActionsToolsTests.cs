@@ -45,7 +45,8 @@ namespace JobScrape.Mcp.Tests
                 null,
                 Now,
                 Now,
-                Now
+                Now,
+                false
             );
         }
 
