@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
 
 import {
   type ApiProblem,
@@ -42,6 +42,7 @@ const baseRun: RunPayload = {
   sourceKey: "naukri",
   stage: "Searching",
   isTerminal: false,
+  onlyNew: false,
   pagesFetched: 1,
   postingsFound: 20,
   postingsNew: 20,
@@ -195,9 +196,14 @@ describe("run helpers", () => {
  * A stateful fake of the runs API: POST starts a run that advances one stage per poll and completes
  * with two postings; a second POST while it executes answers RUN_IN_PROGRESS.
  */
-function runsBackend(companies: string[] = ["Infosys", "TCS"], failExport?: ApiProblem) {
+function runsBackend(
+  companies: string[] = ["Infosys", "TCS"],
+  failExport?: ApiProblem,
+  options: { expectedBody?: StartRunInput; runPatch?: Partial<RunPayload> } = {},
+) {
   const runs: RunPayload[] = [];
   const calls: string[] = [];
+  const posted: StartRunInput[] = [];
   let polls = 0;
   const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
     calls.push(`${init?.method ?? "GET"} ${url}`);
@@ -244,6 +250,7 @@ function runsBackend(companies: string[] = ["Infosys", "TCS"], failExport?: ApiP
     }
     if (url === "/api/v1/runs" && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as StartRunInput;
+      posted.push(body);
       if (runs.some((r) => !r.isTerminal)) {
         return reply(409, {
           status: 409,
@@ -254,12 +261,19 @@ function runsBackend(companies: string[] = ["Infosys", "TCS"], failExport?: ApiP
       }
       const run = {
         ...baseRun,
+        ...options.runPatch,
         companies,
         id: `r${runs.length + 1}`,
         stage: "StartingSession",
         pagesFetched: 0,
       };
-      expect(body).toEqual({ profileId: "p1", browserProfileId: "s1", enrich: true });
+      const expectedBody: StartRunInput = options.expectedBody ?? {
+        profileId: "p1",
+        browserProfileId: "s1",
+        enrich: true,
+        onlyNew: false,
+      };
+      expect(body).toEqual(expectedBody);
       runs.unshift(run);
       return reply(202, run);
     }
@@ -344,7 +358,7 @@ function runsBackend(companies: string[] = ["Infosys", "TCS"], failExport?: ApiP
     }
     return reply(404, { status: 404, title: "Not found", detail: "", code: "BFF_NOT_FOUND" });
   };
-  return { client: createApiClient(fetchImpl), calls };
+  return { client: createApiClient(fetchImpl), calls, posted };
 }
 
 describe("runs page", () => {
@@ -514,5 +528,47 @@ describe("runs page", () => {
     await waitFor(() =>
       expect(queries.getByRole("alert").textContent).toContain("RUN_IN_PROGRESS"),
     );
+  });
+
+  test("renders the NEW ONLY checkbox unchecked by default", async () => {
+    const { client } = runsBackend();
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+    const checkbox = queries.getByRole("checkbox", { name: "New only" }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+  });
+
+  test("sends onlyNew true when checked", async () => {
+    const { client, posted } = runsBackend(["Infosys", "TCS"], undefined, {
+      expectedBody: { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: true },
+    });
+    const events: LogEvent[] = [];
+    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.click(queries.getByRole("checkbox", { name: "New only" }));
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(events.map((e) => e.code)).toContain("RUN_STARTED"));
+    expect(posted).toEqual([
+      { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: true },
+    ]);
+  });
+
+  test("badges a flagged run and notes filtered postings", async () => {
+    const { client } = runsBackend(["Infosys", "TCS"], undefined, {
+      runPatch: { onlyNew: true },
+    });
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() =>
+      expect(
+        within(queries.getByRole("list", { name: "Run stages" })).getByText("NEW ONLY"),
+      ).toBeDefined(),
+    );
+    expect(queries.getByText(/first seen in this run/)).toBeDefined();
   });
 });
