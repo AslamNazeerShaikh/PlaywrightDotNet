@@ -195,6 +195,7 @@ Every edge above is a `ProjectReference` in `src/backend` (see [Solution & Tooli
 - Domain has no static mutable state.
 - Repositories live under `JobScrape.Infrastructure.Persistence` (+ `Repositories/`) and implement Application ports; adapters live under `Infrastructure/Sources/{Naukri,Indeed,LinkedIn}` and implement `IJobSource`.
 - Handlers, controllers, events, stores, and the DbContext follow sealed plus placement rules selected by port identity with boundary-exact namespaces (`StrictArchitectureTests`).
+- Aggregates inherit `AggregateRoot` and keep constructors private, selected by shape with exact match counts (`StrictArchitectureTests`).
 
 ### 5.1 Composition root (`Program.cs`)
 
