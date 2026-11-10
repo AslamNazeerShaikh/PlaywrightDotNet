@@ -740,6 +740,8 @@ flowchart TB
 
 Every page result includes a **fingerprint** (first card ID/href + result range text) so a repeated page is re-requested once and, while Next stays live, fails the run with a named reason.
 
+The reported result-range count binds the page window: a page that names the listing's last page (or refuses one past it) clamps `maxPages`, and the run ends Completed at that page instead of re-requesting it as a suspected stall.
+
 ### 9.2 Extraction priority (implemented)
 
 1. **Detail pages, Naukri and Indeed:** JSON-LD (`script[type="application/ld+json"]`, `@type: JobPosting`) first, then DOM fallback. Details parsed without JSON-LD carry `LowConfidence`.
