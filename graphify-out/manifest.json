@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/RunScrapeOnSqliteTests.cs": {
-    "mtime": 1794219268.5230572,
-    "seen": 1794245668.757532,
-    "ast_hash": "1a7a81d68110f58102eaf867e6390483",
+    "mtime": 1794328147.966166,
+    "seen": 1794328224.397001,
+    "ast_hash": "28d0c2a8f7e81e6ebc86a89d0a1f5b31",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/TestDatabase.cs": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Composition/LoggingRegistration.cs": {
-    "mtime": 1794219268.528066,
-    "seen": 1794245668.757548,
-    "ast_hash": "fd669e91487572741c4bc9e9ebaf5f03",
+    "mtime": 1794326803.6829932,
+    "seen": 1794328224.397019,
+    "ast_hash": "7152a537046f4c177c9d9552795177f8",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Composition/OptionsRegistration.cs": {
@@ -6516,9 +6516,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Http/UsageQuotaMiddleware.cs": {
-    "mtime": 1794219268.4998136,
-    "seen": 1794245668.75743,
-    "ast_hash": "40cdb5479fd719ebf6240446b4993b26",
+    "mtime": 1794326831.864805,
+    "seen": 1794328224.396886,
+    "ast_hash": "8e85c3333f1da87bf6a7f059b6fe50b4",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/IdentityHandlerTests.cs": {
@@ -6528,9 +6528,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/QuotaHandlerTests.cs": {
-    "mtime": 1794219268.5011306,
-    "seen": 1794245668.7574358,
-    "ast_hash": "8f9c659916b8ea9b64b5211ecf39646f",
+    "mtime": 1794326843.9940822,
+    "seen": 1794328224.396893,
+    "ast_hash": "540277a399b38cfc6de719c499211960",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IIdempotencyStore.cs": {
@@ -6552,9 +6552,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IUsageQuotaRepository.cs": {
-    "mtime": 1794219268.5035014,
-    "seen": 1794245668.757449,
-    "ast_hash": "677017504ece5a06f168baad0fe899f9",
+    "mtime": 1794326812.7640944,
+    "seen": 1794328224.396907,
+    "ast_hash": "d16987ca24bf6b5e69d55e1f87469449",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IUserRepository.cs": {
@@ -6864,9 +6864,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/UsageQuotaRepository.cs": {
-    "mtime": 1794219268.531436,
-    "seen": 1794245668.757567,
-    "ast_hash": "e1c9fef43f3aba417a8548f2c15a7689",
+    "mtime": 1794326822.6010568,
+    "seen": 1794328224.3970408,
+    "ast_hash": "162e460f5aa36af0f46c6a00b30da1f5",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/UserRepository.cs": {
@@ -9489,6 +9489,78 @@
     "mtime": 1794259488.5660856,
     "seen": 1794308065.276384,
     "ast_hash": "5ec3afb0e319a0a316950d950bf1d3dc",
+    "semantic_hash": ""
+  },
+  ".opencode/plugins/graphify.js": {
+    "mtime": 1793457083.6751373,
+    "seen": 1794326523.6947541,
+    "ast_hash": "dedd29af2cb8a6160dbaf9742a5080d4",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Architecture.Tests/StrictArchitectureTests.cs": {
+    "mtime": 1794327893.2592926,
+    "seen": 1794328224.3969479,
+    "ast_hash": "d537fbea1a2d8e53b93e56cd2a6c7821",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/SKILL.md": {
+    "mtime": 1793457083.6871295,
+    "seen": 1794326523.695304,
+    "ast_hash": "5bd0c585c5fa42bb9a682a5900cfa556",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/add-watch.md": {
+    "mtime": 1793457083.6872752,
+    "seen": 1794326523.6953049,
+    "ast_hash": "c1f65eb4102ad515149303c7f296b718",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/exports.md": {
+    "mtime": 1793457083.6876388,
+    "seen": 1794326523.6953049,
+    "ast_hash": "73968e2842f6eb742f96cf04c1f8db68",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1793280348.7701304,
+    "seen": 1794326523.695306,
+    "ast_hash": "b50f43d87ae9a11bcf1082942e1f99d4",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1793457083.6878147,
+    "seen": 1794326523.695306,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/hooks.md": {
+    "mtime": 1793280348.7707472,
+    "seen": 1794326523.695306,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/query.md": {
+    "mtime": 1793457083.6880255,
+    "seen": 1794326523.695307,
+    "ast_hash": "d650e8b65648aa27c5f99c3742e010c9",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/transcribe.md": {
+    "mtime": 1793457083.6881664,
+    "seen": 1794326523.695307,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/update.md": {
+    "mtime": 1793457083.6884239,
+    "seen": 1794326523.695307,
+    "ast_hash": "54bb75d63631ba69e65d5908d52fbbd0",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-11-10-strict-arch-tests-design.md": {
+    "mtime": 1794328007.5568287,
+    "seen": 1794328224.397454,
+    "ast_hash": "11590c3b06381fb41c55399a0ebf2ab0",
     "semantic_hash": ""
   }
 }
