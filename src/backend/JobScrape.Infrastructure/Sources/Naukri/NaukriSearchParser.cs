@@ -239,7 +239,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Whether a visible, enabled native Next link with an href exists.
+        /// Whether a visible, enabled native Next link exists.
         /// </summary>
         /// <param name="document">The page.</param>
         /// <returns>True when the adapter may click Next.</returns>

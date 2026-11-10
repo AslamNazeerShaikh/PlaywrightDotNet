@@ -19,9 +19,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
     /// the window. A cold <c>-N</c> load redirects to filtered page 1, so
     /// deep links are never used; pre-window pages advance through native
     /// <b>Next</b> clicks. Later pages inside a run click Next and wait for
-    /// the fingerprint to change. A cold fetch above page 1, or a Next click
-    /// that lands off the expected page, is refused with an empty result
-    /// naming the listing's last page. Walls are classified, never retried or
+    /// the fingerprint to change. Walls are classified, never retried or
     /// solved here.
     /// </summary>
     public sealed partial class NaukriJobSource : IJobSource, ISourceWarmUpVerifier

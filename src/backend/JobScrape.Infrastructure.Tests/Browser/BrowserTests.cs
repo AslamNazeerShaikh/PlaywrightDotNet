@@ -75,7 +75,6 @@ namespace JobScrape.Infrastructure.Tests.Browser
         /// <summary>
         /// Opens the profile and serves every Naukri URL from <paramref name="serve"/>;
         /// a null answer aborts the request like a dropped connection.
-        /// <paramref name="headers"/>, when given, adds response headers per URL.
         /// </summary>
         private async Task<IPage> OpenAsync(
             Func<Uri, (int Status, string Html)?> serve,
