@@ -420,7 +420,12 @@ namespace JobScrape.Api.Tests
 
             using var second = await client.PostAsJsonAsync(
                 "api/v1/runs",
-                new { profileId = profile, browserProfileId = session, onlyNew = true },
+                new
+                {
+                    profileId = profile,
+                    browserProfileId = session,
+                    onlyNew = true,
+                },
                 Ct
             );
             Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
@@ -488,7 +493,12 @@ namespace JobScrape.Api.Tests
 
             using var second = await client.PostAsJsonAsync(
                 "api/v1/runs",
-                new { profileId = profile, browserProfileId = session, onlyNew = true },
+                new
+                {
+                    profileId = profile,
+                    browserProfileId = session,
+                    onlyNew = true,
+                },
                 Ct
             );
             Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
