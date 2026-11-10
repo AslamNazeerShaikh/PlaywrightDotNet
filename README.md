@@ -58,7 +58,7 @@ Browser-profile sessions. One identity per source, launch readiness at a glance.
 
 ### 06 Runs
 
-Start a scrape, follow it live, cancel it, read postings with CSV and XLSX export.
+Start a scrape (optionally new-only), follow it live, cancel it, and read postings with CSV and XLSX export. NEW ONLY badge, inline control tips.
 
 <div style="display:flex;gap:12px;">
 <img src="docs/screenshots/06-runs-light.png" width="49%" alt="Runs page in light theme" />
@@ -67,7 +67,7 @@ Start a scrape, follow it live, cancel it, read postings with CSV and XLSX expor
 
 ### 07 Topology
 
-Request lifecycle sequence, component map of the two processes, layer contract.
+Request lifecycle sequence, component map, layer contract, plus the current scrape flow and the new-only delta.
 
 <div style="display:flex;gap:12px;">
 <img src="docs/screenshots/07-topology-light.png" width="49%" alt="Topology page in light theme" />
