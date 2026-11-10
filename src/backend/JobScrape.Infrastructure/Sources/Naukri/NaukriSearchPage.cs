@@ -18,8 +18,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
     /// emitted. With <paramref name="ResultRange"/> it forms the page fingerprint.
     /// </param>
     /// <param name="HasNext">
-    /// True when a visible native <b>Next</b> link is present and not
-    /// <c>aria-disabled="true"</c>.
+    /// True when a visible native <b>Next</b> link is present, not
+    /// <c>aria-disabled="true"</c>, and carries an href.
     /// </param>
     /// <param name="DroppedCards">
     /// Visible cards that were dropped as malformed (no usable title, job
