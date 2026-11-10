@@ -48,10 +48,7 @@ namespace JobScrape.Application.Tests.Scraping
         {
             var harness = new ScrapeHarness(maxJobs: 2) { OnlyNew = true };
             SeedKnown(harness, "1");
-            harness.Source.Then(
-                Page("next", Job("1"), Job("2")),
-                Page(null, Job("3"), Job("4"))
-            );
+            harness.Source.Then(Page("next", Job("1"), Job("2")), Page(null, Job("3"), Job("4")));
 
             var result = await harness.Build().HandleAsync(harness.Request, Ct);
 
@@ -96,17 +93,12 @@ namespace JobScrape.Application.Tests.Scraping
         {
             var harness = new ScrapeHarness(maxDetails: 1) { OnlyNew = true };
             SeedKnown(harness, "1");
-            harness
-                .Source.Then(Page(null, Job("1"), Job("2")))
-                .ThenDetails(Detail("2"));
+            harness.Source.Then(Page(null, Job("1"), Job("2"))).ThenDetails(Detail("2"));
 
             var result = await harness.Build().HandleAsync(harness.Request, Ct);
 
             Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Code : null);
-            Assert.Equal(
-                ["2"],
-                harness.Source.DetailRequests.Select(j => j.ExternalJobId.Value)
-            );
+            Assert.Equal(["2"], harness.Source.DetailRequests.Select(j => j.ExternalJobId.Value));
             Assert.Equal("Build APIs.", Posting(harness, "2").Description);
             Assert.Null(Posting(harness, "1").Description);
         }

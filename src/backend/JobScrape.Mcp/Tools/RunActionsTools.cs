@@ -58,9 +58,7 @@ namespace JobScrape.Mcp.Tools
             [Description("The browser profile identifier bound to the profile source.")]
                 string browserProfileId,
             [Description("Whether to visit detail pages after searching.")] bool enrich = true,
-            [Description(
-                "Whether to run only postings not seen before; defaults to the full run."
-            )]
+            [Description("Whether to run only postings not seen before; defaults to the full run.")]
                 bool onlyNew = false,
             CancellationToken cancellationToken = default
         )

@@ -119,10 +119,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             );
 
             var seen = await store.ListPostingsAsync(run2Id, 0, 50, Ct);
-            Assert.Equal(
-                ["fresh", "refreshed"],
-                seen!.Items.Select(p => p.ExternalJobId)
-            );
+            Assert.Equal(["fresh", "refreshed"], seen!.Items.Select(p => p.ExternalJobId));
             Assert.Equal(2, seen.Total);
         }
 
