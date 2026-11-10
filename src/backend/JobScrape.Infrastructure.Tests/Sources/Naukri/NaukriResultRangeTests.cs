@@ -46,6 +46,13 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             Assert.Equal(1, range.MaxPage);
         }
 
+        [Fact]
+        public void TheObserved303CountIsSixteenPages()
+        {
+            Assert.Equal(16, NaukriResultRange.Parse("1 - 20 of 303")!.MaxPage);
+            Assert.Equal(3, NaukriResultRange.Parse("301 - 303 of 303")!.PageSize);
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]

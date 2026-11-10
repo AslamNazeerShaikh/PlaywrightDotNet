@@ -319,6 +319,70 @@ namespace JobScrape.Application.Tests.Scraping
         }
 
         [Fact]
+        public async Task TheListingsLastPageBindsThePageWindow()
+        {
+            var harness = new ScrapeHarness(maxPages: 60);
+            harness.Source.Then(
+                new SearchPageResult(
+                    [Job("1")],
+                    "p2",
+                    new PageFingerprint("1", "1 - 20 of 40"),
+                    ChallengeAssessment.Clear,
+                    2
+                ),
+                RangedPage("p3", "21 - 40 of 40", Job("2")),
+                Page(null, Job("3"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(0, summary.Stats.Failures);
+            Assert.Equal(2, summary.Stats.PagesFetched);
+            Assert.Equal(
+                [new SearchPageRequest(1, null), new SearchPageRequest(2, "p2")],
+                harness.Source.Requests
+            );
+        }
+
+        [Fact]
+        public async Task ARefusedPageEndsTheRunWithoutRecordingIt()
+        {
+            var harness = new ScrapeHarness(maxPages: 60);
+            harness.Source.Then(
+                new SearchPageResult(
+                    [Job("1")],
+                    "p2",
+                    new PageFingerprint("1", "1 - 20 of 131"),
+                    ChallengeAssessment.Clear,
+                    7
+                ),
+                RangedPage("p3", "21 - 40 of 131", Job("2")),
+                RangedPage("p4", "41 - 60 of 131", Job("3")),
+                RangedPage("p5", "61 - 80 of 131", Job("4")),
+                RangedPage("p6", "81 - 100 of 131", Job("5")),
+                RangedPage("p7", "101 - 120 of 131", Job("6")),
+                SearchPageResult.BeyondLastPage(7) with
+                {
+                    Jobs = [Job("7")],
+                    NextCursor = "p8",
+                },
+                Page(null, Job("8"))
+            );
+
+            var summary = await RunOkAsync(harness);
+
+            Assert.Equal(RunStage.Completed, summary.Stage);
+            Assert.Equal(0, summary.Stats.Failures);
+            Assert.Equal(6, summary.Stats.PagesFetched);
+            Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value is "7" or "8");
+            var progress = Assert.Single(harness.Store.Runs).Progress;
+            Assert.NotNull(progress);
+            Assert.Equal("p7", progress.NextCursor);
+            Assert.Null(summary.FailureReason);
+        }
+
+        [Fact]
         public async Task ReRunningIsIdempotent()
         {
             var harness = new ScrapeHarness();

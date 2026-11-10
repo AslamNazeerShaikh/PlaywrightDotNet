@@ -75,15 +75,20 @@ namespace JobScrape.Infrastructure.Tests.Browser
         /// <summary>
         /// Opens the profile and serves every Naukri URL from <paramref name="serve"/>;
         /// a null answer aborts the request like a dropped connection.
+        /// <paramref name="headers"/>, when given, adds response headers per URL.
         /// </summary>
-        private async Task<IPage> OpenAsync(Func<Uri, (int Status, string Html)?> serve)
+        private async Task<IPage> OpenAsync(
+            Func<Uri, (int Status, string Html)?> serve,
+            Func<Uri, Dictionary<string, string>?>? headers = null
+        )
         {
             var page = await _pool.OpenAsync(_profile, Ct);
             await page.Context.RouteAsync(
                 "https://www.naukri.com/**",
                 async route =>
                 {
-                    var answer = serve(new Uri(route.Request.Url));
+                    var url = new Uri(route.Request.Url);
+                    var answer = serve(url);
                     if (answer is not { } reply)
                     {
                         await route.AbortAsync();
@@ -96,6 +101,7 @@ namespace JobScrape.Infrastructure.Tests.Browser
                             Status = reply.Status,
                             ContentType = "text/html; charset=utf-8",
                             Body = reply.Html,
+                            Headers = headers?.Invoke(url),
                         }
                     );
                 }
@@ -290,6 +296,100 @@ namespace JobScrape.Infrastructure.Tests.Browser
             Assert.Equal(last.Fingerprint, again.Fingerprint);
             Assert.Equal(source.Key, SourceKey.Naukri);
             Assert.True(source.Capabilities.SupportsDetails);
+        }
+
+        [Fact]
+        public async Task ANextClickThatLandsOffPageEndsTheListing()
+        {
+            const string Page1Path = "/dot-net-developer-jobs-in-pune";
+            const string Page1Url =
+                "https://www.naukri.com/dot-net-developer-jobs-in-pune?k=dot%20net%20developer&l=Pune&nignbevent_src=jobsearchDeskGNB&experience=5&jobAge=7";
+            var landed = false;
+            var page = await OpenAsync(
+                url =>
+                {
+                    var path = url.AbsolutePath;
+                    if (path == "/")
+                    {
+                        return (200, Home);
+                    }
+
+                    if (path == "/dot-net-developer-jobs-in-pune-2")
+                    {
+                        return (302, string.Empty);
+                    }
+
+                    if (path == "/dot-net-developer-jobs-in-pune-6")
+                    {
+                        return (200, NaukriTestPages.Fixture("search-normal.html"));
+                    }
+
+                    if (path == Page1Path)
+                    {
+                        return landed
+                            ? (200, NaukriTestPages.Fixture("search-last-page.html"))
+                            : (200, NaukriTestPages.Fixture("search-normal.html"));
+                    }
+
+                    return null;
+                },
+                url =>
+                    url.AbsolutePath == "/dot-net-developer-jobs-in-pune-2"
+                        ? new Dictionary<string, string> { ["Location"] = Page1Url }
+                        : null
+            );
+            var source = Source();
+            var context = Context();
+
+            var first = await source.SearchPageAsync(context, new SearchPageRequest(1, null), Ct);
+            Assert.Equal(ChallengeKind.None, first.Challenge.Kind);
+
+            landed = true;
+            await page.GotoAsync(
+                "https://www.naukri.com/dot-net-developer-jobs-in-pune-6?k=dot%20net%20developer&l=Pune&nignbevent_src=jobsearchDeskGNB&experience=5&jobAge=7"
+            );
+
+            var refused = await source.SearchPageAsync(
+                context,
+                new SearchPageRequest(7, "next"),
+                Ct
+            );
+
+            Assert.Equal(6, refused.LastPage);
+            Assert.Empty(refused.Jobs);
+            Assert.Null(refused.NextCursor);
+            Assert.Null(refused.Fingerprint);
+            Assert.Equal(ChallengeKind.None, refused.Challenge.Kind);
+        }
+
+        [Fact]
+        public async Task AColdRequestAbovePageOneEndsTheListing()
+        {
+            await OpenAsync(url =>
+            {
+                var path = url.AbsolutePath;
+                if (path == "/")
+                {
+                    return (200, Home);
+                }
+
+                return path == "/dot-net-developer-jobs-in-pune"
+                    ? (200, NaukriTestPages.Fixture("search-normal.html"))
+                    : ((int Status, string Html)?)null;
+            });
+            var source = Source();
+
+            var refused = await source.SearchPageAsync(
+                Context(),
+                new SearchPageRequest(8, null),
+                Ct
+            );
+
+            Assert.Equal(7, refused.LastPage);
+            Assert.Empty(refused.Jobs);
+            Assert.Null(refused.NextCursor);
+            Assert.Null(refused.Fingerprint);
+            Assert.Equal(ChallengeKind.None, refused.Challenge.Kind);
         }
 
         [Fact]
