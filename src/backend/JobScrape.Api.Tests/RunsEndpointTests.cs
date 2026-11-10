@@ -256,6 +256,29 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task RunEndsCleanlyWhenTheListingRefusesTheNextPage()
+        {
+            await using var factory = Factory(new FakeSource { RefusesBeyondLastPage = true });
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+
+            var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done.Stage);
+            Assert.Equal(1, done.PagesFetched);
+            Assert.Equal(0, done.Failures);
+            Assert.Null(done.FailureReason);
+            Assert.Equal(2, done.PostingsFound);
+            Assert.NotNull(done.FinishedAt);
+        }
+
+        [Fact]
         public async Task SkillMatchAndRecencyFlowKeepsOnlyMatchingFreshPostings()
         {
             var source = new FakeSource { Skilled = true };
@@ -797,6 +820,8 @@ namespace JobScrape.Api.Tests
 
             public volatile bool ResightMismatch;
 
+            public volatile bool RefusesBeyondLastPage;
+
             public TaskCompletionSource Entered { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -821,6 +846,11 @@ namespace JobScrape.Api.Tests
                     await Task.Delay(Timeout.Infinite, cancellationToken);
                 }
 
+                if (RefusesBeyondLastPage && request.PageNumber > 1)
+                {
+                    return SearchPageResult.BeyondLastPage(request.PageNumber);
+                }
+
                 var now = DateTimeOffset.UtcNow;
                 JobSnapshot[] jobs = Skilled
                     ? ResightMismatch
@@ -834,7 +864,7 @@ namespace JobScrape.Api.Tests
                     : [Snapshot("101"), Snapshot("102")];
                 return new SearchPageResult(
                     jobs,
-                    null,
+                    RefusesBeyondLastPage ? "p2" : null,
                     new PageFingerprint("101", "1 - 2 of 2"),
                     ChallengeAssessment.Clear
                 );
