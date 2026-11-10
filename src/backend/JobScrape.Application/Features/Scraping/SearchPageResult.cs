@@ -43,7 +43,13 @@ namespace JobScrape.Application.Features.Scraping
         public static SearchPageResult BeyondLastPage(int requestedPage)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(requestedPage, 2);
-            return new SearchPageResult([], null, null, ChallengeAssessment.Clear, requestedPage - 1);
+            return new SearchPageResult(
+                [],
+                null,
+                null,
+                ChallengeAssessment.Clear,
+                requestedPage - 1
+            );
         }
     }
 }
