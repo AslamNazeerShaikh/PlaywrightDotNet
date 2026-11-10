@@ -26,8 +26,10 @@ namespace JobScrape.Infrastructure.Composition
     {
         /// <summary>
         /// The default <c>Application</c> property stamped on every event.
+        /// Not a compile-time constant: NetArchTest reads const fields as
+        /// dependencies on the tagged assembly name.
         /// </summary>
-        public const string ApplicationName = "JobScrape.Api";
+        public static readonly string ApplicationName = "JobScrape.Api";
 
         private const string PlainTextOutputTemplate =
             "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";

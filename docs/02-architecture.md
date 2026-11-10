@@ -187,13 +187,14 @@ Every edge above is a `ProjectReference` in `src/backend` (see [Solution & Tooli
 | `JobScrape.Infrastructure` | Application, Domain, EF Core, `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, AngleSharp | Api |
 | `JobScrape.Api` | Domain, Application, Infrastructure (composition root binds the ports) | — |
 
-**Architecture tests** (`JobScrape.Architecture.Tests`: `LayerRulesTests`, `GuardrailTests`, NetArchTest + xUnit) enforce:
+**Architecture tests** (`JobScrape.Architecture.Tests`: `LayerRulesTests`, `GuardrailTests`, `StrictArchitectureTests`, NetArchTest + xUnit) enforce:
 
 - Domain references neither Application, Infrastructure, nor Api; and none of `Microsoft.Playwright`, `Microsoft.EntityFrameworkCore`, `AngleSharp`-family libraries (verified: Domain has zero package references).
 - Application references neither Infrastructure nor Api.
 - No production assembly references MediatR, and no production type is mediator-shaped (`IRequest`, `ISender`, `ICommand`, `IQuery`-style buses are banned).
 - Domain has no static mutable state.
 - Repositories live under `JobScrape.Infrastructure.Persistence` (+ `Repositories/`) and implement Application ports; adapters live under `Infrastructure/Sources/{Naukri,Indeed,LinkedIn}` and implement `IJobSource`.
+- Handlers, controllers, events, stores, and the DbContext follow sealed plus placement rules selected by port identity with boundary-exact namespaces (`StrictArchitectureTests`).
 
 ### 5.1 Composition root (`Program.cs`)
 

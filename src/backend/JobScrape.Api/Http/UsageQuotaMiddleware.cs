@@ -2,7 +2,6 @@ using System.Globalization;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Access;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace JobScrape.Api.Http
@@ -207,7 +206,7 @@ namespace JobScrape.Api.Http
             var stored = await quotas.ListAsync(context.RequestAborted);
             if (stored.Count == 0)
             {
-                stored = await SeedAsync(context);
+                stored = await quotas.EnsureSeededAsync(context.RequestAborted);
             }
 
             var definitions = stored
@@ -215,35 +214,6 @@ namespace JobScrape.Api.Http
                 .ToList();
             _cache.Set(DefinitionsCacheKey, definitions, now + DefinitionsCacheLifetime);
             return definitions;
-        }
-
-        /// <summary>
-        /// Inserts the starting budgets when the table is empty. A lost
-        /// insert race re-reads instead of failing the request.
-        /// </summary>
-        /// <param name="context">The HTTP context carrying the scoped services.</param>
-        /// <returns>The stored definitions.</returns>
-        private static async Task<IReadOnlyList<UsageQuota>> SeedAsync(HttpContext context)
-        {
-            var quotas = context.RequestServices.GetRequiredService<IUsageQuotaRepository>();
-            var unitOfWork = context.RequestServices.GetRequiredService<IUnitOfWork>();
-            foreach (var quota in UsageQuotaDefaults.All())
-            {
-                await quotas.AddAsync(quota, context.RequestAborted);
-            }
-
-            try
-            {
-                await unitOfWork.SaveChangesAsync(context.RequestAborted);
-            }
-            catch (DbUpdateException)
-            {
-                context
-                    .RequestServices.GetRequiredService<JobScrape.Infrastructure.Persistence.JobScrapeDbContext>()
-                    .ChangeTracker.Clear();
-            }
-
-            return await quotas.ListAsync(context.RequestAborted);
         }
 
         /// <summary>
