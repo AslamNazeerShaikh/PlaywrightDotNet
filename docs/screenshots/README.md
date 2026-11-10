@@ -75,3 +75,30 @@ Browse every user table in the SQLite store. Live schema, paged rows, and CRUD. 
 <img src="./08-database-light.png" width="49%" alt="Database page in light theme" />
 <img src="./08-database-dark.png" width="49%" alt="Database page in dark theme" />
 </div>
+
+## 09 Users
+
+The signed-in account for every caller (roles, permissions, password change), plus the admin surface when the token carries user visibility: list, create with a temporary password, role assign and revoke. Use it to manage who can sign in and what they hold.
+
+<div style="display:flex;gap:12px;">
+<img src="./09-users-light.png" width="49%" alt="Users page in light theme" />
+<img src="./09-users-dark.png" width="49%" alt="Users page in dark theme" />
+</div>
+
+## 10 Roles
+
+Role catalog with create, plus per-role permission grants across the catalog keys. Grant and revoke are one checkbox each and the toggle disables while its own request flies. Use it to review and adjust what each role grants.
+
+<div style="display:flex;gap:12px;">
+<img src="./10-roles-light.png" width="49%" alt="Roles page in light theme" />
+<img src="./10-roles-dark.png" width="49%" alt="Roles page in dark theme" />
+</div>
+
+## 11 Quotas
+
+Usage quota definitions with per-user limits and fixed windows, plus an editor per scope. Use it to adjust how much of each quota a user may spend in a window.
+
+<div style="display:flex;gap:12px;">
+<img src="./11-quotas-light.png" width="49%" alt="Quotas page in light theme" />
+<img src="./11-quotas-dark.png" width="49%" alt="Quotas page in dark theme" />
+</div>

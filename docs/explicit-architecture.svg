@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1248 1028" width="1248" role="img">
-  <title>JobScrape architecture: control plane, application core, and driven adapters</title>
+  <title>JobLens architecture: control plane, application core, and driven adapters</title>
   <style>
     text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
   </style>
@@ -10,7 +10,7 @@
   </defs>
 
   <rect x="0" y="0" width="1248" height="1028" fill="#ffffff"/>
-  <text x="624" y="36" font-size="16" fill="#1e293b" text-anchor="middle">JobScrape architecture: control plane, core, adapters</text>
+  <text x="624" y="36" font-size="16" fill="#1e293b" text-anchor="middle">JobLens architecture: control plane, core, adapters</text>
 
   <!-- Dashed groups. The 26px gaps match the 25px block rule plus the border strokes. -->
   <rect x="24" y="60" width="1200" height="144" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
@@ -88,7 +88,7 @@
 
   <rect x="636.5" y="284" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
   <text x="717.25" y="306.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">ScrapeRun</text>
-  <text x="717.25" y="321.75" font-size="10" fill="#6b21a8" text-anchor="middle">stage · stats · pause</text>
+  <text x="717.25" y="321.75" font-size="10" fill="#6b21a8" text-anchor="middle">stage · stats · onlyNew</text>
 
   <rect x="450" y="363" width="161.5" height="54" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
   <text x="530.75" y="385.75" font-size="12" font-weight="bold" fill="#6b21a8" text-anchor="middle">JobPosting</text>
@@ -181,7 +181,7 @@
   <rect x="40" y="806" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
   <text x="146.8" y="846.75" font-size="12" font-weight="bold" fill="#166534" text-anchor="middle">EF Core · SQLite</text>
   <text x="146.8" y="861.75" font-size="10" fill="#166534" text-anchor="middle">9 repositories · 3 read stores</text>
-  <text x="146.8" y="876.75" font-size="10" fill="#166534" text-anchor="middle">11 tables · 1 migration</text>
+  <text x="146.8" y="876.75" font-size="10" fill="#166534" text-anchor="middle">11 tables · 2 migrations</text>
   <text x="146.8" y="891.75" font-size="10" fill="#166534" text-anchor="middle">WAL · one writer</text>
 
   <rect x="278.6" y="806" width="213.6" height="120" rx="6" fill="#d1fae5" stroke="#22c55e"/>
@@ -211,5 +211,5 @@
 
   <!-- 970 + 34 / 2 + 10 × 0.35 = 990.5, the optical centre of the band. -->
   <rect x="24" y="970" width="1200" height="34" rx="6" fill="#ffffff" stroke="#94a3b8"/>
-  <text x="624" y="990.5" font-size="10" fill="#1e293b" text-anchor="middle">11 projects · 32 handlers · 24 ports · 11 deck routes · 11 tables · 1 migration · 19 ADRs · 11 controllers · 39 endpoints</text>
+  <text x="624" y="990.5" font-size="10" fill="#1e293b" text-anchor="middle">11 projects · 32 handlers · 24 ports · 11 deck routes · 11 tables · 2 migrations · 19 ADRs · 11 controllers · 39 endpoints</text>
 </svg>
