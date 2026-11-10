@@ -15,7 +15,7 @@
 > readouts that wrap instead of overflowing.
 >
 > **Stack:** Bun `1.4.4` · React `19.3.1` · TypeScript `7.0.2` ·
-> Tailwind CSS `4.3.3` · `bun test` + happy-dom + Testing Library.
+> Tailwind CSS `4.3.5` · `bun test` + happy-dom + Testing Library.
 > No Node.js, no npm, no Vite, no Prettier/Biome.
 > UI guidance: [ui-skills](https://www.ui-skills.com/skills) via the
 > `ui-skills` MCP (`list_skills` → `get_skill`), per `AGENTS.md`.
