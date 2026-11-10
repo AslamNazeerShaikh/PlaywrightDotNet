@@ -124,6 +124,25 @@ namespace JobScrape.Architecture.Tests
                     Visibility: Visibility.Any),
             ],
             [
+                new ConventionScope("Aggregate roots", [Domain], null, null, null, null, Visibility.Any,
+                    RequiredBaseType: typeof(JobScrape.Domain.Abstractions.AggregateRoot),
+                    ShapeFirst: true,
+                    Exclude:
+                    [
+                        typeof(JobScrape.Domain.Identity.PasswordHash),
+                        typeof(JobScrape.Domain.Access.PolitenessPolicy),
+                        typeof(JobScrape.Domain.Access.RetryPolicy),
+                        typeof(JobScrape.Domain.Sourcing.ScrapeRunProgress),
+                    ],
+                    ExpectedMatches: 9),
+            ],
+            [
+                new ConventionScope("Aggregate constructors", Production, null,
+                    typeof(JobScrape.Domain.Abstractions.AggregateRoot), null, null, Visibility.Any,
+                    RequireNonPublicCtors: true,
+                    ExpectedMatches: 9),
+            ],
+            [
                 new ConventionScope(
                     "DbContext",
                     Production,
@@ -153,12 +172,6 @@ namespace JobScrape.Architecture.Tests
         public void ConventionScopeHoldsShape(ConventionScope scope)
         {
             var matched = SelectMatching(scope);
-            // A renamed namespace or suffix must fail loudly, never vacate the rule.
-            Assert.True(
-                matched.Length > 0,
-                $"{scope.Description}: scope matched no types; the rule guards nothing"
-            );
-
             var violations = matched
                 .SelectMany(type => Violations(scope, type))
                 .ToList();
@@ -167,18 +180,47 @@ namespace JobScrape.Architecture.Tests
                 Environment.NewLine,
                 violations
             ));
+
+            if (scope.ExpectedMatches is { } expectedMatches)
+            {
+                // An over-broad exemption or a silently dropped candidate
+                // must fail loudly, never quietly narrow the rule.
+                Assert.True(
+                    matched.Length == expectedMatches,
+                    $"{scope.Description}: expected {expectedMatches} matched types, got {matched.Length}: {string.Join(", ", matched.Select(type => type.FullName))}"
+                );
+            }
+            else
+            {
+                // A renamed namespace or suffix must fail loudly, never vacate the rule.
+                Assert.True(
+                    matched.Length > 0,
+                    $"{scope.Description}: scope matched no types; the rule guards nothing"
+                );
+            }
         }
 
         private static Type[] SelectMatching(ConventionScope scope)
         {
-            return scope
+            var candidates = scope
                 .Assemblies
                 .SelectMany(assembly => assembly.GetTypes())
                 .Where(type =>
                     type.IsClass
                     && !type.IsAbstract
                     && !IsCompilerGenerated(type)
-                )
+                );
+
+            // Shape-first rows select concrete, non-record, non-exception
+            // classes; role-selected rows keep their subjects.
+            if (scope.ShapeFirst)
+            {
+                candidates = candidates
+                    .Where(type => !typeof(Exception).IsAssignableFrom(type))
+                    .Where(type => !IsRecord(type));
+            }
+
+            return candidates
                 .Where(type =>
                     scope.NameSuffix is null
                     || type.Name.EndsWith(scope.NameSuffix, StringComparison.Ordinal)
@@ -190,6 +232,9 @@ namespace JobScrape.Architecture.Tests
                     scope.ImplementsAny is null
                     || scope.ImplementsAny.Any(port => port.IsAssignableFrom(type))
                 )
+                .Where(type =>
+                    scope.Exclude is null || !scope.Exclude.Contains(type)
+                )
                 .ToArray();
         }
 
@@ -198,6 +243,22 @@ namespace JobScrape.Architecture.Tests
             if (!type.IsSealed)
             {
                 yield return $"{type.FullName} is not sealed";
+            }
+
+            if (
+                scope.RequiredBaseType is not null
+                && !scope.RequiredBaseType.IsAssignableFrom(type)
+            )
+            {
+                yield return $"{type.FullName} does not inherit {scope.RequiredBaseType}";
+            }
+
+            if (
+                scope.RequireNonPublicCtors
+                && type.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length > 0
+            )
+            {
+                yield return $"{type.FullName} exposes a public instance constructor";
             }
 
             if (
@@ -237,6 +298,20 @@ namespace JobScrape.Architecture.Tests
             );
         }
 
+        private static bool IsRecord(Type type)
+        {
+            // Real records carry a compiler-generated <Clone>$ method or a
+            // non-public EqualityContract. A public EqualityContract property
+            // is just a property; it does not make a type a record.
+            const BindingFlags flags = BindingFlags.Instance
+                | BindingFlags.Public
+                | BindingFlags.NonPublic;
+            return type.GetMethods(flags).Any(method => method.Name == "<Clone>$")
+                || type.GetProperty(
+                    "EqualityContract",
+                    BindingFlags.Instance | BindingFlags.NonPublic) is not null;
+        }
+
         private static string Describe(NetArchTest.Rules.TestResult result)
         {
             return string.Join(
@@ -267,7 +342,12 @@ namespace JobScrape.Architecture.Tests
             Type? BaseType,
             Type[]? ImplementsAny,
             string? RequiredNamespace,
-            Visibility Visibility
+            Visibility Visibility,
+            Type? RequiredBaseType = null,
+            Type[]? Exclude = null,
+            bool RequireNonPublicCtors = false,
+            int? ExpectedMatches = null,
+            bool ShapeFirst = false
         )
         {
             public override string ToString()
