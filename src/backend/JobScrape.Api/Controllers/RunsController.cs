@@ -97,7 +97,7 @@ namespace JobScrape.Api.Controllers
         /// <summary>
         /// Starts a run in the background.
         /// </summary>
-        /// <param name="request">The profile, session, and enrichment choice.</param>
+        /// <param name="request">The profile, session, enrichment choice, and the <c>onlyNew</c> flag (fresh postings only).</param>
         /// <param name="cancellationToken">Aborted when the client disconnects; the run itself continues.</param>
         /// <returns>202 with the recorded run and its <c>Location</c>; or the gate's problem.</returns>
         [HttpPost]

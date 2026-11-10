@@ -452,6 +452,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         // ---- pagination ----
 
         [Theory]
+        [InlineData("<a aria-disabled=\"false\"><span>Next</span></a>", false)]
         [InlineData("<a aria-disabled=\"false\" href=\"/x-2\"><span>Next</span></a>", true)]
         [InlineData("<a href=\"/x-2\"> Next </a>", true)]
         [InlineData("<a aria-disabled=\"true\"><span>Next</span></a>", false)]

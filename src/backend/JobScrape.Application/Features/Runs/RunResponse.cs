@@ -30,6 +30,7 @@ namespace JobScrape.Application.Features.Runs
     /// <param name="CreatedAt">When the run was created.</param>
     /// <param name="StartedAt">When the run started.</param>
     /// <param name="FinishedAt">When the run reached a terminal stage.</param>
+    /// <param name="OnlyNew">Whether the run fetched only postings first seen during it.</param>
     public sealed record RunResponse(
         Guid Id,
         Guid ProfileId,
@@ -54,7 +55,8 @@ namespace JobScrape.Application.Features.Runs
         string? FailureReason,
         DateTimeOffset CreatedAt,
         DateTimeOffset? StartedAt,
-        DateTimeOffset? FinishedAt
+        DateTimeOffset? FinishedAt,
+        bool OnlyNew
     )
     {
         /// <summary>
@@ -91,7 +93,8 @@ namespace JobScrape.Application.Features.Runs
                 run.FailureReason,
                 run.CreatedAt,
                 run.StartedAt,
-                run.FinishedAt
+                run.FinishedAt,
+                run.OnlyNew
             );
         }
     }

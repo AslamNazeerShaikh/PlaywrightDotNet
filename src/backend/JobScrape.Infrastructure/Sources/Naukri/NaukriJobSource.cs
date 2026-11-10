@@ -210,18 +210,29 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     LogLanded(_logger, context, request, landedUrl, first);
                     if (first.Challenge.Kind == ChallengeKind.None && context.StartPage > 1)
                     {
-                        var size = NaukriResultRange.Parse(first.Fingerprint?.ResultRange);
-                        if (size is not null && context.StartPage > size.MaxPage)
+                        if (first.LastPage is { } last && context.StartPage > last)
                         {
-                            throw new StartPageOutOfRangeException(context.StartPage, size.MaxPage);
+                            throw new StartPageOutOfRangeException(context.StartPage, last);
                         }
 
-                        if (size is null && first.NextCursor is null)
+                        if (first.LastPage is null && first.NextCursor is null)
                         {
                             // One page and no parseable range: the listing
                             // has a single page, so any later start is past it.
                             throw new StartPageOutOfRangeException(context.StartPage, 1);
                         }
+                    }
+
+                    if (request.PageNumber > 1)
+                    {
+                        LogBeyondLastPage(
+                            _logger,
+                            context.RunId.Value,
+                            request.PageNumber,
+                            landedUrl,
+                            request.PageNumber - 1
+                        );
+                        return SearchPageResult.BeyondLastPage(request.PageNumber);
                     }
 
                     return first;
@@ -241,15 +252,14 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     )
                 )
                 {
-                    // A cold -N load bounces to page 1; the fingerprint
-                    // alone cannot tell that from a real advance. Report
-                    // the page so the repeated-page guard stops the run.
-                    LogUnexpectedPageUrl(
+                    LogBeyondLastPage(
                         _logger,
                         context.RunId.Value,
                         request.PageNumber,
-                        page.Url
+                        page.Url,
+                        request.PageNumber - 1
                     );
+                    return SearchPageResult.BeyondLastPage(request.PageNumber);
                 }
 
                 return await FinishPageAsync(page, context, request, null, cancellationToken);
@@ -342,13 +352,15 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 );
             }
 
+            var size = NaukriResultRange.Parse(parsed.ResultRange);
             return new SearchPageResult(
                 parsed.Jobs,
                 parsed.HasNext ? NextCursor : null,
                 parsed.FirstJobId is null && parsed.ResultRange is null
                     ? null
                     : new PageFingerprint(parsed.FirstJobId, parsed.ResultRange),
-                ChallengeAssessment.Clear
+                ChallengeAssessment.Clear,
+                size is { First: 1 } ? size.MaxPage : null
             );
         }
 
@@ -534,14 +546,15 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         private static partial void LogNextDidNotAdvance(ILogger logger, Guid runId, int page);
 
         [LoggerMessage(
-            Level = LogLevel.Warning,
-            Message = "Naukri Next landed off-page for run {RunId} on requested page {Page} at {Url}"
+            Level = LogLevel.Information,
+            Message = "Naukri run {RunId} refused requested page {Page} at {Url}; the listing ends at page {LastPage}"
         )]
-        private static partial void LogUnexpectedPageUrl(
+        private static partial void LogBeyondLastPage(
             ILogger logger,
             Guid runId,
             int page,
-            string url
+            string url,
+            int lastPage
         );
 
         [LoggerMessage(

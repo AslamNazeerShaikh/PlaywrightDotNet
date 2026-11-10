@@ -123,6 +123,46 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task StartForwardsOnlyNewToTheLauncher()
+        {
+            var launcher = new FakeLauncher();
+            var handler = new StartRunHandler(
+                launcher,
+                new FakeRunStore(),
+                Consent,
+                CallerContext.LocalOperator
+            );
+            var request = new StartRunRequest(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Enrich: false,
+                OnlyNew: true
+            );
+            await handler.HandleAsync(request, Ct);
+            Assert.True(Assert.Single(launcher.Started).OnlyNew);
+        }
+
+        [Fact]
+        public async Task StartForwardsOnlyNewFalseToTheLauncher()
+        {
+            var launcher = new FakeLauncher();
+            var handler = new StartRunHandler(
+                launcher,
+                new FakeRunStore(),
+                Consent,
+                CallerContext.LocalOperator
+            );
+            var request = new StartRunRequest(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Enrich: false,
+                OnlyNew: false
+            );
+            await handler.HandleAsync(request, Ct);
+            Assert.False(Assert.Single(launcher.Started).OnlyNew);
+        }
+
+        [Fact]
         public async Task StartPassesTheConfiguredConsentAndReturnsTheRecordedRun()
         {
             var run = Run(RunStage.StartingSession);

@@ -10,9 +10,10 @@ namespace JobScrape.Domain.Sourcing
     /// outcome. Illegal transitions throw <see cref="DomainException"/>;
     /// the application layer decides which transition to request.
     /// <para>
-    /// The run snapshots the profile's source, limits, and company list at
-    /// creation, so it can never point at a profile of another source and
-    /// later profile edits never change a run in flight.
+    /// The run snapshots the profile's source, limits, company list, and
+    /// the new-only choice at creation, so it can never point at a
+    /// profile of another source and later profile edits never change a
+    /// run in flight.
     /// </para>
     /// </summary>
     public sealed class ScrapeRun : AggregateRoot
@@ -30,13 +31,15 @@ namespace JobScrape.Domain.Sourcing
         /// <param name="limits">The profile's caps at creation.</param>
         /// <param name="companies">The profile's company list at creation.</param>
         /// <param name="createdAt">Creation time.</param>
+        /// <param name="onlyNew">Whether the run fetches only new postings.</param>
         private ScrapeRun(
             ScrapeRunId id,
             SearchProfileId profileId,
             SourceKey source,
             RunLimits limits,
             IReadOnlyList<string> companies,
-            DateTimeOffset createdAt
+            DateTimeOffset createdAt,
+            bool onlyNew
         )
         {
             Id = id;
@@ -45,6 +48,7 @@ namespace JobScrape.Domain.Sourcing
             Limits = limits;
             Companies = companies;
             CreatedAt = createdAt;
+            OnlyNew = onlyNew;
             Stage = RunStage.Pending;
             Stats = RunStats.Empty;
         }
@@ -74,6 +78,13 @@ namespace JobScrape.Domain.Sourcing
         /// snapshotted from the profile.
         /// </summary>
         public IReadOnlyList<string> Companies { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the run fetches only postings
+        /// not seen in earlier runs. Snapshotted at creation; later edits
+        /// never change a run in flight.
+        /// </summary>
+        public bool OnlyNew { get; }
 
         /// <summary>
         /// Gets the current lifecycle stage.
@@ -133,10 +144,15 @@ namespace JobScrape.Domain.Sourcing
         /// </summary>
         /// <param name="profile">The profile to execute. Must be enabled.</param>
         /// <param name="now">The creation time.</param>
+        /// <param name="onlyNew">Whether the run fetches only new postings.</param>
         /// <returns>The pending run.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
         /// <exception cref="DomainException">Thrown when the profile is disabled.</exception>
-        public static ScrapeRun Create(SearchProfile profile, DateTimeOffset now)
+        public static ScrapeRun Create(
+            SearchProfile profile,
+            DateTimeOffset now,
+            bool onlyNew = false
+        )
         {
             ArgumentNullException.ThrowIfNull(profile);
             if (!profile.Enabled)
@@ -152,7 +168,8 @@ namespace JobScrape.Domain.Sourcing
                 profile.Source,
                 profile.Limits,
                 profile.Criteria.Companies,
-                now
+                now,
+                onlyNew
             );
         }
 

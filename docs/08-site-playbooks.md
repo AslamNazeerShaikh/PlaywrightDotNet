@@ -184,6 +184,7 @@ https://www.naukri.com/job-listings-{slug}-{id}
 - If the fingerprint does not change, stop (do not loop).
 - If Next is disabled/absent, stop.
 - A cold `-N` load redirects to filtered page 1 (verified live 2026-11-04: a `-31` request served range 1 - 20 of 918 with filters intact), so a fresh run loads page 1 first to learn the size (a resumed run continues from its saved cursor), a start past the last page fails fast, and pre-window pages advance through Next clicks.
+- A refused page ends the listing one page earlier: when the site serves the listing's last page count instead of the requested `-N` page, the run stops before the refused page and completes without a repeated-fingerprint failure.
 
 ### 3.6 Optional private API fast path (feature-flagged)
 

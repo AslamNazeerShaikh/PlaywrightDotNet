@@ -5,6 +5,7 @@
 # chores (kill, clean, build, relaunch, shell checks): opencode-go/beam-free#max
 # chores (graphify update, dotnet and bun formatting): opencode-go/beam-free#max
 # chores (package upgrades, outdated checkups, lockfile refresh): opencode-go/beam-free#max
+# chores (git pull, git push): opencode-go/beam-free#max
 # thinking: muse-spark runs #high, inkling-2-small-free runs #max, deepseek-v4.1-flash runs #max. DeepSeek carries hardest tasks, why synthesizer, architect runners, arena cross-judge pool, and interrogate reviewers.
 # parent session: run the interactive session on opencode-go/muse-spark-1.3-contributor#high; role lines below only affect subagents.
 feature, refactoring: opencode/inkling-2-small-free#max

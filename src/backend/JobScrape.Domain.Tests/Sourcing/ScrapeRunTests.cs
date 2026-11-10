@@ -422,6 +422,20 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void CreateDefaultsOnlyNewToFalse()
+        {
+            var run = ScrapeRun.Create(Profile(), Now);
+            Assert.False(run.OnlyNew);
+        }
+
+        [Fact]
+        public void CreatePreservesOnlyNew()
+        {
+            var run = ScrapeRun.Create(Profile(), Now, onlyNew: true);
+            Assert.True(run.OnlyNew);
+        }
+
+        [Fact]
         public void TerminalRunRejectsEveryTransition()
         {
             var run = Persisting();
