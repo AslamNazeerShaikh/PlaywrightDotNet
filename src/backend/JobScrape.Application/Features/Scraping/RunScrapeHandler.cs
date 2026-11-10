@@ -722,6 +722,17 @@ namespace JobScrape.Application.Features.Scraping
                     return true;
                 }
 
+                if (result.LastPage is { } reported)
+                {
+                    lastPage = Math.Min(lastPage, reported);
+                }
+
+                if (page > lastPage)
+                {
+                    LogPaginationStopped(_logger, run.Id.Value, page, "end of results", "at");
+                    break;
+                }
+
                 // A repeated fingerprint only stalls when Next is live: the
                 // click did not advance. A missing Next ends the run through
                 // the null cursor path below, so it is not a failure.

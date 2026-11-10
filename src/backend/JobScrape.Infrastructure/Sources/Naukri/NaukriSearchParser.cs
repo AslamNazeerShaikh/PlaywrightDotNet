@@ -239,7 +239,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Whether a visible, enabled native Next link exists.
+        /// Whether a visible, enabled native Next link with an href exists.
         /// </summary>
         /// <param name="document">The page.</param>
         /// <returns>True when the adapter may click Next.</returns>
@@ -253,6 +253,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                         "Next",
                         StringComparison.OrdinalIgnoreCase
                     )
+                    && link.HasAttribute("href")
                     && !string.Equals(
                         link.GetAttribute("aria-disabled")?.Trim(),
                         "true",
