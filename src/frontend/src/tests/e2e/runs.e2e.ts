@@ -139,7 +139,8 @@ async function routeRunsPage(
     const onlyNew = () => list.find((r) => r.id === id)?.onlyNew ?? started.get(id) ?? false;
     await page.route(
       (url) => url.pathname === `/api/v1/runs/${id}`,
-      (route) => route.fulfill({ json: terminalRun(id, onlyNew()) }),
+      (route) =>
+        route.fulfill({ json: list.find((r) => r.id === id) ?? terminalRun(id, onlyNew()) }),
     );
     await page.route(
       (url) => url.pathname === `/api/v1/runs/${id}/postings`,
@@ -289,4 +290,28 @@ test("runs page: flagged run badge, filtered postings note, NEW ONLY default off
   await page.getByRole("button", { name: "START RUN" }).click();
   await expect.poll(() => posts.length).toBe(2);
   expect(posts[1]?.onlyNew).toBe(false);
+});
+
+test("runs page: a run that stopped at the listing's end reads Completed with no failure line", async ({
+  page,
+}) => {
+  const stopped = {
+    ...terminalRun("run-clean-stop", false),
+    pagesFetched: 16,
+    maxPages: 60,
+  };
+  await routeRunsPage(page, [stopped]);
+  await signInDeck(page);
+  await page.goto("/#/runs");
+
+  const status = page.getByRole("status");
+  await expect(status).toContainText("COMPLETED");
+  await expect(status).not.toContainText("repeated an earlier page");
+
+  const pages = page.getByRole("meter", { name: "Pages used" });
+  await expect(pages).toHaveAttribute("aria-valuenow", "16");
+  await expect(pages).toHaveAttribute("aria-valuemax", "60");
+
+  const history = page.getByRole("table", { name: "Runs" });
+  await expect(history.getByRole("cell", { name: "16/60" })).toBeVisible();
 });
