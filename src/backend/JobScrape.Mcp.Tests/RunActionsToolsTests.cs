@@ -45,7 +45,8 @@ namespace JobScrape.Mcp.Tests
                 null,
                 Now,
                 Now,
-                Now
+                Now,
+                false
             );
         }
 
@@ -77,6 +78,28 @@ namespace JobScrape.Mcp.Tests
         }
 
         [Fact]
+        public async Task StartRunForwardsOnlyNew()
+        {
+            var id = Guid.NewGuid();
+            var launcher = new FakeLauncher { Next = Result.Ok(id) };
+            var store = new FakeRunStore(Run(id));
+            var profileId = Guid.NewGuid();
+            var browserId = Guid.NewGuid();
+
+            var response = await StartTools(launcher, store)
+                .StartRunAsync(
+                    profileId.ToString(),
+                    browserId.ToString(),
+                    enrich: true,
+                    onlyNew: true,
+                    cancellationToken: Ct
+                );
+
+            Assert.Equal(id, response.Id);
+            Assert.True(Assert.Single(launcher.Started).OnlyNew);
+        }
+
+        [Fact]
         public async Task StartRunReturnsTheRecordedRun()
         {
             var id = Guid.NewGuid();
@@ -86,7 +109,12 @@ namespace JobScrape.Mcp.Tests
             var browserId = Guid.NewGuid();
 
             var response = await StartTools(launcher, store)
-                .StartRunAsync(profileId.ToString(), browserId.ToString(), true, Ct);
+                .StartRunAsync(
+                    profileId.ToString(),
+                    browserId.ToString(),
+                    true,
+                    cancellationToken: Ct
+                );
 
             Assert.Equal(id, response.Id);
             var sent = Assert.Single(launcher.Started);
@@ -101,7 +129,12 @@ namespace JobScrape.Mcp.Tests
         {
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(new FakeLauncher(), new FakeRunStore())
-                    .StartRunAsync("not-a-guid", Guid.NewGuid().ToString(), true, Ct)
+                    .StartRunAsync(
+                        "not-a-guid",
+                        Guid.NewGuid().ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("VALIDATION_FAILED:", error.Message);
@@ -112,7 +145,12 @@ namespace JobScrape.Mcp.Tests
         {
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(new FakeLauncher(), new FakeRunStore())
-                    .StartRunAsync(Guid.NewGuid().ToString(), "not-a-guid", true, Ct)
+                    .StartRunAsync(
+                        Guid.NewGuid().ToString(),
+                        "not-a-guid",
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("VALIDATION_FAILED:", error.Message);
@@ -124,7 +162,12 @@ namespace JobScrape.Mcp.Tests
             var launcher = new FakeLauncher();
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(launcher, new FakeRunStore())
-                    .StartRunAsync(Guid.Empty.ToString(), Guid.Empty.ToString(), true, Ct)
+                    .StartRunAsync(
+                        Guid.Empty.ToString(),
+                        Guid.Empty.ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("VALIDATION_FAILED:", error.Message);
@@ -141,7 +184,12 @@ namespace JobScrape.Mcp.Tests
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(launcher, new FakeRunStore())
-                    .StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)
+                    .StartRunAsync(
+                        Guid.NewGuid().ToString(),
+                        Guid.NewGuid().ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("RUN_IN_PROGRESS:", error.Message);
@@ -158,7 +206,12 @@ namespace JobScrape.Mcp.Tests
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(launcher, new FakeRunStore())
-                    .StartRunAsync(profileId.ToString(), Guid.NewGuid().ToString(), true, Ct)
+                    .StartRunAsync(
+                        profileId.ToString(),
+                        Guid.NewGuid().ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("PROFILE_NOT_FOUND:", error.Message);
@@ -179,7 +232,12 @@ namespace JobScrape.Mcp.Tests
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(launcher, new FakeRunStore())
-                    .StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)
+                    .StartRunAsync(
+                        Guid.NewGuid().ToString(),
+                        Guid.NewGuid().ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("QUOTA_EXCEEDED:", error.Message);
@@ -195,7 +253,12 @@ namespace JobScrape.Mcp.Tests
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
                 StartTools(launcher, new FakeRunStore())
-                    .StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)
+                    .StartRunAsync(
+                        Guid.NewGuid().ToString(),
+                        Guid.NewGuid().ToString(),
+                        true,
+                        cancellationToken: Ct
+                    )
             );
 
             Assert.StartsWith("SOURCE_COOLING_DOWN:", error.Message);
@@ -277,7 +340,12 @@ namespace JobScrape.Mcp.Tests
             );
 
             var error = await Assert.ThrowsAsync<McpException>(() =>
-                tools.StartRunAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), true, Ct)
+                tools.StartRunAsync(
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    true,
+                    cancellationToken: Ct
+                )
             );
 
             Assert.StartsWith("ACCESS_DENIED:", error.Message);
@@ -296,7 +364,7 @@ namespace JobScrape.Mcp.Tests
                 Guid.NewGuid().ToString(),
                 Guid.NewGuid().ToString(),
                 true,
-                Ct
+                cancellationToken: Ct
             );
 
             Assert.Equal(id, response.Id);

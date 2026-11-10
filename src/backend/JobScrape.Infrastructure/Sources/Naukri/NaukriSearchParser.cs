@@ -253,6 +253,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                         "Next",
                         StringComparison.OrdinalIgnoreCase
                     )
+                    && link.HasAttribute("href")
                     && !string.Equals(
                         link.GetAttribute("aria-disabled")?.Trim(),
                         "true",

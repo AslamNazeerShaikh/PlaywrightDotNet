@@ -781,7 +781,8 @@ select.input {
 .input:focus-visible,
 .btn:focus-visible,
 .density-btn:focus-visible,
-.ruler-stop:focus-visible {
+.ruler-stop:focus-visible,
+.info-tip-btn:focus-visible {
   outline: 2px solid var(--sig);
   outline-offset: 1px;
 }
@@ -871,6 +872,13 @@ table.data td.actions-cell {
   position: sticky;
   right: 0;
   background: var(--panel);
+}
+
+/* Visited postings read as violet so a scanned table shows which links you opened.
+   Color-only: scripts cannot see visited state, so this is the one hint browsers expose. */
+.tbl-wrap .data a:visited,
+table.data a:visited {
+  color: var(--brand-3);
 }
 
 /* ---- code + raw payloads ---- */
@@ -1124,6 +1132,70 @@ abbr.abbr {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
   cursor: help;
+}
+
+/* Circled-i usage tooltip: hover/focus reveals one line; instant, no transition. */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.info-tip-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--line-hi);
+  border-radius: 50%;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  font-size: 9px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.info-tip-btn::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+}
+
+.info-tip-btn:hover {
+  color: var(--ink);
+  border-color: var(--sig-line);
+}
+
+.info-tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 32ch;
+  padding: 6px 9px;
+  border: 1px solid var(--line-hi);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  text-wrap: pretty;
+  box-shadow: var(--shadow-md);
+  white-space: normal;
+}
+
+.info-tip-bubble[hidden] {
+  display: none;
 }
 
 /* ---- page intro strip ---- */

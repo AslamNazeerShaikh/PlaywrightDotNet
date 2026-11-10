@@ -46,6 +46,7 @@ namespace JobScrape.Mcp.Tools
         /// <param name="profileId">The search profile identifier.</param>
         /// <param name="browserProfileId">The browser profile identifier bound to the profile source.</param>
         /// <param name="enrich">Whether to visit detail pages after searching.</param>
+        /// <param name="onlyNew">Whether to run only postings not seen before.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The started run as recorded; poll <c>get_run</c> for progress.</returns>
         [McpServerTool(Name = "start_run")]
@@ -57,6 +58,8 @@ namespace JobScrape.Mcp.Tools
             [Description("The browser profile identifier bound to the profile source.")]
                 string browserProfileId,
             [Description("Whether to visit detail pages after searching.")] bool enrich = true,
+            [Description("Whether to run only postings not seen before; defaults to the full run.")]
+                bool onlyNew = false,
             CancellationToken cancellationToken = default
         )
         {
@@ -68,7 +71,7 @@ namespace JobScrape.Mcp.Tools
             );
             return McpErrors.OrThrow(
                 await _start.HandleAsync(
-                    new StartRunRequest(profile, browser, enrich),
+                    new StartRunRequest(profile, browser, enrich, onlyNew),
                     cancellationToken
                 )
             );
