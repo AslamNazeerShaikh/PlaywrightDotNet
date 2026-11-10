@@ -30,9 +30,9 @@
     "semantic_hash": "2b76b11e29baa16b43881d4ecd93b855"
   },
   "docs/02-architecture.md": {
-    "mtime": 1794303570.0166717,
-    "seen": 1794308065.276744,
-    "ast_hash": "fe923a13c72c05c9f8d1d089e42ec1d5",
+    "mtime": 1794333970.1928117,
+    "seen": 1794333994.673652,
+    "ast_hash": "9caa73c2017fe45fbffdc9a0b941b17c",
     "semantic_hash": ""
   },
   "docs/03-domain-model.md": {
@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/JobPosting.cs": {
-    "mtime": 1794219268.5182667,
-    "seen": 1794245668.757517,
+    "mtime": 1794333739.983677,
+    "seen": 1794333994.6731808,
     "ast_hash": "b7c51ae00205f9bf0601ce2ace0837c1",
     "semantic_hash": ""
   },
@@ -1062,8 +1062,8 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Access/BrowserProfile.cs": {
-    "mtime": 1794219268.5147312,
-    "seen": 1794245668.7575,
+    "mtime": 1794332989.4786441,
+    "seen": 1794333994.673162,
     "ast_hash": "9cc10f079fb7480c7b657e87497ddd06",
     "semantic_hash": ""
   },
@@ -9498,9 +9498,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Architecture.Tests/StrictArchitectureTests.cs": {
-    "mtime": 1794327893.2592926,
-    "seen": 1794328224.3969479,
-    "ast_hash": "d537fbea1a2d8e53b93e56cd2a6c7821",
+    "mtime": 1794333788.8586953,
+    "seen": 1794333994.673145,
+    "ast_hash": "59a9e3ef5192d06239c973447b1c5a0f",
     "semantic_hash": ""
   },
   ".opencode/skills/graphify/SKILL.md": {
@@ -9558,9 +9558,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-11-10-strict-arch-tests-design.md": {
-    "mtime": 1794328007.5568287,
-    "seen": 1794328224.397454,
-    "ast_hash": "11590c3b06381fb41c55399a0ebf2ab0",
+    "mtime": 1794333842.049635,
+    "seen": 1794333994.673676,
+    "ast_hash": "5492d7658fb153eccd7219d898c76561",
     "semantic_hash": ""
   }
 }
