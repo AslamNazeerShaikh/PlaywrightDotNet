@@ -3,7 +3,7 @@
 ### Mutating calls accept an `Idempotency-Key` header: a repeat with the
 ### same user, endpoint, and key replays the stored response for 24h.
 
-@base = http://localhost:5208/api/v1
+@base = https://localhost:5208/api/v1
 
 ### 1. Sign in. 200 with the token; 401 INVALID_CREDENTIALS for a wrong
 ### email or password, or before first login; 403 ACCOUNT_LOCKED
