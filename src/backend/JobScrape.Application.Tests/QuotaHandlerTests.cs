@@ -39,6 +39,18 @@ namespace JobScrape.Application.Tests
                 _quotas.Add(quota);
                 return Task.CompletedTask;
             }
+
+            public Task<IReadOnlyList<UsageQuota>> EnsureSeededAsync(
+                CancellationToken cancellationToken
+            )
+            {
+                foreach (var quota in UsageQuotaDefaults.All())
+                {
+                    _quotas.Add(quota);
+                }
+
+                return ListAsync(cancellationToken);
+            }
         }
 
         private sealed class FakeUnitOfWork : IUnitOfWork

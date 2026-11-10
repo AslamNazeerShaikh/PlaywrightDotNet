@@ -33,5 +33,27 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         {
             await db.UsageQuotas.AddAsync(quota, cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<UsageQuota>> EnsureSeededAsync(
+            CancellationToken cancellationToken
+        )
+        {
+            foreach (var quota in UsageQuotaDefaults.All())
+            {
+                await AddAsync(quota, cancellationToken);
+            }
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                db.ChangeTracker.Clear();
+            }
+
+            return await ListAsync(cancellationToken);
+        }
     }
 }
