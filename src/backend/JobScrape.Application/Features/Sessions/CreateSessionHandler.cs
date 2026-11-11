@@ -8,9 +8,9 @@ namespace JobScrape.Application.Features.Sessions
     /// <summary>
     /// Creates a browser profile in the <c>New</c> state. Every field is
     /// validated at the request boundary with the domain's own rules
-    /// (<see cref="BrowserProfile.IsValidName"/>, engine/channel pairing), so
-    /// the aggregate only ever sees valid input. Logging in is a separate,
-    /// manual step that needs the Playwright session manager.
+    /// (<see cref="BrowserProfile.IsValidName"/> and the defined engine and
+    /// channel values), so the aggregate only ever sees valid input. Logging
+    /// in is a separate, manual step that needs the Playwright session manager.
     /// </summary>
     public sealed class CreateSessionHandler
     {
@@ -97,11 +97,7 @@ namespace JobScrape.Application.Features.Sessions
                 && !SessionValidation.TryParseEnum(request.Channel, out channel)
             )
             {
-                errors["channel"] = ["Choose Bundled, Chrome, or Edge."];
-            }
-            else if (channel != BrowserChannel.Bundled && engine != BrowserEngine.Chromium)
-            {
-                errors["channel"] = [$"The {channel} channel requires the Chromium engine."];
+                errors["channel"] = ["Choose Bundled."];
             }
 
             if (errors.Count > 0)

@@ -77,11 +77,7 @@ namespace JobScrape.Api.Tests
             using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
             var errors = body.RootElement.GetProperty("errors");
             Assert.True(errors.TryGetProperty("name", out _));
-            Assert.Contains(
-                "Chromium",
-                errors.GetProperty("channel")[0].GetString(),
-                StringComparison.Ordinal
-            );
+            Assert.Equal("Choose Bundled.", errors.GetProperty("channel")[0].GetString());
         }
 
         [Fact]
@@ -245,7 +241,7 @@ namespace JobScrape.Api.Tests
                 {
                     name = "../escape",
                     engine = "Firefox",
-                    channel = "Chrome",
+                    channel = "Bundled",
                 },
                 Ct
             );

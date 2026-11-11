@@ -240,7 +240,7 @@ function runsBackend(
             name: "naukri-main",
             sourceKey: "naukri",
             engine: "Chromium",
-            channel: "Chrome",
+            channel: "Bundled",
             state: "New",
             canLaunch: true,
           },

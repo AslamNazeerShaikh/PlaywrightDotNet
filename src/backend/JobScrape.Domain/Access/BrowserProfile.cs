@@ -117,7 +117,7 @@ namespace JobScrape.Domain.Access
         /// </param>
         /// <param name="source">The source the profile is used for. Must not be null.</param>
         /// <param name="engine">The browser engine.</param>
-        /// <param name="channel">The channel; branded channels require Chromium.</param>
+        /// <param name="channel">The engine channel.</param>
         /// <returns>The new profile in <see cref="SessionState.New"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
         /// <exception cref="DomainException">Thrown when the name is unsafe or the engine/channel pair is invalid.</exception>
@@ -152,7 +152,7 @@ namespace JobScrape.Domain.Access
         /// open context keeps its current browser until it is released.
         /// </summary>
         /// <param name="engine">The new engine.</param>
-        /// <param name="channel">The new channel; branded channels require Chromium.</param>
+        /// <param name="channel">The new channel.</param>
         /// <exception cref="DomainException">Thrown when the pair is invalid.</exception>
         public void Configure(BrowserEngine engine, BrowserChannel channel)
         {
@@ -191,11 +191,6 @@ namespace JobScrape.Domain.Access
             if (!Enum.IsDefined(engine) || !Enum.IsDefined(channel))
             {
                 throw new DomainException($"Unknown browser engine {engine} or channel {channel}.");
-            }
-
-            if (channel != BrowserChannel.Bundled && engine != BrowserEngine.Chromium)
-            {
-                throw new DomainException($"Channel {channel} requires the Chromium engine.");
             }
         }
 

@@ -82,7 +82,7 @@ export interface SessionPayload {
   name: string;
   sourceKey: string;
   engine: "Chromium" | "Firefox" | "WebKit";
-  channel: "Bundled" | "Chrome" | "Edge";
+  channel: "Bundled";
   state: "New" | "Healthy" | "Challenged" | "CoolingDown" | "Expired" | "ResetRequired";
   userDataDirectory: string;
   canLaunch: boolean;

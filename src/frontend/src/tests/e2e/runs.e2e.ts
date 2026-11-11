@@ -42,7 +42,7 @@ const USABLE_SESSION = {
   name: "Naukri session",
   sourceKey: "naukri",
   engine: "Chromium",
-  channel: "Chrome",
+  channel: "Bundled",
   state: "Healthy",
   userDataDirectory: "/tmp/task10-session",
   canLaunch: true,

@@ -6,7 +6,7 @@ namespace JobScrape.Domain.Access
     public enum BrowserEngine
     {
         /// <summary>
-        /// Chromium (the default; also hosts the Chrome and Edge channels).
+        /// Chromium (the default engine).
         /// </summary>
         Chromium,
 

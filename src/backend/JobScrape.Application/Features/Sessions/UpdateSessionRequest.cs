@@ -6,6 +6,6 @@ namespace JobScrape.Application.Features.Sessions
     /// </summary>
     /// <param name="Name">New safe profile name, or null to keep it.</param>
     /// <param name="Engine">New engine, or null to keep it.</param>
-    /// <param name="Channel">New channel, or null to keep it.</param>
+    /// <param name="Channel">New channel: <c>Bundled</c>, or null to keep it.</param>
     public sealed record UpdateSessionRequest(string? Name, string? Engine, string? Channel);
 }

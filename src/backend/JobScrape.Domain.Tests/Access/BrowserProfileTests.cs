@@ -10,6 +10,8 @@ namespace JobScrape.Domain.Tests.Access
 
         private static readonly TimeSpan Hour = TimeSpan.FromHours(1);
 
+        private static readonly string[] ChannelNames = ["Bundled"];
+
         private static BrowserProfile Create(string? name = "naukri-main")
         {
             return BrowserProfile.Create(
@@ -45,6 +47,12 @@ namespace JobScrape.Domain.Tests.Access
             Assert.Null(profile.LastUsedAt);
             Assert.Null(profile.LastVerifiedAt);
             Assert.True(profile.CanLaunch(Now));
+        }
+
+        [Fact]
+        public void ChannelExposesOnlyBundled()
+        {
+            Assert.Equal(ChannelNames, Enum.GetNames<BrowserChannel>());
         }
 
         [Theory]
@@ -102,30 +110,27 @@ namespace JobScrape.Domain.Tests.Access
         }
 
         [Fact]
-        public void BrandedChannelsRequireChromium()
+        public void BundledChannelWorksWithEveryEngine()
         {
-            var edge = BrowserProfile.Create(
-                "edge",
+            var chromium = Create();
+            var firefox = BrowserProfile.Create(
+                "ff",
                 SourceKey.Naukri,
-                BrowserEngine.Chromium,
-                BrowserChannel.Edge
+                BrowserEngine.Firefox,
+                BrowserChannel.Bundled
+            );
+            var webkit = BrowserProfile.Create(
+                "wk",
+                SourceKey.Naukri,
+                BrowserEngine.WebKit,
+                BrowserChannel.Bundled
             );
 
-            Assert.Equal(BrowserChannel.Edge, edge.Channel);
-            Assert.Throws<DomainException>(() =>
-                BrowserProfile.Create(
-                    "ff",
-                    SourceKey.Naukri,
-                    BrowserEngine.Firefox,
-                    BrowserChannel.Chrome
-                )
-            );
-            Assert.Equal(
-                BrowserEngine.WebKit,
-                BrowserProfile
-                    .Create("wk", SourceKey.Naukri, BrowserEngine.WebKit, BrowserChannel.Bundled)
-                    .Engine
-            );
+            Assert.Equal(BrowserChannel.Bundled, chromium.Channel);
+            Assert.Equal(BrowserEngine.Firefox, firefox.Engine);
+            Assert.Equal(BrowserChannel.Bundled, firefox.Channel);
+            Assert.Equal(BrowserEngine.WebKit, webkit.Engine);
+            Assert.Equal(BrowserChannel.Bundled, webkit.Channel);
         }
 
         [Fact]
@@ -323,18 +328,10 @@ namespace JobScrape.Domain.Tests.Access
         {
             var profile = Create();
 
-            profile.Configure(BrowserEngine.Chromium, BrowserChannel.Chrome);
+            profile.Configure(BrowserEngine.Firefox, BrowserChannel.Bundled);
 
-            Assert.Equal(BrowserEngine.Chromium, profile.Engine);
-            Assert.Equal(BrowserChannel.Chrome, profile.Channel);
-        }
-
-        [Fact]
-        public void ConfigureRejectsBrandedChannelOnNonChromium()
-        {
-            Assert.Throws<DomainException>(() =>
-                Create().Configure(BrowserEngine.Firefox, BrowserChannel.Chrome)
-            );
+            Assert.Equal(BrowserEngine.Firefox, profile.Engine);
+            Assert.Equal(BrowserChannel.Bundled, profile.Channel);
         }
     }
 }

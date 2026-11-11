@@ -10,7 +10,7 @@ namespace JobScrape.Application.Features.Sessions
     /// <param name="Name">The profile name (also its directory name).</param>
     /// <param name="SourceKey">The single source the profile is used for.</param>
     /// <param name="Engine"><c>Chromium</c>, <c>Firefox</c>, or <c>WebKit</c>.</param>
-    /// <param name="Channel"><c>Bundled</c>, <c>Chrome</c>, or <c>Edge</c>.</param>
+    /// <param name="Channel"><c>Bundled</c>.</param>
     /// <param name="State">Session state, e.g. <c>New</c>, <c>Healthy</c>, <c>CoolingDown</c>.</param>
     /// <param name="UserDataDirectory">Directory relative to the profiles root.</param>
     /// <param name="CanLaunch">Whether the profile may launch now.</param>

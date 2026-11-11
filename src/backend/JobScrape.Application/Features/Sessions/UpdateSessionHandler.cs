@@ -120,11 +120,7 @@ namespace JobScrape.Application.Features.Sessions
                 && !SessionValidation.TryParseEnum(request.Channel, out channel)
             )
             {
-                errors["channel"] = ["Choose Bundled, Chrome, or Edge."];
-            }
-            else if (channel != BrowserChannel.Bundled && engine != BrowserEngine.Chromium)
-            {
-                errors["channel"] = [$"The {channel} channel requires the Chromium engine."];
+                errors["channel"] = ["Choose Bundled."];
             }
 
             if (errors.Count > 0)
