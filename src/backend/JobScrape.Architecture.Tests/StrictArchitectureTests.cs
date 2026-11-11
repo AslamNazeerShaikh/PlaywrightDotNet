@@ -6,19 +6,22 @@ namespace JobScrape.Architecture.Tests
 {
     public sealed class StrictArchitectureTests
     {
-        private static readonly Assembly Domain =
-            typeof(JobScrape.Domain.DomainException).Assembly;
+        private static readonly Assembly Domain = typeof(JobScrape.Domain.DomainException).Assembly;
         private static readonly Assembly Application =
             typeof(JobScrape.Application.Results.Result).Assembly;
         private static readonly Assembly Infrastructure =
             typeof(JobScrape.Infrastructure.Persistence.JobScrapeDbContext).Assembly;
-        private static readonly Assembly Api =
-            typeof(JobScrape.Api.Program).Assembly;
-        private static readonly Assembly Mcp =
-            typeof(JobScrape.Mcp.Tools.HealthTools).Assembly;
+        private static readonly Assembly Api = typeof(JobScrape.Api.Program).Assembly;
+        private static readonly Assembly Mcp = typeof(JobScrape.Mcp.Tools.HealthTools).Assembly;
 
         private static readonly Assembly[] Production =
-            [Domain, Application, Infrastructure, Api, Mcp];
+        [
+            Domain,
+            Application,
+            Infrastructure,
+            Api,
+            Mcp,
+        ];
 
         // Selection is by role: a type is matched by the port it implements,
         // never by where it sits. A rogue implementer cannot pass by spelling
@@ -28,8 +31,7 @@ namespace JobScrape.Architecture.Tests
             .. Application
                 .GetTypes()
                 .Where(type =>
-                    type.IsInterface
-                    && type.Name.EndsWith("Repository", StringComparison.Ordinal)
+                    type.IsInterface && type.Name.EndsWith("Repository", StringComparison.Ordinal)
                 ),
             typeof(JobScrape.Application.Abstractions.IIdempotencyStore),
         ];
@@ -42,117 +44,136 @@ namespace JobScrape.Architecture.Tests
         ];
 
         public static IEnumerable<object[]> LayerScopes =>
-        [
-            [new LayerScope(Infrastructure, "JobScrape.Api")],
-            [new LayerScope(Infrastructure, "JobScrape.Mcp")],
-            [new LayerScope(Mcp, "JobScrape.Infrastructure")],
-            [new LayerScope(Mcp, "Microsoft.Playwright")],
-            [new LayerScope(Mcp, "Microsoft.EntityFrameworkCore")],
-            [new LayerScope(Mcp, "AngleSharp")],
-            [new LayerScope(Mcp, "ClosedXML")],
-            [new LayerScope(Mcp, "Dapper")],
-            [new LayerScope(Api, "Microsoft.Playwright")],
-            [new LayerScope(Api, "AngleSharp")],
-            [new LayerScope(Api, "ClosedXML")],
-            [new LayerScope(Api, "Dapper")],
-            [new LayerScope(Api, "Microsoft.EntityFrameworkCore")],
-        ];
+            [
+                [new LayerScope(Infrastructure, "JobScrape.Api")],
+                [new LayerScope(Infrastructure, "JobScrape.Mcp")],
+                [new LayerScope(Mcp, "JobScrape.Infrastructure")],
+                [new LayerScope(Mcp, "Microsoft.Playwright")],
+                [new LayerScope(Mcp, "Microsoft.EntityFrameworkCore")],
+                [new LayerScope(Mcp, "AngleSharp")],
+                [new LayerScope(Mcp, "ClosedXML")],
+                [new LayerScope(Mcp, "Dapper")],
+                [new LayerScope(Api, "Microsoft.Playwright")],
+                [new LayerScope(Api, "AngleSharp")],
+                [new LayerScope(Api, "ClosedXML")],
+                [new LayerScope(Api, "Dapper")],
+                [new LayerScope(Api, "Microsoft.EntityFrameworkCore")],
+            ];
 
         public static IEnumerable<object[]> ConventionScopes =>
-        [
             [
-                new ConventionScope(
-                    "Handlers",
-                    [Application],
-                    NameSuffix: "Handler",
-                    BaseType: null,
-                    ImplementsAny: null,
-                    RequiredNamespace: "JobScrape.Application.Features",
-                    Visibility: Visibility.Public),
-            ],
-            [
-                new ConventionScope(
-                    "Controllers",
-                    [Api],
-                    NameSuffix: "Controller",
-                    BaseType: null,
-                    ImplementsAny: null,
-                    RequiredNamespace: "JobScrape.Api.Controllers",
-                    Visibility: Visibility.Public),
-            ],
-            [
-                new ConventionScope(
-                    "Domain events",
-                    Production,
-                    NameSuffix: null,
-                    BaseType: typeof(JobScrape.Domain.Abstractions.DomainEvent),
-                    ImplementsAny: null,
-                    RequiredNamespace: "JobScrape.Domain",
-                    Visibility: Visibility.Any),
-            ],
-            [
-                new ConventionScope(
-                    "Repository implementations",
-                    Production,
-                    NameSuffix: null,
-                    BaseType: null,
-                    ImplementsAny: RepositoryPorts,
-                    RequiredNamespace: "JobScrape.Infrastructure.Persistence.Repositories",
-                    Visibility: Visibility.Internal),
-            ],
-            [
-                new ConventionScope(
-                    "Persistence stores",
-                    Production,
-                    NameSuffix: null,
-                    BaseType: null,
-                    ImplementsAny: StorePorts,
-                    RequiredNamespace: "JobScrape.Infrastructure.Persistence",
-                    Visibility: Visibility.Public),
-            ],
-            [
-                new ConventionScope(
-                    "Source adapters",
-                    Production,
-                    NameSuffix: null,
-                    BaseType: null,
-                    ImplementsAny:
-                    [
-                        typeof(JobScrape.Application.Features.Scraping.IJobSource),
-                    ],
-                    RequiredNamespace: "JobScrape.Infrastructure.Sources",
-                    Visibility: Visibility.Any),
-            ],
-            [
-                new ConventionScope("Aggregate roots", [Domain], null, null, null, null, Visibility.Any,
-                    RequiredBaseType: typeof(JobScrape.Domain.Abstractions.AggregateRoot),
-                    ShapeFirst: true,
-                    Exclude:
-                    [
-                        typeof(JobScrape.Domain.Identity.PasswordHash),
-                        typeof(JobScrape.Domain.Access.PolitenessPolicy),
-                        typeof(JobScrape.Domain.Access.RetryPolicy),
-                        typeof(JobScrape.Domain.Sourcing.ScrapeRunProgress),
-                    ],
-                    ExpectedMatches: 9),
-            ],
-            [
-                new ConventionScope("Aggregate constructors", Production, null,
-                    typeof(JobScrape.Domain.Abstractions.AggregateRoot), null, null, Visibility.Any,
-                    RequireNonPublicCtors: true,
-                    ExpectedMatches: 9),
-            ],
-            [
-                new ConventionScope(
-                    "DbContext",
-                    Production,
-                    NameSuffix: "DbContext",
-                    BaseType: null,
-                    ImplementsAny: null,
-                    RequiredNamespace: "JobScrape.Infrastructure.Persistence",
-                    Visibility: Visibility.Any),
-            ],
-        ];
+                [
+                    new ConventionScope(
+                        "Handlers",
+                        [Application],
+                        NameSuffix: "Handler",
+                        BaseType: null,
+                        ImplementsAny: null,
+                        RequiredNamespace: "JobScrape.Application.Features",
+                        Visibility: Visibility.Public
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Controllers",
+                        [Api],
+                        NameSuffix: "Controller",
+                        BaseType: null,
+                        ImplementsAny: null,
+                        RequiredNamespace: "JobScrape.Api.Controllers",
+                        Visibility: Visibility.Public
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Domain events",
+                        Production,
+                        NameSuffix: null,
+                        BaseType: typeof(JobScrape.Domain.Abstractions.DomainEvent),
+                        ImplementsAny: null,
+                        RequiredNamespace: "JobScrape.Domain",
+                        Visibility: Visibility.Any
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Repository implementations",
+                        Production,
+                        NameSuffix: null,
+                        BaseType: null,
+                        ImplementsAny: RepositoryPorts,
+                        RequiredNamespace: "JobScrape.Infrastructure.Persistence.Repositories",
+                        Visibility: Visibility.Internal
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Persistence stores",
+                        Production,
+                        NameSuffix: null,
+                        BaseType: null,
+                        ImplementsAny: StorePorts,
+                        RequiredNamespace: "JobScrape.Infrastructure.Persistence",
+                        Visibility: Visibility.Public
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Source adapters",
+                        Production,
+                        NameSuffix: null,
+                        BaseType: null,
+                        ImplementsAny: [typeof(JobScrape.Application.Features.Scraping.IJobSource)],
+                        RequiredNamespace: "JobScrape.Infrastructure.Sources",
+                        Visibility: Visibility.Any
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Aggregate roots",
+                        [Domain],
+                        null,
+                        null,
+                        null,
+                        null,
+                        Visibility.Any,
+                        RequiredBaseType: typeof(JobScrape.Domain.Abstractions.AggregateRoot),
+                        ShapeFirst: true,
+                        Exclude:
+                        [
+                            typeof(JobScrape.Domain.Identity.PasswordHash),
+                            typeof(JobScrape.Domain.Access.PolitenessPolicy),
+                            typeof(JobScrape.Domain.Access.RetryPolicy),
+                            typeof(JobScrape.Domain.Sourcing.ScrapeRunProgress),
+                        ],
+                        ExpectedMatches: 9
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "Aggregate constructors",
+                        Production,
+                        null,
+                        typeof(JobScrape.Domain.Abstractions.AggregateRoot),
+                        null,
+                        null,
+                        Visibility.Any,
+                        RequireNonPublicCtors: true,
+                        ExpectedMatches: 9
+                    ),
+                ],
+                [
+                    new ConventionScope(
+                        "DbContext",
+                        Production,
+                        NameSuffix: "DbContext",
+                        BaseType: null,
+                        ImplementsAny: null,
+                        RequiredNamespace: "JobScrape.Infrastructure.Persistence",
+                        Visibility: Visibility.Any
+                    ),
+                ],
+            ];
 
         [Theory]
         [MemberData(nameof(LayerScopes))]
@@ -172,14 +193,9 @@ namespace JobScrape.Architecture.Tests
         public void ConventionScopeHoldsShape(ConventionScope scope)
         {
             var matched = SelectMatching(scope);
-            var violations = matched
-                .SelectMany(type => Violations(scope, type))
-                .ToList();
+            var violations = matched.SelectMany(type => Violations(scope, type)).ToList();
 
-            Assert.True(violations.Count == 0, string.Join(
-                Environment.NewLine,
-                violations
-            ));
+            Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
 
             if (scope.ExpectedMatches is { } expectedMatches)
             {
@@ -203,13 +219,8 @@ namespace JobScrape.Architecture.Tests
         private static Type[] SelectMatching(ConventionScope scope)
         {
             var candidates = scope
-                .Assemblies
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(type =>
-                    type.IsClass
-                    && !type.IsAbstract
-                    && !IsCompilerGenerated(type)
-                );
+                .Assemblies.SelectMany(assembly => assembly.GetTypes())
+                .Where(type => type.IsClass && !type.IsAbstract && !IsCompilerGenerated(type));
 
             // Shape-first rows select concrete, non-record, non-exception
             // classes; role-selected rows keep their subjects.
@@ -225,16 +236,12 @@ namespace JobScrape.Architecture.Tests
                     scope.NameSuffix is null
                     || type.Name.EndsWith(scope.NameSuffix, StringComparison.Ordinal)
                 )
-                .Where(type =>
-                    scope.BaseType is null || scope.BaseType.IsAssignableFrom(type)
-                )
+                .Where(type => scope.BaseType is null || scope.BaseType.IsAssignableFrom(type))
                 .Where(type =>
                     scope.ImplementsAny is null
                     || scope.ImplementsAny.Any(port => port.IsAssignableFrom(type))
                 )
-                .Where(type =>
-                    scope.Exclude is null || !scope.Exclude.Contains(type)
-                )
+                .Where(type => scope.Exclude is null || !scope.Exclude.Contains(type))
                 .ToArray();
         }
 
@@ -284,10 +291,10 @@ namespace JobScrape.Architecture.Tests
         {
             // Boundary-exact: "PersistenceLegacy" is not "Persistence".
             return ns is not null
-                && (ns.Equals(prefix, StringComparison.Ordinal)
-                    || ns.StartsWith(
-                        prefix + ".",
-                        StringComparison.Ordinal));
+                && (
+                    ns.Equals(prefix, StringComparison.Ordinal)
+                    || ns.StartsWith(prefix + ".", StringComparison.Ordinal)
+                );
         }
 
         private static bool IsCompilerGenerated(Type type)
@@ -303,13 +310,14 @@ namespace JobScrape.Architecture.Tests
             // Real records carry a compiler-generated <Clone>$ method or a
             // non-public EqualityContract. A public EqualityContract property
             // is just a property; it does not make a type a record.
-            const BindingFlags flags = BindingFlags.Instance
-                | BindingFlags.Public
-                | BindingFlags.NonPublic;
+            const BindingFlags flags =
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             return type.GetMethods(flags).Any(method => method.Name == "<Clone>$")
                 || type.GetProperty(
                     "EqualityContract",
-                    BindingFlags.Instance | BindingFlags.NonPublic) is not null;
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                )
+                    is not null;
         }
 
         private static string Describe(NetArchTest.Rules.TestResult result)
