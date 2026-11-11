@@ -14,10 +14,14 @@ Recaptures every ops-deck route, light plus dark, as full-page PNGs.
 3. Check one light and one dark file by eye, then commit the PNGs.
 
 Env knobs: `BFF_URL` (default `https://127.0.0.1:3000`), `SHOT_OUT`
-(default `docs/screenshots`), `CDP_PORT` (default `9222`),
+(default `docs/screenshots`),
 `PLAYWRIGHT_BROWSERS_PATH` (default: the OS ms-playwright cache —
 `~/Library/Caches/ms-playwright` on macOS, `%LOCALAPPDATA%\ms-playwright`
 on Windows, `~/.cache/ms-playwright` on Linux).
+
+The CDP port is ephemeral: Chromium picks it at launch and reports it in
+`DevToolsActivePort` inside the throwaway profile, so a leftover system
+browser squatting on a fixed port is never driven by mistake.
 
 The script picks the highest installed `chromium-*` revision and a throwaway
 profile directory under the OS temp dir, removed on exit.
