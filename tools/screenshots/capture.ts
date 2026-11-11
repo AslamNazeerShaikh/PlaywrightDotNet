@@ -3,17 +3,20 @@
  *
  * Run: `bun tools/screenshots/capture.ts` from the repo root.
  * Env: `BFF_URL` (default `https://127.0.0.1:3000`),
- * `SHOT_OUT` (default `docs/screenshots`), `CDP_PORT` (default `9222`).
+ * `SHOT_OUT` (default `docs/screenshots`), `CDP_PORT` (default `9222`),
+ * `PLAYWRIGHT_BROWSERS_PATH` (default: the OS ms-playwright cache).
  *
- * Needs headless Chrome with remote debugging first:
- * macOS: /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --headless
- *   --remote-debugging-port=9222 --ignore-certificate-errors
- *   --user-data-dir=/tmp/chrome-shots about:blank
- * Linux: google-chrome with the same flags.
+ * Launches the Playwright bundled Chromium itself with remote debugging,
+ * then shuts it down. No system browser is used. Needs a bundled Chromium
+ * install (docs/09-operations-runbook.md §0).
  *
  * Theme uses the deck THEME toggle with a confirm poll. A fixed sleep raced
  * React state and produced light files named dark, so the poll is load-bearing.
  */
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
+
 const BFF = process.env["BFF_URL"] ?? "https://127.0.0.1:3000";
 const OUT = process.env["SHOT_OUT"] ?? "docs/screenshots";
 const CDP = process.env["CDP_PORT"] ?? "9222";
@@ -34,6 +37,91 @@ const routes = [
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function browsersRoot(): string {
+  if (process.env["PLAYWRIGHT_BROWSERS_PATH"])
+    return process.env["PLAYWRIGHT_BROWSERS_PATH"];
+  switch (process.platform) {
+    case "darwin":
+      return join(homedir(), "Library", "Caches", "ms-playwright");
+    case "win32":
+      return join(
+        process.env["LOCALAPPDATA"] ?? join(homedir(), "AppData", "Local"),
+        "ms-playwright",
+      );
+    default:
+      return join(homedir(), ".cache", "ms-playwright");
+  }
+}
+
+function bundledChromium(): string {
+  const root = browsersRoot();
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    // Missing cache dir; handled by the throw below.
+  }
+  const revisions = entries
+    .map((d) => /^chromium-(\d+)$/.exec(d)?.[1])
+    .filter((v): v is string => v !== undefined)
+    .map(Number)
+    .sort((a, b) => b - a);
+  for (const rev of revisions) {
+    const dir = join(root, `chromium-${rev}`);
+    const candidate =
+      process.platform === "darwin"
+        ? join(
+            dir,
+            `chrome-mac-${process.arch === "arm64" ? "arm64" : "x64"}`,
+            "Google Chrome for Testing.app",
+            "Contents",
+            "MacOS",
+            "Google Chrome for Testing",
+          )
+        : process.platform === "win32"
+          ? [join(dir, "chrome-win64", "chrome.exe"), join(dir, "chrome-win", "chrome.exe")].find(
+              existsSync,
+            )
+          : join(dir, "chrome-linux", "chrome");
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  throw new Error(
+    `No bundled Chromium under ${root}. Install one with the API build's driver (docs/09-operations-runbook.md §0) or, in src/frontend, run \`bunx playwright install chromium\`.`,
+  );
+}
+
+const chromiumBin = bundledChromium();
+const profileDir = mkdtempSync(join(tmpdir(), "bundled-shots-"));
+const browser = Bun.spawn(
+  [
+    chromiumBin,
+    "--headless",
+    `--remote-debugging-port=${CDP}`,
+    "--ignore-certificate-errors",
+    `--user-data-dir=${profileDir}`,
+    "about:blank",
+  ],
+  { stdout: "ignore", stderr: "ignore" },
+);
+let cdpUp = false;
+for (let i = 0; i < 40 && !cdpUp; i++) {
+  try {
+    const r = await fetch(`http://127.0.0.1:${CDP}/json/version`);
+    cdpUp = r.ok;
+  } catch {
+    // Not up yet.
+  }
+  if (!cdpUp) await sleep(500);
+}
+if (!cdpUp) {
+  browser.kill();
+  rmSync(profileDir, { recursive: true, force: true });
+  throw new Error(
+    `Bundled Chromium did not open a CDP endpoint on port ${CDP} in 20 s (${chromiumBin})`,
+  );
+}
+
 const created = await fetch(`http://127.0.0.1:${CDP}/json/new?about:blank`, {
   method: "PUT",
 }).then((r) => r.json());
@@ -104,30 +192,30 @@ async function shot(path: string) {
   console.log("saved", path, `h=${h}`);
 }
 
-await send("Page.enable");
-await send("Runtime.enable");
-
-// Sign in once: every deck route sits behind the login gate. Fills the
-// React-controlled form via the native value setter so onInput fires,
-// submits, then polls for the deck theme toggle (absent on the login page).
-await send("Page.navigate", { url: `${BFF}/#/overview` });
-await sleep(2500);
-await evalJs(
-  `(() => { const email = ${JSON.stringify(ADMIN_EMAIL)}; const pass = ${JSON.stringify(ADMIN_PASSWORD)}; const set = (el, v) => { const d = Object.getOwnPropertyDescriptor(el.__proto__, 'value') ?? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'); d?.set?.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }; const e = document.querySelector('input[name="email"]'); const p = document.querySelector('input[name="password"]'); if (e) set(e, email); if (p) set(p, pass); return !!(e && p); })()`,
-);
-await evalJs(
-  `document.querySelector('form[aria-label="Sign in"] button[type="submit"]')?.click()`,
-);
-for (let i = 0; i < 40; i++) {
-  const deck = await evalJs(
-    `document.querySelector('[title="Toggle color theme"]') ? "READY" : "WAITING"`,
-  );
-  if (String(deck) === "READY") break;
-  if (i === 39) throw new Error("deck never rendered after sign-in");
-  await sleep(500);
-}
-
 try {
+  await send("Page.enable");
+  await send("Runtime.enable");
+
+  // Sign in once: every deck route sits behind the login gate. Fills the
+  // React-controlled form via the native value setter so onInput fires,
+  // submits, then polls for the deck theme toggle (absent on the login page).
+  await send("Page.navigate", { url: `${BFF}/#/overview` });
+  await sleep(2500);
+  await evalJs(
+    `(() => { const email = ${JSON.stringify(ADMIN_EMAIL)}; const pass = ${JSON.stringify(ADMIN_PASSWORD)}; const set = (el, v) => { const d = Object.getOwnPropertyDescriptor(el.__proto__, 'value') ?? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'); d?.set?.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }; const e = document.querySelector('input[name="email"]'); const p = document.querySelector('input[name="password"]'); if (e) set(e, email); if (p) set(p, pass); return !!(e && p); })()`,
+  );
+  await evalJs(
+    `document.querySelector('form[aria-label="Sign in"] button[type="submit"]')?.click()`,
+  );
+  for (let i = 0; i < 40; i++) {
+    const deck = await evalJs(
+      `document.querySelector('[title="Toggle color theme"]') ? "READY" : "WAITING"`,
+    );
+    if (String(deck) === "READY") break;
+    if (i === 39) throw new Error("deck never rendered after sign-in");
+    await sleep(500);
+  }
+
   for (const [slug, route] of routes) {
     await send("Page.navigate", { url: `${BFF}/#/${route}` });
     await sleep(3500);
@@ -159,5 +247,8 @@ try {
   }
   if (!cleaned)
     console.log("warning: capture tab still open, close it by hand");
+  browser.kill();
+  await browser.exited.catch(() => {});
+  rmSync(profileDir, { recursive: true, force: true });
 }
 console.log("done");

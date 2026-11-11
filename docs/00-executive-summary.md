@@ -9,7 +9,7 @@
 Build a brand-new automation/web-scraping solution that:
 
 - Runs on **macOS, Linux, and Windows**.
-- Works with **Chromium/Chrome, Firefox, WebKit, and Edge** where technically possible.
+- Works with **bundled Chromium, Firefox, and WebKit** where technically possible.
 - Targets **Naukri**, **LinkedIn**, and **Indeed India**.
 - Uses **.NET 10**, **latest xUnit**, and **latest Playwright**.
 - Follows **Clean Architecture, DDD, TDD, SOLID, YAGNI, and DRY** where each adds value.

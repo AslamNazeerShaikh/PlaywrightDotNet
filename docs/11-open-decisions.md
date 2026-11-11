@@ -18,7 +18,7 @@
 | D6 | Scheduling | OS scheduler / in-process daemon | **OS scheduler** | Simpler, reliable, no daemon; cron/launchd/Task Scheduler. |
 | D7 | API/dashboard | v1 / v2 / never | **v2 (after Phase 3)** | Avoids building UI before the pipeline is proven. |
 | D8 | Egress | Normal network / static proxy / rotation | **Normal network**; optional user-supplied static egress | Rotation is out of policy; static helps geo consistency. |
-| D9 | Browser default | Chromium / Chrome / Edge / Firefox / WebKit | **Bundled Chromium**; Chrome/Edge optional | Lowest install friction; real browser channels for compatibility. |
+| D9 | Browser default | Bundled Chromium / Firefox / WebKit | **Bundled Chromium** only | Lowest install friction; pinned bundled build. |
 | D10 | Recruiter emails | Include / defer | **Defer (out of scope)** | Personal-data/privacy risk; v1 is job postings only. |
 | D11 | License | MIT / Apache-2.0 / private | **Private or MIT** | Affects sharing/contributions; decide before publishing. |
 | D12 | Data retention | 30/90/180 days | **Artifacts 30d, logs 90d, postings 180d** | Privacy/storage balance; configurable. |
@@ -176,13 +176,11 @@
 
 | Option | Pros | Cons |
 |---|---|---|
-| **Bundled Chromium (recommended)** | No external install; pinned; works on all OSes. | Slightly different from branded Chrome. |
-| Chrome stable channel | Real Chrome fingerprint/behavior. | Must be installed; enterprise policies; version drift. |
-| Edge stable channel | Good on Windows. | Linux/macOS availability varies; policies. |
+| **Bundled Chromium (recommended)** | No external install; pinned; works on all OSes. | Slightly different from a branded build. |
 | Firefox | Diversity. | Patched build; some sites behave differently. |
 | WebKit | Safari-like. | Not real Safari; anti-bot behavior may differ. |
 
-**Recommendation:** bundled Chromium default; expose `--engine`/`--channel` for Chrome/Edge/Firefox/WebKit diagnostics. Do not promise real Safari.
+**Recommendation:** bundled Chromium only; expose `--engine` for Firefox/WebKit diagnostics. No system Chrome or Edge channel is supported. Do not promise real Safari.
 
 **Decision:** ____________________
 

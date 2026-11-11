@@ -4,7 +4,7 @@
 >
 > **Status:** Research and planning complete. No implementation code yet.
 >
-> **Last updated:** 2026-11-09
+> **Last updated:** 2026-11-11
 >
 > **Target stack:** .NET 10 (LTS) · xUnit.net v3 · Playwright for .NET · SQLite/EF Core 10 · React 19/Bun 1.4 cockpit (v2)
 
@@ -56,7 +56,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 |---|---|
 | Runtime | **[.NET 10 LTS](10-adr/0001-dotnet-10-lts.md)** (installed: SDK `10.0.403`, runtime `10.0.14`; supported to 2028-11-14) |
 | Test framework | **xUnit.net v3** (`xunit.v3` `4.0.2`, VS adapter `4.0.1`) |
-| Browser automation | **Playwright for .NET** `1.64.1` (Chromium 156, Firefox 157, WebKit 27.2; Chrome/Edge 155 channels) |
+| Browser automation | **Playwright for .NET** `1.64.1` (Chromium 156, Firefox 157, WebKit 27.2; bundled builds only) |
 | Architecture | Modular monolith, Clean Architecture, DDD for Sourcing + Access; CLI first |
 | Persistence | SQLite via EF Core `10.0.14`; PostgreSQL later if scale demands it |
 | CLI | [`System.CommandLine`](04-solution-and-tooling.md#6-target-cli-surface) `2.0.14` + `Microsoft.Extensions.Hosting` `10.0.14` + Serilog |
@@ -153,3 +153,4 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Replaced the AOT-driven policy with the library-usage policy, restored standard Serilog configuration/enrichers, DataAnnotations, ClosedXML, and Scalar defaults, and added ADR-0014. |
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |
 | 2026-11-09 | Added the lean-workflow guide (one-slash poteto-mode plus ponytail plus superpowers gates) and the `working-lean-with-poteto` skill. |
+| 2026-11-11 | Bundled-only browsers: docs and runbook reference only Playwright bundled Chromium (with darwin-arm64/win64 install paths) and the screenshot tool launches it over CDP; system Chrome/Edge channel references removed. |

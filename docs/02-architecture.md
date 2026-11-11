@@ -485,7 +485,7 @@ Task<ChallengeAssessment> EnsureSessionAsync(
 
 What it does:
 
-1. Opens the profile's persistent context through `BrowserSessionPool` (one Playwright persistent context per `BrowserProfile`, in `{ProfilesRoot}/{source}/{name}`; engine → Chromium/Firefox/WebKit, channel → `chrome`/`msedge`/bundled; real window size and the browser's own user agent — no viewport or UA override; headed by default, `JobScrape:Browser:Headless=false`).
+1. Opens the profile's persistent context through `BrowserSessionPool` (one Playwright persistent context per `BrowserProfile`, in `{ProfilesRoot}/{source}/{name}`; engine → Chromium/Firefox/WebKit, channel → bundled only; real window size and the browser's own user agent — no viewport or UA override; headed by default, `JobScrape:Browser:Headless=false`).
 2. For Naukri: warm-up on the home page, a random 1.5–3 s pause, one scroll, then `NaukriChallengeClassifier` on URL, status, title, and body text.
 3. A clean home page marks the profile verified (`MarkVerified`); a navigation failure or timeout returns `TransientError`.
 
