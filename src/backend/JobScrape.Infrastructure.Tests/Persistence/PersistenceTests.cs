@@ -93,6 +93,39 @@ namespace JobScrape.Infrastructure.Tests.Persistence
         }
 
         [Fact]
+        public async Task LegacyBrandedChannelRowsMigrateToBundled()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            await using (var scope = database.Scope())
+            {
+                await scope
+                    .Db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>()
+                    .MigrateAsync("20261109171206_AddOnlyNewToScrapeRuns", Ct);
+                await scope.Db.Database.ExecuteSqlRawAsync(
+                    """
+                    INSERT INTO browser_profiles
+                        (id, name, source_key, engine, channel, state, consecutive_challenges)
+                    VALUES
+                        ('11111111-1111-1111-1111-111111111111', 'legacy-chrome', 'naukri', 'Chromium', 'Chrome', 'New', 0),
+                        ('22222222-2222-2222-2222-222222222222', 'legacy-edge', 'naukri', 'Chromium', 'Edge', 'New', 0);
+                    """,
+                    Ct
+                );
+                await scope.Db.Database.MigrateAsync(Ct);
+            }
+
+            await using var reload = database.Scope();
+            var profiles = await reload
+                .Db.BrowserProfiles.OrderBy(profile => profile.Name)
+                .ToListAsync(Ct);
+
+            Assert.Equal(
+                ["Bundled", "Bundled"],
+                profiles.Select(profile => profile.Channel.ToString())
+            );
+        }
+
+        [Fact]
         public void LimitsJsonWithoutStartPageReadsAsPageOne()
         {
             const string json =
@@ -447,7 +480,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                 "naukri-main",
                 SourceKey.Naukri,
                 BrowserEngine.Chromium,
-                BrowserChannel.Chrome
+                BrowserChannel.Bundled
             );
             profile.MarkVerified(Now);
             profile.MarkChallenged(ChallengeKind.Captcha, Now, TimeSpan.FromMinutes(45));
@@ -462,7 +495,7 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
             Assert.NotNull(loaded);
             Assert.Equal("naukri/naukri-main", loaded.UserDataDirectory);
-            Assert.Equal(BrowserChannel.Chrome, loaded.Channel);
+            Assert.Equal(BrowserChannel.Bundled, loaded.Channel);
             Assert.Equal(SessionState.CoolingDown, loaded.State);
             Assert.Equal(Now.AddMinutes(45), loaded.CooldownUntil);
             Assert.Equal(1, loaded.ConsecutiveChallenges);

@@ -23,7 +23,7 @@ import { SOURCES } from "./profiles.tsx";
  * implemented yet; the page says so instead of offering buttons that cannot work.
  */
 export const ENGINES = ["Chromium", "Firefox", "WebKit"] as const;
-export const CHANNELS = ["Bundled", "Chrome", "Edge"] as const;
+export const CHANNELS = ["Bundled"] as const;
 
 export function SessionsPage({
   sessions,

@@ -103,18 +103,19 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task ChangesEngineAndChannelWithoutMoving()
+        public async Task ChangesEngineWithoutMoving()
         {
             var (handler, store, workspace) = Create();
 
             var result = await handler.HandleAsync(
                 store.BrowserProfiles[0].Id.Value,
-                new UpdateSessionRequest(null, "Chromium", "Chrome"),
+                new UpdateSessionRequest(null, "Firefox", "Bundled"),
                 Ct
             );
 
             Assert.True(result.IsSuccess);
-            Assert.Equal("Chrome", result.Value.Channel);
+            Assert.Equal("Firefox", result.Value.Engine);
+            Assert.Equal("Bundled", result.Value.Channel);
             Assert.Empty(workspace.Moves);
         }
 
@@ -181,13 +182,13 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task InvalidPairingReturnsFieldErrors()
+        public async Task UnknownChannelReturnsFieldErrors()
         {
             var (handler, store, _) = Create();
 
             var result = await handler.HandleAsync(
                 store.BrowserProfiles[0].Id.Value,
-                new UpdateSessionRequest(null, "Firefox", "Chrome"),
+                new UpdateSessionRequest(null, "Chromium", "Chrome"),
                 Ct
             );
 
@@ -196,7 +197,7 @@ namespace JobScrape.Application.Tests
             var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
                 result.Error.Metadata!["errors"]
             );
-            Assert.Contains("channel", errors.Keys);
+            Assert.Equal(["Choose Bundled."], errors["channel"]);
         }
 
         [Fact]
