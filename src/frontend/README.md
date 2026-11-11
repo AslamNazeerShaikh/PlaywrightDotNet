@@ -38,7 +38,7 @@
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
 | `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
-| `bun run test:e2e`                        | Playwright suite (`src/tests/e2e/*.e2e.ts`). Boots its own temp backend + temp DB and BFF on loopback ports (`:5399` / `:3399`), drives Chrome (`channel: "chrome"`, no download), and deletes the temp root after the run. The shared dev backend and its database are never touched. |
+| `bun run test:e2e`                        | Playwright suite (`src/tests/e2e/*.e2e.ts`). Boots its own temp backend + temp DB and BFF on loopback ports (`:5399` / `:3399`), drives Playwright's bundled Chromium (install once with `bunx playwright install chromium`), and deletes the temp root after the run. The shared dev backend and its database are never touched. |
 | `bun run test:flags`                      | Flag-off validation (`src/tests/e2e/validate-flags.ts`): boots the backend twice on temp ports + temp DBs, proves the harness on the default boot, then pins health-404, features payload, and csv-404/xlsx-present with Health + CsvExport off. Cleans up its temp dirs and processes. |
 | `bun run test:pretest`                    | Pre-test live validation (`src/tests/e2e/validate-pretest.ts`): boots a temp backend + seeded admin, then pins the login/setup/lockout/role/rate-limit/idempotency/quota/MCP matrices and the `PASSWORD_SETUP_COMPLETE`, `ACCOUNT_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `QUOTA_EXCEEDED` codes over HTTP, including quota counter resets across restarts. Cleans up on every exit path; nonzero exit on any failure. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
@@ -54,9 +54,10 @@ Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
 `bun run test:e2e` is self-contained: it boots a temp backend (temp SQLite
 DB, temp artifacts/logs) and the BFF on loopback ports `:5399` and `:3399`
 (override with `JOBSCRAPE_E2E_API_PORT` / `JOBSCRAPE_E2E_BFF_PORT`), then
-drives the Chrome channel against the pair. The suite never reads the shared
-dev DB, and the temp root is removed on teardown. It needs `dotnet`, `bun`,
-and Google Chrome on PATH; no running dev servers are required. If a crashed
+drives Playwright's bundled Chromium against the pair. The suite never reads
+the shared dev DB, and the temp root is removed on teardown. It needs
+`dotnet`, `bun`, and a one-time `bunx playwright install chromium`; no
+running dev servers and no system Chrome are required. If a crashed
 run leaves the temp root behind, the next run reuses its seeded admin and
 finishes setup idempotently. Existing specs pin the sign-in gate, anonymous
 features flags, database/runs guards, and the auth flows: first-login setup

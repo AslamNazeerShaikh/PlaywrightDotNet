@@ -6,10 +6,10 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * Self-contained e2e: the suite boots its own temp backend (temp SQLite DB) and BFF on loopback
- * ports, then drives the Chrome channel against them. The shared dev backend on :5208 and its
- * database are never touched, and no external server has to be running. Google Chrome is used
- * (`channel: "chrome"`, no download). The BFF is plain HTTP here: loopback is a secure context and
- * cookies work without the local TLS cert.
+ * ports, then drives the bundled Chromium against them. The shared dev backend on :5208 and its
+ * database are never touched, and no external server has to be running. Playwright's bundled
+ * Chromium is used; install it once per machine with `bunx playwright install chromium`. The BFF
+ * is plain HTTP here: loopback is a secure context and cookies work without the local TLS cert.
  */
 
 const FRONTEND_ROOT = dirname(fileURLToPath(import.meta.url));
@@ -55,9 +55,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: {
-        channel: "chrome",
-      },
+      use: {},
     },
   ],
   webServer: [
