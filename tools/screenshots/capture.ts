@@ -3,23 +3,25 @@
  *
  * Run: `bun tools/screenshots/capture.ts` from the repo root.
  * Env: `BFF_URL` (default `https://127.0.0.1:3000`),
- * `SHOT_OUT` (default `docs/screenshots`), `CDP_PORT` (default `9222`),
+ * `SHOT_OUT` (default `docs/screenshots`),
  * `PLAYWRIGHT_BROWSERS_PATH` (default: the OS ms-playwright cache).
  *
  * Launches the Playwright bundled Chromium itself with remote debugging,
  * then shuts it down. No system browser is used. Needs a bundled Chromium
- * install (docs/09-operations-runbook.md §0).
+ * install (docs/09-operations-runbook.md §0). The CDP port is ephemeral:
+ * Chromium picks it at launch and reports it in the profile's
+ * `DevToolsActivePort` file, so a leftover system browser squatting on a
+ * fixed port is never picked up by mistake.
  *
  * Theme uses the deck THEME toggle with a confirm poll. A fixed sleep raced
  * React state and produced light files named dark, so the poll is load-bearing.
  */
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const BFF = process.env["BFF_URL"] ?? "https://127.0.0.1:3000";
 const OUT = process.env["SHOT_OUT"] ?? "docs/screenshots";
-const CDP = process.env["CDP_PORT"] ?? "9222";
 const ADMIN_EMAIL = process.env["ADMIN_EMAIL"] ?? "admin@example.com";
 const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "AslamAslam@123";
 const routes = [
@@ -97,15 +99,49 @@ const browser = Bun.spawn(
   [
     chromiumBin,
     "--headless",
-    `--remote-debugging-port=${CDP}`,
+    "--remote-debugging-port=0",
     "--ignore-certificate-errors",
     `--user-data-dir=${profileDir}`,
     "about:blank",
   ],
   { stdout: "ignore", stderr: "ignore" },
 );
+let browserDied = false;
+browser.exited.then(
+  () => {
+    browserDied = true;
+  },
+  () => {
+    browserDied = true;
+  },
+);
+// Port 0 means Chromium picks an ephemeral port and writes it to
+// DevToolsActivePort inside our own throwaway profile, so the endpoint
+// below is ours by construction, never a fixed-port squatter.
+const devToolsPort = (): number | null => {
+  try {
+    const port = Number(readFileSync(join(profileDir, "DevToolsActivePort"), "utf8").split("\n")[0]?.trim());
+    return Number.isInteger(port) && port > 0 ? port : null;
+  } catch {
+    return null;
+  }
+};
+let CDP: number | null = null;
+for (let i = 0; i < 40 && CDP === null && !browserDied; i++) {
+  CDP = devToolsPort();
+  if (CDP === null) await sleep(500);
+}
+if (CDP === null) {
+  browser.kill();
+  rmSync(profileDir, { recursive: true, force: true });
+  throw new Error(
+    browserDied
+      ? `Bundled Chromium exited before reporting a DevTools port (${chromiumBin})`
+      : `Bundled Chromium did not write DevToolsActivePort within 20 s (${chromiumBin})`,
+  );
+}
 let cdpUp = false;
-for (let i = 0; i < 40 && !cdpUp; i++) {
+for (let i = 0; i < 20 && !cdpUp && !browserDied; i++) {
   try {
     const r = await fetch(`http://127.0.0.1:${CDP}/json/version`);
     cdpUp = r.ok;
@@ -118,7 +154,7 @@ if (!cdpUp) {
   browser.kill();
   rmSync(profileDir, { recursive: true, force: true });
   throw new Error(
-    `Bundled Chromium did not open a CDP endpoint on port ${CDP} in 20 s (${chromiumBin})`,
+    `Bundled Chromium CDP endpoint on port ${CDP} did not answer within 10 s (${chromiumBin})`,
   );
 }
 
