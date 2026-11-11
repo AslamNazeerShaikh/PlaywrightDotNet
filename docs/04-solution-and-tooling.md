@@ -590,11 +590,21 @@ dotnet run --project src/JobLens.Cli -- search create `
 >
 > ```bash
 > dotnet build src/backend/JobScrape.slnx
+> # Linux, no PowerShell needed:
 > src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/linux-x64/node \
+>   src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
+> # macOS (Apple Silicon):
+> src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/darwin-arm64/node \
 >   src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
 > ```
 >
-> On other OSes the `node/<platform>` folder name differs (or use `pwsh src/backend/JobScrape.Api/bin/Debug/net10.0/playwright.ps1 install chromium`). Alternatively create the session with channel `Chrome` or `Edge` to use an installed browser instead of the bundled Chromium.
+> ```powershell
+> # Windows:
+> src\backend\JobScrape.Api\bin\Debug\net10.0\.playwright\node\win64\node.exe `
+>   src\backend\JobScrape.Api\bin\Debug\net10.0\.playwright\package\cli.js install chromium
+> ```
+>
+> On other platforms the `node/<platform>` folder name differs (or use `pwsh src/backend/JobScrape.Api/bin/Debug/net10.0/playwright.ps1 install chromium`). Only the Playwright bundled Chromium is supported; sessions are always created with channel `Bundled`.
 
 Design target (CLI wrapper unavailable):
 
@@ -673,7 +683,7 @@ Rules:
   `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run the same steps.
 - No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`
   plus both `BFF_TLS_*` lines commented out for a plain-http BFF.
-- Browsers: Chrome/Safari accept `https://127.0.0.1:3000` via the step-1
+- Chromium-based browsers and Safari accept `https://127.0.0.1:3000` via the step-1
   keychain trust. Firefox uses its own store: import `localhost-cert.pem`
   or add a one-time exception.
 - Verify with `curl https://localhost:5208/api/v1/health` (direct) and

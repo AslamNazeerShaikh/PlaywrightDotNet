@@ -5,14 +5,22 @@ Recaptures every ops-deck route, light plus dark, as full-page PNGs.
 ## Use
 
 1. Start the API and the BFF (`dotnet run --project src/backend/JobScrape.Api`, `bun run dev` in `src/frontend`).
-2. Start headless Chrome with remote debugging:
-   macOS: `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --headless --remote-debugging-port=9222 --ignore-certificate-errors --user-data-dir=/tmp/chrome-shots about:blank`
-   Linux: `google-chrome` with the same flags.
-3. Run `bun tools/screenshots/capture.ts` from the repo root.
-4. Check one light and one dark file by eye, then commit the PNGs.
+2. Run `bun tools/screenshots/capture.ts` from the repo root. The script
+   launches the Playwright bundled Chromium itself with remote debugging and
+   shuts it down at the end. No system browser is used. Requires a bundled
+   Chromium install (`cli.js install chromium` from the API build output,
+   see docs/09-operations-runbook.md §0, or `bunx playwright install chromium`
+   in `src/frontend`).
+3. Check one light and one dark file by eye, then commit the PNGs.
 
 Env knobs: `BFF_URL` (default `https://127.0.0.1:3000`), `SHOT_OUT`
-(default `docs/screenshots`), `CDP_PORT` (default `9222`).
+(default `docs/screenshots`), `CDP_PORT` (default `9222`),
+`PLAYWRIGHT_BROWSERS_PATH` (default: the OS ms-playwright cache —
+`~/Library/Caches/ms-playwright` on macOS, `%LOCALAPPDATA%\ms-playwright`
+on Windows, `~/.cache/ms-playwright` on Linux).
+
+The script picks the highest installed `chromium-*` revision and a throwaway
+profile directory under the OS temp dir, removed on exit.
 
 ## How it works
 

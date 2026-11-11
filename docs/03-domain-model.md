@@ -273,7 +273,7 @@ classDiagram
 **State**
 
 - `Id`, `Name`, `Source`.
-- `Engine` (`Chromium`, `Firefox`, `WebKit`), `Channel` (`Bundled`, `Chrome`, `Edge`).
+- `Engine` (`Chromium`, `Firefox`, `WebKit`), `Channel` (`Bundled`).
 - `UserDataDirectory` (derived `$"{Source}/{Name}"`, never stored).
 - `State` (`New`, `Healthy`, `CoolingDown`, `Expired`, `ResetRequired`; the enum also declares `Challenged` but no code path ever assigns it).
 - `CooldownUntil`, `ConsecutiveChallenges`, `LastUsedAt`, `LastVerifiedAt`.

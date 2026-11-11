@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fetch uBlock Origin Lite and prepare a max-filtering unpacked Chrome build.
+# Fetch uBlock Origin Lite and prepare a max-filtering unpacked Chromium build.
 set -euo pipefail
 
 UBOL_TAG="2026.914.1325"
