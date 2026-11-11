@@ -1,16 +1,16 @@
-# Graph Report - PlaywrightDotNet  (2026-11-10)
+# Graph Report - PlaywrightDotNet  (2026-11-11)
 
 ## Corpus Check
-- 1303 files · ~2,099,232 words
+- 1307 files · ~2,101,397 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 14708 nodes · 27962 edges · 919 communities (752 shown, 102 thin omitted)
-- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 1533 edges (avg confidence: 0.84)
+- 14731 nodes · 28000 edges · 934 communities (767 shown, 102 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 1534 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0e991e93`
+- Built from commit: `cdaac774`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -37,7 +37,7 @@
 - github
 - validate_data.py
 - Conventional Commits
-- ScrapeHarness
+- RunScrapeHandlerTests
 - .opencode/README.md
 - RunScrapeHandler
 - ECC - OpenCode Instructions
@@ -57,8 +57,8 @@
 - ADR-0015: JobScrape solution naming, backend-first scaffold, native MTP tests
 - mermaid_extract.py
 - Design
-- chart.test.ts
-- ExportPosting
+- run.ts
+- ExportFormat
 - FakeUsers
 - ScrapeRunTests
 - .InvokeAsync
@@ -86,8 +86,8 @@
 - RFC 9457 Problem Details HTTP error contract
 - commit-msg
 - Pure hash router
-- IdempotencyEntry
-- IUnitOfWork
+- Task
+- .RenameAsync
 - AngleSharp
 - ClosedXML
 - Pre-Phase Spikes S1-S7
@@ -112,7 +112,7 @@
 - ChallengeAssessment
 - JobScrape.Domain.Common
 - Fixes
-- argparse
+- cip/generate.py
 - FakeRunStore
 - ADR-0018: Dapper for the raw SQLite explorer
 - labels.ts
@@ -124,13 +124,13 @@
 - Design System
 - test_design_system_mode.py
 - Grade Tests
-- JobScrape.Application.Abstractions
+- microsoft_entityframeworkcore
 - Code Testing Skill
-- UsersController
+- .ValidationFailed
 - IJobSource
 - Understand the code before changing it
 - Recipes and pitfalls
-- SearchProfilesEndpointTests
+- SearchProfileResponse
 - github.ts
 - test/cli.test.ts
 - source-playbook.md
@@ -140,11 +140,11 @@
 - 05-build-and-clean.md
 - slide_search_core.py
 - RunReadStore
-- .Validate
+- SourceSettings
 - app.tsx
 - Find Untested Sources
 - MSBuild Item Management Patterns
-- .New
+- IUnitOfWork
 - sessions.tsx
 - CLI-first (System.CommandLine + Hosting + Serilog)
 - JobScrape.Api.Tests
@@ -168,7 +168,7 @@
 - JobScrape.Infrastructure
 - Eval Command
 - .CreateAdminClientAsync
-- .AddJobScrapeUseCases
+- .ToUserResponseAsync
 - runs.tsx
 - watch-pr/cli.test.ts
 - color
@@ -177,12 +177,12 @@
 - Diagnosing MSBuild Evaluation Performance
 - incremental-build/SKILL.md
 - Canvas Design System
-- RunLimits
+- ScrapeHarness
 - JobScrape.Api
 - Migration Checklist: Legacy → SDK-style
 - ApiFactory
-- JobScrape.Application.Results
-- .ListsByNameAndEvaluatesLaunchabilityOnTheClock
+- JobScrape.Application.Abstractions
+- .From
 - Workflow
 - spacing
 - BrowserProfileTests
@@ -263,7 +263,7 @@
 - Create a formal verification skill
 - .NET Crash Dump Collection
 - Figure it out
-- TestThresholdGate
+- test_relevance_evaluator.py
 - Test Platform and Framework Detection
 - SessionHandlersTests
 - Statechart
@@ -290,8 +290,8 @@
 - profiles.tsx
 - .RequirePermission
 - Find Repeated Work Within One Build
-- JobDetailResult
-- DomainConverters
+- .Page
+- Json
 - Color Palette Management
 - Blast radius
 - Correct
@@ -306,7 +306,7 @@
 - CIP Deliverable Guide
 - code-testing-agent/SKILL.md
 - States and Variants
-- ICallerContext
+- FakeCaller
 - Swift Extension
 - Workflow
 - check-plan.mjs
@@ -400,7 +400,7 @@
 - policy.test.ts
 - Rust Test Framework Reference (built-in `#[test]`, `cargo test`)
 - Swift Test Frameworks Reference (XCTest, Swift Testing)
-- SourcesOptions
+- .AddJobScrapeOptions
 - Core Visual Elements
 - inject-brand-context.cjs
 - CoverageData.ps1
@@ -412,7 +412,7 @@
 - Additional MSBuild anti-patterns
 - compilerOptions
 - .ListAsync
-- RunListResponse
+- RunPostingListResponse
 - drawio_extract.py
 - ScrapeRunId
 - I/O, Serialization & General Patterns
@@ -441,7 +441,7 @@
 - dotnet-monitor
 - system_globalization
 - Implementation Process
-- run.ts
+- ref_node_path
 - .HandleAsync
 - SourceSettingsCatalog
 - ValidationResult
@@ -457,7 +457,7 @@
 - Coverage Analysis — setup and discovery
 - dotnet-trace collect-linux (.NET 10+)
 - Analyzing MSBuild failures with binary logs
-- LinkedInFields
+- .BuildSnapshot
 - CounterRules
 - CounterTie
 - CounterView
@@ -509,60 +509,60 @@
 - divergent-reviewer.md
 - judgment-reviewer.md
 - create.md
-- ErrorKind
-- SourceKey
+- BrowserProfileId
+- .Create
 - .AddJobScrapeAuth
-- RunScrapeHandler
+- .SearchAsync
 - fetch-background.py
 - .Parse
 - JobSnapshot
 - QuotaScope
 - DatabaseEndpointTests
-- SearchProfileResponse
+- .HandleAsync
 - SYNC-LOG.md
 - .Build
 - IndeedFields
 - Java Pipeline Examples
-- SessionState
+- .TwoRunsPersistDedupeAndChargeTheDailyQuota
 - FakeQuotas
 - Go Pipeline Examples
 - IndeedJsonLd
-- InMemoryStore
+- ListSourcesHandlerTests
 - .test_add_fonts
 - UsageQuotaEndpointTests
-- icon/generate.py
-- .UpdateAsync
+- ExportPosting
+- RunScrapeHandler
 - UserId
 - RunLimitsTests
 - PageStats
 - OptionsTests
-- marks.ts
+- chart.test.ts
 - config-fuzz.test.ts
 - SessionResponse
 - UsageQuota
-- tlc.ts
+- ScrapeRunProgress
 - ContentHash
 - HealthEndpointTests
 - SessionsToolsTests
 - SourceQuotaRepository
 - IndeedChallengeClassifier
-- ChallengeKind
+- SourceCircuitBreakerTests
 - download-ubol.sh
 - RunScrapeFilteringTests
 - File structure
-- LoggingOptions
+- FeaturesOptions
 - GuardrailTests
 - frontend/package.json
 - ComplianceConsent
 - Research Process
-- .AddJobScrapeBrowser
+- SourceRunContext
 - .Matches
 - .RemoveAsyncRetriesOnceAfterWrappedBusy
 - SearchProfilesController
-- ErrorMapperTests
+- ErrorKind
 - RunScope
 - .Create
-- .SeedAndLoginAsync
+- LinkedInFields
 - .HandleAsync
 - BrowserTests
 - .StartDay
@@ -571,30 +571,32 @@
 - Onboarding — generate your skin from a design source
 - .Parse
 - BM25
-- DataQualityIssues
-- JobScrape.Application.Features.SearchProfiles
-- FakeCaller
+- SearchPageResult
+- JobScrape.Mcp.Tools
+- GetHealthHandler
 - NaukriTestPages
 - Ridgeline
 - .Create
 - JobScrapeDbContext
 - .Classify
-- RunPostingResponse
+- .AddJobScrapeBrowser
 - Resolve a Testability Obstacle
 - 2. Layout formulas — deterministic geometry
 - SourceOptions
 - Technical writing
-- .ListSourcesAsync
+- .Parse
 - During the session
 - MSBuild Property Patterns
 - Analysis Workflow
 - Process
+- JobSourceRegistry
 - Planning Process
 - .SearchUrl
 - Process
 - MSBuild Expert Agent
 - RuntimeHardeningTests
 - HTML Report Format
+- LoggingOptions
 - TestDatabase
 - 2. Structured logging with Serilog
 - New-only scrape runs — design
@@ -608,7 +610,7 @@
 - capture.ts
 - Harness Audit Command
 - CorrelationMiddleware
-- .IsAllowed
+- detect_domain
 - 6. Problem Details pattern
 - .Parse
 - .Page1Url
@@ -632,12 +634,14 @@
 - pstack-models.md
 - patch
 - .HandleAsync
-- .HandleAsync
-- .Main
+- IdempotencyEntry
+- test_validate_tokens.py
+- test_style_taxonomy.py
 - Review Focus
 - Screenshot capture
 - IT current-state
-- BrowserProfileRepository
+- ChallengeKind
+- FeatureFlags
 - Linter Agent
 - Ketchup video
 - optimizing-dotnet-performance
@@ -648,10 +652,13 @@
 - build-error-resolver
 - doc-updater
 - .AddJobScrapeLogging
+- IdempotencyRecord
 - e2e-runner
 - .TimeProviderDelayHonorsCancellationAndRejectsNegative
-- 20261107112658_InitialCreate.Designer.cs
-- TestMetricMath
+- LinkedInTestPages
+- StringBuilder
+- DomainConverters.cs
+- Review Focus
 - ADR-0019: MCP server transports and tool surface
 - FeaturesEndpointTests
 - Arena
@@ -659,23 +666,26 @@
 - graphify reference: extra exports and benchmark
 - export_svg.py
 - Poteto mode
-- GetHealthHandler
-- .Log
-- .CursorOffset
+- .HandleAsync
+- SqlitePragmaInterceptor
+- IndeedJobSource
 - UsersPage
 - Brand
 - DP integration
+- IIdempotencyStore
 - code-reviewer
 - tools/README.md
+- .Classify
 - .ToPlainText
 - pstack in OpenCode
 - TypeScript Pipeline Examples
 - Medallion
 - input
 - NaukriJobSource
-- OptionsStartupTests
+- PostingWriterTests.cs
 - Design
-- ErrorsTests
+- ISessionManager
+- CompanyExportGroup
 - 2. No CQRS, no MediatR
 - decode_xml_references
 - 3. Global exception handling and error logging
@@ -693,7 +703,7 @@
 - Export block registry (`--registry`)
 - Reflect
 - How it works
-- .GetAsync
+- SearchProfileReadStore
 - LinkedIn parser fixtures
 - .test_generate_config_with_plugins
 - .test_validate_config_valid
@@ -703,7 +713,7 @@
 - .EveryPermissionPolicyIsRegistered
 - Style Guide
 - Set up pstack
-- .AddJobScrapeOptions
+- AdminSeedOptions
 - poteto-agent.md
 - The pstack guide
 - graphify reference: query, path, explain
@@ -717,7 +727,7 @@
 - Anonymous mode Implementation Plan
 - Sequence
 - Marimekko
-- IClassFixture
+- OneProfileStore
 - Export to PNG / SVG
 - Draw.io import output spec — format × size × detail × audience
 - Architecture delta
@@ -725,24 +735,28 @@
 - css_escape
 - .test_init_framework
 - WorkMode
+- ExportColumns
 - .DefinitionRoundTripsEveryField
+- .GetProfileAsync
 - admin-pages.test.tsx
 - Strict backend architecture tests spec
+- Bundled-only browsers + uBOL max for Naukri — Spec
 - $type
 - $type
 - radius
 - People
 - Interrogate
 - Step 5: Static Graph Builds (`/graph`)
-- .Extensions
-- ErrorInfoTests
+- .FindAsync
+- ComplianceTier
+- .CaptureAsync
 - Feature toggles
 - 800
 - padding-y
 - graphify reference: add a URL and watch a folder
 - graphify reference: commit hook and native CLAUDE.md integration
 - graphify reference: incremental update and cluster-only
-- TestFixtureValidation
+- CreateSearchProfileRequest
 - Import from draw.io
 - Import from Mermaid
 - Data stack
@@ -789,7 +803,8 @@
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - Render a chart
-- TablesResponse
+- SystemRandomSource
+- .Skills
 - DevOps
 - Compute
 - Kubernetes
@@ -911,15 +926,15 @@
 - **xml docs enforcement flow** — docs_04_solution_and_tooling_code_conventions, docs_10_adr_0017_xml_documentation_rule_xml_doc_build_rule, docs_10_adr_readme_adr_index [INFERRED]
 - **** — docs_12_web_cockpit_control_plane, docs_12_web_cockpit_bun_bff, docs_12_web_cockpit_dotnet_data_plane [INFERRED]
 
-## Communities (919 total, 102 thin omitted)
+## Communities (934 total, 102 thin omitted)
 
 ### Community 0 - "useRenderLog"
 Cohesion: 0.13
 Nodes (30): Abbr(), Cross(), Diamond(), Dot(), Glossary(), GlossaryTerm, Legend(), LegendItem (+22 more)
 
 ### Community 1 - "JobScrape.Infrastructure.Configuration"
-Cohesion: 0.06
-Nodes (34): JobScrape.Infrastructure.Security, JobScrape.Infrastructure.Tests.Security, JobScrape.Api.Tests, JobScrape.Application.Features.Quotas, JobScrape.Infrastructure.Composition, JobScrape.Infrastructure.Configuration, JobScrape.Api, JobScrape.Infrastructure.Tests.Composition (+26 more)
+Cohesion: 0.08
+Nodes (32): JobScrape.Infrastructure.Security, JobScrape.Infrastructure.Tests.Security, JobScrape.Api.Tests, JobScrape.Infrastructure.Composition, JobScrape.Infrastructure.Configuration, JobScrape.Api, JobScrape.Infrastructure.Tests.Composition, JobScrape.Infrastructure.Runtime (+24 more)
 
 ### Community 2 - "Runtime Hardening: Logging, Errors, Resilience, and Resources"
 Cohesion: 0.07
@@ -947,7 +962,7 @@ Nodes (24): Modular Monolith with Clean Architecture and inward dependency rule,
 
 ### Community 8 - ".Ok"
 Cohesion: 0.03
-Nodes (74): EnableRateLimiting, ActionResult, AllowAnonymous, CancellationToken, HttpGet, HttpPost, IReadOnlyList, IResult (+66 more)
+Nodes (73): RoleListResponse, ActionResult, Authorize, CancellationToken, HttpDelete, HttpGet, HttpPost, IResult (+65 more)
 
 ### Community 9 - "Solution Layout (JobLens.slnx)"
 Cohesion: 0.10
@@ -959,19 +974,19 @@ Nodes (21): compilerOptions, allowImportingTsExtensions, allowJs, isolatedModule
 
 ### Community 11 - "index.ts"
 Cohesion: 0.06
-Nodes (47): src_frontend_src_client_index, CockpitConfig, parseApiUrl(), parseConfig(), parseOptionalPath(), parsePort(), config, apiProxy() (+39 more)
+Nodes (46): src_frontend_src_client_index, CockpitConfig, parseApiUrl(), parseConfig(), parseOptionalPath(), parsePort(), config, apiProxy() (+38 more)
 
 ### Community 12 - "RunResponse"
-Cohesion: 0.09
-Nodes (37): CleanSessions, FakeSource, NoArtifacts, NoDelay, Profile, Session, ArgumentNullException, BrowserProfileId (+29 more)
+Cohesion: 0.10
+Nodes (34): CleanSessions, FakeSource, NoArtifacts, NoDelay, Profile, Session, ArgumentNullException, BrowserProfileId (+26 more)
 
 ### Community 13 - "Web cockpit (v2 control plane)"
 Cohesion: 0.11
 Nodes (28): CLI-first (System.CommandLine + Hosting + Serilog), Deferred API/dashboard (post-Phase 3), Same-origin Bun BFF, No Node.js policy, React + Bun web cockpit (v2.0), shadcn/ui copy-in components, HTTP/JSON commands + Server-Sent Events transport, Backend-first scaffold (+20 more)
 
 ### Community 14 - "FakeLauncher"
-Cohesion: 0.09
-Nodes (34): TimeProvider, CancelRunHandler, Caller, CancellationToken, Guid, Task, IRunLauncher, CancellationToken (+26 more)
+Cohesion: 0.11
+Nodes (28): TimeProvider, CancelRunHandler, Caller, IRunLauncher, StartRunHandler, Caller, Guid, StartRunRequest (+20 more)
 
 ### Community 15 - "Build Performance Baseline & Optimization"
 Cohesion: 0.05
@@ -983,7 +998,7 @@ Nodes (13): Headed Persistent Browser Profile, Playwright for .NET, Public Brows
 
 ### Community 17 - "ir.ts"
 Cohesion: 0.06
-Nodes (97): ASCII, code(), encode(), esc(), firstOf, kindAt(), kindOf(), MARK_STYLES (+89 more)
+Nodes (93): ASCII, code(), encode(), esc(), firstOf, kindAt(), kindOf(), MARK_STYLES (+85 more)
 
 ### Community 18 - "2. Library-specific guidance"
 Cohesion: 0.14
@@ -994,16 +1009,16 @@ Cohesion: 0.18
 Nodes (11): headers, oauth, type, url, Authorization, mcp, servers, github (+3 more)
 
 ### Community 20 - "validate_data.py"
-Cohesion: 0.07
-Nodes (49): Semantic quality contracts for the core UI/UX datasets., read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract() (+41 more)
+Cohesion: 0.06
+Nodes (56): csv, Semantic quality contracts for the core UI/UX datasets., read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, Freshness and migration contracts for native, desktop, and 3D stacks. (+48 more)
 
 ### Community 21 - "Conventional Commits"
 Cohesion: 0.14
 Nodes (13): 1.1 Header, 1.2 Body, 1.3 Footers, 1.4 Breaking changes, 1. Format, 2.1 Scopes, 2. Types used in this repository, 3.1 Examples (+5 more)
 
-### Community 22 - "ScrapeHarness"
-Cohesion: 0.08
-Nodes (37): FakeSessions, RecordingArtifacts, RecordingDelay, ArgumentNullException, CancellationToken, Fact, InvalidOperationException, IReadOnlyDictionary (+29 more)
+### Community 22 - "RunScrapeHandlerTests"
+Cohesion: 0.13
+Nodes (8): SearchPageRequest, CancellationToken, Fact, IReadOnlyDictionary, OperationCanceledException, Task, RunScrapeHandlerTests, Ct
 
 ### Community 23 - ".opencode/README.md"
 Cohesion: 0.07
@@ -1019,7 +1034,7 @@ Nodes (35): After Writing/Editing Code, Agent Orchestration, API Response Format
 
 ### Community 26 - ".CreateAsync"
 Cohesion: 0.08
-Nodes (32): IMigrator, IJobPostingRepository, IScrapeRunRepository, ISearchProfileRepository, ISourceCircuitBreakerRepository, ISourceQuotaRepository, ScrapeStores, IServiceCollection (+24 more)
+Nodes (30): IMigrator, CancellationToken, Task, IJobPostingRepository, IScrapeRunRepository, ISearchProfileRepository, ISourceCircuitBreakerRepository, ISourceQuotaRepository (+22 more)
 
 ### Community 27 - "Cooldown Ladder"
 Cohesion: 0.11
@@ -1031,7 +1046,7 @@ Nodes (50): dynamic, DynamicParameters, IDictionary, IHost, IHostEnvironment, Ke
 
 ### Community 29 - "RunActionsToolsTests"
 Cohesion: 0.10
-Nodes (34): FakeLauncher, FakeRuns, FakeUnitOfWork, ArgumentNullException, CancellationToken, DateTimeOffset, Exception, Fact (+26 more)
+Nodes (33): FakeLauncher, FakeRuns, FakeUnitOfWork, ArgumentNullException, CancellationToken, DateTimeOffset, Exception, Fact (+25 more)
 
 ### Community 30 - "TestShadcnInstaller"
 Cohesion: 0.12
@@ -1046,16 +1061,16 @@ Cohesion: 0.25
 Nodes (9): UI design in src/frontend, ui-skills catalog router, BFF API proxy, .NET data plane API localhost 5207, Bun React TypeScript Tailwind stack, JobScrape Cockpit control plane, globals.css stylesheet link, main.tsx module entry (+1 more)
 
 ### Community 33 - "PolicyTests"
-Cohesion: 0.13
-Nodes (14): IRandomSource, PolitenessPolicy, TimeSpan, RetryPolicy, ArgumentNullException, DomainException, Fact, InlineData (+6 more)
+Cohesion: 0.14
+Nodes (13): IRandomSource, PolitenessPolicy, TimeSpan, RetryPolicy, ArgumentNullException, DomainException, Fact, InlineData (+5 more)
 
 ### Community 34 - "Phase 0 open decisions (D1-D12 with recommended defaults)"
 Cohesion: 0.09
 Nodes (27): xUnit.net v3, Headed first contact + persistent contexts per source, Playwright for .NET, Browser-first automation as source of truth, Optional Naukri API fast path (jobapi/v3/search with RSA nkparam), Compliance-first low-signal automation policy, Per-source compliance tiers and consent gates, Stop-on-wall with manual challenge solve (+19 more)
 
 ### Community 35 - "search"
-Cohesion: 0.03
-Nodes (64): difflib, _contains_phrase(), detect_domain(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature() (+56 more)
+Cohesion: 0.04
+Nodes (59): difflib, _contains_phrase(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature(), _get_bm25() (+51 more)
 
 ### Community 36 - "ADR-0011: Explicit Use-Case Handlers, No CQRS or MediatR"
 Cohesion: 0.22
@@ -1081,45 +1096,45 @@ Nodes (65): analyze(), _block_summary(), classify_shape(), clean_label(), _confi
 Cohesion: 0.06
 Nodes (35): Banner Design (Built-in), Banner: Design Rules, Banner: Quick Size Reference, Banner: Top Art Styles, Banner: Workflow, CIP Design (Built-in), CIP: Generate Brief, CIP: Generate Mockups (+27 more)
 
-### Community 42 - "chart.test.ts"
+### Community 42 - "run.ts"
 Cohesion: 0.08
-Nodes (37): findLoop(), findTrace(), hasRule(), Lasso, Past, pastState, PathStep, stateKey() (+29 more)
+Nodes (50): boundRun(), chartRun(), configText(), CHART_STATES, ConfigSection, findLoop(), findTrace(), hasRule() (+42 more)
 
-### Community 43 - "ExportPosting"
-Cohesion: 0.06
-Nodes (33): ExportFormat, Csv, Xlsx, DateTimeOffset, Guid, IReadOnlyList, ExportPosting, CancellationToken (+25 more)
+### Community 43 - "ExportFormat"
+Cohesion: 0.12
+Nodes (20): ExportFormat, Csv, Xlsx, IPostingExportWriter, Format, CancellationToken, IReadOnlyList, Task (+12 more)
 
 ### Community 44 - "FakeUsers"
 Cohesion: 0.09
-Nodes (45): FakeRoles, FakeTokens, FakeUsers, CallerContext, LocalOperator, MustChangePassword, AssignRoleHandler, TimeProvider (+37 more)
+Nodes (47): FakeRoles, FakeTokens, FakeUsers, CallerContext, LocalOperator, MustChangePassword, TimeProvider, CreateUserHandler (+39 more)
 
 ### Community 45 - "ScrapeRunTests"
 Cohesion: 0.16
 Nodes (7): ArgumentNullException, DateTimeOffset, DomainException, Fact, InlineData, Theory, ScrapeRunTests
 
 ### Community 46 - ".InvokeAsync"
-Cohesion: 0.13
-Nodes (16): HttpRequest, CancellationToken, ConcurrentDictionary, HttpContext, PathString, RequestDelegate, SemaphoreSlim, Task (+8 more)
+Cohesion: 0.19
+Nodes (11): HttpRequest, CancellationToken, ConcurrentDictionary, HttpContext, PathString, RequestDelegate, SemaphoreSlim, Task (+3 more)
 
 ### Community 47 - "User"
-Cohesion: 0.07
-Nodes (32): JwtSecurityToken, JwtSecurityTokenHandler, SecurityTokenException, DateTimeOffset, IReadOnlyList, List, TimeSpan, User (+24 more)
+Cohesion: 0.05
+Nodes (41): JwtSecurityToken, JwtSecurityTokenHandler, SecurityTokenException, Exception, CancellationToken, IReadOnlyList, Task, CancellationToken (+33 more)
 
 ### Community 48 - "logo/core.py"
 Cohesion: 0.08
-Nodes (28): collections, math, BM25, detect_domain(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query (+20 more)
+Nodes (25): collections, math, BM25, detect_domain(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query (+17 more)
 
 ### Community 49 - "SearchProfile"
-Cohesion: 0.12
-Nodes (16): CancellationToken, Task, DateTimeOffset, SearchProfile, CreatedAt, Criteria, Enabled, Id (+8 more)
+Cohesion: 0.06
+Nodes (33): CancellationToken, Task, TimeSpan, RunLimits, MaxDelay, MaxDetails, MaxJobs, MaxPages (+25 more)
 
 ### Community 50 - ".HandleAsync"
-Cohesion: 0.12
-Nodes (25): CompanyExportGroup, All, Exclude, Only, ExportFile, CancellationToken, Guid, HashSet (+17 more)
+Cohesion: 0.22
+Nodes (17): CancellationToken, Guid, HashSet, IReadOnlyList, Task, ExportRunPostingsHandler, ArgumentNullException, DateTimeOffset (+9 more)
 
 ### Community 51 - "JobPosting"
-Cohesion: 0.05
-Nodes (41): CompanyName, Value, DateTimeOffset, IReadOnlyList, JobPosting, ApplyUrl, Company, CompanyUrl (+33 more)
+Cohesion: 0.03
+Nodes (58): CompanyName, Value, DataQualityIssues, DescriptionMissing, MissingCompany, MissingLocation, None, ParseLowConfidence (+50 more)
 
 ### Community 52 - "types.ts"
 Cohesion: 0.05
@@ -1153,13 +1168,13 @@ Nodes (3): Backlog epics E0–E9, Definition of Ready / Done, Coverage and quali
 Cohesion: 0.09
 Nodes (23): $type, $value, $type, $value, $type, $value, $type, $value (+15 more)
 
-### Community 71 - "IdempotencyEntry"
-Cohesion: 0.17
-Nodes (12): CancellationToken, Fact, JsonElement, Task, TaskCompletionSource, TimeProvider, BlockingStore, FakeIdempotencyStore (+4 more)
+### Community 71 - "Task"
+Cohesion: 0.25
+Nodes (8): IdempotencyOptions, CompletionWaitTimeout, Fact, JsonElement, Task, TimeProvider, IdempotencyAndQuotaEdgeTests, Ct
 
-### Community 72 - "IUnitOfWork"
-Cohesion: 0.13
-Nodes (17): Exception, IUnitOfWork, CancellationToken, IReadOnlyList, Task, IUserRepository, CancellationToken, Guid (+9 more)
+### Community 72 - ".RenameAsync"
+Cohesion: 0.07
+Nodes (26): CancellationToken, IPage, Task, CancellationToken, Exception, Guid, ILogger, LoggerMessage (+18 more)
 
 ### Community 83 - "AggregateRoot"
 Cohesion: 0.17
@@ -1171,7 +1186,7 @@ Nodes (34): Accessibility, Available Domains, Available Stacks, Common Rules for
 
 ### Community 85 - "design_system.py"
 Cohesion: 0.03
-Nodes (80): CompletedProcess, copy, csv, importlib_util, io, json, Regression test for sync-brand-to-tokens.cjs. The color parser required a…, HTML Design Token Validator Ensures all HTML assets (slides, infographics,… (+72 more)
+Nodes (92): argparse, datetime, google, google_genai, io, json, generate_html(), get_deliverable_info() (+84 more)
 
 ### Community 87 - "Step 2: Recommend diagnostic tools"
 Cohesion: 0.06
@@ -1183,7 +1198,7 @@ Nodes (24): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Pract
 
 ### Community 89 - "DomainException"
 Cohesion: 0.05
-Nodes (42): JobScrape.Domain.Tests, CancellationToken, IReadOnlyList, Task, DomainException, RunStage, Cancelled, Completed (+34 more)
+Nodes (43): JobScrape.Domain.Tests, Exception, CancellationToken, IReadOnlyList, Task, StartPageOutOfRangeException, MaxPage, StartPage (+35 more)
 
 ### Community 90 - "SearchCriteriaTests"
 Cohesion: 0.18
@@ -1202,20 +1217,20 @@ Cohesion: 0.33
 Nodes (7): CI Outline restore build test E2E coverage, Code Conventions and csharpier workflow, Options binding and startup validation, Solution and Tooling, csharpier formatting ownership, C# style guides ktaranov plus Google, XML documentation global build rule
 
 ### Community 94 - "ChallengeAssessment"
-Cohesion: 0.04
-Nodes (54): ScriptedSource, CancellationToken, Task, CancellationToken, Task, ISessionManager, SourceRunContext, CancellationToken (+46 more)
+Cohesion: 0.05
+Nodes (41): ScriptedSource, JobDetailResult, CancellationToken, CancellationTokenSource, DateOnly, Exception, IReadOnlyList, List (+33 more)
 
 ### Community 95 - "JobScrape.Domain.Common"
 Cohesion: 0.05
-Nodes (15): JobScrape.Infrastructure.Browser, JobScrape.Domain.Sourcing, JobScrape.Infrastructure.Tests.Browser, JobScrape.Infrastructure.Tests.Sources.LinkedIn, JobScrape.Domain.Common, JobScrape.Infrastructure.Sources.LinkedIn, JobScrape.Application.Features.Scraping, JobScrape.Domain.Abstractions (+7 more)
+Nodes (11): JobScrape.Domain.Sourcing, JobScrape.Domain.Tests.Access, JobScrape.Infrastructure.Persistence.Repositories, JobScrape.Domain.Common, JobScrape.Application.Features.Scraping, JobScrape.Domain.Abstractions, JobScrape.Domain.Access, JobScrape.Application.Tests.Scraping (+3 more)
 
 ### Community 96 - "Fixes"
 Cohesion: 0.08
 Nodes (23): Add missing indexes, Bound change detection in growing imports, Capture SQL and query counts, Choose tracking for the actual result graph, Common Pitfalls, Compile hot, frequently-executed queries, Control SQL parameterization and database plan reuse, Filter and paginate; prefer keyset over offset (+15 more)
 
-### Community 97 - "argparse"
-Cohesion: 0.08
-Nodes (42): argparse, detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection (+34 more)
+### Community 97 - "cip/generate.py"
+Cohesion: 0.10
+Nodes (33): detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+25 more)
 
 ### Community 98 - "FakeRunStore"
 Cohesion: 0.13
@@ -1238,12 +1253,12 @@ Cohesion: 0.25
 Nodes (8): ADR-0014: Use Libraries as Designed; AOT Is Not a Constraint, Alternatives considered, Consequences, Context, Decision, Negative / trade-offs, Positive, References
 
 ### Community 103 - "ErrorInfo"
-Cohesion: 0.09
-Nodes (9): IReadOnlyDictionary, ErrorInfo, DateTimeOffset, Guid, IReadOnlyList, TimeSpan, Errors, ArgumentNullException (+1 more)
+Cohesion: 0.05
+Nodes (35): CancellationToken, Dictionary, HttpDelete, HttpGet, HttpPost, HttpPut, IResult, JsonElement (+27 more)
 
 ### Community 104 - "xunit"
 Cohesion: 0.08
-Nodes (10): JobScrape.Domain.Tests.Access, JobScrape.Architecture.Tests, JobScrape.Domain.Tests.Abstractions, JobScrape.Infrastructure.Tests.Sources, JobScrape.Domain.Tests.Common, JobScrape.Domain.Tests.Identity, JobScrape.Domain.Tests.Sourcing, netarchtest_rules (+2 more)
+Nodes (10): JobScrape.Architecture.Tests, JobScrape.Infrastructure.Tests.Sources.Indeed, JobScrape.Domain.Tests.Abstractions, JobScrape.Domain.Tests.Common, JobScrape.Domain.Tests.Identity, JobScrape.Domain.Tests.Sourcing, jobscrape_infrastructure_tests_sources_indeed_indeedtestpages, netarchtest_rules (+2 more)
 
 ### Community 105 - "Ops-Deck Screenshots"
 Cohesion: 0.15
@@ -1261,17 +1276,17 @@ Nodes (25): _contrast_ratio(), _derive_dark_palette(), _filter_anti_patterns_for
 Cohesion: 0.09
 Nodes (22): 1. Summary, 2. Per-test table, A. Assertion strength, B. Structure & focus, C. Anti-pattern hygiene, Combining sub-grades, Common Pitfalls, Grade Tests (+14 more)
 
-### Community 109 - "JobScrape.Application.Abstractions"
-Cohesion: 0.07
-Nodes (22): JobScrape.Infrastructure.Persistence, JobScrape.Application.Abstractions, JobScrape.Infrastructure.Tests.Persistence, JobScrape.Infrastructure.Persistence.Repositories, JobScrape.Domain.Identity, JobScrape.Domain, JobScrape.Infrastructure.Persistence.Configurations, JobScrape.Application.Features.Identity (+14 more)
+### Community 109 - "microsoft_entityframeworkcore"
+Cohesion: 0.09
+Nodes (13): JobScrape.Infrastructure.Persistence, JobScrape.Infrastructure.Tests.Persistence, JobScrape.Application.Features.Sessions, JobScrape.Infrastructure.Persistence.Configurations, dapper, microsoft_data_sqlite, microsoft_entityframeworkcore, microsoft_entityframeworkcore_design (+5 more)
 
 ### Community 110 - "Code Testing Skill"
 Cohesion: 0.10
 Nodes (21): Agent Reference, Broader validation fails, Code Testing Skill, Completion contract, Environment-dependent tests fail, How It Works, Non-negotiable execution contract, Pipeline Overview (+13 more)
 
-### Community 111 - "UsersController"
-Cohesion: 0.18
-Nodes (16): ActionResult, Authorize, CancellationToken, Guid, HttpDelete, HttpGet, HttpPost, IResult (+8 more)
+### Community 111 - ".ValidationFailed"
+Cohesion: 0.11
+Nodes (24): EnableRateLimiting, ActionResult, AllowAnonymous, CancellationToken, HttpGet, HttpPost, IResult, Task (+16 more)
 
 ### Community 112 - "IJobSource"
 Cohesion: 0.09
@@ -1285,9 +1300,9 @@ Nodes (7): Actually understand it with `/teach`, Dig up history with `/why`, Reb
 Cohesion: 0.10
 Nodes (20): Ask how without starting the work, Catch up on a chat you left running, Check independent slices in parallel, Fix a bug through a failing test, Get a second opinion on a design, Get the reply in plain words, Keep a run honest while you're away, Prototype before you pick (+12 more)
 
-### Community 115 - "SearchProfilesEndpointTests"
-Cohesion: 0.26
-Nodes (6): ArgumentNullException, CancellationToken, Fact, Task, SearchProfilesEndpointTests, Ct
+### Community 115 - "SearchProfileResponse"
+Cohesion: 0.19
+Nodes (12): ArgumentNullException, CancellationToken, Fact, Task, SearchProfilesEndpointTests, Ct, IReadOnlyList, SearchProfileListResponse (+4 more)
 
 ### Community 116 - "github.ts"
 Cohesion: 0.12
@@ -1295,7 +1310,7 @@ Nodes (36): at(), buildReviewThreads(), checkDetails(), CommandResult, enumValue
 
 ### Community 117 - "test/cli.test.ts"
 Cohesion: 0.05
-Nodes (41): firstLine(), pad(), plainText(), PREFIX, printed(), render(), runtime(), cutMessage() (+33 more)
+Nodes (37): firstLine(), pad(), plainText(), PREFIX, printed(), render(), runtime(), cutMessage() (+29 more)
 
 ### Community 118 - "source-playbook.md"
 Cohesion: 0.04
@@ -1325,9 +1340,9 @@ Nodes (38): format_context(), format_result(), main(), Format a single search re
 Cohesion: 0.15
 Nodes (18): RunPostings, CancellationToken, DateTimeOffset, Dictionary, Guid, IReadOnlyList, Task, TimeProvider (+10 more)
 
-### Community 125 - ".Validate"
-Cohesion: 0.16
-Nodes (10): IReadOnlyList, SearchProfileInput, Dictionary, SearchProfileValidator, Text, ArgumentNullException, Fact, InlineData (+2 more)
+### Community 125 - "SourceSettings"
+Cohesion: 0.27
+Nodes (7): TimeSpan, SourceSettings, IReadOnlyList, SearchProfileInput, Dictionary, SearchProfileValidator, SearchProfileValues
 
 ### Community 126 - "app.tsx"
 Cohesion: 0.07
@@ -1341,9 +1356,9 @@ Nodes (18): Find Untested Sources, How it works, How it works, Limitations (be h
 Cohesion: 0.11
 Nodes (18): Batching rules, Common Pitfalls, Conditional Item Inclusion, Cross-product batching, Exclude Pattern — Set Subtraction on Include, Generated files in source tree, Include — Add Items, Include / Remove / Update — Three Operations (+10 more)
 
-### Community 129 - ".New"
-Cohesion: 0.06
-Nodes (44): GateState, IHostedService, IServiceProvider, SaveChangesInterceptor, DomainException, Fact, RoleTests, CancellationToken (+36 more)
+### Community 129 - "IUnitOfWork"
+Cohesion: 0.04
+Nodes (80): GateState, IHostedService, IHttpContextAccessor, IServiceProvider, SaveChangesInterceptor, IReadOnlyCollection, ICallerContext, ActorId (+72 more)
 
 ### Community 130 - "sessions.tsx"
 Cohesion: 0.21
@@ -1382,7 +1397,7 @@ Cohesion: 0.14
 Nodes (16): JobScrape.Application, net10.0, Microsoft.Extensions.Logging.Abstractions, Microsoft.NET.Sdk, JobScrape.Application.Tests, net10.0, coverlet.collector, Microsoft.Extensions.TimeProvider.Testing (+8 more)
 
 ### Community 139 - "CreateSearchProfileHandlerTests"
-Cohesion: 0.20
+Cohesion: 0.19
 Nodes (12): ArgumentNullException, DateTimeOffset, Fact, Handler, InlineData, InMemoryStore, IReadOnlyDictionary, Result (+4 more)
 
 ### Community 140 - "Assertion Diversity Analysis"
@@ -1434,12 +1449,12 @@ Cohesion: 0.12
 Nodes (15): Criterion Breakdown, Eval Command, Evaluation Framework, Evaluation Process, Evaluation Report, Evidence, Grader Types, Overall: [PASS/FAIL] (Score: X/100) (+7 more)
 
 ### Community 152 - ".CreateAdminClientAsync"
-Cohesion: 0.27
-Nodes (8): HttpClient, CancellationToken, Fact, JsonElement, Task, TimeProvider, IdentityAdminEndpointTests, Ct
+Cohesion: 0.17
+Nodes (17): ConditionalWeakTable, CancellationToken, Guid, HttpClient, Program, Task, TimeProvider, WebApplicationFactory (+9 more)
 
-### Community 153 - ".AddJobScrapeUseCases"
-Cohesion: 0.04
-Nodes (67): IHttpContextAccessor, RoleListResponse, ActionResult, Authorize, CancellationToken, HttpDelete, HttpGet, HttpPost (+59 more)
+### Community 153 - ".ToUserResponseAsync"
+Cohesion: 0.11
+Nodes (19): Guid, IReadOnlyList, TimeSpan, LoginPolicy, RoleListResponse, RoleResponse, UserListResponse, UserResponse (+11 more)
 
 ### Community 154 - "runs.tsx"
 Cohesion: 0.09
@@ -1454,8 +1469,8 @@ Cohesion: 0.11
 Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
 
 ### Community 157 - "pipeline.test.ts"
-Cohesion: 0.09
-Nodes (25): checkView(), Inspect, isFunction(), isPlainObject(), isString(), json, jsonVars(), projected (+17 more)
+Cohesion: 0.08
+Nodes (27): checkView(), Inspect, isFunction(), isPlainObject(), isString(), json, jsonVars(), projected (+19 more)
 
 ### Community 158 - "CRAP Score Analysis"
 Cohesion: 0.12
@@ -1473,9 +1488,9 @@ Nodes (15): Additional diagnostic techniques, Common Fixes, Common mistakes to a
 Cohesion: 0.06
 Nodes (35): 1. Visual Communication First, 2. Minimal Text Integration, 3. Expert Craftsmanship, 4. Systematic Patterns, Analog Meditation, Approach, Canvas Boundaries, Canvas Design System (+27 more)
 
-### Community 162 - "RunLimits"
-Cohesion: 0.12
-Nodes (16): SearchProfileValues, TimeSpan, RunLimits, MaxDelay, MaxDetails, MaxJobs, MaxPages, MinDelay (+8 more)
+### Community 162 - "ScrapeHarness"
+Cohesion: 0.09
+Nodes (29): FakeSessions, RecordingArtifacts, RecordingDelay, InvalidOperationException, CancellationToken, DateTimeOffset, Fact, Task (+21 more)
 
 ### Community 163 - "JobScrape.Api"
 Cohesion: 0.12
@@ -1486,16 +1501,16 @@ Cohesion: 0.12
 Nodes (15): Central Package Management Migration, Common Migration Issues, Complete Before/After Example, Directory.Build Consolidation, Identifying Legacy vs SDK-style Projects, Migration Checklist: Legacy → SDK-style, MSBuild Modernization: Legacy to SDK-style Migration, Step 1: Replace Project Root Element (+7 more)
 
 ### Community 165 - "ApiFactory"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (23): IWebHostBuilder, Action, IServiceCollection, Program, ApiFactory, DatabasePath, DeleteLogsOnDispose, DeleteStorageOnDispose (+15 more)
 
-### Community 166 - "JobScrape.Application.Results"
-Cohesion: 0.10
-Nodes (7): closedxml_excel, JobScrape.Application.Results, JobScrape.Application.Tests, JobScrape.Infrastructure.Tests.Export, JobScrape.Application.Features.Runs, JobScrape.Application.Features.Sessions, JobScrape.Application.Tests.Scraping
+### Community 166 - "JobScrape.Application.Abstractions"
+Cohesion: 0.08
+Nodes (12): JobScrape.Application.Results, JobScrape.Application.Features.Quotas, JobScrape.Application.Tests, JobScrape.Application.Abstractions, JobScrape.Domain.Identity, JobScrape.Application.Features.Runs, JobScrape.Domain, JobScrape.Application.Features.Identity (+4 more)
 
-### Community 167 - ".ListsByNameAndEvaluatesLaunchabilityOnTheClock"
-Cohesion: 0.16
-Nodes (13): CancellationToken, Guid, IReadOnlyList, Task, TimeProvider, SessionReadStore, ArgumentNullException, CancellationToken (+5 more)
+### Community 167 - ".From"
+Cohesion: 0.15
+Nodes (14): DateTimeOffset, CancellationToken, Guid, IReadOnlyList, Task, TimeProvider, SessionReadStore, ArgumentNullException (+6 more)
 
 ### Community 168 - "Workflow"
 Cohesion: 0.13
@@ -1538,8 +1553,8 @@ Cohesion: 0.22
 Nodes (9): ConcurrentQueue, microsoft_codeanalysis, microsoft_codeanalysis_csharp, microsoft_codeanalysis_csharp_syntax, AnalysisState, ConcurrentDictionary, Decl, DiagnosticRecord (+1 more)
 
 ### Community 178 - "SearchCriteria"
-Cohesion: 0.11
-Nodes (18): IReadOnlyList, SearchCriteria, Companies, ExperienceYears, Keywords, Locations, PostedWithinDays, RemoteOnly (+10 more)
+Cohesion: 0.17
+Nodes (13): IReadOnlyList, SearchCriteria, Companies, ExperienceYears, Keywords, Locations, PostedWithinDays, RemoteOnly (+5 more)
 
 ### Community 179 - "Banner Design - Multi-Format Creative Banner System"
 Cohesion: 0.14
@@ -1602,16 +1617,16 @@ Cohesion: 0.15
 Nodes (12): Common Pitfalls, Eliminate Redundant Restores, Inputs, Output, Step 1: Confirm restore is repeated and worth removing, Step 2: Inventory every invocation in execution order, Step 3: Decide per invocation, Step 4: Apply the smallest change (+4 more)
 
 ### Community 194 - "FakeProfiles"
-Cohesion: 0.18
-Nodes (14): FakeProfiles, ArgumentNullException, CancellationToken, DateTimeOffset, Exception, Fact, List, McpException (+6 more)
+Cohesion: 0.21
+Nodes (12): FakeProfiles, CancellationToken, DateTimeOffset, Exception, Fact, List, McpException, Task (+4 more)
 
 ### Community 195 - "Logo Usage Rules"
 Cohesion: 0.07
 Nodes (28): Absolute Don'ts, Approved Backgrounds, Before Using Logo, Clear Space, Co-branding, Color Rules, Color Usage, Color Variants (+20 more)
 
 ### Community 196 - ".Create"
-Cohesion: 0.12
-Nodes (22): FakeWorkspace, From, UpdateSessionRequest, CancellationToken, DateTimeOffset, Fact, Handler, InlineData (+14 more)
+Cohesion: 0.17
+Nodes (15): FakeWorkspace, UpdateSessionRequest, Store, DateTimeOffset, Fact, Handler, InlineData, InMemoryStore (+7 more)
 
 ### Community 197 - "JobLens"
 Cohesion: 0.13
@@ -1754,8 +1769,8 @@ Cohesion: 0.25
 Nodes (7): Approach, Build Fix Command, Common Error Fixes, DO:, DON'T:, Verification Steps, Your Task
 
 ### Community 232 - "CapturingLogger"
-Cohesion: 0.15
-Nodes (11): ILogger, Dictionary, EventId, Exception, Func, IDisposable, LogEntry, LogLevel (+3 more)
+Cohesion: 0.18
+Nodes (10): ILogger, Dictionary, EventId, Func, IDisposable, LogEntry, LogLevel, CapturingLogger (+2 more)
 
 ### Community 233 - "Route work through `/poteto-mode`"
 Cohesion: 0.25
@@ -1775,7 +1790,7 @@ Nodes (21): $type, $value, $type, $value, 500, 600, blue, green (+13 more)
 
 ### Community 237 - "RunCoordinator"
 Cohesion: 0.12
-Nodes (21): ActiveRun, IDisposable, BrowserProfileId, CancellationToken, CancellationTokenSource, Exception, Guid, ILogger (+13 more)
+Nodes (21): ActiveRun, RunScrapeRequest, BrowserProfileId, CancellationToken, CancellationTokenSource, Exception, Guid, ILogger (+13 more)
 
 ### Community 238 - "Build Performance Baseline & Optimization"
 Cohesion: 0.07
@@ -1795,11 +1810,11 @@ Nodes (35): RFC-9457, ApiResult, ChangePasswordInput, CreateProfileInput, Create
 
 ### Community 242 - "DesignSystemGenerator"
 Cohesion: 0.05
-Nodes (19): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict. (+11 more)
+Nodes (28): copy, DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords. (+20 more)
 
 ### Community 243 - "BrowserProfile"
-Cohesion: 0.08
-Nodes (22): BrowserChannel, Bundled, Chrome, Edge, BrowserEngine, Chromium, Firefox, WebKit (+14 more)
+Cohesion: 0.06
+Nodes (33): BrowserChannel, Bundled, BrowserEngine, Chromium, Firefox, WebKit, DateTimeOffset, TimeSpan (+25 more)
 
 ### Community 244 - "Analyzing MSBuild Failures with Binary Logs"
 Cohesion: 0.29
@@ -1817,13 +1832,17 @@ Nodes (6): Detecting CoreCLR vs NativeAOT, .NET Crash Dump Collection, Step 1 �
 Cohesion: 0.29
 Nodes (7): Figure it out, Phase A: Frame, Phase B: Design the workflow, Phase C: Run the loop, Phase D: Keep the audit trail, Phase E: Verify and hand back, Start
 
+### Community 248 - "test_relevance_evaluator.py"
+Cohesion: 0.12
+Nodes (5): importlib_util, Unit tests for metric math and relevance fixture validation., TestFixtureValidation, TestMetricMath, TestThresholdGate
+
 ### Community 249 - "Test Platform and Framework Detection"
 Cohesion: 0.20
 Nodes (8): `dotnet test` Command Mode, Selection, Conditional and per-target-framework properties, Detecting the executed test platform, Detecting the project system, Detecting the test framework, Response contract, Test Platform and Framework Detection
 
 ### Community 250 - "SessionHandlersTests"
-Cohesion: 0.10
-Nodes (24): SessionsController, CreateSessionRequest, GetSessionHandler, ISessionStore, ListSessionsHandler, Store, ArgumentNullException, CancellationToken (+16 more)
+Cohesion: 0.15
+Nodes (16): CreateSessionRequest, ArgumentNullException, CancellationToken, DateTimeOffset, Fact, Guid, Handler, InlineData (+8 more)
 
 ### Community 251 - "Statechart"
 Cohesion: 0.29
@@ -1878,8 +1897,8 @@ Cohesion: 0.33
 Nodes (5): References (Knowledge Base), Routing, Slides, Subcommands, When to Use
 
 ### Community 264 - "BrowserSessionPool"
-Cohesion: 0.04
-Nodes (55): IAsyncLifetime, IBrowserContext, IBrowserType, CancellationToken, ConcurrentDictionary, ILogger, IPage, IPlaywright (+47 more)
+Cohesion: 0.06
+Nodes (30): IAsyncLifetime, IBrowserContext, IBrowserType, IDisposable, ConcurrentDictionary, ILogger, IPlaywright, LoggerMessage (+22 more)
 
 ### Community 265 - "test-analysis-extensions/SKILL.md"
 Cohesion: 0.17
@@ -1914,20 +1933,20 @@ Cohesion: 0.09
 Nodes (47): react, CodeTag(), Field(), Module(), plural(), RefreshButton(), fullScramble(), Scramble() (+39 more)
 
 ### Community 274 - ".RequirePermission"
-Cohesion: 0.10
-Nodes (24): IReadOnlyList, CreateSearchProfileRequest, IReadOnlyList, UpdateSearchProfileRequest, McpAuth, Guid, McpException, McpErrors (+16 more)
+Cohesion: 0.11
+Nodes (23): IReadOnlyList, UpdateSearchProfileRequest, McpAuth, Guid, McpException, McpErrors, CancellationToken, Description (+15 more)
 
 ### Community 275 - "Find Repeated Work Within One Build"
 Cohesion: 0.17
 Nodes (11): Common Pitfalls, Find Repeated Work Within One Build, Output, Step 1: Count executions, Step 2: Classify each candidate, Step 3: Size the win, Step 4: Fix without changing behavior, Step 5: Validate and report truthfully (+3 more)
 
-### Community 276 - "JobDetailResult"
-Cohesion: 0.23
-Nodes (9): JobDetailResult, DateTimeOffset, Guid, ScrapeRunSummary, CancellationToken, Fact, Task, RunScrapeEnrichmentTests (+1 more)
+### Community 276 - ".Page"
+Cohesion: 0.35
+Nodes (5): CancellationToken, Fact, Task, RunScrapeEnrichmentTests, Ct
 
-### Community 277 - "DomainConverters"
-Cohesion: 0.08
-Nodes (19): CriteriaJson, JsonSerializerOptions, LimitsJson, LocationJson, SalaryJson, Guid, IReadOnlyList, List (+11 more)
+### Community 277 - "Json"
+Cohesion: 0.10
+Nodes (14): CriteriaJson, JsonSerializerOptions, LimitsJson, LocationJson, SalaryJson, Guid, IReadOnlyList, TimeSpan (+6 more)
 
 ### Community 278 - "Color Palette Management"
 Cohesion: 0.08
@@ -1966,8 +1985,8 @@ Cohesion: 0.50
 Nodes (4): Gather what changed, Ketchup, Visuals, Write the reply
 
 ### Community 287 - "IdempotencyStore"
-Cohesion: 0.12
-Nodes (19): DateTimeOffset, IdempotencyRecord, Body, ContentType, CreatedAt, Endpoint, Key, OwnerKey (+11 more)
+Cohesion: 0.23
+Nodes (9): CancellationToken, DbUpdateException, Exception, ILogger, JobScrapeDbContext, LoggerMessage, Task, TimeProvider (+1 more)
 
 ### Community 288 - "Maintain a verification skill"
 Cohesion: 0.50
@@ -1981,9 +2000,9 @@ Nodes (24): Apparel, Business Card, Car/Sedan, CIP Deliverable Guide, Core Ident
 Cohesion: 0.08
 Nodes (24): Accessibility, Accessibility Requirements, ARIA States, Color Contrast, Color Variants, Disabled States, Error Messages, Error States (+16 more)
 
-### Community 334 - "ICallerContext"
-Cohesion: 0.15
-Nodes (12): IReadOnlyCollection, ICallerContext, ActorId, MustChangePassword, Permissions, Roles, IReadOnlyCollection, FakeCaller (+4 more)
+### Community 334 - "FakeCaller"
+Cohesion: 0.33
+Nodes (6): IReadOnlyCollection, FakeCaller, ActorId, MustChangePassword, Permissions, Roles
 
 ### Community 335 - "Swift Extension"
 Cohesion: 0.08
@@ -2006,8 +2025,8 @@ Cohesion: 0.09
 Nodes (22): @apply Directive, Best Practices, Color Customization, Complete Tailwind Config, Configuration Examples, Content Configuration, Custom Color Palette, Custom Font Sizes (+14 more)
 
 ### Community 340 - "generate-slide.py"
-Cohesion: 0.13
-Nodes (22): datetime, _e(), generate_chart_slide(), generate_cta_slide(), generate_deck(), generate_metrics_slide(), generate_problem_slide(), generate_solution_slide() (+14 more)
+Cohesion: 0.14
+Nodes (21): _e(), generate_chart_slide(), generate_cta_slide(), generate_deck(), generate_metrics_slide(), generate_problem_slide(), generate_solution_slide(), generate_testimonial_slide() (+13 more)
 
 ### Community 341 - "card"
 Cohesion: 0.20
@@ -2042,8 +2061,8 @@ Cohesion: 0.07
 Nodes (14): Test TailwindConfigGenerator class., Test that adding same plugin twice doesn't duplicate., Test generating TypeScript configuration., Test generating JavaScript configuration., Test validating config with empty theme extensions., Test initialization for JavaScript config., Test that written config contains expected content., Test generating complete JavaScript configuration. (+6 more)
 
 ### Community 349 - "RunsController"
-Cohesion: 0.16
-Nodes (16): ActionResult, AllowAnonymous, HttpGet, FeaturesController, ActionResult, Authorize, CancellationToken, Guid (+8 more)
+Cohesion: 0.22
+Nodes (13): ActionResult, Authorize, CancellationToken, Guid, HttpGet, HttpPost, IResult, Task (+5 more)
 
 ### Community 350 - "Asset Organization Guide"
 Cohesion: 0.11
@@ -2170,8 +2189,8 @@ Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
 ### Community 382 - "Role"
-Cohesion: 0.05
-Nodes (39): LoginPruning, DateTimeOffset, IReadOnlyList, ITokenService, ILogger, IReadOnlyList, LoggerMessage, TimeProvider (+31 more)
+Cohesion: 0.04
+Nodes (46): LoginPruning, CancellationToken, IReadOnlyList, Task, DateTimeOffset, IReadOnlyList, ITokenService, CancellationToken (+38 more)
 
 ### Community 383 - "TypeScript patterns"
 Cohesion: 0.12
@@ -2294,8 +2313,8 @@ Cohesion: 0.20
 Nodes (6): IElement, IHtmlDocument, IParentNode, IndeedHtml, IDocument, IndeedSearchParser
 
 ### Community 414 - "SearchProfileId"
-Cohesion: 0.12
-Nodes (11): Guid, JobPostingId, Value, Guid, Guid, SearchProfileId, Value, DomainException (+3 more)
+Cohesion: 0.11
+Nodes (12): Guid, Guid, JobPostingId, Value, Guid, Guid, SearchProfileId, Value (+4 more)
 
 ### Community 415 - "Collections & LINQ Patterns"
 Cohesion: 0.17
@@ -2349,9 +2368,9 @@ Nodes (12): Assertion APIs, Capability tags, Exception Handling — Idiomatic Al
 Cohesion: 0.17
 Nodes (12): Assertion APIs, Capability tags, Exception Handling — Idiomatic Alternatives, Integration Test Markers, Language-specific calibration notes, Mystery Guest — Common Swift Patterns, Setup/Teardown, Skip/Ignore Annotations (+4 more)
 
-### Community 428 - "SourcesOptions"
-Cohesion: 0.18
-Nodes (9): ComplianceOptions, AcknowledgeSourceRisk, AllowHighRiskSources, SourceSettingsMapper, Dictionary, SourcesOptions, Sources, ValidateOptionsResult (+1 more)
+### Community 428 - ".AddJobScrapeOptions"
+Cohesion: 0.15
+Nodes (13): IOptions, IServiceCollection, IValidateOptions, OptionsRegistration, ComplianceOptions, AcknowledgeSourceRisk, AllowHighRiskSources, SourceSettingsMapper (+5 more)
 
 ### Community 429 - "Core Visual Elements"
 Cohesion: 0.18
@@ -2397,17 +2416,17 @@ Nodes (10): compilerOptions, allowImportingTsExtensions, module, moduleResolutio
 Cohesion: 0.13
 Nodes (15): ActionResult, Authorize, CancellationToken, HttpGet, Task, SourcesController, ArgumentNullException, CancellationToken (+7 more)
 
-### Community 440 - "RunListResponse"
-Cohesion: 0.21
-Nodes (8): CancellationToken, Guid, IReadOnlyList, Task, CancellationToken, Task, IReadOnlyList, RunListResponse
+### Community 440 - "RunPostingListResponse"
+Cohesion: 0.15
+Nodes (11): CancellationToken, Guid, IReadOnlyList, Task, Guid, IReadOnlyList, RunPostingListResponse, DateTimeOffset (+3 more)
 
 ### Community 441 - "drawio_extract.py"
 Cohesion: 0.08
-Nodes (47): base64, dataclasses, _aligned(), analyze(), classify_shape(), clean_label(), _configure_stdout_utf8(), _decompress_limited() (+39 more)
+Nodes (46): base64, _aligned(), analyze(), classify_shape(), clean_label(), _configure_stdout_utf8(), _decompress_limited(), digest() (+38 more)
 
 ### Community 442 - "ScrapeRunId"
-Cohesion: 0.05
-Nodes (39): ScrapeRunId, Value, DateTimeOffset, RunCancelled, DateTimeOffset, RunCompleted, DateTimeOffset, RunFailed (+31 more)
+Cohesion: 0.06
+Nodes (30): ScrapeRunId, Value, DateTimeOffset, RunCancelled, DateTimeOffset, RunCompleted, DateTimeOffset, RunFailed (+22 more)
 
 ### Community 443 - "I/O, Serialization & General Patterns"
 Cohesion: 0.20
@@ -2478,8 +2497,8 @@ Cohesion: 0.25
 Nodes (7): .NET Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
 
 ### Community 461 - "excalidraw_extract.py"
-Cohesion: 0.13
-Nodes (26): analyze(), clean_label(), _configure_stdout_utf8(), digest(), Edge, _escape_inline(), _escape_markdown(), _escape_table() (+18 more)
+Cohesion: 0.12
+Nodes (27): dataclasses, analyze(), clean_label(), _configure_stdout_utf8(), digest(), Edge, _escape_inline(), _escape_markdown() (+19 more)
 
 ### Community 462 - "Kotlin Pipeline Examples"
 Cohesion: 0.25
@@ -2502,24 +2521,24 @@ Cohesion: 0.25
 Nodes (7): Common Commands, dotnet-monitor, Installation, Kubernetes Sidecar Setup, REST API Endpoints, Security Guidance (Production), Trade-offs
 
 ### Community 467 - "system_globalization"
-Cohesion: 0.08
-Nodes (14): anglesharp_dom, anglesharp_html_dom, anglesharp_html_parser, JobScrape.Infrastructure.Sources, JobScrape.Infrastructure.Sources.Naukri, JobScrape.Infrastructure.Tests.Sources.Naukri, JobScrape.Infrastructure.Sources.Indeed, JobScrape.Infrastructure.Tests.Sources.Indeed (+6 more)
+Cohesion: 0.06
+Nodes (21): anglesharp_dom, anglesharp_html_dom, anglesharp_html_parser, JobScrape.Infrastructure.Sources, JobScrape.Infrastructure.Browser, JobScrape.Infrastructure.Sources.Naukri, JobScrape.Infrastructure.Tests.Sources.Naukri, JobScrape.Infrastructure.Tests.Browser (+13 more)
 
 ### Community 468 - "Implementation Process"
 Cohesion: 0.12
 Nodes (16): 1. Read the Plan and Research, 2. Read Source Files and Validate References, 3. Register Tests with the Build System, 4. Write Test Files, 5. Verify with Build, 6. Verify with Tests, 7. Verify Harness Discovery (MANDATORY), 8. Format Code (Optional) (+8 more)
 
-### Community 469 - "run.ts"
-Cohesion: 0.05
-Nodes (48): commanderPackagePath, currentInstallKey(), ensureDependenciesInstalled(), installKeyPath, nodeModulesDirectory, checker, boundRun(), chartRun() (+40 more)
+### Community 469 - "ref_node_path"
+Cohesion: 0.06
+Nodes (35): commanderPackagePath, currentInstallKey(), ensureDependenciesInstalled(), installKeyPath, nodeModulesDirectory, checker, PINNED_FLAGS, broken() (+27 more)
 
 ### Community 470 - ".HandleAsync"
-Cohesion: 0.21
-Nodes (8): CancellationToken, DateOnly, Task, CancellationToken, Task, SourceGate, SourcePolicy, SourceStatusResponse
+Cohesion: 0.19
+Nodes (9): CancellationToken, Task, SourceGate, SourcePolicy, SourceStatusResponse, CancellationToken, Description, McpServerTool (+1 more)
 
 ### Community 471 - "SourceSettingsCatalog"
-Cohesion: 0.24
-Nodes (9): TimeSpan, SourceSettings, Dictionary, IReadOnlyList, SourceSettingsCatalog, All, TimeProvider, CreateSearchProfileHandler (+1 more)
+Cohesion: 0.21
+Nodes (12): Dictionary, IReadOnlyList, SourceSettingsCatalog, All, TimeProvider, CreateSearchProfileHandler, Caller, TimeProvider (+4 more)
 
 ### Community 472 - "ValidationResult"
 Cohesion: 0.09
@@ -2573,9 +2592,9 @@ Nodes (5): Container Usage, dotnet-trace collect-linux (.NET 10+), Key Differenc
 Cohesion: 0.33
 Nodes (6): Analyzing MSBuild failures with binary logs, Before analysis, Find independent causes, Inspect the replayed text, Replay a binary log, Verify and report
 
-### Community 486 - "LinkedInFields"
-Cohesion: 0.05
-Nodes (31): GeneratedRegex, Regex, Uri, LinkedInChallengeClassifier, DateTimeOffset, GeneratedRegex, HashSet, IEnumerable (+23 more)
+### Community 486 - ".BuildSnapshot"
+Cohesion: 0.19
+Nodes (8): DateTimeOffset, IElement, IParentNode, LinkedInHtml, DateTimeOffset, IDocument, IElement, LinkedInSearchParser
 
 ### Community 487 - "CounterRules"
 Cohesion: 0.33
@@ -2705,21 +2724,21 @@ Nodes (3): Orchestrate, Supervision, Topology
 Cohesion: 0.47
 Nodes (3): fmt_day(), worktree-audit.sh script, transcript_dirs()
 
-### Community 547 - "ErrorKind"
-Cohesion: 0.09
-Nodes (21): ErrorKind, Challenge, Conflict, CoolingDown, Forbidden, NotFound, QuotaExceeded, RateLimited (+13 more)
+### Community 547 - "BrowserProfileId"
+Cohesion: 0.11
+Nodes (17): CancellationToken, Task, IBrowserProfileRepository, BrowserProfileId, Value, CancellationToken, IPage, Task (+9 more)
 
-### Community 548 - "SourceKey"
+### Community 548 - ".Create"
 Cohesion: 0.10
-Nodes (18): ComplianceTier, HighRisk, Restricted, Standard, SourceKey, Tier, Value, CanonicalUrl (+10 more)
+Nodes (16): CanonicalUrl, Value, ArgumentNullException, DomainException, Fact, MemberData, Theory, TheoryData (+8 more)
 
 ### Community 549 - ".AddJobScrapeAuth"
-Cohesion: 0.12
-Nodes (18): AuthorizationHandler, IAuthorizationHandler, IAuthorizationRequirement, IHttpBodyControlFeature, JwtBearerOptions, AuthorizationHandlerContext, Task, AdminAuthorizationHandler (+10 more)
+Cohesion: 0.09
+Nodes (23): AuthorizationHandler, IAuthorizationHandler, IAuthorizationRequirement, IHttpBodyControlFeature, JwtBearerOptions, AuthorizationHandlerContext, Task, AdminAuthorizationHandler (+15 more)
 
-### Community 550 - "RunScrapeHandler"
-Cohesion: 0.12
-Nodes (21): RunScope, CancellationToken, Task, TimeSpan, Action, CancellationToken, DateTimeOffset, Exception (+13 more)
+### Community 550 - ".SearchAsync"
+Cohesion: 0.16
+Nodes (14): RunScope, CancellationToken, Task, TimeSpan, CancellationToken, DateTimeOffset, Func, HashSet (+6 more)
 
 ### Community 551 - "fetch-background.py"
 Cohesion: 0.16
@@ -2738,12 +2757,12 @@ Cohesion: 0.17
 Nodes (15): Definition, DateTimeOffset, HttpContext, IMemoryCache, IReadOnlyList, RequestDelegate, Task, TimeProvider (+7 more)
 
 ### Community 555 - "DatabaseEndpointTests"
-Cohesion: 0.25
-Nodes (7): ArgumentNullException, Fact, JsonElement, Task, DatabaseEndpointTests, TableInfo, TablesResponse
+Cohesion: 0.20
+Nodes (10): ArgumentNullException, Fact, JsonElement, List, Task, DatabaseEndpointTests, TableInfo, TablesResponse (+2 more)
 
-### Community 556 - "SearchProfileResponse"
-Cohesion: 0.08
-Nodes (31): CancellationToken, Guid, Task, GetSearchProfileHandler, CancellationToken, Guid, IReadOnlyList, Task (+23 more)
+### Community 556 - ".HandleAsync"
+Cohesion: 0.11
+Nodes (20): CancellationToken, Guid, Task, GetSearchProfileHandler, CancellationToken, Guid, IReadOnlyList, Task (+12 more)
 
 ### Community 557 - "SYNC-LOG.md"
 Cohesion: 0.40
@@ -2761,9 +2780,9 @@ Nodes (9): GeneratedRegex, HashSet, IEnumerable, IReadOnlyList, Regex, Uri, Inde
 Cohesion: 0.25
 Nodes (7): Java Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample Generated Test File, Sample Plan Output, Sample Research Output, Source Under Test
 
-### Community 561 - "SessionState"
-Cohesion: 0.20
-Nodes (9): DateTimeOffset, SessionBootstrapped, SessionState, Challenged, CoolingDown, Expired, Healthy, New (+1 more)
+### Community 561 - ".TwoRunsPersistDedupeAndChargeTheDailyQuota"
+Cohesion: 0.12
+Nodes (18): DateTimeOffset, Guid, ScrapeRunSummary, ArgumentNullException, CancellationToken, DateTimeOffset, Fact, Task (+10 more)
 
 ### Community 562 - "FakeQuotas"
 Cohesion: 0.18
@@ -2777,21 +2796,21 @@ Nodes (7): Go Pipeline Examples, Sample Final Report, Sample Fix Cycle, Sample G
 Cohesion: 0.16
 Nodes (14): IDocument, IEnumerable, IReadOnlyList, JsonDocument, JsonDocumentOptions, JsonElement, IndeedJsonLd, Company (+6 more)
 
-### Community 565 - "InMemoryStore"
-Cohesion: 0.11
-Nodes (23): DateTimeOffset, SourceCircuit, SourceQuotaUsage, ArgumentNullException, CancellationToken, DateTimeOffset, Fact, InMemoryStore (+15 more)
+### Community 565 - "ListSourcesHandlerTests"
+Cohesion: 0.22
+Nodes (11): DateTimeOffset, SourceCircuit, SourceQuotaUsage, ArgumentNullException, CancellationToken, DateTimeOffset, Fact, InMemoryStore (+3 more)
 
 ### Community 567 - "UsageQuotaEndpointTests"
 Cohesion: 0.27
 Nodes (8): HttpResponseMessage, CancellationToken, Fact, HttpClient, JsonElement, Task, UsageQuotaEndpointTests, Ct
 
-### Community 568 - "icon/generate.py"
-Cohesion: 0.10
-Nodes (29): google, google_genai, apply_color(), apply_viewbox_size(), extract_svgs(), generate_batch(), generate_icon(), generate_sizes() (+21 more)
+### Community 568 - "ExportPosting"
+Cohesion: 0.11
+Nodes (14): ExportFile, DateTimeOffset, Guid, IReadOnlyList, ExportPosting, CancellationToken, IReadOnlyList, Task (+6 more)
 
-### Community 569 - ".UpdateAsync"
-Cohesion: 0.22
-Nodes (11): CancellationToken, Dictionary, HttpDelete, HttpGet, HttpPost, HttpPut, IResult, JsonElement (+3 more)
+### Community 569 - "RunScrapeHandler"
+Cohesion: 0.25
+Nodes (7): Action, Exception, Guid, ILogger, LoggerMessage, TimeProvider, RunScrapeHandler
 
 ### Community 570 - "UserId"
 Cohesion: 0.15
@@ -2802,44 +2821,44 @@ Cohesion: 0.29
 Nodes (5): DomainException, Fact, InlineData, Theory, RunLimitsTests
 
 ### Community 572 - "PageStats"
-Cohesion: 0.09
-Nodes (17): PageStats, PostingsFound, PostingsNew, PostingsUpdated, DomainException, Fact, InlineData, Theory (+9 more)
+Cohesion: 0.13
+Nodes (12): PageStats, PostingsFound, PostingsNew, PostingsUpdated, DomainException, Fact, InlineData, Theory (+4 more)
 
 ### Community 573 - "OptionsTests"
-Cohesion: 0.24
+Cohesion: 0.25
 Nodes (5): Dictionary, Fact, IConfiguration, ValidateOptionsResult, OptionsTests
 
-### Community 574 - "marks.ts"
-Cohesion: 0.11
-Nodes (35): Lines, linesOf(), parseDot(), parseState(), unescapeDot(), markTexts(), readCounterexample(), readMarks() (+27 more)
+### Community 574 - "chart.test.ts"
+Cohesion: 0.07
+Nodes (50): Lines, linesOf(), parseDot(), parseState(), unescapeDot(), markTexts(), readCounterexample(), readMarks() (+42 more)
 
 ### Community 575 - "config-fuzz.test.ts"
 Cohesion: 0.06
-Nodes (40): isListField(), ListField, NAME, readConfig(), Section, SECTIONS, shown(), Token (+32 more)
+Nodes (42): isListField(), ListField, NAME, readConfig(), Section, SECTIONS, shown(), Token (+34 more)
 
 ### Community 576 - "SessionResponse"
-Cohesion: 0.09
-Nodes (23): ArgumentNullException, CancellationToken, Fact, Task, BusyWorkspace, SessionsEndpointTests, Ct, IBrowserProfileWorkspace (+15 more)
+Cohesion: 0.19
+Nodes (12): ArgumentNullException, CancellationToken, Fact, Task, BusyWorkspace, SessionsEndpointTests, Ct, IBrowserProfileWorkspace (+4 more)
 
 ### Community 577 - "UsageQuota"
 Cohesion: 0.18
 Nodes (12): TimeSpan, UsageQuota, Limit, Scope, Window, EntityTypeBuilder, UsageQuotaConfiguration, CancellationToken (+4 more)
 
-### Community 578 - "tlc.ts"
-Cohesion: 0.24
-Nodes (10): late, agrees(), alone(), exitClass(), here, properties(), skip, stepsIn() (+2 more)
+### Community 578 - "ScrapeRunProgress"
+Cohesion: 0.14
+Nodes (14): DateTimeOffset, IEnumerable, IReadOnlyList, ScrapeRunProgress, Id, NextCursor, PagesCompleted, SeenExternalIds (+6 more)
 
 ### Community 579 - "ContentHash"
 Cohesion: 0.15
 Nodes (11): IEnumerable, ContentHash, Value, DateTimeOffset, JobPostingUpdated, ArgumentNullException, DomainException, Fact (+3 more)
 
 ### Community 580 - "HealthEndpointTests"
-Cohesion: 0.21
-Nodes (10): HealthPayload, HealthController, ArgumentNullException, DateTimeOffset, Fact, SuppressMessage, Task, HealthEndpointTests (+2 more)
+Cohesion: 0.12
+Nodes (16): HealthPayload, ProducesResponseType, AllowAnonymous, CancellationToken, HttpGet, IResult, Task, HealthController (+8 more)
 
 ### Community 581 - "SessionsToolsTests"
-Cohesion: 0.18
-Nodes (16): CancellationToken, Fact, Guid, IReadOnlyCollection, IReadOnlyList, McpException, StubStore, Task (+8 more)
+Cohesion: 0.12
+Nodes (23): SessionsController, GetSessionHandler, ISessionStore, ListSessionsHandler, OneSessionStore, ArgumentNullException, CancellationToken, Fact (+15 more)
 
 ### Community 582 - "SourceQuotaRepository"
 Cohesion: 0.38
@@ -2849,9 +2868,9 @@ Nodes (5): CancellationToken, DateOnly, JobScrapeDbContext, Task, SourceQuotaRep
 Cohesion: 0.44
 Nodes (4): GeneratedRegex, Match, Regex, IndeedChallengeClassifier
 
-### Community 584 - "ChallengeKind"
-Cohesion: 0.11
-Nodes (18): ChallengeKind, AccessDenied, Captcha, LoginRequired, None, RateLimited, SoftChallenge, SourceChanged (+10 more)
+### Community 584 - "SourceCircuitBreakerTests"
+Cohesion: 0.20
+Nodes (7): ArgumentNullException, DateTimeOffset, DomainException, Fact, InlineData, Theory, SourceCircuitBreakerTests
 
 ### Community 586 - "RunScrapeFilteringTests"
 Cohesion: 0.32
@@ -2861,9 +2880,9 @@ Nodes (6): CancellationToken, DateTimeOffset, Fact, Task, RunScrapeFilteringTest
 Cohesion: 0.11
 Nodes (17): File structure, Global Constraints, New-only scrape runs Implementation Plan, Review Focus, Self-review, Task 10: End-to-end automation, Task 11: Docs and diagram profile, Task 12: Full verification loop (+9 more)
 
-### Community 588 - "LoggingOptions"
-Cohesion: 0.10
-Nodes (23): ILoggerFactory, FeaturesOptions, Authentication, CsvExport, ExcelExport, Health, Logging, LoggingOptions (+15 more)
+### Community 588 - "FeaturesOptions"
+Cohesion: 0.15
+Nodes (14): ILoggerFactory, FeaturesOptions, Authentication, CsvExport, ExcelExport, Health, Logging, Action (+6 more)
 
 ### Community 589 - "GuardrailTests"
 Cohesion: 0.18
@@ -2874,52 +2893,52 @@ Cohesion: 0.07
 Nodes (27): happy-dom, react-dom, tailwindcss, @tailwindcss/cli, @types/bun, @types/react, @types/react-dom, dependencies (+19 more)
 
 ### Community 591 - "ComplianceConsent"
-Cohesion: 0.27
-Nodes (5): ComplianceConsent, None, ComplianceDecision, CompliancePolicy, Fact
+Cohesion: 0.23
+Nodes (7): ComplianceConsent, None, ComplianceDecision, CompliancePolicy, Fact, Uri, LinkedInChallengeClassifierTests
 
 ### Community 592 - "Research Process"
 Cohesion: 0.13
 Nodes (14): 1. Establish a bounded scope, 2. Identify the Language and Framework, 3. Identify the Scope of Testing, 4. Use the cheapest discovery path, 5. Analyze Source Files, 6. Discover Build/Test Commands, 7. Discover Preexisting Tests, 8. Generate Research Document (+6 more)
 
-### Community 593 - ".AddJobScrapeBrowser"
-Cohesion: 0.04
-Nodes (47): CancellationToken, Task, IJobSource, Capabilities, Key, Dictionary, JobSourceRegistry, SourceCapabilities (+39 more)
+### Community 593 - "SourceRunContext"
+Cohesion: 0.11
+Nodes (19): CancellationToken, Task, IJobSource, Capabilities, Key, SourceCapabilities, SourceRunContext, CancellationToken (+11 more)
 
 ### Community 594 - ".Matches"
-Cohesion: 0.20
-Nodes (8): IEnumerable, IEnumerable, IReadOnlyList, SkillMatcher, Fact, InlineData, Theory, SkillMatcherTests
+Cohesion: 0.24
+Nodes (7): IEnumerable, IReadOnlyList, SkillMatcher, Fact, InlineData, Theory, SkillMatcherTests
 
 ### Community 595 - ".RemoveAsyncRetriesOnceAfterWrappedBusy"
-Cohesion: 0.14
-Nodes (16): ConnectionEndEventData, DbConnection, DbConnectionInterceptor, CancellationToken, Task, SqlitePragmaInterceptor, CancellationToken, DbContextEventData (+8 more)
+Cohesion: 0.24
+Nodes (10): CancellationToken, DbContextEventData, Fact, InterceptionResult, Task, TimeProvider, ValueTask, BusyInterceptor (+2 more)
 
 ### Community 596 - "SearchProfilesController"
-Cohesion: 0.17
-Nodes (14): ActionResult, Authorize, CancellationToken, Guid, HttpGet, HttpPost, HttpPut, IResult (+6 more)
-
-### Community 597 - "ErrorMapperTests"
 Cohesion: 0.29
-Nodes (7): ArgumentNullException, Fact, InlineData, IResult, Task, Theory, ErrorMapperTests
+Nodes (10): ActionResult, Authorize, CancellationToken, Guid, HttpGet, HttpPost, HttpPut, IResult (+2 more)
+
+### Community 597 - "ErrorKind"
+Cohesion: 0.11
+Nodes (21): ArgumentNullException, Fact, InlineData, IResult, Task, Theory, ErrorMapperTests, ErrorKind (+13 more)
 
 ### Community 598 - "RunScope"
-Cohesion: 0.10
-Nodes (18): CancellationToken, Task, RunScope, Adapter, ArtifactDirectory, Browser, Circuit, Context (+10 more)
+Cohesion: 0.14
+Nodes (14): RunScope, Adapter, ArtifactDirectory, Browser, Circuit, Context, Enrich, FreshExternalIds (+6 more)
 
 ### Community 599 - ".Create"
-Cohesion: 0.21
-Nodes (5): DomainException, Fact, InlineData, Theory, PostingTextValueTests
+Cohesion: 0.11
+Nodes (11): Text, ArgumentNullException, Fact, InlineData, Theory, TextTests, DomainException, Fact (+3 more)
 
-### Community 600 - ".SeedAndLoginAsync"
-Cohesion: 0.24
-Nodes (9): ConditionalWeakTable, CancellationToken, Guid, Program, Task, TimeProvider, WebApplicationFactory, AuthTestHelper (+1 more)
+### Community 600 - "LinkedInFields"
+Cohesion: 0.23
+Nodes (5): GeneratedRegex, HashSet, Regex, Uri, LinkedInFields
 
 ### Community 601 - ".HandleAsync"
-Cohesion: 0.17
-Nodes (13): CancellationToken, Task, IBrowserProfileRepository, SessionValidation, CancellationToken, Exception, Guid, ILogger (+5 more)
+Cohesion: 0.23
+Nodes (10): SessionValidation, CancellationToken, Exception, Guid, ILogger, LoggerMessage, Task, TimeProvider (+2 more)
 
 ### Community 602 - "BrowserTests"
-Cohesion: 0.11
-Nodes (19): JobReference, SearchPageRequest, ValueTask, ArgumentNullException, CancellationToken, DateTimeOffset, Dictionary, Fact (+11 more)
+Cohesion: 0.12
+Nodes (17): JobReference, ArgumentNullException, CancellationToken, DateTimeOffset, Dictionary, Fact, Func, IPage (+9 more)
 
 ### Community 603 - ".StartDay"
 Cohesion: 0.30
@@ -2945,17 +2964,17 @@ Nodes (5): DomainException, Fact, InlineData, Theory, SourceKeyTests
 Cohesion: 0.08
 Nodes (13): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query, BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords (+5 more)
 
-### Community 609 - "DataQualityIssues"
-Cohesion: 0.22
-Nodes (8): DataQualityIssues, DescriptionMissing, MissingCompany, MissingLocation, None, ParseLowConfidence, PostedDateUnknown, SalaryUnknown
-
-### Community 610 - "JobScrape.Application.Features.SearchProfiles"
-Cohesion: 0.10
-Nodes (15): JobScrape.Application.Features.Health, JobScrape.Mcp.Tools, JobScrape.Mcp.Tests, JobScrape.Application.Features.SearchProfiles, JobScrape.Application.Features.Sources, modelcontextprotocol, modelcontextprotocol_aspnetcore, modelcontextprotocol_server (+7 more)
-
-### Community 611 - "FakeCaller"
+### Community 609 - "SearchPageResult"
 Cohesion: 0.17
-Nodes (13): ArgumentNullException, CancellationToken, Fact, IReadOnlyCollection, Task, FakeCaller, ActorId, MustChangePassword (+5 more)
+Nodes (10): IReadOnlyList, SearchPageResult, CancellationToken, Task, PageFingerprint, FirstExternalId, ResultRange, DomainException (+2 more)
+
+### Community 610 - "JobScrape.Mcp.Tools"
+Cohesion: 0.11
+Nodes (13): JobScrape.Application.Features.Health, JobScrape.Mcp.Tools, JobScrape.Mcp.Tests, modelcontextprotocol, modelcontextprotocol_aspnetcore, modelcontextprotocol_server, HttpServerTransportOptions, McpHttpTransport (+5 more)
+
+### Community 611 - "GetHealthHandler"
+Cohesion: 0.07
+Nodes (27): CancellationToken, Task, TimeProvider, GetHealthHandler, DateTimeOffset, GetHealthResponse, ArgumentNullException, Fact (+19 more)
 
 ### Community 612 - "NaukriTestPages"
 Cohesion: 0.33
@@ -2971,15 +2990,15 @@ Nodes (6): IReadOnlyList, UsageQuotaDefaults, Fact, InlineData, Theory, UsageQuo
 
 ### Community 615 - "JobScrapeDbContext"
 Cohesion: 0.05
-Nodes (35): DbContext, DbSet, IDesignTimeDbContextFactory, IEntityTypeConfiguration, ModelConfigurationBuilder, EntityTypeBuilder, BrowserProfileConfiguration, EntityTypeBuilder (+27 more)
+Nodes (33): DbContext, DbSet, IDesignTimeDbContextFactory, IEntityTypeConfiguration, ModelConfigurationBuilder, EntityTypeBuilder, BrowserProfileConfiguration, EntityTypeBuilder (+25 more)
 
 ### Community 616 - ".Classify"
 Cohesion: 0.22
 Nodes (7): Uri, Fact, InlineData, Theory, Uri, IndeedChallengeClassifierTests, BodyText
 
-### Community 617 - "RunPostingResponse"
-Cohesion: 0.40
-Nodes (4): DateTimeOffset, Guid, IReadOnlyList, RunPostingResponse
+### Community 617 - ".AddJobScrapeBrowser"
+Cohesion: 0.13
+Nodes (13): CancellationToken, Task, BrowserProfileWorkspace, IPlaywright, Task, IPlaywrightFactory, IPlaywright, Task (+5 more)
 
 ### Community 618 - "Resolve a Testability Obstacle"
 Cohesion: 0.13
@@ -2997,9 +3016,9 @@ Nodes (15): SourceOptions, BaseUrl, ChallengeCooldownMinutes, DailyDetailCap, Da
 Cohesion: 0.25
 Nodes (8): Leave no sentence open to two readings (Global English), Make statements load one at a time (STE rules), Pick the mode first (Diátaxis), Technical writing, Vary the rhythm, Voice and repo specifics, Worked example, Write sentences to the reader (Google developer style)
 
-### Community 622 - ".ListSourcesAsync"
-Cohesion: 0.40
-Nodes (4): CancellationToken, Description, McpServerTool, Task
+### Community 622 - ".Parse"
+Cohesion: 0.24
+Nodes (5): IHtmlDocument, IReadOnlyList, LinkedInSearchPage, Fact, LinkedInSearchParserTests
 
 ### Community 623 - "During the session"
 Cohesion: 0.09
@@ -3016,6 +3035,10 @@ Nodes (12): Alternate flow — text-log replay (when MCP is unavailable), Analys
 ### Community 626 - "Process"
 Cohesion: 0.07
 Nodes (28): 10. Complexity budget, 11. Anti-patterns, 12.1 What this YAML proves, 12.2 Adapting this YAML to a different process, 12. Worked example — full YAML for an extended process variant, 13. Examples, 1. Inputs — the parameter contract, 2.1 Background structure (+20 more)
+
+### Community 627 - "JobSourceRegistry"
+Cohesion: 0.23
+Nodes (9): Dictionary, JobSourceRegistry, ArgumentException, ArgumentNullException, Fact, SourceCatalogTests, StubSource, Capabilities (+1 more)
 
 ### Community 628 - "Planning Process"
 Cohesion: 0.17
@@ -3040,6 +3063,10 @@ Nodes (8): ValueTask, ArgumentNullException, CancellationToken, Fact, InvalidOpe
 ### Community 633 - "HTML Report Format"
 Cohesion: 0.10
 Nodes (18): Call-graph collapse, Candidate card, Cross-section (good for layered shallowness), Diagram patterns, Hand-built boxes-and-arrows (when Mermaid's layout fights you), Header, HTML Report Format, Mass diagram (good for "interface as wide as implementation") (+10 more)
+
+### Community 634 - "LoggingOptions"
+Cohesion: 0.15
+Nodes (11): LoggingOptions, Directory, FileSizeLimitBytes, PlainTextFileSizeLimitBytes, PlainTextRetentionDays, PlainTextRollingInterval, RetentionDays, ValidateOptionsResult (+3 more)
 
 ### Community 635 - "TestDatabase"
 Cohesion: 0.19
@@ -3070,8 +3097,8 @@ Cohesion: 0.15
 Nodes (8): main(), Handle shadcn/ui component installation., Initialize installer. Args: project_root: Project root directory (default:…, ShadcnInstaller, Test adding components that are already installed., Test getting installed components when files exist., Test getting installed components without config., Test adding components with empty list.
 
 ### Community 642 - "ProfileDirectoryRename"
-Cohesion: 0.14
-Nodes (12): CancellationToken, Task, ProfileDirectoryRename, AlreadyRenamed, Failed, Moved, NothingToMove, ProfileInUse (+4 more)
+Cohesion: 0.11
+Nodes (17): From, CancellationToken, Task, ProfileDirectoryRename, AlreadyRenamed, Failed, Moved, NothingToMove (+9 more)
 
 ### Community 643 - "Data Flow"
 Cohesion: 0.08
@@ -3093,9 +3120,9 @@ Nodes (7): Arguments, Checklist, Deterministic Engine, Example Result, Harness A
 Cohesion: 0.21
 Nodes (8): serilog_context, HttpContext, RequestDelegate, Task, CorrelationMiddleware, InlineData, Task, Theory
 
-### Community 648 - ".IsAllowed"
-Cohesion: 0.28
-Nodes (5): IReadOnlyCollection, PermissionDecision, ArgumentNullException, Fact, PermissionDecisionTests
+### Community 648 - "detect_domain"
+Cohesion: 0.23
+Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
 ### Community 649 - "6. Problem Details pattern"
 Cohesion: 0.25
@@ -3138,7 +3165,7 @@ Cohesion: 0.24
 Nodes (11): Anti-ban by being a good citizen, Hard exclusions (no CAPTCHA solving, no spoofing), HumanPacing, Low-signal automation policy, Pacing and quotas, Stop-on-wall hard rule, Consistency beats spoofing, No evasion tooling (+3 more)
 
 ### Community 659 - "BrowserOptions"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (8): IValidateOptions, BrowserOptions, AdblockMode, ExtensionDir, Headless, NavigationTimeoutSeconds, ValidateOptionsResult, BrowserOptionsValidator
 
 ### Community 660 - "Design Pattern Decisions"
@@ -3162,7 +3189,7 @@ Cohesion: 0.40
 Nodes (6): HtmlParser, JSON-LD extraction, Visibility guards, Extraction priority (JSON-LD first), Honeypot and visibility guards, SearchPageParser
 
 ### Community 665 - "JwtOptions"
-Cohesion: 0.24
+Cohesion: 0.22
 Nodes (9): JwtOptions, Audience, Issuer, LockoutMinutes, MaxFailedAttempts, Secret, TokenLifetimeMinutes, ValidateOptionsResult (+1 more)
 
 ### Community 666 - "The map"
@@ -3189,13 +3216,17 @@ Nodes (6): Test adding components with overwrite flag., Test successful componen
 Cohesion: 0.26
 Nodes (8): QuotaResponse, CancellationToken, IReadOnlyList, Task, IUsageQuotaRepository, CancellationToken, Task, TimeSpan
 
-### Community 672 - ".HandleAsync"
-Cohesion: 0.20
-Nodes (8): CancellationToken, Task, DateTimeOffset, GetHealthResponse, CancellationToken, Description, McpServerTool, Task
+### Community 672 - "IdempotencyEntry"
+Cohesion: 0.26
+Nodes (6): CancellationToken, TaskCompletionSource, BlockingStore, FakeIdempotencyStore, DateTimeOffset, IdempotencyEntry
 
-### Community 674 - ".Main"
-Cohesion: 0.22
-Nodes (8): ApiBehaviorOptions, PartitionedRateLimiter, HttpContext, RequestDelegate, Task, LoginIpRateLimitMiddleware, ILogger, Program
+### Community 673 - "test_validate_tokens.py"
+Cohesion: 0.19
+Nodes (10): CompletedProcess, Regression test for sync-brand-to-tokens.cjs. The color parser required a…, Regression tests for validate-tokens.cjs. The validator used to skip any line…, A hardcoded hex on the same line as a var() token is still a violation., A line that references only tokens produces no false positives., _run(), test_flags_hardcoded_hex_sharing_line_with_token(), test_token_only_line_reports_no_violation() (+2 more)
+
+### Community 674 - "test_style_taxonomy.py"
+Cohesion: 0.17
+Nodes (4): Regression tests for the public style taxonomy and search contract., read_rows(), TestStyleTaxonomy, statistics
 
 ### Community 675 - "Review Focus"
 Cohesion: 0.20
@@ -3209,9 +3240,13 @@ Nodes (4): How it works, Improve later, Screenshot capture, Use
 Cohesion: 0.08
 Nodes (23): 10.1 What this YAML proves, 10. Worked YAML — full inputs for `example-it-state.html`, 1. Inputs — the parameter contract, 2.1 Background and zone frame, 2.2 Component box, 2.3 Connector geometry (§3 holds the routing rules), 2.4 Footer bar, 2.5 Legend strip (+15 more)
 
-### Community 679 - "BrowserProfileRepository"
-Cohesion: 0.48
-Nodes (4): CancellationToken, JobScrapeDbContext, Task, BrowserProfileRepository
+### Community 678 - "ChallengeKind"
+Cohesion: 0.15
+Nodes (11): ChallengeKind, AccessDenied, Captcha, LoginRequired, None, RateLimited, SoftChallenge, SourceChanged (+3 more)
+
+### Community 679 - "FeatureFlags"
+Cohesion: 0.21
+Nodes (7): ActionResult, AllowAnonymous, HttpGet, FeaturesController, FeatureFlags, IReadOnlyList, ExportFormatSupport
 
 ### Community 680 - "Linter Agent"
 Cohesion: 0.22
@@ -3253,6 +3288,10 @@ Nodes (5): doc-updater, description, mode, permissions, system
 Cohesion: 0.25
 Nodes (7): LoggerConfiguration, LoggerSinkConfiguration, Action, IConfiguration, IOptions, IServiceCollection, LoggingRegistration
 
+### Community 690 - "IdempotencyRecord"
+Cohesion: 0.18
+Nodes (10): DateTimeOffset, IdempotencyRecord, Body, ContentType, CreatedAt, Endpoint, Key, OwnerKey (+2 more)
+
 ### Community 691 - "e2e-runner"
 Cohesion: 0.40
 Nodes (5): e2e-runner, description, mode, permissions, system
@@ -3261,17 +3300,29 @@ Nodes (5): e2e-runner, description, mode, permissions, system
 Cohesion: 0.22
 Nodes (7): CancellationToken, Task, TimeSpan, ArgumentNullException, ArgumentOutOfRangeException, OperationCanceledException, Task
 
-### Community 695 - "20261107112658_InitialCreate.Designer.cs"
-Cohesion: 0.07
-Nodes (26): JobScrape.Infrastructure.Persistence.Migrations, microsoft_entityframeworkcore_infrastructure, microsoft_entityframeworkcore_migrations, microsoft_entityframeworkcore_storage_valueconversion, Migration, ModelSnapshot, DateOnly, Guid (+18 more)
+### Community 693 - "LinkedInTestPages"
+Cohesion: 0.22
+Nodes (5): InlineData, Theory, BodyText, DateTimeOffset, LinkedInTestPages
+
+### Community 694 - "StringBuilder"
+Cohesion: 0.31
+Nodes (5): NaukriUrlBuilder, TheoryData, InlineData, Theory, StringBuilder
+
+### Community 695 - "DomainConverters.cs"
+Cohesion: 0.06
+Nodes (32): JobScrape.Infrastructure.Persistence.Migrations, microsoft_entityframeworkcore_changetracking, microsoft_entityframeworkcore_infrastructure, microsoft_entityframeworkcore_migrations, microsoft_entityframeworkcore_storage_valueconversion, Migration, ModelSnapshot, DateOnly (+24 more)
+
+### Community 696 - "Review Focus"
+Cohesion: 0.22
+Nodes (8): Bundled-only browsers + uBOL max Implementation Plan, Global Constraints, Review Focus, Task 1: Frontend e2e on bundled Chromium, Task 2: Backend bundled-only channels with migration, Task 3: uBOL max for Naukri stays headed bundled-only, Task 4: Docs and screenshot tool bundled-only, Task 5: Format, graphify, verify, push
 
 ### Community 697 - "ADR-0019: MCP server transports and tool surface"
 Cohesion: 0.22
 Nodes (9): ADR-0019: MCP server transports and tool surface, Alternatives considered, Consequences, Context, Decision, Follow-ups, Negative / trade-offs, Positive (+1 more)
 
 ### Community 698 - "FeaturesEndpointTests"
-Cohesion: 0.39
-Nodes (6): FeaturesPayload, Fact, SuppressMessage, Task, FeaturesEndpointTests, FeaturesPayload
+Cohesion: 0.11
+Nodes (16): FeaturesPayload, IClassFixture, OptionsValidationException, Fact, InvalidOperationException, Task, FeatureFlagBootTests, Fact (+8 more)
 
 ### Community 699 - "Arena"
 Cohesion: 0.25
@@ -3293,17 +3344,17 @@ Nodes (26): _animation_component(), _animation_declarations(), _animation_proper
 Cohesion: 0.22
 Nodes (9): Autonomy, Comments, Harness, Non-negotiables, Playbooks, Poteto mode, Principles, Subagents (+1 more)
 
-### Community 704 - "GetHealthHandler"
-Cohesion: 0.28
-Nodes (6): TimeProvider, GetHealthHandler, ArgumentNullException, Fact, Task, GetHealthHandlerTests
+### Community 704 - ".HandleAsync"
+Cohesion: 0.25
+Nodes (6): CancellationToken, Guid, IReadOnlyList, Task, CancellationToken, Task
 
-### Community 705 - ".Log"
-Cohesion: 0.28
-Nodes (6): Dictionary, EventId, Exception, Func, LogLevel, LogEntry
+### Community 705 - "SqlitePragmaInterceptor"
+Cohesion: 0.32
+Nodes (6): ConnectionEndEventData, DbConnection, DbConnectionInterceptor, CancellationToken, Task, SqlitePragmaInterceptor
 
-### Community 706 - ".CursorOffset"
-Cohesion: 0.36
-Nodes (4): Fact, InlineData, Theory, SearchPageDriverTests
+### Community 706 - "IndeedJobSource"
+Cohesion: 0.09
+Nodes (22): IPage, Task, PageText, CancellationToken, Exception, Guid, ILogger, IPage (+14 more)
 
 ### Community 707 - "UsersPage"
 Cohesion: 0.53
@@ -3317,9 +3368,17 @@ Nodes (21): active-directory, aws, azure, Brand, docker, gcp, gitea, github (+13
 Cohesion: 0.10
 Nodes (21): 10. Budget — this type exceeds the default, 11. Anti-patterns, 12. Examples, 1. Inputs — the parameter contract, 2.1 Row placement (cursor algorithm), 2.2 Node placement inside a `row` entry, 2.3 Bar (full-zone-width) placement, 2.4 Source / consumer placement (side columns) (+13 more)
 
+### Community 710 - "IIdempotencyStore"
+Cohesion: 0.46
+Nodes (3): CancellationToken, Task, IIdempotencyStore
+
 ### Community 711 - "code-reviewer"
 Cohesion: 0.33
 Nodes (6): code-reviewer, description, mode, model, permissions, system
+
+### Community 713 - ".Classify"
+Cohesion: 0.50
+Nodes (4): GeneratedRegex, Regex, Uri, LinkedInChallengeClassifier
 
 ### Community 714 - ".ToPlainText"
 Cohesion: 0.39
@@ -3342,20 +3401,24 @@ Cohesion: 0.29
 Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
 ### Community 719 - "NaukriJobSource"
-Cohesion: 0.05
-Nodes (50): Exception, IReadOnlyList, SearchPageResult, StartPageOutOfRangeException, MaxPage, StartPage, PageFingerprint, FirstExternalId (+42 more)
+Cohesion: 0.13
+Nodes (20): TimeProvider, TimeProviderDelay, CancellationToken, Exception, Guid, ILogger, IPage, LoggerMessage (+12 more)
 
-### Community 720 - "OptionsStartupTests"
-Cohesion: 0.32
-Nodes (5): OptionsValidationException, Fact, InlineData, Theory, OptionsStartupTests
+### Community 720 - "PostingWriterTests.cs"
+Cohesion: 0.33
+Nodes (3): closedxml_excel, JobScrape.Infrastructure.Tests.Export, JobScrape.Infrastructure.Export
 
 ### Community 721 - "Design"
 Cohesion: 0.11
 Nodes (18): Anonymous mode, backend, Anonymous mode, UI and BFF, Anti-goals, Approaches, Constraints, Design, Docs, Export toggles (+10 more)
 
-### Community 723 - "ErrorsTests"
-Cohesion: 0.36
-Nodes (3): ArgumentNullException, Fact, ErrorsTests
+### Community 722 - "ISessionManager"
+Cohesion: 0.29
+Nodes (6): CancellationToken, Task, ISessionManager, FakeSessions, Calls, Result
+
+### Community 723 - "CompanyExportGroup"
+Cohesion: 0.29
+Nodes (4): CompanyExportGroup, All, Exclude, Only
 
 ### Community 724 - "2. No CQRS, no MediatR"
 Cohesion: 0.29
@@ -3421,9 +3484,9 @@ Nodes (7): 1. Locate the active transcript, 2. Spawn three reviewers in parallel
 Cohesion: 0.12
 Nodes (16): A handler does one job, About event-driven building blocks in C#, An event has two meanings, and two shapes, Commands change, queries read, Delegates are required, reflection is not, Event sourcing stores facts, not state, Events as records, Events as sealed classes (+8 more)
 
-### Community 741 - ".GetAsync"
-Cohesion: 0.29
-Nodes (6): ProducesResponseType, AllowAnonymous, CancellationToken, HttpGet, IResult, Task
+### Community 741 - "SearchProfileReadStore"
+Cohesion: 0.38
+Nodes (5): CancellationToken, Guid, IReadOnlyList, Task, SearchProfileReadStore
 
 ### Community 742 - "LinkedIn parser fixtures"
 Cohesion: 0.50
@@ -3445,9 +3508,9 @@ Nodes (17): Constraints (don't break these), Contrast contract, Customizing the 
 Cohesion: 0.33
 Nodes (6): Accept the verification offers, or don't, Install the plugin, Keep the cost in check, Pick your models, Run your first task, Set up pstack
 
-### Community 751 - ".AddJobScrapeOptions"
-Cohesion: 0.15
-Nodes (10): IOptions, IServiceCollection, IValidateOptions, OptionsRegistration, AdminSeedOptions, Email, SetupSecret, RunOptions (+2 more)
+### Community 751 - "AdminSeedOptions"
+Cohesion: 0.50
+Nodes (3): AdminSeedOptions, Email, SetupSecret
 
 ### Community 754 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -3493,9 +3556,9 @@ Nodes (15): Activation bar primitive, Anti-patterns, Combined fragments (`alt` /
 Cohesion: 0.13
 Nodes (14): Anti-patterns, Anti-patterns, Cell element pattern, Colour, Declaring the share, Declaring the values, Examples, Honest-data rule (+6 more)
 
-### Community 765 - "IClassFixture"
-Cohesion: 0.33
-Nodes (5): IClassFixture, Fact, InvalidOperationException, Task, FeatureFlagBootTests
+### Community 765 - "OneProfileStore"
+Cohesion: 0.40
+Nodes (4): CancellationToken, Guid, IReadOnlyList, OneProfileStore
 
 ### Community 766 - "Export to PNG / SVG"
 Cohesion: 0.14
@@ -3521,9 +3584,17 @@ Nodes (12): css_escape(), css_id_token(), starts_name(), decoded_css_url_fragmen
 Cohesion: 0.33
 Nodes (5): WorkMode, Hybrid, Onsite, Remote, Unknown
 
+### Community 775 - "ExportColumns"
+Cohesion: 0.33
+Nodes (3): ExportPosting, IEnumerable, ExportColumns
+
 ### Community 776 - ".DefinitionRoundTripsEveryField"
 Cohesion: 0.33
 Nodes (5): CancellationToken, Fact, Task, UsageQuotaPersistenceTests, Ct
+
+### Community 777 - ".GetProfileAsync"
+Cohesion: 0.53
+Nodes (4): CancellationToken, Description, McpServerTool, Task
 
 ### Community 778 - "admin-pages.test.tsx"
 Cohesion: 0.24
@@ -3532,6 +3603,10 @@ Nodes (8): newIdempotencyKey(), RolesPage(), fail(), loadRoles(), submitCreate()
 ### Community 779 - "Strict backend architecture tests spec"
 Cohesion: 0.40
 Nodes (4): Dropped candidates with why, Rules to ship (each verified green today), Strict backend architecture tests spec, Success criteria
+
+### Community 780 - "Bundled-only browsers + uBOL max for Naukri — Spec"
+Cohesion: 0.40
+Nodes (4): Acceptance, Bundled-only browsers + uBOL max for Naukri — Spec, Decisions, Non-goals
 
 ### Community 781 - "$type"
 Cohesion: 0.60
@@ -3557,9 +3632,13 @@ Nodes (5): Fan out, Frame, Interrogate, Output, Verify
 Cohesion: 0.40
 Nodes (5): Benefits, Enabling Graph Build, Step 5: Static Graph Builds (`/graph`), Troubleshooting Graph Build, When to Use
 
-### Community 787 - ".Extensions"
+### Community 787 - ".FindAsync"
 Cohesion: 0.50
-Nodes (3): Dictionary, IResult, ErrorMapper
+Nodes (3): CancellationToken, DateOnly, Task
+
+### Community 788 - "ComplianceTier"
+Cohesion: 0.40
+Nodes (4): ComplianceTier, HighRisk, Restricted, Standard
 
 ### Community 790 - "Feature toggles"
 Cohesion: 0.50
@@ -3757,10 +3836,6 @@ Nodes (7): Anti-patterns, Examples, Honesty rules, Layout conventions, Machine-r
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
-### Community 843 - "TablesResponse"
-Cohesion: 0.67
-Nodes (3): List, TablesResponse, TableInfo
-
 ### Community 845 - "DevOps"
 Cohesion: 0.29
 Nodes (7): bug, DevOps, git-branch, monitoring, pipeline, terminal, test
@@ -3914,32 +3989,32 @@ Cohesion: 0.50
 Nodes (3): Boundaries, Output, Scan
 
 ### Community 910 - "JobScrape.Api.Http"
-Cohesion: 0.11
-Nodes (17): JobScrape.Api.Http.Auth, JobScrape.Api.Http, JobScrape.Api.Controllers, microsoft_aspnetcore_authentication_jwtbearer, microsoft_aspnetcore_authorization, microsoft_aspnetcore_diagnostics, microsoft_aspnetcore_http_features, microsoft_aspnetcore_mvc (+9 more)
+Cohesion: 0.05
+Nodes (47): ApiBehaviorOptions, JobScrape.Api.Http.Auth, JobScrape.Api.Http, JobScrape.Api.Controllers, microsoft_aspnetcore_authentication_jwtbearer, microsoft_aspnetcore_authorization, microsoft_aspnetcore_diagnostics, microsoft_aspnetcore_http_features (+39 more)
 
 ### Community 916 - "TailwindConfigGenerator"
 Cohesion: 0.10
 Nodes (12): main(), Add custom font families. Args: fonts: Dict of font_type: [font_names] e.g.,…, Add custom spacing values. Args: spacing: Dict of name: value e.g., {'18':…, Add custom breakpoints. Args: breakpoints: Dict of name: width e.g., {'3xl':…, Add plugin requirements. Args: plugins: List of plugin names e.g.,…, Get plugin recommendations based on configuration. Returns: List of recommended…, Generate Tailwind CSS configuration files., Validate configuration. Returns: Tuple of (valid, message) (+4 more)
 
 ## Knowledge Gaps
-- **5468 isolated node(s):** `$schema`, `plugins`, `todo`, `lsp`, `instructions` (+5463 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 7280 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **5475 isolated node(s):** `$schema`, `plugins`, `todo`, `lsp`, `instructions` (+5470 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 7291 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **102 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `TestDatabase` connect `TestDatabase` to `ValidationResult`, `.CreateAsync`, `JobScrape.Application.Abstractions`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+- **Why does `TestDatabase` connect `TestDatabase` to `ValidationResult`, `.CreateAsync`, `microsoft_entityframeworkcore`?**
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Why does `Path` connect `ValidationResult` to `mermaid_extract.py`, `excalidraw_extract.py`, `design_system.py`, `drawio_extract.py`, `TestDatabase`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Why does `persist_design_system()` connect `design_system.py` to `ValidationResult`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **What connects `$schema`, `plugins`, `todo` to the rest of the system?**
-  _5468 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _5475 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useRenderLog` be split into smaller, more focused modules?**
   _Cohesion score 0.13225371120107962 - nodes in this community are weakly interconnected._
 - **Should `JobScrape.Infrastructure.Configuration` be split into smaller, more focused modules?**
-  _Cohesion score 0.06486486486486487 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07598371777476255 - nodes in this community are weakly interconnected._
 - **Should `Runtime Hardening: Logging, Errors, Resilience, and Resources` be split into smaller, more focused modules?**
   _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
