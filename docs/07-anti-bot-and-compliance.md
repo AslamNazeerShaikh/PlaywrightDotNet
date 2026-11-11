@@ -135,20 +135,31 @@ Had the script run, it would have made the browser **more** detectable:
 | One pass at a time | **Yes** | Global semaphore + per-profile lock. |
 | No proxy rotation | **Yes** | Optional static egress only; no pools. |
 | No CAPTCHA solving | **Yes** | Hard rule, no code path. |
-| uBlock Origin Lite | **Optional** | Cuts tracker weight but adds an installed-extension signal. Default off; headed Chromium only, opt-in and measure (§5.1). |
+| uBlock Origin Lite | **Required for Naukri** | Naukri runs headed bundled Chromium with `ubol-max` (§5.1). Committed default stays `AdblockMode: null`; other sources stay blocker-free. Headless and non-Chromium launches ignore it. |
 | Chrome-only stack | **No** | Chromium default; Firefox/WebKit compatibility. |
 | UA pinning / language stubs | **No** | Never. |
+| Inert stealth init script | **No** | Removed permanently. |
 
-### 5.1 uBlock Origin Lite (opt-in, headed only)
+### 5.1 uBlock Origin Lite (Naukri: max on headed bundled Chromium)
+
+Naukri runs headed bundled Chromium with uBlock Origin Lite at maximum
+filtering: `ubol-max`, 16 of 56 rulesets (`ublock-filters`, `easylist`,
+`easyprivacy`, `pgl`, `ublock-badware`, `urlhaus-full`,
+`adguard-spyware-url`, `ublock-experimental`, `ind-0`, plus the 7
+`annoyances-*` rulesets), pinned tag `2026.914.1325`.
+
+The committed `appsettings.json` stays at `AdblockMode: null`, so a
+fresh clone starts without the blocker. Naukri opts in locally or via
+environment keys; no other source is required to run it.
 
 The blocker trims ad and tracker weight from scrapes. It also adds an
-installed-extension signal, so it stays off unless measurement says it
-earns its place.
+installed-extension signal, so it never loads in headless or
+non-Chromium launches.
 
-Measure before keeping it. Run the same pages with and without the
-blocker and compare `time_to_first_posting`, `parse_failure_rate`, and
-`challenge_rate`. Keep it only when scrapes get faster with no worse
-challenge rate.
+Measure before widening it beyond Naukri. Run the same pages with and
+without the blocker and compare `time_to_first_posting`,
+`parse_failure_rate`, and `challenge_rate`. Keep it only when scrapes
+get faster with no worse challenge rate.
 
 Install steps:
 
@@ -159,14 +170,14 @@ Install steps:
    `"Browser": {"AdblockMode": "ubol-max",
    "ExtensionDir": "../../../vendor/ubol-chrome-max"}`. The API loads
    that file when present, so a fresh clone starts without the blocker
-   and a developer can opt in locally. `ExtensionDir` resolves against the API
+   and a developer can opt in locally. Production opts in with the same keys
+   via environment variables. `ExtensionDir` resolves against the API
    content root (`src/backend/JobScrape.Api`); `../../../` is the repo
    root. An absolute path also works.
-3. Launch headed Chromium with the bundled channel. Headless, Firefox,
+3. Launch headed bundled Chromium. Headless, Firefox,
    and WebKit launches ignore the setting. A set mode with a missing
    directory fails startup and names the script; a directory lost
    mid-run logs once and launches without the blocker.
-| Inert stealth init script | **No** | Removed permanently. |
 
 ---
 
@@ -177,14 +188,14 @@ Install steps:
 | Setting | Default | Rule |
 |---|---|---|
 | Engine | Chromium | Firefox/WebKit for compatibility/diagnostics. |
-| Channel | Bundled Chromium | `chrome`/`msedge` only when installed and verified. |
+| Channel | Bundled Chromium | Playwright bundled build only; system Chrome/Edge are not supported. |
 | Headless | `false` | Headless is for fixture E2E/diagnostics; do not use it for live collection. |
 | User agent | Browser's genuine UA | **No override.** |
 | Locale | `en-IN` | Match the network/region; one value across context. |
 | Timezone | `Asia/Kolkata` | Match locale/egress; one value across context. |
 | Viewport | `1366x768` or `1440x900` | Realistic desktop; consistent within a profile. |
 | SlowMo | `40ms` | Helps human pacing/debugging; not a stealth feature. |
-| Extensions | None | Optional tracker blocker only after measurement. |
+| Extensions | Naukri: `ubol-max`; others: none | Naukri runs headed bundled Chromium with `ubol-max` (§5.1). Committed default stays `AdblockMode: null`; no other source is required to run it. |
 | Proxy | `null` | Optional user-supplied static egress; no rotation. |
 | Downloads | Disabled/controlled | Do not auto-open files. |
 | Permissions | Deny by default | Grant only what a page needs; never blanket-allow. |
@@ -203,7 +214,6 @@ Install steps:
 artifacts/profiles/
   naukri/
     chromium-bundled/
-    chrome-stable/          (optional)
   indeed/
     chromium-bundled/
   linkedin/
