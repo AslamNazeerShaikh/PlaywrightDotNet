@@ -119,7 +119,7 @@ cd src/frontend && bun run dev
 Verify: `curl https://localhost:5208/api/v1/health` (API),
 `curl https://127.0.0.1:3000/api/v1/health` (BFF proxy, must return
 `healthy`), and open `https://127.0.0.1:3000/#/overview` in the browser —
-Chrome/Safari accept it via the keychain trust from step 1. Firefox uses
+Chromium-based browsers and Safari accept it via the keychain trust from step 1. Firefox uses
 its own cert store: import `localhost-cert.pem` under
 Settings → Privacy & Security → Certificates, or add a one-time exception.
 
