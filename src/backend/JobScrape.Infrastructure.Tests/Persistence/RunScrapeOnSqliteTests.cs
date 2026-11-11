@@ -126,13 +126,16 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             )
             {
                 var ids = request.PageNumber == 1 ? new[] { "101", "102" } : ["103"];
-                var jobs = ids.Select(id => new JobSnapshot
-                {
-                    Source = SourceKey.Naukri,
-                    ExternalJobId = id,
-                    Url = $"https://www.naukri.com/job-listings-x-{id}",
-                    Title = $"Engineer {id}",
-                })
+                var jobs = ids.Select(id =>
+                    {
+                        return new JobSnapshot
+                        {
+                            Source = SourceKey.Naukri,
+                            ExternalJobId = id,
+                            Url = $"https://www.naukri.com/job-listings-x-{id}",
+                            Title = $"Engineer {id}",
+                        };
+                    })
                     .ToArray();
                 return Task.FromResult(
                     new SearchPageResult(
