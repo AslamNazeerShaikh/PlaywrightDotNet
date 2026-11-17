@@ -429,7 +429,7 @@ namespace JobScrape.Application.Tests.Scraping
         // ---- gates ----
 
         [Fact]
-        public async Task RejectsEmptyIdsAndMissingConsentBeforeAnyLookup()
+        public async Task RejectsMissingConsentBeforeAnyLookup()
         {
             var harness = new ScrapeHarness();
 
@@ -441,7 +441,9 @@ namespace JobScrape.Application.Tests.Scraping
             var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
                 result.Error.Metadata!["errors"]
             );
-            Assert.Equal(["browserProfileId", "consent", "profileId"], errors.Keys.Order());
+            // Request ids are the API edge's concern; this gate only owns the
+            // consent prerequisite every direct caller must supply.
+            Assert.Equal(["consent"], errors.Keys.Order());
             Assert.Empty(harness.Store.Circuits);
         }
 
