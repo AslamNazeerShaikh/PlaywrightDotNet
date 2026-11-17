@@ -668,6 +668,29 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
+        /// Creates a failure for local disk space below the safety floor.
+        /// Writes stop rather than filling the volume that holds the database
+        /// and run artifacts.
+        /// </summary>
+        /// <param name="freeBytes">Free bytes on the volume at the check.</param>
+        /// <param name="minimumBytes">The configured floor.</param>
+        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Storage"/>.</returns>
+        public static ErrorInfo StorageLowDisk(long freeBytes, long minimumBytes)
+        {
+            return new ErrorInfo(
+                "STORAGE_LOW_DISK",
+                "Local disk space is below the safety threshold.",
+                $"The volume holding run artifacts has {freeBytes} free bytes; keep at least {minimumBytes} free before starting a run.",
+                ErrorKind.Storage,
+                new Dictionary<string, object?>
+                {
+                    ["freeBytes"] = freeBytes,
+                    ["minimumBytes"] = minimumBytes,
+                }
+            );
+        }
+
+        /// <summary>
         /// Creates a not-found failure for a missing user.
         /// </summary>
         /// <param name="email">The requested email, echoed in metadata.</param>
