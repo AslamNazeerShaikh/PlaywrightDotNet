@@ -142,7 +142,7 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<ListUsersHandler>();
             services.AddTransient<AssignRoleHandler>();
             services.AddTransient<RevokeRoleHandler>();
-            services.AddTransient<CreateRoleHandler>();
+            services.AddTransient<EnsureRoleHandler>();
             services.AddTransient<GetRoleHandler>();
             services.AddTransient<ListRolesHandler>();
             services.AddTransient<GrantPermissionHandler>();

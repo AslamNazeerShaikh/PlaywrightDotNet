@@ -719,23 +719,6 @@ namespace JobScrape.Application.Results
         }
 
         /// <summary>
-        /// Creates a conflict failure for a role name that already exists.
-        /// </summary>
-        /// <param name="name">The requested role name.</param>
-        /// <returns>An <see cref="ErrorInfo"/> with kind <see cref="ErrorKind.Conflict"/>.</returns>
-        public static ErrorInfo RoleNameTaken(string name)
-        {
-            ArgumentNullException.ThrowIfNull(name);
-            return new ErrorInfo(
-                "ROLE_NAME_TAKEN",
-                "Role already exists.",
-                $"A role named '{name}' already exists.",
-                ErrorKind.Conflict,
-                new Dictionary<string, object?> { ["name"] = name }
-            );
-        }
-
-        /// <summary>
         /// Creates a conflict failure for assigning a role the user already has.
         /// </summary>
         /// <param name="name">The role name.</param>
