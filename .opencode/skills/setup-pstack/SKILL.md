@@ -43,6 +43,7 @@ Write `.opencode/pstack-models.md` with a `# budget` line with the chosen label 
 # `inherit-parent` or `auto` as a value: the role runs on the parent model (omit the subagent `model`). Alias entries in a panel list still count toward its fan-out.
 # Real values are `provider/model#variant` (see `opencode models`); the variant carries the effort.
 # budget: large (xhigh)
+chores: inherit-parent
 feature, refactoring: inherit-parent
 bug-fix: inherit-parent
 perf-issue: inherit-parent

@@ -4,6 +4,8 @@
 - Never install, update, or remove software, tools, libraries, or packages outside the repo folder without explicit permission. This covers brew, wget, curl, language package managers, global tool installs, browser downloads, and system configs.
 - Standard restores required by an explicitly ordered step (`dotnet restore`, `bun install`) may populate their default caches. Anything beyond that needs explicit permission first.
 - When in doubt, stop and ask. A blocked step beats an unauthorized change.
+- Default to readonly commands (`read`, `grep`, `glob`, `git status`, `git log`, `git diff`). Destructive means data loss or force overwrite (`rm -rf`, `git reset --hard`, `git push --force`). System-modifying means persistent change outside the edit tools (installs, uninstalls, `chmod`, writes outside the repo).
+- Ask first for anything destructive or system-modifying, and state the exact command and why.
 
 ## Architecture
 
@@ -43,6 +45,7 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 - Pre-dispatch check (binding — answer before every execution; record in the brief, or in reply for direct work): role and model from `.opencode/pstack-models.md`, or explicit `inherit-parent`. Never dispatch on an unnamed default.
 - SDD task with brief, or trivial edit going direct — and if direct, one-line why. No third path: another planning flow (`superpowers` brainstorming/plans, ad-hoc planning) does not substitute for `writing-plans` plus a task brief.
 - For dispatched work: name what runs in parallel with this step and what waits on it.
+- Launch independent workers in one turn. When you wait on all of them, leave `background` off so they return together; use `background: true` only when you have other work to do meanwhile. This overrides skill background defaults.
 - Any of the three missing — role/model, execution route, parallel plan — stop and resolve it before executing.
 - `deslop` ships from `cursor-team-kit` (`.opencode/skills/deslop/`, `/deslop` command).
 
