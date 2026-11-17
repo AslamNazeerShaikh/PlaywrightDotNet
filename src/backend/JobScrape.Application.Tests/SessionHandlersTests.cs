@@ -22,9 +22,7 @@ namespace JobScrape.Application.Tests
                 new CreateSessionHandler(
                     store,
                     store,
-                    new FakeTimeProvider(Now),
-                    CallerContext.LocalOperator
-                ),
+                    new FakeTimeProvider(Now)),
                 store
             );
         }
@@ -232,16 +230,13 @@ namespace JobScrape.Application.Tests
             var clock = new FakeTimeProvider();
 
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(null!, store, clock, CallerContext.LocalOperator)
+                new CreateSessionHandler(null!, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, null!, clock, CallerContext.LocalOperator)
+                new CreateSessionHandler(store, null!, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, store, null!, CallerContext.LocalOperator)
-            );
-            Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, store, clock, null!)
+                new CreateSessionHandler(store, store, null!)
             );
             Assert.Throws<ArgumentNullException>(() => new ListSessionsHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new GetSessionHandler(null!));
