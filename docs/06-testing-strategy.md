@@ -2,7 +2,7 @@
 
 > **Goal:** a fast, trustworthy feedback loop for a browser-heavy system, without making CI depend on live websites.
 >
-> **Stack:** xUnit.net v3 `4.0.2` · `Microsoft.Playwright.Xunit.v3` `1.64.1` · NSubstitute `6.2.0` · SQLite/EF Core 10 · NetArchTest.
+> **Stack:** xUnit.net v3 `4.0.3` · `Microsoft.Playwright.Xunit.v3` `1.64.1` · NSubstitute `6.2.0` · SQLite/EF Core 11 · NetArchTest.
 
 ---
 
@@ -113,7 +113,7 @@ An xUnit v3 test project is an executable:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -127,7 +127,7 @@ An xUnit v3 test project is an executable:
 </Project>
 ```
 
-Versions come from `Directory.Packages.props` (`xunit.v3` 4.0.2, adapter 4.0.1, test SDK 18.11.0).
+Versions come from `Directory.Packages.props` (`xunit.v3` 4.0.3, adapter 4.0.1, test SDK 18.12.0).
 
 ### 4.2 First test
 
@@ -298,7 +298,7 @@ dotnet run --project tests/JobLens.Domain.Tests -- -filter "class=JobLens.Domain
 
 ```bash
 dotnet build
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install chromium firefox webkit
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install chromium firefox webkit
 ```
 
 Or use `joblens doctor --install-browsers` (the CLI wrapper calls `Microsoft.Playwright.Program.Main(["install", ...])`).

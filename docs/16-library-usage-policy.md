@@ -126,7 +126,7 @@ Check:
 
 - official documentation and recommended usage;
 - license and maintenance status;
-- .NET 10 compatibility;
+- .NET 11 compatibility;
 - security posture and transitive dependencies;
 - whether it fits an existing port rather than leaking through layers.
 

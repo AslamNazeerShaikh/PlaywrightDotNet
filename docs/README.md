@@ -6,13 +6,13 @@
 >
 > **Last updated:** 2026-11-11
 >
-> **Target stack:** .NET 10 (LTS) · xUnit.net v3 · Playwright for .NET · SQLite/EF Core 10 · React 19/Bun 1.4 cockpit (v2)
+> **Target stack:** .NET 11 · xUnit.net v3 · Playwright for .NET · SQLite/EF Core 11 · React 19/Bun 1.4 cockpit (v2)
 
 ---
 
 ## What this is
 
-A brand-new, cross-platform .NET 10 solution for **polite, low-volume job-board automation and public job-posting collection**. The first three sources are:
+A brand-new, cross-platform .NET 11 solution for **polite, low-volume job-board automation and public job-posting collection**. The first three sources are:
 
 - **Naukri** — `https://www.naukri.com`
 - **LinkedIn** — `https://www.linkedin.com`
@@ -54,19 +54,19 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 
 | Area | Decision |
 |---|---|
-| Runtime | **[.NET 10 LTS](10-adr/0001-dotnet-10-lts.md)** (installed: SDK `10.0.403`, runtime `10.0.14`; supported to 2028-11-14) |
-| Test framework | **xUnit.net v3** (`xunit.v3` `4.0.2`, VS adapter `4.0.1`) |
+| Runtime | **[.NET 11](10-adr/0020-dotnet-11-upgrade.md)** (installed: SDK `11.0.100`, runtime `11.0.0`) |
+| Test framework | **xUnit.net v3** (`xunit.v3` `4.0.3`, VS adapter `4.0.1`) |
 | Browser automation | **Playwright for .NET** `1.64.1` (Chromium 156, Firefox 157, WebKit 27.2; bundled builds only) |
 | Architecture | Modular monolith, Clean Architecture, DDD for Sourcing + Access; CLI first |
-| Persistence | SQLite via EF Core `10.0.14`; PostgreSQL later if scale demands it |
-| CLI | [`System.CommandLine`](04-solution-and-tooling.md#6-target-cli-surface) `2.0.14` + `Microsoft.Extensions.Hosting` `10.0.14` + Serilog |
-| HTML parsing | [AngleSharp](02-architecture.md#9-source-adapter-design) `1.8.6` for offline fixtures and server-rendered pages |
+| Persistence | SQLite via EF Core `11.0.0`; PostgreSQL later if scale demands it |
+| CLI | [`System.CommandLine`](04-solution-and-tooling.md#6-target-cli-surface) `2.0.14` + `Microsoft.Extensions.Hosting` `11.0.0` + Serilog |
+| HTML parsing | [AngleSharp](02-architecture.md#9-source-adapter-design) `1.10.4` for offline fixtures and server-rendered pages |
 | Export | CSV + Excel ([ClosedXML](04-solution-and-tooling.md#3-package-matrix) `0.105.1`) |
 | Control plane (v2) | React `19.3.1` + TypeScript `7.0.2` + Tailwind `4.3.3` + shadcn/ui `4.23.0`; Bun `1.4.4` runtime/package manager/BFF; no Node.js |
 | Application patterns | Explicit use-case handlers; Result, Options, Specification, Problem Details; **no CQRS/MediatR** ([details](14-application-patterns.md)) |
 | Logging & resilience | Serilog compact JSON logs, daily rolling + 90-day retention, standard enrichers; global exception handling; `IHttpClientFactory` + Polly v8 retry/circuit/timeout/fallback ([details](15-runtime-hardening.md)) |
 | Library policy | Use documented/recommended configurations; AOT/trimming is not a design constraint. Serilog, DataAnnotations, ClosedXML, Scalar, EF Core, and Playwright are used as designed ([details](16-library-usage-policy.md)) |
-| API testing | [Scalar.AspNetCore](https://scalar.com/products/api-references/integrations/aspnetcore/integration) `2.18.5` at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` `10.0.14` |
+| API testing | [Scalar.AspNetCore](https://scalar.com/products/api-references/integrations/aspnetcore/integration) `3.0.0` at `/scalar` (Development only) + `Microsoft.AspNetCore.OpenApi` `11.0.0` |
 | Browser policy | Headed first contact, persistent profile per source, one run at a time |
 | Anti-bot policy | Low-signal, consistent, polite, stop-on-wall. **No CAPTCHA solving, no fingerprint spoofing, no auth-wall bypass, no proxy rotation to evade bans.** |
 | Default sources | Naukri enabled; Indeed opt-in; LinkedIn high-risk opt-in and disabled by default |
@@ -134,7 +134,7 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 ## Document conventions
 
 - **MUST / SHOULD / MAY** are used in the RFC sense.
-- Versions were verified on **2026-10-29** against NuGet and the official docs.
+- Versions were verified on **2026-11-17** against NuGet, the SDK install on this machine, and the test runs in [Solution & Tooling](04-solution-and-tooling.md#11-quality-gates).
 - Mermaid diagrams render on GitHub, GitLab, Azure DevOps, and VS Code with a Mermaid extension.
 - “Old project” means `/Users/aslamshaikh/Projects/PythonWebScraping`.
 - “v1” means the first shippable release described in the [Gameplan](05-gameplan.md).
@@ -153,4 +153,5 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Replaced the AOT-driven policy with the library-usage policy, restored standard Serilog configuration/enrichers, DataAnnotations, ClosedXML, and Scalar defaults, and added ADR-0014. |
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |
 | 2026-11-09 | Added the lean-workflow guide (one-slash poteto-mode plus ponytail plus superpowers gates) and the `working-lean-with-poteto` skill. |
+| 2026-11-17 | Moved the backend to .NET 11 (SDK `11.0.100`, `net11.0`, Microsoft packages `11.0.0`) with the latest compatible third-party versions, and added ADR-0020. |
 | 2026-11-11 | Bundled-only browsers: docs and runbook reference only Playwright bundled Chromium (with darwin-arm64/win64 install paths) and the screenshot tool launches it over CDP; system Chrome/Edge channel references removed. |

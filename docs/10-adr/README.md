@@ -4,7 +4,7 @@
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-dotnet-10-lts.md) | Target .NET 10 LTS | Accepted |
+| [0001](0001-dotnet-10-lts.md) | Target .NET 10 LTS | Superseded by 0020 |
 | [0002](0002-xunit-v3.md) | Use xUnit.net v3 | Accepted |
 | [0003](0003-playwright-dotnet.md) | Use Playwright for .NET | Accepted |
 | [0004](0004-modular-monolith-clean-architecture.md) | Modular monolith + Clean Architecture + focused DDD | Accepted |
@@ -23,6 +23,7 @@
 | [0017](0017-xml-documentation-rule.md) | XML documentation as a global build rule | Accepted |
 | [0018](0018-dapper-sqlite-explorer.md) | Dapper for the raw SQLite explorer | Accepted |
 | [0019](0019-mcp-transports-and-tools.md) | MCP server transports and tool surface | Accepted |
+| [0020](0020-dotnet-11-upgrade.md) | Target .NET 11 | Accepted |
 
 ## Conventions
 

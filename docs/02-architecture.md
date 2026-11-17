@@ -283,10 +283,10 @@ flowchart LR
 PlaywrightDotNet/
 ├── src/
 │   ├── backend/
-│   │   ├── JobScrape.slnx              (9 projects)
+│   │   ├── JobScrape.slnx              (11 projects)
 │   │   ├── global.json                 (+ MTP test runner)
-│   │   ├── Directory.Build.props       (net10.0, warnings-as-errors, XML docs)
-│   │   ├── Directory.Packages.props    (31 pinned versions)
+│   │   ├── Directory.Build.props       (net11.0, warnings-as-errors, XML docs)
+│   │   ├── Directory.Packages.props    (42 pinned versions)
 │   │   ├── NuGet.config                (nuget.org only)
 │   │   ├── JobScrape.Domain/
 │   │   │   ├── Common/                 (IDs, SourceKey, Text, ComplianceTier)
