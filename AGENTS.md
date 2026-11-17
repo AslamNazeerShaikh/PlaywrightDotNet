@@ -1,3 +1,10 @@
+## Workspace boundary (strict)
+
+- Work only inside the current repository folder. Never create, modify, or delete files outside it.
+- Never install, update, or remove software, tools, libraries, or packages outside the repo folder without explicit permission. This covers brew, wget, curl, language package managers, global tool installs, browser downloads, and system configs.
+- Standard restores required by an explicitly ordered step (`dotnet restore`, `bun install`) may populate their default caches. Anything beyond that needs explicit permission first.
+- When in doubt, stop and ask. A blocked step beats an unauthorized change.
+
 ## Architecture
 
 - No CQRS command/query buses, no MediatR/mediator, no AutoMapper, and no generic repositories.
