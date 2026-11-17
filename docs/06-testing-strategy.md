@@ -259,24 +259,36 @@ Assert.Skip("Live browser not configured."); // dynamic skip
 ### 4.8 Running tests
 
 ```bash
-# All tests in a project (xUnit v3 executable)
-dotnet run --project tests/JobLens.Domain.Tests
+# One backend test project (native MTP runner: global.json selects
+# Microsoft.Testing.Platform, so the command is `dotnet test --project`)
+dotnet test --project src/backend/JobScrape.Domain.Tests/JobScrape.Domain.Tests.csproj
 
-# Through VSTest / VS Test Explorer
-dotnet test tests/JobLens.Domain.Tests
+# Backend unit gate: all six test projects, browser-gated tests excluded
+# (Category=Browser needs Playwright's Chromium; see the runbook install step)
+for p in Domain Application Infrastructure Api Mcp Architecture; do
+  dotnet test --project src/backend/JobScrape.$p.Tests/JobScrape.$p.Tests.csproj \
+    --filter-not-trait "Category=Browser"
+done
 
-# Filter by trait/category
-dotnet test --filter "Category=Unit"
-dotnet test --filter "Category!=Live&Category!=E2E"
+# Filter by trait (MTP xUnit v3 syntax)
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-trait "Category=Browser"
 
-# Filter by fully qualified name
-dotnet test --filter "FullyQualifiedName~Naukri"
+# Filter by class or method
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-class "*AdminSeedHostedServiceTests*"
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-method "*ConcurrentSeedLeavesOneAdminAndOneRaceWarning*"
 
-# xUnit v3 native query filter
-dotnet run --project tests/JobLens.Domain.Tests -- -filter "class=JobLens.Domain.Tests.RunLimitsTests"
+# Coverage (built-in collector, no extra packages)
+dotnet test --project src/backend/JobScrape.Domain.Tests/JobScrape.Domain.Tests.csproj \
+  --coverage --coverage-output-format cobertura
 ```
 
-> `dotnet test` uses the VSTest adapter; `dotnet run` uses xUnit's in-process runner. Both are supported. Pick one mode for CI and document it.
+> `dotnet test` runs in native MTP command mode here (never positional project
+> paths, never a `--` bridge separator). Do not combine `--coverage` with the
+> Architecture project: the coverage engine injects statics that trip its
+> `DomainHasNoStaticMutableState` guardrail.
 
 ### 4.9 xUnit v3 gotchas
 
@@ -833,31 +845,33 @@ flowchart LR
 
 ```bash
 # Build
-dotnet build -warnaserror
+dotnet build src/backend/JobScrape.slnx -warnaserror
 
-# All non-live tests
-dotnet test --filter "Category!=Live&Category!=E2E"
+# Backend unit gate (all six test projects, browser-gated tests excluded)
+for p in Domain Application Infrastructure Api Mcp Architecture; do
+  dotnet test --project src/backend/JobScrape.$p.Tests/JobScrape.$p.Tests.csproj \
+    --filter-not-trait "Category=Browser"
+done
 
-# Unit only
-dotnet test --filter "Category=Unit"
+# One project / one class / one method (MTP syntax)
+dotnet test --project src/backend/JobScrape.Domain.Tests/JobScrape.Domain.Tests.csproj
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-class "*AdminSeedHostedServiceTests*"
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-method "*ConcurrentSeedLeavesOneAdminAndOneRaceWarning*"
 
-# One project / one class
-dotnet test tests/JobLens.Domain.Tests
-dotnet test tests/JobLens.Cli.Tests
-dotnet test --filter "FullyQualifiedName~RunLimitsTests"
+# Browser-gated tests only (needs Playwright's Chromium; see the runbook)
+dotnet test --project src/backend/JobScrape.Infrastructure.Tests/JobScrape.Infrastructure.Tests.csproj \
+  --filter-trait "Category=Browser"
 
-# xUnit v3 native runner
-dotnet run --project tests/JobLens.Domain.Tests
+# Frontend unit gate (never the e2e suite here)
+bun test
+bun check
+bun fmt --check src package.json bunfig.toml
 
-# E2E (headless Chromium)
-dotnet test tests/JobLens.E2E.Tests
-
-# E2E Firefox / WebKit
-BROWSER=firefox dotnet test tests/JobLens.E2E.Tests
-BROWSER=webkit dotnet test tests/JobLens.E2E.Tests
-
-# Coverage
-dotnet test --collect:"XPlat Code Coverage" --results-directory artifacts/coverage
+# Coverage (built-in collector; never combined with the Architecture project)
+dotnet test --project src/backend/JobScrape.Domain.Tests/JobScrape.Domain.Tests.csproj \
+  --coverage --coverage-output-format cobertura --results-directory artifacts/coverage
 
 # Vulnerable packages
 dotnet list package --vulnerable --include-transitive
