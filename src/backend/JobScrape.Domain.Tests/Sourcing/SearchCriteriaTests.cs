@@ -102,6 +102,20 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void RejectsCompanyNameOverLengthLimit()
+        {
+            var tooLong = new string('c', CompanyName.MaxLength + 1);
+
+            var failure = Assert.Throws<DomainException>(() => Create(companies: [tooLong]));
+
+            Assert.Contains(
+                $"at most {CompanyName.MaxLength} characters",
+                failure.Message,
+                StringComparison.Ordinal
+            );
+        }
+
+        [Fact]
         public void AcceptsTenLocations()
         {
             var locations = Enumerable.Range(1, 10).Select(i => $"City{i}").ToArray();
