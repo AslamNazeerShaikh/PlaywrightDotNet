@@ -69,6 +69,41 @@ namespace JobScrape.Infrastructure.Tests.Browser
         }
 
         [Fact]
+        public async Task CaptureStaysBestEffortWhenTheDirectoryCannotBeCreated()
+        {
+            var files = new RecordingFileSystem { FailDirectoryCreation = true };
+            var store = Store(files);
+            var context = Context();
+
+            var relative = await store.CaptureAsync(
+                context,
+                new ChallengeAssessment(ChallengeKind.Captcha, 0.8, " status=403 "),
+                Ct
+            );
+
+            Assert.Equal(
+                $"runs/{context.RunId.Value}/{Now.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture)}-Captcha",
+                relative
+            );
+        }
+
+        [Fact]
+        public async Task CaptureStaysBestEffortWhenTheAssessmentCannotBeWritten()
+        {
+            var files = new RecordingFileSystem { FailWrites = true };
+            var store = Store(files);
+            var context = Context();
+
+            var relative = await store.CaptureAsync(
+                context,
+                new ChallengeAssessment(ChallengeKind.Captcha, 0.8, " status=403 "),
+                Ct
+            );
+
+            Assert.NotEmpty(relative);
+        }
+
+        [Fact]
         public void ConstructorRejectsNullCollaborators()
         {
             var files = new RecordingFileSystem();
@@ -148,6 +183,10 @@ namespace JobScrape.Infrastructure.Tests.Browser
         {
             public char DirectorySeparatorChar => '/';
 
+            public bool FailDirectoryCreation { get; init; }
+
+            public bool FailWrites { get; init; }
+
             public List<string> CreatedDirectories { get; } = [];
 
             public Dictionary<string, string> Writes { get; } = new(StringComparer.Ordinal);
@@ -159,6 +198,11 @@ namespace JobScrape.Infrastructure.Tests.Browser
 
             public void CreateDirectory(string path)
             {
+                if (FailDirectoryCreation)
+                {
+                    throw new IOException("disk full");
+                }
+
                 CreatedDirectories.Add(path);
             }
 
@@ -179,6 +223,11 @@ namespace JobScrape.Infrastructure.Tests.Browser
                 CancellationToken cancellationToken
             )
             {
+                if (FailWrites)
+                {
+                    throw new UnauthorizedAccessException("read-only");
+                }
+
                 Writes.Add(path, contents);
                 return Task.CompletedTask;
             }
