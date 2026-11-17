@@ -231,6 +231,17 @@ namespace JobScrape.Api.Tests
                 badFormatBody.GetProperty("detail").GetString()
             );
 
+            using var numericFormat = await client.GetAsync(
+                $"api/v1/runs/{run.Id}/postings/export?format=01",
+                Ct
+            );
+            Assert.Equal(HttpStatusCode.BadRequest, numericFormat.StatusCode);
+            var numericFormatBody = await numericFormat.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal(
+                "EXPORT_FORMAT_UNSUPPORTED",
+                numericFormatBody.GetProperty("code").GetString()
+            );
+
             using var missing = await client.GetAsync(
                 $"api/v1/runs/{Guid.NewGuid()}/postings/export?format=csv",
                 Ct

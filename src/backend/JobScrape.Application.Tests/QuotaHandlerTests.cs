@@ -119,6 +119,18 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task UpdateRejectsAnUnknownNumericScope()
+        {
+            var handler = new UpdateUsageQuotaHandler(new FakeQuotas(), new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync("0", 7, TimeSpan.FromMinutes(3), Ct);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("UNKNOWN_QUOTA_SCOPE", result.Error.Code);
+            Assert.Equal(ErrorKind.NotFound, result.Error.Kind);
+        }
+
+        [Fact]
         public async Task UpdateRejectsAnUnknownScope()
         {
             var handler = new UpdateUsageQuotaHandler(new FakeQuotas(), new FakeUnitOfWork());

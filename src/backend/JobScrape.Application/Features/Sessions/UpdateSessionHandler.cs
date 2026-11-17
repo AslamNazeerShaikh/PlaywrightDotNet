@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 using Microsoft.Extensions.Logging;
@@ -108,7 +109,7 @@ namespace JobScrape.Application.Features.Sessions
             var engine = profile.Engine;
             if (
                 request.Engine is not null
-                && !SessionValidation.TryParseEnum(request.Engine, out engine)
+                && !EnumNames.TryParse(request.Engine, out engine)
             )
             {
                 errors["engine"] = ["Choose Chromium, Firefox, or WebKit."];
@@ -117,7 +118,7 @@ namespace JobScrape.Application.Features.Sessions
             var channel = profile.Channel;
             if (
                 request.Channel is not null
-                && !SessionValidation.TryParseEnum(request.Channel, out channel)
+                && !EnumNames.TryParse(request.Channel, out channel)
             )
             {
                 errors["channel"] = ["Choose Bundled."];

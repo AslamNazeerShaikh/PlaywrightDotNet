@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain;
 using JobScrape.Domain.Access;
 
@@ -48,10 +49,7 @@ namespace JobScrape.Application.Features.Quotas
             CancellationToken cancellationToken
         )
         {
-            if (
-                !Enum.TryParse<QuotaScope>(scope, ignoreCase: true, out var parsed)
-                || !Enum.IsDefined(parsed)
-            )
+            if (!EnumNames.TryParse<QuotaScope>(scope, out var parsed))
             {
                 return Result.Fail<QuotaResponse>(Errors.UnknownQuotaScope(scope));
             }
