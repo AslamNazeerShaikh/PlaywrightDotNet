@@ -247,16 +247,38 @@ namespace JobScrape.Api.Http.Auth
         /// (email) parsed from the request body when present, otherwise the
         /// client IP.
         /// </summary>
-        private static string GetLoginPartitionKey(HttpContext context)
+        internal static string GetLoginPartitionKey(HttpContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             context.Request.EnableBuffering();
             var bodyControl = context.Features.Get<IHttpBodyControlFeature>();
+            var previousSyncIo = bodyControl?.AllowSynchronousIO;
             if (bodyControl is not null)
             {
                 bodyControl.AllowSynchronousIO = true;
             }
 
+            try
+            {
+                return PartitionKeyFromBody(context);
+            }
+            finally
+            {
+                if (bodyControl is not null && previousSyncIo is { } allow)
+                {
+                    bodyControl.AllowSynchronousIO = allow;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reads the submitted email from the buffered request body, falling
+        /// back to the client IP.
+        /// </summary>
+        /// <param name="context">The request context.</param>
+        /// <returns>The partition key.</returns>
+        private static string PartitionKeyFromBody(HttpContext context)
+        {
             string? email = null;
             if (context.Request.Body.CanSeek)
             {
