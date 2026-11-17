@@ -426,6 +426,218 @@ namespace JobScrape.Api.Tests
             }
         }
 
+        [Fact]
+        public async Task QuotaParallelRequestsNeverUnderCount()
+        {
+            const int limit = 41;
+            // Models the reported race: under contention every caller misses
+            // the counter entry and builds its own, so a cache-held counter
+            // loses increments. The fix keeps counters outside the cache.
+            using var cache = new AlwaysMissForCountersCache();
+            var clock = TimeProvider.System;
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddProblemDetails();
+            services.AddSingleton<IUsageQuotaRepository>(
+                new FixedQuotaRepository(
+                    JobScrape.Domain.Access.UsageQuota.Create(
+                        JobScrape.Domain.Access.QuotaScope.Api,
+                        limit,
+                        TimeSpan.FromMinutes(1)
+                    )
+                )
+            );
+            services.AddSingleton<ICallerContext>(new FixedCaller());
+            await using var provider = services.BuildServiceProvider();
+            var middleware = new UsageQuotaMiddleware(
+                _ =>
+                {
+                    return Task.CompletedTask;
+                },
+                cache,
+                clock
+            );
+
+            // One warm-up request loads the definitions and takes the first slot.
+            var warm = QuotaContext(provider);
+            await middleware.InvokeAsync(warm);
+            Assert.Equal(StatusCodes.Status200OK, warm.Response.StatusCode);
+
+            // Every other request races for the remaining slots. Losing an
+            // increment to a non-atomic counter creation would let extra
+            // requests through.
+            var parallel = Enumerable
+                .Range(0, 80)
+                .Select(_ => Task.Run(async () =>
+                {
+                    var context = QuotaContext(provider);
+                    await middleware.InvokeAsync(context);
+                    return context.Response.StatusCode;
+                }))
+                .ToArray();
+            var statuses = await Task.WhenAll(parallel);
+
+            Assert.Equal(limit - 1, statuses.Count(status => status == StatusCodes.Status200OK));
+            Assert.Equal(
+                statuses.Length - (limit - 1),
+                statuses.Count(status => status == StatusCodes.Status429TooManyRequests)
+            );
+        }
+
+        [Fact]
+        public async Task LookalikeAuthPrefixPathStillEngagesIdempotency()
+        {
+            var store = new CountingIdempotencyStore();
+            var invoked = false;
+            var middleware = new IdempotencyMiddleware(_ =>
+            {
+                invoked = true;
+                return Task.CompletedTask;
+            });
+
+            var context = AuthenticatedContext("/api/v1/authors", "POST", "lookalike-key");
+            await middleware.InvokeAsync(context, store, TimeProvider.System);
+
+            Assert.True(invoked);
+            Assert.Equal(1, store.Reservations);
+        }
+
+        [Fact]
+        public async Task ManyParallelSameKeyRequestsExecuteOnce()
+        {
+            var store = new InMemoryIdempotencyStore();
+            var executions = 0;
+            var middleware = new IdempotencyMiddleware(
+                async context =>
+                {
+                    Interlocked.Increment(ref executions);
+                    await Task.Yield();
+                    context.Response.StatusCode = StatusCodes.Status201Created;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.Body.WriteAsync(
+                        "{\"id\":1}"u8.ToArray(),
+                        context.RequestAborted
+                    );
+                },
+                Options.Create(
+                    new IdempotencyOptions { CompletionWaitTimeout = TimeSpan.FromSeconds(10) }
+                )
+            );
+
+            var requests = Enumerable
+                .Range(0, 32)
+                .Select(async _ =>
+                {
+                    var context = AuthenticatedContext("/api/v1/users", "POST", "parallel-key");
+                    await middleware.InvokeAsync(context, store, TimeProvider.System);
+                    return context.Response.StatusCode;
+                })
+                .ToArray();
+            var statuses = await Task.WhenAll(requests);
+
+            Assert.Equal(1, executions);
+            Assert.All(statuses, status => Assert.Equal(StatusCodes.Status201Created, status));
+        }
+
+        /// <summary>
+        /// Builds one authenticated mutating request for the idempotency middleware.
+        /// </summary>
+        private static DefaultHttpContext AuthenticatedContext(
+            string path,
+            string method,
+            string key
+        )
+        {
+            var context = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(
+                    new ClaimsIdentity([new Claim(IdentityClaimTypes.Subject, "actor")], "Bearer")
+                ),
+            };
+            context.Request.Method = method;
+            context.Request.Path = path;
+            context.Request.Headers.Append(IdempotencyMiddleware.HeaderName, key);
+            context.Request.Body = new MemoryStream("{}"u8.ToArray());
+            context.Response.Body = new MemoryStream();
+            return context;
+        }
+
+        /// <summary>
+        /// Builds one authenticated request context for the quota middleware.
+        /// </summary>
+        private static DefaultHttpContext QuotaContext(IServiceProvider provider)
+        {
+            var context = new DefaultHttpContext
+            {
+                RequestServices = provider,
+                User = new ClaimsPrincipal(
+                    new ClaimsIdentity([new Claim(IdentityClaimTypes.Subject, "actor")], "Bearer")
+                ),
+            };
+            context.Request.Method = "GET";
+            context.Request.Path = "/api/v1/users";
+            context.Response.Body = new MemoryStream();
+            return context;
+        }
+
+        private sealed class AlwaysMissForCountersCache : Microsoft.Extensions.Caching.Memory.IMemoryCache
+        {
+            private readonly Microsoft.Extensions.Caching.Memory.MemoryCache _inner = new(
+                new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()
+            );
+
+            public bool TryGetValue(object key, out object? value)
+            {
+                if (key is string text && text.StartsWith("usage-quota:", StringComparison.Ordinal))
+                {
+                    value = null;
+                    return false;
+                }
+
+                return _inner.TryGetValue(key, out value);
+            }
+
+            public Microsoft.Extensions.Caching.Memory.ICacheEntry CreateEntry(object key) =>
+                _inner.CreateEntry(key);
+
+            public void Remove(object key) => _inner.Remove(key);
+
+            public void Dispose() => _inner.Dispose();
+        }
+
+        private sealed class FixedCaller : ICallerContext
+        {
+            public string ActorId => "actor";
+
+            public IReadOnlyCollection<string> Roles { get; } = ["Viewer"];
+
+            public IReadOnlyCollection<string> Permissions { get; } = ["users.read"];
+
+            public bool MustChangePassword => false;
+        }
+
+        private sealed class FixedQuotaRepository(JobScrape.Domain.Access.UsageQuota quota)
+            : IUsageQuotaRepository
+        {
+            public Task<JobScrape.Domain.Access.UsageQuota?> GetAsync(
+                JobScrape.Domain.Access.QuotaScope scope,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<JobScrape.Domain.Access.UsageQuota?>(quota);
+
+            public Task<IReadOnlyList<JobScrape.Domain.Access.UsageQuota>> ListAsync(
+                CancellationToken cancellationToken
+            ) => Task.FromResult<IReadOnlyList<JobScrape.Domain.Access.UsageQuota>>([quota]);
+
+            public Task AddAsync(
+                JobScrape.Domain.Access.UsageQuota value,
+                CancellationToken cancellationToken
+            ) => Task.CompletedTask;
+
+            public Task<IReadOnlyList<JobScrape.Domain.Access.UsageQuota>> EnsureSeededAsync(
+                CancellationToken cancellationToken
+            ) => ListAsync(cancellationToken);
+        }
+
         private static async Task CompleteWithinAsync(Task task, string label)
         {
             var done = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(2), Ct));
@@ -470,6 +682,89 @@ namespace JobScrape.Api.Tests
                 string key,
                 CancellationToken cancellationToken
             ) => Task.CompletedTask;
+        }
+
+        private sealed class CountingIdempotencyStore : IIdempotencyStore
+        {
+            public int Reservations { get; private set; }
+
+            public Task<IdempotencyEntry?> GetAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<IdempotencyEntry?>(null);
+
+            public Task SaveAsync(IdempotencyEntry entry, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
+
+            public Task<bool> TryReserveAsync(
+                IdempotencyEntry entry,
+                CancellationToken cancellationToken
+            )
+            {
+                Reservations++;
+                return Task.FromResult(true);
+            }
+
+            public Task RemoveAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            ) => Task.CompletedTask;
+        }
+
+        private sealed class InMemoryIdempotencyStore : IIdempotencyStore
+        {
+            private readonly System.Collections.Concurrent.ConcurrentDictionary<
+                string,
+                IdempotencyEntry
+            > _entries = new(StringComparer.Ordinal);
+
+            public Task<IdempotencyEntry?> GetAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(
+                    _entries.TryGetValue(Composite(ownerKey, endpoint, key), out var entry)
+                        ? entry
+                        : null
+                );
+            }
+
+            public Task SaveAsync(IdempotencyEntry entry, CancellationToken cancellationToken)
+            {
+                _entries[Composite(entry.OwnerKey, entry.Endpoint, entry.Key)] = entry;
+                return Task.CompletedTask;
+            }
+
+            public Task<bool> TryReserveAsync(
+                IdempotencyEntry entry,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(
+                    _entries.TryAdd(Composite(entry.OwnerKey, entry.Endpoint, entry.Key), entry)
+                );
+            }
+
+            public Task RemoveAsync(
+                string ownerKey,
+                string endpoint,
+                string key,
+                CancellationToken cancellationToken
+            )
+            {
+                _entries.TryRemove(Composite(ownerKey, endpoint, key), out _);
+                return Task.CompletedTask;
+            }
+
+            private static string Composite(string ownerKey, string endpoint, string key) =>
+                string.Concat(ownerKey, "\u001f", endpoint, "\u001f", key);
         }
 
         private sealed class FakeIdempotencyStore : IIdempotencyStore

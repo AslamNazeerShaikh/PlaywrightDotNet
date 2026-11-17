@@ -111,19 +111,19 @@ namespace JobScrape.Api
 
             var app = builder.Build();
 
-            // Development-only document and reference endpoints; never
-            // proxied by the cockpit BFF and never exposed beyond loopback.
+            // Development-only document and reference endpoints; the cockpit
+            // BFF does not proxy them. Binding is host configuration: the
+            // development launch profile uses loopback, but Kestrel honors
+            // whatever URLs the operator supplies.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi().AllowAnonymous();
 
-                app.MapScalarApiReference(
-                        "/scalar",
-                        options =>
-                            options
-                                .WithTitle("JobLens API v1")
-                                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-                                .AddPreferredSecuritySchemes("Bearer")
+                app.MapScalarApiReference("/scalar", options =>
+                        options
+                            .WithTitle("JobLens API v1")
+                            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+                            .AddPreferredSecuritySchemes("Bearer")
                     )
                     .AllowAnonymous();
             }
@@ -131,11 +131,14 @@ namespace JobScrape.Api
             DatabaseRegistration.MigrateInDevelopment(app);
 
             app.UseMiddleware<CorrelationMiddleware>();
+            // First after correlation: limiter, authentication, authorization,
+            // idempotency, and quota failures all surface as Problem Details
+            // rather than an empty 500.
+            app.UseExceptionHandler();
             app.UseMiddleware<LoginIpRateLimitMiddleware>();
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseExceptionHandler();
             // One completion event per request, written through this host's
             // logger rather than the static Log.Logger.
             app.UseSerilogRequestLogging(options =>
@@ -145,8 +148,9 @@ namespace JobScrape.Api
             app.UseMiddleware<UsageQuotaMiddleware>();
             app.MapControllers();
 
-            // MCP lives beside the controllers on /mcp; loopback only, like
-            // every other endpoint in this host, and bearer-authorized.
+            // MCP lives beside the controllers on /mcp and is
+            // bearer-authorized. Like every endpoint, its reach is the host's
+            // configured binding, not a rule enforced here.
             app.MapMcp("/mcp").RequireAuthorization();
 
             // Run disposes the host on every exit path; that disposes the

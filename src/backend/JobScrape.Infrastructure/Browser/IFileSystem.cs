@@ -56,5 +56,34 @@ namespace JobScrape.Infrastructure.Browser
             Encoding encoding,
             CancellationToken cancellationToken
         );
+
+        /// <summary>
+        /// Gets the free bytes available on the volume that holds a path.
+        /// </summary>
+        /// <param name="path">A file or directory on the volume.</param>
+        /// <returns>The available bytes.</returns>
+        long GetAvailableFreeBytes(string path);
+
+        /// <summary>
+        /// Lists the immediate subdirectories of a directory. A missing
+        /// directory reads as empty.
+        /// </summary>
+        /// <param name="path">The directory.</param>
+        /// <returns>The subdirectory paths.</returns>
+        IReadOnlyList<string> EnumerateDirectories(string path);
+
+        /// <summary>
+        /// Gets a directory's last write time in UTC.
+        /// </summary>
+        /// <param name="path">The directory.</param>
+        /// <returns>The last write time.</returns>
+        DateTime GetLastWriteTimeUtc(string path);
+
+        /// <summary>
+        /// Deletes a directory.
+        /// </summary>
+        /// <param name="path">The directory.</param>
+        /// <param name="recursive">True to delete its contents too.</param>
+        void DeleteDirectory(string path, bool recursive);
     }
 }

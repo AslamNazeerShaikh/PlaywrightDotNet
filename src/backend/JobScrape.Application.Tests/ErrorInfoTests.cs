@@ -28,7 +28,7 @@ namespace JobScrape.Application.Tests
         [Fact]
         public void MetadataDefaultsToNull()
         {
-            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Validation);
 
             Assert.Null(error.Metadata);
         }

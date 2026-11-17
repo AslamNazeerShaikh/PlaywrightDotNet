@@ -158,15 +158,13 @@ namespace JobScrape.Api.Http.Auth
             authorization.SetFallbackPolicy(
                 new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()
             );
-            authorization.AddPolicy(
-                AuthPolicies.RequireAdmin,
-                policy => policy.AddRequirements(new AdminRequirement())
+            authorization.AddPolicy(AuthPolicies.RequireAdmin, policy =>
+                policy.AddRequirements(new AdminRequirement())
             );
             foreach (var permission in PermissionCatalog.Keys)
             {
-                authorization.AddPolicy(
-                    permission.Value,
-                    policy => policy.AddRequirements(new PermissionRequirement(permission.Value))
+                authorization.AddPolicy(permission.Value, policy =>
+                    policy.AddRequirements(new PermissionRequirement(permission.Value))
                 );
             }
 
@@ -211,38 +209,34 @@ namespace JobScrape.Api.Http.Auth
                 );
                 // Per-account login budget, keyed by the submitted email
                 // when present, otherwise the client IP.
-                options.AddPolicy(
-                    RateLimitPolicies.Login,
-                    context =>
-                        RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: GetLoginPartitionKey(context),
-                            factory: _ => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = LoginPermitLimit,
-                                Window = TimeSpan.FromMinutes(1),
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                                QueueLimit = 0,
-                                AutoReplenishment = true,
-                            }
-                        )
+                options.AddPolicy(RateLimitPolicies.Login, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: GetLoginPartitionKey(context),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = LoginPermitLimit,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            QueueLimit = 0,
+                            AutoReplenishment = true,
+                        }
+                    )
                 );
 
                 // Separate setup-password budget, so setup spam cannot burn an
                 // account's login budget.
-                options.AddPolicy(
-                    RateLimitPolicies.Setup,
-                    context =>
-                        RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: GetLoginPartitionKey(context),
-                            factory: _ => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = LoginPermitLimit,
-                                Window = TimeSpan.FromMinutes(1),
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                                QueueLimit = 0,
-                                AutoReplenishment = true,
-                            }
-                        )
+                options.AddPolicy(RateLimitPolicies.Setup, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: GetLoginPartitionKey(context),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = LoginPermitLimit,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            QueueLimit = 0,
+                            AutoReplenishment = true,
+                        }
+                    )
                 );
             });
             return services;
@@ -253,16 +247,38 @@ namespace JobScrape.Api.Http.Auth
         /// (email) parsed from the request body when present, otherwise the
         /// client IP.
         /// </summary>
-        private static string GetLoginPartitionKey(HttpContext context)
+        internal static string GetLoginPartitionKey(HttpContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             context.Request.EnableBuffering();
             var bodyControl = context.Features.Get<IHttpBodyControlFeature>();
+            var previousSyncIo = bodyControl?.AllowSynchronousIO;
             if (bodyControl is not null)
             {
                 bodyControl.AllowSynchronousIO = true;
             }
 
+            try
+            {
+                return PartitionKeyFromBody(context);
+            }
+            finally
+            {
+                if (bodyControl is not null && previousSyncIo is { } allow)
+                {
+                    bodyControl.AllowSynchronousIO = allow;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reads the submitted email from the buffered request body, falling
+        /// back to the client IP.
+        /// </summary>
+        /// <param name="context">The request context.</param>
+        /// <returns>The partition key.</returns>
+        private static string PartitionKeyFromBody(HttpContext context)
+        {
             string? email = null;
             if (context.Request.Body.CanSeek)
             {

@@ -8,17 +8,28 @@
 
 ## 0. As implemented: API + cockpit
 
-> Sections 3–7 describe the `JobLens.Cli` design target; no CLI, `doctor`, scheduler, or export exists. The implemented operator path is the loopback API plus the cockpit, and only Naukri has an adapter.
+> This runbook's `JobLens.Cli` references describe the design target; no CLI, `doctor`, scheduler, or export exists. The implemented operator path is the loopback API plus the cockpit, and only Naukri has an adapter.
 
 ```bash
 # 1. Build (copies the Playwright 1.64.1 driver into the API output).
 dotnet build src/backend/JobScrape.slnx
 
-# 2. Install a browser once per Playwright version. Linux, no PowerShell needed;
-#    on other OSes the node/<platform> folder name differs.
-src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/linux-x64/node \
-  src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
+# 2. Install Chromium once per Playwright version (only the bundled
+#    Chromium is supported). Linux, no PowerShell needed:
+src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/node/linux-x64/node \
+  src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/package/cli.js install chromium
+# macOS (Apple Silicon):
+src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/node/darwin-arm64/node \
+  src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/package/cli.js install chromium
+```
 
+```powershell
+# Windows:
+src\backend\JobScrape.Api\bin\Debug\net11.0\.playwright\node\win64\node.exe `
+  src\backend\JobScrape.Api\bin\Debug\net11.0\.playwright\package\cli.js install chromium
+```
+
+```bash
 # 3. API on :5207 (Development: applies migrations on start).
 dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj
 
@@ -26,11 +37,9 @@ dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj
 cd src/frontend && bun run dev
 ```
 
-Skip step 2 by creating the session with channel `Chrome` or `Edge` to use a browser already installed on the machine.
-
 Then, in the cockpit:
 
-1. `#/sessions` — create a session for `naukri` (engine `Chromium`, channel `Bundled`, or `Chrome`/`Edge`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret.
+1. `#/sessions` — create a session for `naukri` (engine `Chromium`, channel `Bundled`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret.
 2. `#/profiles` — create a search profile (keywords, cities, caps).
 3. `#/runs` — pick an enabled profile and a launchable session of the same source, then **Start**. A **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends.
 4. The run detail polls every 2 s (stage track, page/posting/detail meters, postings table). **Cancel** stops the run cooperatively and keeps partial results.
@@ -56,9 +65,7 @@ Verified live on 2026-11-01: headed Chromium (`Bundled`), profile "dot net devel
 
 | Browser | Role |
 |---|---|
-| Chromium (bundled) | Default production engine. |
-| Chrome stable channel | Optional; verify enterprise policies. |
-| Edge stable channel | Optional; Windows/macOS/Linux where installed. |
+| Chromium (bundled) | Default and only production engine. |
 | Firefox (Playwright build) | Compatibility/diagnostic. |
 | WebKit (Playwright build) | Safari-like compatibility/diagnostic; **not** real Safari. |
 
@@ -70,7 +77,7 @@ Verified live on 2026-11-01: headed Chromium (`Bundled`), profile "dot net devel
 
 | Requirement | Why |
 |---|---|
-| .NET 10 SDK **10.0.403+** | Build/run. |
+| .NET 11 SDK **11.0.100+** | Build/run. |
 | Git | Clone/versioning. |
 | PowerShell 7 (`pwsh`) | Optional; `doctor --install-browsers` avoids it. |
 | ~2 GB free disk | Browser binaries + profiles + DB. |
@@ -82,7 +89,7 @@ Verify:
 
 ```bash
 dotnet --info
-# SDK 10.0.403+ and runtime 10.0.14+ expected
+# SDK 11.0.100+ and runtime 11.0.0+ expected
 ```
 
 ---
@@ -91,7 +98,7 @@ dotnet --info
 
 ```mermaid
 flowchart TD
-    A["Install .NET 10 SDK"] --> B["Clone repo"]
+    A["Install .NET 11 SDK"] --> B["Clone repo"]
     B --> C["dotnet restore/build/test"]
     C --> D["doctor --install-browsers"]
     D --> E{"doctor green?"}
@@ -106,7 +113,7 @@ flowchart TD
 ### 3.1 macOS
 
 ```bash
-# Install .NET 10 SDK via the official installer or Homebrew, then:
+# Install .NET 11 SDK via the official installer or Homebrew, then:
 dotnet --info
 
 git clone <your-repo-url> PlaywrightDotNet
@@ -122,22 +129,22 @@ dotnet run --project src/JobLens.Cli -- db migrate
 If `doctor` reports missing browser dependencies, run the Playwright installer with deps:
 
 ```bash
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install --with-deps chromium
 ```
 
 ### 3.2 Linux (Ubuntu/Debian)
 
 ```bash
-# Install .NET 10 SDK from Microsoft's package feed or dotnet-install.sh.
+# Install .NET 11 SDK from Microsoft's package feed or dotnet-install.sh.
 dotnet --info
 
 sudo apt-get update
 # Playwright's installer can add the required libraries:
 dotnet build
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium firefox webkit
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install --with-deps chromium firefox webkit
 ```
 
-For servers without a desktop, start from a **.NET 10 SDK** base image, install Playwright's Linux dependencies, and use Xvfb for headed first contact. The official Playwright image is convenient, but verify it ships a .NET 10 SDK (`dotnet --version`) before relying on it.
+For servers without a desktop, start from a **.NET 11 SDK** base image, install Playwright's Linux dependencies, and use Xvfb for headed first contact. The official Playwright image is convenient, but verify it ships a .NET 11 SDK (`dotnet --version`) before relying on it.
 
 ```bash
 sudo apt-get install -y xvfb
@@ -147,7 +154,7 @@ xvfb-run -a dotnet run --project src/JobLens.Cli -- session login --source naukr
 ### 3.3 Windows 11
 
 ```powershell
-# Install .NET 10 SDK via the official installer or winget, then:
+# Install .NET 11 SDK via the official installer or winget, then:
 dotnet --info
 
 git clone <your-repo-url> PlaywrightDotNet
@@ -163,7 +170,7 @@ dotnet run --project src/JobLens.Cli -- db migrate
 Use PowerShell 7 for `playwright.ps1` if the CLI wrapper is unavailable:
 
 ```powershell
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install chromium firefox webkit
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install chromium firefox webkit
 ```
 
 ### 3.4 Docker (Linux CI/E2E)
@@ -451,9 +458,9 @@ jq -c 'select(.TraceId == "00-...-01")' artifacts/logs/joblens-api-*.jsonl
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `dotnet: command not found` | SDK not installed/PATH | Install .NET 10 SDK; reopen shell. |
-| `The current .NET SDK does not support targeting .NET 10` | Older SDK | Install 10.0.403+; check `global.json`. |
-| `Executable doesn't exist ... chromium` | Browsers not installed | Run the driver's `cli.js install chromium` from the API build output (§0), or use channel `Chrome`/`Edge`. |
+| `dotnet: command not found` | SDK not installed/PATH | Install .NET 11 SDK; reopen shell. |
+| `The current .NET SDK does not support targeting .NET 11` | Older SDK | Install 11.0.100+; check `global.json`. |
+| `Executable doesn't exist ... chromium` | Browsers not installed | Run the driver's `cli.js install chromium` from the API build output (§0). |
 | Linux: `Host system is missing dependencies` | Missing libs | `playwright.ps1 install --with-deps chromium` (sudo may be required). |
 | Browser closes immediately | Headless/display issue | Use headed on desktop; `xvfb-run` on server. |
 | `Target page, context or browser has been closed` | Crash/profile lock | Check logs; ensure no other process uses the profile. |
@@ -532,7 +539,7 @@ Scalar is a local development tool. Do not proxy `/scalar` through the BFF, expo
 
 ### 11.3 .NET patch upgrades
 
-- .NET 10 patches are monthly; stay current for support.
+- .NET 11 patches are monthly; stay current for support.
 - Update SDK pin only after CI + local build pass.
 - Re-run database migrations on a backup copy first.
 

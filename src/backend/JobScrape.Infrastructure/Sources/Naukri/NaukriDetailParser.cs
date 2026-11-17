@@ -113,8 +113,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 minYears = NaukriFields.ExperienceFromMonths(jsonLd?.MonthsOfExperience);
             }
 
-            var salaryRaw =
-                NaukriHtml.TextOf(document.QuerySelector("[class*='jhc__salary'] span"))
+            var salaryRaw = NaukriHtml.TextOf(document.QuerySelector("[class*='jhc__salary'] span"))
                 ?? NaukriFields.Clean(jsonLd?.SalaryText);
             var postedRaw = PostedText(document);
 
@@ -136,8 +135,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 SalaryRaw = salaryRaw,
                 Salary = NaukriFields.Salary(salaryRaw) ?? JsonLdSalary(jsonLd),
                 PostedRaw = postedRaw,
-                PostedAt =
-                    NaukriFields.IsoDate(jsonLd?.DatePosted) ?? NaukriFields.Posted(postedRaw, now),
+                PostedAt = NaukriFields.IsoDate(jsonLd?.DatePosted)
+                    ?? NaukriFields.Posted(postedRaw, now),
                 Description = Description(document, jsonLd),
                 Skills = NaukriFields.Skills(
                     jsonLd?.Skills is { Count: > 0 } skills
@@ -160,8 +159,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <returns>The location, or null.</returns>
         private static JobLocation? Location(IDocument document, NaukriJsonLd? jsonLd)
         {
-            var shown =
-                NaukriHtml.TextOf(document.QuerySelector("[class*='jhc__loc']"))
+            var shown = NaukriHtml.TextOf(document.QuerySelector("[class*='jhc__loc']"))
                 ?? string.Join(
                     ", ",
                     (jsonLd?.Localities ?? [])

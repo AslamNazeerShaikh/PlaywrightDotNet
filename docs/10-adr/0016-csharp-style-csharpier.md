@@ -22,7 +22,7 @@ references were adopted together.
   then alphabetical, attributes on their own lines, XML doc comments.
 - **Formatting:** [csharpier](https://github.com/belav/csharpier) owns all
   whitespace, brace, and line-wrapping decisions. It is installed as a
-  repo-local tool (`.config/dotnet-tools.json`, currently `1.3.0`).
+  repo-local tool (`.config/dotnet-tools.json`, currently `1.4.0`).
 - **Workflow:** run `dotnet tool run csharpier format .` from
   `src/backend/` before every commit; `csharpier check .` is part of the
   quality gates.

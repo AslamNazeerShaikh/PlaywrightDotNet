@@ -44,5 +44,31 @@ namespace JobScrape.Infrastructure.Browser
         {
             return File.WriteAllTextAsync(path, contents, encoding, cancellationToken);
         }
+
+        /// <inheritdoc />
+        public long GetAvailableFreeBytes(string path)
+        {
+            var full = Path.GetFullPath(path);
+            var root = Path.GetPathRoot(full);
+            return string.IsNullOrEmpty(root) ? 0 : new DriveInfo(root).AvailableFreeSpace;
+        }
+
+        /// <inheritdoc />
+        public IReadOnlyList<string> EnumerateDirectories(string path)
+        {
+            return Directory.Exists(path) ? Directory.EnumerateDirectories(path).ToList() : [];
+        }
+
+        /// <inheritdoc />
+        public DateTime GetLastWriteTimeUtc(string path)
+        {
+            return Directory.GetLastWriteTimeUtc(path);
+        }
+
+        /// <inheritdoc />
+        public void DeleteDirectory(string path, bool recursive)
+        {
+            Directory.Delete(path, recursive);
+        }
     }
 }

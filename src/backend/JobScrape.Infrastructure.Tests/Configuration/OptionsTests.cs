@@ -81,9 +81,8 @@ namespace JobScrape.Infrastructure.Tests.Configuration
 
             Assert.False(result.Succeeded);
             Assert.Equal(3, result.Failures!.Count());
-            Assert.All(
-                result.Failures!,
-                failure => Assert.StartsWith("Sources:naukri:", failure, StringComparison.Ordinal)
+            Assert.All(result.Failures!, failure =>
+                Assert.StartsWith("Sources:naukri:", failure, StringComparison.Ordinal)
             );
         }
 
@@ -156,9 +155,8 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             var ackOnly = Validate(sources, acknowledge: true);
 
             Assert.Equal(2, none.Failures!.Count());
-            Assert.Contains(
-                ackOnly.Failures!,
-                f => f.Contains("AllowHighRiskSources", StringComparison.Ordinal)
+            Assert.Contains(ackOnly.Failures!, f =>
+                f.Contains("AllowHighRiskSources", StringComparison.Ordinal)
             );
             Assert.True(Validate(sources, acknowledge: true, allowHighRisk: true).Succeeded);
         }
@@ -309,9 +307,8 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.True(off.Validate(null, new LoggingOptions { Directory = "   " }).Succeeded);
             var missing = on.Validate(null, new LoggingOptions { Directory = null! });
             Assert.False(missing.Succeeded);
-            Assert.Contains(
-                missing.Failures!,
-                failure => failure.Contains("JobScrape:Logging:Directory", StringComparison.Ordinal)
+            Assert.Contains(missing.Failures!, failure =>
+                failure.Contains("JobScrape:Logging:Directory", StringComparison.Ordinal)
             );
             Assert.False(on.Validate(null, new LoggingOptions { Directory = "" }).Succeeded);
             Assert.True(on.Validate(null, new LoggingOptions()).Succeeded);
@@ -383,9 +380,8 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             );
 
             Assert.False(result.Succeeded);
-            Assert.Contains(
-                result.Failures!,
-                failure => failure.Contains("demo placeholder", StringComparison.OrdinalIgnoreCase)
+            Assert.Contains(result.Failures!, failure =>
+                failure.Contains("demo placeholder", StringComparison.OrdinalIgnoreCase)
             );
         }
 

@@ -11,6 +11,11 @@ import { useRenderLog } from "../lib/debug.ts";
 // Full symbol rack, no alphanumerics: the scramble can never equal the target.
 const GLYPHS = "!@#$%^&*()_+!@#$%^&*()_+-={}|:\"<>?/.,;'[]\\";
 
+/**
+ * Decryption reveal for mount-once text. `duration` is the lock-in time in ms; `ariaHidden` hides
+ * the glyph animation from assistive tech when a surrounding frame already labels it. Reduced
+ * motion renders the final text immediately.
+ */
 export function Scramble({
   text,
   duration = 975,

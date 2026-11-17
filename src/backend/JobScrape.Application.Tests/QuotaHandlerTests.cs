@@ -39,6 +39,18 @@ namespace JobScrape.Application.Tests
                 _quotas.Add(quota);
                 return Task.CompletedTask;
             }
+
+            public Task<IReadOnlyList<UsageQuota>> EnsureSeededAsync(
+                CancellationToken cancellationToken
+            )
+            {
+                foreach (var quota in UsageQuotaDefaults.All())
+                {
+                    _quotas.Add(quota);
+                }
+
+                return ListAsync(cancellationToken);
+            }
         }
 
         private sealed class FakeUnitOfWork : IUnitOfWork
@@ -107,6 +119,18 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task UpdateRejectsAnUnknownNumericScope()
+        {
+            var handler = new UpdateUsageQuotaHandler(new FakeQuotas(), new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync("0", 7, TimeSpan.FromMinutes(3), Ct);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("UNKNOWN_QUOTA_SCOPE", result.Error.Code);
+            Assert.Equal(ErrorKind.NotFound, result.Error.Kind);
+        }
+
+        [Fact]
         public async Task UpdateRejectsAnUnknownScope()
         {
             var handler = new UpdateUsageQuotaHandler(new FakeQuotas(), new FakeUnitOfWork());
@@ -148,6 +172,49 @@ namespace JobScrape.Application.Tests
                 TimeSpan.FromHours(1),
                 (await quotas.GetAsync(QuotaScope.Api, Ct))!.Window
             );
+        }
+
+        [Fact]
+        public async Task UpdateAttributesAWindowFailureToTheWindowField()
+        {
+            var quotas = new FakeQuotas();
+            quotas.Seed(UsageQuota.Create(QuotaScope.Api, 100, TimeSpan.FromHours(1)));
+            var handler = new UpdateUsageQuotaHandler(quotas, new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync("Api", 100, TimeSpan.FromHours(25), Ct);
+
+            var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Equal(["window"], errors.Keys);
+        }
+
+        [Fact]
+        public async Task CreateAttributesAWindowFailureToTheWindowField()
+        {
+            var handler = new UpdateUsageQuotaHandler(new FakeQuotas(), new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync("Api", 100, TimeSpan.Zero, Ct);
+
+            var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Equal(["window"], errors.Keys);
+        }
+
+        [Fact]
+        public async Task UpdateAttributesALimitFailureToTheLimitField()
+        {
+            var quotas = new FakeQuotas();
+            quotas.Seed(UsageQuota.Create(QuotaScope.Api, 100, TimeSpan.FromHours(1)));
+            var handler = new UpdateUsageQuotaHandler(quotas, new FakeUnitOfWork());
+
+            var result = await handler.HandleAsync("Api", 0, TimeSpan.FromHours(1), Ct);
+
+            var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Equal(["limit"], errors.Keys);
         }
     }
 }

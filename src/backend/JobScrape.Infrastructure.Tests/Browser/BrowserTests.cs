@@ -82,29 +82,26 @@ namespace JobScrape.Infrastructure.Tests.Browser
         )
         {
             var page = await _pool.OpenAsync(_profile, Ct);
-            await page.Context.RouteAsync(
-                "https://www.naukri.com/**",
-                async route =>
+            await page.Context.RouteAsync("https://www.naukri.com/**", async route =>
+            {
+                var url = new Uri(route.Request.Url);
+                var answer = serve(url);
+                if (answer is not { } reply)
                 {
-                    var url = new Uri(route.Request.Url);
-                    var answer = serve(url);
-                    if (answer is not { } reply)
-                    {
-                        await route.AbortAsync();
-                        return;
-                    }
-
-                    await route.FulfillAsync(
-                        new RouteFulfillOptions
-                        {
-                            Status = reply.Status,
-                            ContentType = "text/html; charset=utf-8",
-                            Body = reply.Html,
-                            Headers = headers?.Invoke(url),
-                        }
-                    );
+                    await route.AbortAsync();
+                    return;
                 }
-            );
+
+                await route.FulfillAsync(
+                    new RouteFulfillOptions
+                    {
+                        Status = reply.Status,
+                        ContentType = "text/html; charset=utf-8",
+                        Body = reply.Html,
+                        Headers = headers?.Invoke(url),
+                    }
+                );
+            });
             return page;
         }
 
@@ -475,26 +472,23 @@ namespace JobScrape.Infrastructure.Tests.Browser
             );
             var page = await _pool.OpenAsync(_profile, Ct);
             var hang = false;
-            await page.Context.RouteAsync(
-                "https://www.naukri.com/**",
-                async route =>
+            await page.Context.RouteAsync("https://www.naukri.com/**", async route =>
+            {
+                if (hang)
                 {
-                    if (hang)
-                    {
-                        return;
-                    }
-
-                    await route.FulfillAsync(
-                        new RouteFulfillOptions
-                        {
-                            Status = 403,
-                            ContentType = "text/html",
-                            Body =
-                                "<html><head><title>Access Denied</title></head><body>Access Denied</body></html>",
-                        }
-                    );
+                    return;
                 }
-            );
+
+                await route.FulfillAsync(
+                    new RouteFulfillOptions
+                    {
+                        Status = 403,
+                        ContentType = "text/html",
+                        Body =
+                            "<html><head><title>Access Denied</title></head><body>Access Denied</body></html>",
+                    }
+                );
+            });
             var source = Source();
             var job = new JobReference(
                 ExternalJobId.Create("011126000001"),

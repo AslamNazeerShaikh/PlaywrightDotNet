@@ -3,7 +3,7 @@
 > **Status:** production ready back-end API and ops-deck cockpit front-end.
 >
 > Polite, low-volume job-board automation on .NET 10. Playwright collects from Naukri, Indeed India, and opt-in LinkedIn into SQLite, with skill-demand analysis and hyperlinked Excel snapshots, plus a live ops-deck cockpit.
-> A modular monolith built to be read: explicit use-case handlers, 971 behavior-pinned tests, and docs that match the tree.
+> A modular monolith built to be read: explicit use-case handlers, 1,630 tests (1,423 backend unit + 207 frontend unit), and docs that match the tree.
 
 ## Architecture
 

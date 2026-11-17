@@ -44,21 +44,9 @@ namespace JobScrape.Application.Results
         QuotaExceeded,
 
         /// <summary>
-        /// The source presented a challenge or auth wall. The run pauses for a
-        /// human instead of retrying. Maps to HTTP 409.
-        /// </summary>
-        Challenge,
-
-        /// <summary>
         /// The source is in a cooldown period after a wall. Maps to HTTP 423.
         /// </summary>
         CoolingDown,
-
-        /// <summary>
-        /// The source changed its markup or flow in a way the parser cannot
-        /// handle. Maps to HTTP 502.
-        /// </summary>
-        SourceChanged,
 
         /// <summary>
         /// An upstream dependency is temporarily unavailable. Maps to HTTP 503.
@@ -69,10 +57,5 @@ namespace JobScrape.Application.Results
         /// Local disk space is below the safety threshold. Maps to HTTP 507.
         /// </summary>
         Storage,
-
-        /// <summary>
-        /// An unexpected failure with no safer category. Maps to HTTP 500.
-        /// </summary>
-        Unexpected,
     }
 }

@@ -162,12 +162,10 @@ namespace JobScrape.Api.Tests
                 await factory.DisposeAsync();
 
                 var events = ReadEvents(factory.LogDirectory);
-                var logged = Assert.Single(
-                    events,
-                    e =>
-                        e.TryGetProperty("CorrelationId", out var id)
-                        && id.GetString() == "e2e-check-1"
-                        && e.TryGetProperty("RequestPath", out _)
+                var logged = Assert.Single(events, e =>
+                    e.TryGetProperty("CorrelationId", out var id)
+                    && id.GetString() == "e2e-check-1"
+                    && e.TryGetProperty("RequestPath", out _)
                 );
                 Assert.Equal("JobScrape.Api", logged.GetProperty("Application").GetString());
                 Assert.Equal("/api/v1/health", logged.GetProperty("RequestPath").GetString());
@@ -192,7 +190,7 @@ namespace JobScrape.Api.Tests
                 .GetFiles(directory, "jobscrape-api-*.jsonl")
                 .SelectMany(File.ReadAllLines)
                 .Where(line => line.Length > 0)
-                .Select(line => JsonDocument.Parse(line).RootElement.Clone())
+                .Select(line => JsonElement.Parse(line))
                 .ToArray();
         }
 

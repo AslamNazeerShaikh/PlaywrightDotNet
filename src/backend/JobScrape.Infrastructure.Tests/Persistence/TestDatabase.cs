@@ -27,6 +27,12 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
         public string ConnectionString { get; }
 
+        /// <summary>
+        /// Gets the factory hosted services use to open their own scopes.
+        /// </summary>
+        public IServiceScopeFactory ScopeFactory =>
+            _provider.GetRequiredService<IServiceScopeFactory>();
+
         public static async Task<TestDatabase> CreateAsync(CancellationToken cancellationToken)
         {
             var database = new TestDatabase(

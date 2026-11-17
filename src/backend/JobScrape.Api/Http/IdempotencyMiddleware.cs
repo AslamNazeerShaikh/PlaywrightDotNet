@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
@@ -46,12 +45,19 @@ namespace JobScrape.Api.Http
         internal static readonly TimeSpan CompletionWaitTimeout = TimeSpan.FromSeconds(10);
 
         /// <summary>
-        /// Per-key locks so parallel duplicate requests serialize and only
+        /// How many lock stripes serialize duplicate requests. A fixed set
+        /// never removes a lock while a waiter still holds a reference, so
+        /// the same key can never run twice through two different gates.
+        /// Distinct keys that hash to one stripe serialize with each other;
+        /// that is slower, never wrong.
+        /// </summary>
+        internal const int LockStripes = 256;
+
+        /// <summary>
+        /// Per-stripe gates so parallel duplicate requests serialize and only
         /// the first executes.
         /// </summary>
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(
-            StringComparer.Ordinal
-        );
+        private static readonly SemaphoreSlim[] _locks = CreateLocks();
 
         // Injected and never mutated.
         private readonly RequestDelegate _next;
@@ -81,6 +87,32 @@ namespace JobScrape.Api.Http
             : this(next, null)
         {
             _completionWaitTimeout = completionWaitTimeout;
+        }
+
+        /// <summary>
+        /// Creates one gate per stripe.
+        /// </summary>
+        /// <returns>The fixed gate array.</returns>
+        private static SemaphoreSlim[] CreateLocks()
+        {
+            var locks = new SemaphoreSlim[LockStripes];
+            for (var index = 0; index < locks.Length; index++)
+            {
+                locks[index] = new SemaphoreSlim(1, 1);
+            }
+
+            return locks;
+        }
+
+        /// <summary>
+        /// Picks the gate for a scope key.
+        /// </summary>
+        /// <param name="lockKey">The owner, endpoint, and key.</param>
+        /// <returns>The stripe's gate.</returns>
+        private static SemaphoreSlim LockFor(string lockKey)
+        {
+            var hash = (uint)StringComparer.Ordinal.GetHashCode(lockKey);
+            return _locks[hash % (uint)_locks.Length];
         }
 
         /// <summary>
@@ -136,7 +168,7 @@ namespace JobScrape.Api.Http
             var owner = context.User.FindFirst(IdentityClaimTypes.Subject)?.Value ?? string.Empty;
             var endpoint = Scope(context.Request);
             var lockKey = string.Concat(owner, "\u001f", endpoint, "\u001f", key);
-            var semaphore = _locks.GetOrAdd(lockKey, static _ => new SemaphoreSlim(1, 1));
+            var semaphore = LockFor(lockKey);
             if (!await semaphore.WaitAsync(_completionWaitTimeout, context.RequestAborted))
             {
                 await Errors.IdempotencyPending().ToProblem().ExecuteAsync(context);
@@ -209,27 +241,20 @@ namespace JobScrape.Api.Http
                 buffer.Seek(0, SeekOrigin.Begin);
                 if (buffer.Length <= MaxBodyBytes && IsStorable(context.Response.StatusCode))
                 {
-                    try
-                    {
-                        await store.SaveAsync(
-                            new IdempotencyEntry(
-                                owner,
-                                endpoint,
-                                key,
-                                requestHash,
-                                context.Response.StatusCode,
-                                context.Response.ContentType ?? "application/json",
-                                buffer.ToArray(),
-                                clock.GetUtcNow()
-                            ),
-                            context.RequestAborted
-                        );
-                        reserved = false;
-                    }
-                    catch
-                    {
-                        throw;
-                    }
+                    await store.SaveAsync(
+                        new IdempotencyEntry(
+                            owner,
+                            endpoint,
+                            key,
+                            requestHash,
+                            context.Response.StatusCode,
+                            context.Response.ContentType ?? "application/json",
+                            buffer.ToArray(),
+                            clock.GetUtcNow()
+                        ),
+                        context.RequestAborted
+                    );
+                    reserved = false;
                 }
                 else
                 {
@@ -252,10 +277,6 @@ namespace JobScrape.Api.Http
             finally
             {
                 semaphore.Release();
-                if (semaphore.CurrentCount == 1)
-                {
-                    _locks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(lockKey, semaphore));
-                }
             }
         }
 
@@ -302,14 +323,19 @@ namespace JobScrape.Api.Http
 
         /// <summary>
         /// Whether the request targets the auth surface, which never engages
-        /// idempotency.
+        /// idempotency. Matches the segment exactly or with a following
+        /// slash, so a lookalike such as <c>/api/v1/authors</c> still replays.
         /// </summary>
         /// <param name="path">The request path.</param>
-        /// <returns>True for paths under <c>/api/v1/auth</c>.</returns>
+        /// <returns>True for <c>/api/v1/auth</c> and its subpaths.</returns>
         private static bool IsAuthPath(PathString path)
         {
-            return path.Value?.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
-                == true;
+            var value = path.Value;
+            return value is not null
+                && (
+                    value.Equals("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
+                    || value.StartsWith("/api/v1/auth/", StringComparison.OrdinalIgnoreCase)
+                );
         }
 
         /// <summary>

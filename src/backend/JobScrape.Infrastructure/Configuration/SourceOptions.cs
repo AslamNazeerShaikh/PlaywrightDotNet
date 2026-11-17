@@ -79,8 +79,9 @@ namespace JobScrape.Infrastructure.Configuration
         public int DailyDetailCap { get; init; }
 
         /// <summary>
-        /// Gets the runs allowed per UTC day. Zero blocks all runs. Ignored
-        /// when <see cref="UnlimitedRunCap"/> is true.
+        /// Gets the runs allowed per UTC day. Zero blocks all runs unless
+        /// <see cref="UnlimitedRunCap"/> is true; a positive value together
+        /// with <see cref="UnlimitedRunCap"/> fails startup validation.
         /// </summary>
         [Range(0, 100)]
         public int DailyRunCap { get; init; }

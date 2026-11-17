@@ -187,13 +187,15 @@ Every edge above is a `ProjectReference` in `src/backend` (see [Solution & Tooli
 | `JobScrape.Infrastructure` | Application, Domain, EF Core, `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, AngleSharp | Api |
 | `JobScrape.Api` | Domain, Application, Infrastructure (composition root binds the ports) | — |
 
-**Architecture tests** (`JobScrape.Architecture.Tests`: `LayerRulesTests`, `GuardrailTests`, NetArchTest + xUnit) enforce:
+**Architecture tests** (`JobScrape.Architecture.Tests`: `LayerRulesTests`, `GuardrailTests`, `StrictArchitectureTests`, NetArchTest + xUnit) enforce:
 
 - Domain references neither Application, Infrastructure, nor Api; and none of `Microsoft.Playwright`, `Microsoft.EntityFrameworkCore`, `AngleSharp`-family libraries (verified: Domain has zero package references).
 - Application references neither Infrastructure nor Api.
 - No production assembly references MediatR, and no production type is mediator-shaped (`IRequest`, `ISender`, `ICommand`, `IQuery`-style buses are banned).
 - Domain has no static mutable state.
 - Repositories live under `JobScrape.Infrastructure.Persistence` (+ `Repositories/`) and implement Application ports; adapters live under `Infrastructure/Sources/{Naukri,Indeed,LinkedIn}` and implement `IJobSource`.
+- Handlers, controllers, events, stores, and the DbContext follow sealed plus placement rules selected by port identity with boundary-exact namespaces (`StrictArchitectureTests`).
+- Aggregates inherit `AggregateRoot` and keep constructors private, selected by shape with exact match counts (`StrictArchitectureTests`).
 
 ### 5.1 Composition root (`Program.cs`)
 
@@ -281,10 +283,10 @@ flowchart LR
 PlaywrightDotNet/
 ├── src/
 │   ├── backend/
-│   │   ├── JobScrape.slnx              (9 projects)
+│   │   ├── JobScrape.slnx              (11 projects)
 │   │   ├── global.json                 (+ MTP test runner)
-│   │   ├── Directory.Build.props       (net10.0, warnings-as-errors, XML docs)
-│   │   ├── Directory.Packages.props    (31 pinned versions)
+│   │   ├── Directory.Build.props       (net11.0, warnings-as-errors, XML docs)
+│   │   ├── Directory.Packages.props    (42 pinned versions)
 │   │   ├── NuGet.config                (nuget.org only)
 │   │   ├── JobScrape.Domain/
 │   │   │   ├── Common/                 (IDs, SourceKey, Text, ComplianceTier)
@@ -483,7 +485,7 @@ Task<ChallengeAssessment> EnsureSessionAsync(
 
 What it does:
 
-1. Opens the profile's persistent context through `BrowserSessionPool` (one Playwright persistent context per `BrowserProfile`, in `{ProfilesRoot}/{source}/{name}`; engine → Chromium/Firefox/WebKit, channel → `chrome`/`msedge`/bundled; real window size and the browser's own user agent — no viewport or UA override; headed by default, `JobScrape:Browser:Headless=false`).
+1. Opens the profile's persistent context through `BrowserSessionPool` (one Playwright persistent context per `BrowserProfile`, in `{ProfilesRoot}/{source}/{name}`; engine → Chromium/Firefox/WebKit, channel → bundled only; real window size and the browser's own user agent — no viewport or UA override; headed by default, `JobScrape:Browser:Headless=false`).
 2. For Naukri: warm-up on the home page, a random 1.5–3 s pause, one scroll, then `NaukriChallengeClassifier` on URL, status, title, and body text.
 3. A clean home page marks the profile verified (`MarkVerified`); a navigation failure or timeout returns `TransientError`.
 
@@ -1035,7 +1037,7 @@ flowchart LR
 
 ### 13.2 Linux server / CI
 
-No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test` per test project (native MTP runner), `dotnet-coverage` merge for the 100% gate, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (no automated test touches the network; the Naukri run was verified by hand). The `Category=Browser` tests need Playwright's Chromium installed on the runner (see the runbook's install command).
+No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test --project` per test project with `--filter-not-trait "Category=Browser"` (native MTP runner), coverage via the built-in `--coverage --coverage-output-format cobertura` collector, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (no automated test touches the network; the Naukri run was verified by hand). The `Category=Browser` tests need Playwright's Chromium installed on the runner (see the runbook's install command).
 
 ### 13.3 API and cockpit (present, v1)
 

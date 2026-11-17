@@ -328,8 +328,9 @@ describe("session route guards", () => {
     const res = await handler.fetch(new Request("http://bff/bff/session/setup", { method: "GET" }));
 
     expect(res.status).toBe(405);
-    const body = (await res.json()) as { code: string };
+    const body = (await res.json()) as { code: string; type: string };
     expect(body.code).toBe("METHOD_NOT_ALLOWED");
+    expect(body.type).toBe("https://jobscrape.local/problems/method-not-allowed");
   });
 
   test("GET /bff/session with a foreign Origin answers 403", async () => {

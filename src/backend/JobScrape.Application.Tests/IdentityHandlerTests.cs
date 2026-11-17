@@ -831,19 +831,21 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
-        public async Task CreateRoleSucceedsAndDuplicateFails()
+        public async Task EnsureRoleCreatesOnceThenReportsTheExistingRow()
         {
             var roles = new FakeRoles();
             var unitOfWork = new FakeUnitOfWork();
-            var handler = new CreateRoleHandler(roles, unitOfWork);
+            var handler = new EnsureRoleHandler(roles, unitOfWork);
             var ct = TestContext.Current.CancellationToken;
 
             var created = await handler.HandleAsync(RoleName.Operator, ct);
-            var duplicate = await handler.HandleAsync(RoleName.Operator, ct);
+            var repeat = await handler.HandleAsync(RoleName.Operator, ct);
 
             Assert.True(created.IsSuccess);
+            Assert.True(created.Value.Created);
+            Assert.False(repeat.Value.Created);
+            Assert.Equal(created.Value.Id, repeat.Value.Id);
             Assert.NotNull(await roles.GetByNameAsync(RoleName.Operator, ct));
-            Assert.Equal("ROLE_NAME_TAKEN", duplicate.Error.Code);
             Assert.Equal(1, unitOfWork.Saves);
         }
 
@@ -1163,11 +1165,9 @@ namespace JobScrape.Application.Tests
 
             Assert.True(result.IsSuccess);
             Assert.DoesNotContain(unknownRoleId, user.Roles);
-            Assert.Single(
-                logger.Entries,
-                entry =>
-                    entry.Level == LogLevel.Warning
-                    && entry.Message.Contains("Dropped unknown role", StringComparison.Ordinal)
+            Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Warning
+                && entry.Message.Contains("Dropped unknown role", StringComparison.Ordinal)
             );
             Assert.Equal(1, unitOfWork.Saves);
         }
@@ -1244,14 +1244,9 @@ namespace JobScrape.Application.Tests
             Assert.Contains(PermissionKey.From("runs.read"), tokens.SeenPermissions!);
             Assert.Contains(PermissionKey.From("profiles.read"), tokens.SeenPermissions!);
             Assert.DoesNotContain(unknownKey, tokens.SeenPermissions!);
-            Assert.Single(
-                logger.Entries,
-                entry =>
-                    entry.Level == LogLevel.Warning
-                    && entry.Message.Contains(
-                        "Dropped unknown permission",
-                        StringComparison.Ordinal
-                    )
+            Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Warning
+                && entry.Message.Contains("Dropped unknown permission", StringComparison.Ordinal)
             );
             Assert.Equal(1, unitOfWork.Saves);
         }
@@ -1319,7 +1314,7 @@ namespace JobScrape.Application.Tests
             Assert.Throws<ArgumentNullException>(() =>
                 new RevokeRoleHandler(users, roles, null!, CallerContext.LocalOperator)
             );
-            Assert.Throws<ArgumentNullException>(() => new CreateRoleHandler(null!, unitOfWork));
+            Assert.Throws<ArgumentNullException>(() => new EnsureRoleHandler(null!, unitOfWork));
             Assert.Throws<ArgumentNullException>(() =>
                 new GrantPermissionHandler(roles, new FakeUsers(), null!)
             );

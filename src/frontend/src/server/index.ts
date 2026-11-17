@@ -7,8 +7,16 @@
  * - `/*` — the React bundle.
  */
 import { type CockpitConfig, parseConfig } from "./config.ts";
+import {
+  clearedCookie,
+  parseCookies,
+  readSessionToken,
+  serializeCookie,
+  SESSION_COOKIE_NAMES,
+} from "./cookies.ts";
 import { proxyRequest } from "./proxy.ts";
 
+/** Creates the BFF request handler; `startServer` wraps it in `Bun.serve`. */
 export function createHandler(config: CockpitConfig) {
   return {
     async fetch(req: Request): Promise<Response> {
@@ -31,27 +39,42 @@ export function createHandler(config: CockpitConfig) {
   };
 }
 
+/**
+ * Loads the TLS keypair when configured; undefined means plain HTTP. Throws when only one half of
+ * the pair is set or either file is missing, with the fix in the message.
+ */
 export async function loadTls(
   config: CockpitConfig,
 ): Promise<{ cert: ReturnType<typeof Bun.file>; key: ReturnType<typeof Bun.file> } | undefined> {
-  if (config.tlsCertFile === undefined && config.tlsKeyFile === undefined) {
+  const certFile = config.tlsCertFile;
+  const keyFile = config.tlsKeyFile;
+  if (certFile === undefined && keyFile === undefined) {
     return undefined;
   }
-  const cert = Bun.file(config.tlsCertFile as string);
-  const key = Bun.file(config.tlsKeyFile as string);
+  if (certFile === undefined || keyFile === undefined) {
+    throw new Error(
+      'BFF_TLS_CERT_FILE and BFF_TLS_KEY_FILE must be set together; export the dev cert first (see README "HTTPS dev loop").',
+    );
+  }
+  const cert = Bun.file(certFile);
+  const key = Bun.file(keyFile);
   if (!(await cert.exists())) {
     throw new Error(
-      `BFF_TLS_CERT_FILE not found: ${config.tlsCertFile}. Export the dev cert first (see README "HTTPS dev loop").`,
+      `BFF_TLS_CERT_FILE not found: ${certFile}. Export the dev cert first (see README "HTTPS dev loop").`,
     );
   }
   if (!(await key.exists())) {
     throw new Error(
-      `BFF_TLS_KEY_FILE not found: ${config.tlsKeyFile}. Export the dev cert first (see README "HTTPS dev loop").`,
+      `BFF_TLS_KEY_FILE not found: ${keyFile}. Export the dev cert first (see README "HTTPS dev loop").`,
     );
   }
   return { cert, key };
 }
 
+/**
+ * True for the direct auth endpoints the BFF hides from the browser. Case, percent-encoding, and
+ * trailing slashes are normalized before the compare.
+ */
 export function isBlockedAuthPath(pathname: string): boolean {
   let decoded = pathname;
   try {
@@ -63,10 +86,15 @@ export function isBlockedAuthPath(pathname: string): boolean {
   return normalized === "/api/v1/auth/login" || normalized === "/api/v1/auth/setup-password";
 }
 
+/** GET /healthz answer: `ok` plus the configured upstream. Never calls the data plane. */
 export function healthResponse(config: CockpitConfig): Response {
   return Response.json({ status: "ok", upstream: config.dotnetApiUrl });
 }
 
+/**
+ * `/api/*` entry: blocks the hidden auth endpoints, enforces the origin/CSRF guard on unsafe
+ * methods, then proxies to the data plane.
+ */
 export function apiProxy(req: Request, config: CockpitConfig): Promise<Response> {
   const url = new URL(req.url);
   // Direct auth endpoints are blocked so token JSON never reaches the browser.
@@ -125,40 +153,13 @@ function csrfCheck(req: Request): CsrfResult {
       response: problemResponse(403, "ORIGIN_NOT_ALLOWED", "Sec-Fetch-Site missing."),
     };
   }
-  const cookies = parseCookies(req.headers.get("cookie"));
-  const csrfCookie = cookies["jobscrape_csrf"];
-  const csrfHeader = req.headers.get("x-csrf-token");
-  if (
-    csrfCookie === undefined ||
-    csrfCookie === "" ||
-    csrfHeader === null ||
-    csrfHeader === "" ||
-    csrfCookie !== csrfHeader
-  ) {
+  if (!csrfPairMatches(req)) {
     return { ok: false, response: problemResponse(403, "CSRF_FAILED", "CSRF token mismatch.") };
   }
   return { ok: true, response: new Response(null, { status: 204 }) };
 }
 
-function parseCookies(header: string | null): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (header === null || header === "") return out;
-  for (const part of header.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx < 0) continue;
-    const name = part.slice(0, idx).trim();
-    const value = part.slice(idx + 1).trim();
-    if (name !== "") {
-      try {
-        out[name] = decodeURIComponent(value);
-      } catch {
-        out[name] = value;
-      }
-    }
-  }
-  return out;
-}
-
+/** Guard preset for a session route: bootstrap (create), read, or delete. */
 export type SessionGuardMode = "bootstrap" | "read" | "delete";
 
 function normalizeGuardMode(mode: string): SessionGuardMode {
@@ -172,6 +173,10 @@ function normalizeGuardMode(mode: string): SessionGuardMode {
   return "delete";
 }
 
+/**
+ * Checks a session request against its mode's origin/CSRF rules. Returns the 403 problem to send,
+ * or null when the request may proceed.
+ */
 export function guardSession(req: Request, mode: string | SessionGuardMode): Response | null {
   const url = new URL(req.url);
   const expectedOrigin = `${url.protocol}//${url.host}`;
@@ -198,21 +203,25 @@ export function guardSession(req: Request, mode: string | SessionGuardMode): Res
   }
 
   if (m === "delete") {
-    const cookies = parseCookies(req.headers.get("cookie"));
-    const csrfCookie = cookies["jobscrape_csrf"];
-    const csrfHeader = req.headers.get("x-csrf-token");
-    if (
-      csrfCookie === undefined ||
-      csrfCookie === "" ||
-      csrfHeader === null ||
-      csrfHeader === "" ||
-      csrfCookie !== csrfHeader
-    ) {
+    if (!csrfPairMatches(req)) {
       return problemResponse(403, "CSRF_FAILED", "CSRF token mismatch.");
     }
   }
 
   return null;
+}
+
+/** True when the double-submit cookie and header are both present and equal. */
+function csrfMatches(cookie: string | undefined, header: string | null): boolean {
+  return (
+    cookie !== undefined && cookie !== "" && header !== null && header !== "" && cookie === header
+  );
+}
+
+/** Reads the CSRF pair from the request and reports whether it matches. */
+function csrfPairMatches(req: Request): boolean {
+  const cookies = parseCookies(req.headers.get("cookie"));
+  return csrfMatches(cookies["jobscrape_csrf"], req.headers.get("x-csrf-token"));
 }
 
 function problemResponse(status: number, code: string, detail: string): Response {
@@ -233,39 +242,7 @@ function isSecure(req: Request, config: CockpitConfig): boolean {
 }
 
 function sessionCookieName(secure: boolean): string {
-  return secure ? "__Host-jobscrape_session" : "jobscrape_session";
-}
-
-function buildSetCookie(
-  name: string,
-  value: string,
-  secure: boolean,
-  httpOnly: boolean,
-  maxAge?: number,
-): string {
-  const parts = [`${name}=${value}`];
-  parts.push("Path=/");
-  if (name.startsWith("__Host-")) {
-    parts.push("Secure");
-  } else if (secure) {
-    parts.push("Secure");
-  }
-  if (httpOnly) parts.push("HttpOnly");
-  parts.push("SameSite=Strict");
-  if (maxAge !== undefined) parts.push(`Max-Age=${maxAge}`);
-  return parts.join("; ");
-}
-
-function clearSetCookie(name: string, secure: boolean, httpOnly: boolean): string {
-  const parts = [`${name}=`, "Path=/", "Max-Age=0", "Expires=Thu, 01 Jan 1970 00:00:00 GMT"];
-  if (name.startsWith("__Host-")) {
-    parts.push("Secure");
-  } else if (secure) {
-    parts.push("Secure");
-  }
-  if (httpOnly) parts.push("HttpOnly");
-  parts.push("SameSite=Strict");
-  return parts.join("; ");
+  return secure ? SESSION_COOKIE_NAMES[0] : SESSION_COOKIE_NAMES[1];
 }
 
 function generateCsrfToken(): string {
@@ -348,8 +325,11 @@ async function createSessionFromUpstream(
   const sName = sessionCookieName(secure);
   const csrf = generateCsrfToken();
   const headers = new Headers({ "content-type": "application/json" });
-  headers.append("set-cookie", buildSetCookie(sName, data.token, secure, true));
-  headers.append("set-cookie", buildSetCookie("jobscrape_csrf", csrf, secure, false));
+  headers.append("set-cookie", serializeCookie(sName, data.token, { secure, httpOnly: true }));
+  headers.append(
+    "set-cookie",
+    serializeCookie("jobscrape_csrf", csrf, { secure, httpOnly: false }),
+  );
   return new Response(JSON.stringify({ mustChangePassword: data.mustChangePassword }), {
     status: 200,
     headers,
@@ -357,7 +337,7 @@ async function createSessionFromUpstream(
 }
 
 async function getSession(req: Request, config: CockpitConfig): Promise<Response> {
-  const token = readSessionTokenFromReq(req);
+  const token = readSessionToken(req);
   if (token === null) {
     return Response.json({ authenticated: false });
   }
@@ -387,10 +367,10 @@ async function getSession(req: Request, config: CockpitConfig): Promise<Response
     }
     const secure = isSecure(req, config);
     const headers = new Headers({ "content-type": "application/json" });
-    for (const name of ["__Host-jobscrape_session", "jobscrape_session"]) {
-      headers.append("set-cookie", clearSetCookie(name, secure, true));
+    for (const name of SESSION_COOKIE_NAMES) {
+      headers.append("set-cookie", clearedCookie(name, secure, true));
     }
-    headers.append("set-cookie", clearSetCookie("jobscrape_csrf", secure, false));
+    headers.append("set-cookie", clearedCookie("jobscrape_csrf", secure, false));
     const body =
       code === "SESSION_REVOKED"
         ? { authenticated: false, expired: true, revoked: true }
@@ -417,10 +397,10 @@ async function getSession(req: Request, config: CockpitConfig): Promise<Response
 function deleteSession(req: Request, config: CockpitConfig): Response {
   const secure = isSecure(req, config);
   const headers = new Headers();
-  for (const name of ["__Host-jobscrape_session", "jobscrape_session"]) {
-    headers.append("set-cookie", clearSetCookie(name, secure, true));
+  for (const name of SESSION_COOKIE_NAMES) {
+    headers.append("set-cookie", clearedCookie(name, secure, true));
   }
-  headers.append("set-cookie", clearSetCookie("jobscrape_csrf", secure, false));
+  headers.append("set-cookie", clearedCookie("jobscrape_csrf", secure, false));
   return new Response(null, { status: 204, headers });
 }
 
@@ -439,19 +419,10 @@ function decodeMustChangePassword(token: string | null): boolean {
   }
 }
 
-function readSessionTokenFromReq(req: Request): string | null {
-  const cookies = parseCookies(req.headers.get("cookie"));
-  for (const name of ["__Host-jobscrape_session", "jobscrape_session"]) {
-    const value = cookies[name];
-    if (value !== undefined && value !== "") return value;
-  }
-  return null;
-}
-
 function methodNotAllowed(): Response {
   return Response.json(
     {
-      type: "https://jobscrape.local/problems/not-found",
+      type: "https://jobscrape.local/problems/method-not-allowed",
       title: "Method not allowed",
       status: 405,
       detail: "Method not allowed.",
@@ -461,6 +432,7 @@ function methodNotAllowed(): Response {
   );
 }
 
+/** 404 problem+json for a path the BFF does not own; `pathname` is echoed in the detail. */
 export function fallbackResponse(pathname: string): Response {
   return Response.json(
     {
@@ -474,8 +446,13 @@ export function fallbackResponse(pathname: string): Response {
   );
 }
 
+/** What the wildcard route serves: a Bun HTML bundle in dev, a request handler in production. */
 export type FallbackRoute = import("bun").HTMLBundle | ((req: Request) => Promise<Response>);
 
+/**
+ * Binds the loopback server with the health, session, API, and fallback routes. Loads TLS first, so
+ * a missing or half-configured keypair fails before the port opens.
+ */
 export async function startServer(config: CockpitConfig, fallback: FallbackRoute): Promise<void> {
   const routes = {
     "/healthz": () => healthResponse(config),
@@ -496,7 +473,7 @@ export async function startServer(config: CockpitConfig, fallback: FallbackRoute
 }
 
 if (import.meta.main) {
-  const config = parseConfig(Bun.env as Record<string, string | undefined>);
+  const config = parseConfig(Bun.env);
   await startServer(config, serveDist);
 }
 

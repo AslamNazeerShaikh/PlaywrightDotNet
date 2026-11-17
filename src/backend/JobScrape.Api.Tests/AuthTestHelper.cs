@@ -45,9 +45,8 @@ namespace JobScrape.Api.Tests
             CancellationToken cancellationToken
         )
         {
-            var token = await Tokens.GetValue(
-                factory,
-                _ => SeedAndLoginAsync(factory, cancellationToken)
+            var token = await Tokens.GetValue(factory, _ =>
+                SeedAndLoginAsync(factory, cancellationToken)
             );
             var client = factory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(

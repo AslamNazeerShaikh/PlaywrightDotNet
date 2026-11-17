@@ -2,7 +2,7 @@
 
 > **Purpose:** the exact project layout, package versions, SDK pin, configuration shape, commands, CI, and conventions for Phase 0.
 >
-> **Verified:** 2026-10-29 · .NET SDK `10.0.403` · xUnit `4.0.2` · Playwright/AngleSharp rows re-verified 2026-11-02 (`Microsoft.Playwright 1.64.1`, `AngleSharp 1.8.6`)
+> **Verified:** 2026-11-17 · .NET SDK `11.0.100` · xUnit `4.0.3` · Playwright/AngleSharp rows re-verified 2026-11-17 (`Microsoft.Playwright 1.64.1`, `AngleSharp 1.10.4`)
 
 ---
 
@@ -71,7 +71,7 @@ PlaywrightDotNet/
 └── artifacts/                 (gitignored)
 ```
 
-Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in your chain does not understand `.slnx`, `dotnet sln migrate` / a classic `.sln` is an acceptable fallback; do not maintain both.
+Use `.slnx` (the modern XML solution format supported by .NET 10 and later). If a tool in your chain does not understand `.slnx`, `dotnet sln migrate` / a classic `.sln` is an acceptable fallback; do not maintain both.
 
 > **v2 note:** the web cockpit is a separate Bun package under `src/frontend/`, not a .NET project in this solution. See [Web Cockpit](12-web-cockpit.md).
 
@@ -86,7 +86,7 @@ Use `.slnx` (the modern XML solution format supported by .NET 10). If a tool in 
 | Project | Responsibility | References |
 |---|---|---|
 | `JobScrape.Domain` | Aggregates (`SearchProfile`, `ScrapeRun`, `JobPosting`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`), value objects, policies, domain events. Pure C#, zero packages. | BCL only |
-| `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `ListSources`, `List/Get/CreateSession`, `Start/List/Get/CancelRun`, `ListRunPostings`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `ISessionStore`, `IRunStore`, `IRunLauncher`, `IJobSource`), Result pattern. | Domain, `Microsoft.Extensions.Logging.Abstractions` |
+| `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `ListSources`, `List/Get/CreateSession`, `Start/List/Get/CancelRun`, `ListRunPostings`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `ISessionStore`, `IRunStore`, `IRunLauncher`, `IJobSource`), Result pattern. | Domain, inbox logging abstractions (no package reference on .NET 11) |
 | `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), read stores (`SearchProfileReadStore`, `SessionReadStore`, `RunReadStore`), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `Browser/` (`BrowserSessionPool`, `PlaywrightSessionManager`, `FileArtifactStore`), `Sources/Naukri/` (`NaukriJobSource`, URL builder, parsers, challenge classifier). | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, `AngleSharp` |
 | `JobScrape.Api` | Composition root (`Program.Main`): 5 controllers (Health, SearchProfiles, Sources, Sessions, Runs), `RunCoordinator` (background runs), `BrowserRegistration`, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
 | `JobScrape.Domain.Tests` | Pure unit tests. | Domain, xUnit |
@@ -135,20 +135,21 @@ No production project may reference a test project. Domain references nothing. A
 > management + transitive pinning on). Anything else in the pre-rename
 > design matrix (`System.CommandLine`, NSubstitute, …)
 > is approved for later slices but has **no reference in the tree yet** and
-> must not appear in diagrams as installed.
+> must not appear in diagrams as installed. `Microsoft.Extensions.Hosting.Abstractions`
+> and `Microsoft.Extensions.Logging.Abstractions` ship inbox with .NET 11,
+> so they carry no `PackageReference` and no pin.
 
 | Package | Version | Project(s) | Why |
 |---|---|---|---|
-| `Microsoft.Extensions.Logging.Abstractions` | `10.0.14` | Application, Infrastructure | `ILogger<T>` without a logging implementation. |
-| `Microsoft.Extensions.Options.DataAnnotations` | `10.0.14` | Infrastructure | Options binding + DataAnnotations validation. |
-| `Microsoft.EntityFrameworkCore.Sqlite` | `10.0.14` | Infrastructure | SQLite provider. |
-| `Microsoft.Data.Sqlite` | `10.0.14` | Infrastructure | Direct SQLite access for the raw database explorer. |
+| `Microsoft.Extensions.Options.DataAnnotations` | `11.0.0` | Infrastructure | Options binding + DataAnnotations validation. |
+| `Microsoft.EntityFrameworkCore.Sqlite` | `11.0.0` | Infrastructure | SQLite provider. |
+| `Microsoft.Data.Sqlite` | `11.0.0` | Infrastructure | Direct SQLite access for the raw database explorer. |
 | `Dapper` | `2.1.89` | Infrastructure | Micro-ORM for the raw database explorer (see ADR-0018). |
-| `Microsoft.EntityFrameworkCore.Design` | `10.0.14` | Infrastructure | Migrations (`PrivateAssets=all`). |
+| `Microsoft.EntityFrameworkCore.Design` | `11.0.0` | Infrastructure | Migrations (`PrivateAssets=all`). |
 | `Microsoft.Playwright` | `1.64.1` | Infrastructure | Headed browser automation: persistent contexts per browser profile, Naukri navigation. |
-| `AngleSharp` | `1.8.6` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
-| `Microsoft.AspNetCore.OpenApi` | `10.0.14` | Api | OpenAPI document generation (Development only). |
-| `Scalar.AspNetCore` | `2.18.5` | Api | Local interactive API reference at `/scalar` (Development only). |
+| `AngleSharp` | `1.10.4` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
+| `Microsoft.AspNetCore.OpenApi` | `11.0.0` | Api | OpenAPI document generation (Development only). |
+| `Scalar.AspNetCore` | `3.0.0` | Api | Local interactive API reference at `/scalar` (Development only). |
 | `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
 | `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
 | `Serilog.Enrichers.Environment` | `3.0.1` | Api | Machine and environment names. |
@@ -158,13 +159,13 @@ No production project may reference a test project. Domain references nothing. A
 | `Serilog.Enrichers.AssemblyName` | `2.0.0` | Api | Assembly name/version. |
 | `Serilog.Exceptions` | `8.4.0` | Api | Detailed exception properties. |
 | `Serilog.Enrichers.Demystifier` | `1.0.3` | Api | Readable async stack traces. |
-| `xunit.v3` | `4.0.2` | All test projects | Test framework + assertions. |
+| `xunit.v3` | `4.0.3` | All test projects | Test framework + assertions. |
 | `xunit.runner.visualstudio` | `4.0.1` | All test projects | `dotnet test` / VS Test Explorer. |
-| `Microsoft.NET.Test.Sdk` | `18.11.0` | All test projects | Test host. |
-| `coverlet.collector` | `10.1.0` | Test projects | Cross-platform coverage (VSTest mode; inert under native MTP). |
+| `Microsoft.NET.Test.Sdk` | `18.12.0` | All test projects | Test host. |
+| `coverlet.collector` | `10.1.1` | Test projects | Cross-platform coverage (VSTest mode; inert under native MTP). |
 | `Microsoft.Testing.Extensions.CodeCoverage` | `18.12.0` | Test projects | Native MTP `--coverage` provider (see ADR-0015). |
-| `Microsoft.Extensions.TimeProvider.Testing` | `10.11.0` | Application/Infrastructure tests | `FakeTimeProvider`. |
-| `Microsoft.AspNetCore.Mvc.Testing` | `10.0.14` | Api.Tests | `WebApplicationFactory` integration. |
+| `Microsoft.Extensions.TimeProvider.Testing` | `11.0.0` | Application/Infrastructure tests | `FakeTimeProvider`. |
+| `Microsoft.AspNetCore.Mvc.Testing` | `11.0.0` | Api.Tests | `WebApplicationFactory` integration. |
 | `Serilog.Sinks.InMemory` | `2.0.0` | Api.Tests | Assert structured log properties and redaction. |
 | `NetArchTest.Rules` | `1.3.2` | Architecture tests | Dependency rules. |
 
@@ -177,7 +178,7 @@ flowchart LR
     INF["JobScrape.Infrastructure"]
     API["JobScrape.Api"]
 
-    LOG["Microsoft.Extensions<br/>.Logging.Abstractions"]
+    LOG["Inbox logging abstractions<br/>(no package reference on .NET 11)"]
     OPT["Microsoft.Extensions<br/>.Options.DataAnnotations"]
     EF["Microsoft.EntityFrameworkCore<br/>.Sqlite + .Design"]
     MDS["Microsoft.Data.Sqlite"]
@@ -227,7 +228,7 @@ flowchart LR
 ```json
 {
   "sdk": {
-    "version": "10.0.403",
+    "version": "11.0.100",
     "rollForward": "latestFeature",
     "allowPrerelease": false
   },
@@ -237,14 +238,14 @@ flowchart LR
 }
 ```
 
-Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allows a newer 10.0.4xx/10.0.5xx on other machines but will not fall back to an older SDK.
+Install **11.0.100 or newer within the 11.0 feature band**. `latestFeature` allows a newer 11.0.1xx on other machines but will not fall back to an older SDK.
 
 ### 4.2 `Directory.Build.props`
 
 ```xml
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -275,12 +276,11 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
@@ -291,21 +291,21 @@ Install **10.0.403 or newer within the 10.0 feature band**. `latestFeature` allo
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageVersion Include="Serilog.Enrichers.Demystifier" Version="1.0.3" />
     <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
-    <PackageVersion Include="AngleSharp" Version="1.8.6" />
+    <PackageVersion Include="AngleSharp" Version="1.10.4" />
   </ItemGroup>
 </Project>
 ```
 
 > The real file also pins `Microsoft.Extensions.Hosting` and
-> `Microsoft.Extensions.Http` (`10.0.14`), which no project references.
+> `Microsoft.Extensions.Http` (`11.0.0`), which no project references.
 > Anything else (`System.CommandLine`, `Http.Resilience`,
 > `Microsoft.Playwright.Xunit.v3`,
 > NSubstitute, Verify, MinVer) appears only in the pre-rename design matrix:
@@ -590,20 +590,30 @@ dotnet run --project src/JobLens.Cli -- search create `
 >
 > ```bash
 > dotnet build src/backend/JobScrape.slnx
-> src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/node/linux-x64/node \
->   src/backend/JobScrape.Api/bin/Debug/net10.0/.playwright/package/cli.js install chromium
+> # Linux, no PowerShell needed:
+> src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/node/linux-x64/node \
+>   src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/package/cli.js install chromium
+> # macOS (Apple Silicon):
+> src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/node/darwin-arm64/node \
+>   src/backend/JobScrape.Api/bin/Debug/net11.0/.playwright/package/cli.js install chromium
 > ```
 >
-> On other OSes the `node/<platform>` folder name differs (or use `pwsh src/backend/JobScrape.Api/bin/Debug/net10.0/playwright.ps1 install chromium`). Alternatively create the session with channel `Chrome` or `Edge` to use an installed browser instead of the bundled Chromium.
+> ```powershell
+> # Windows:
+> src\backend\JobScrape.Api\bin\Debug\net11.0\.playwright\node\win64\node.exe `
+>   src\backend\JobScrape.Api\bin\Debug\net11.0\.playwright\package\cli.js install chromium
+> ```
+>
+> On other platforms the `node/<platform>` folder name differs (or use `pwsh src/backend/JobScrape.Api/bin/Debug/net11.0/playwright.ps1 install chromium`). Only the Playwright bundled Chromium is supported; sessions are always created with channel `Bundled`.
 
 Design target (CLI wrapper unavailable):
 
 ```bash
 # macOS/Linux with PowerShell 7
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install chromium firefox webkit
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install chromium firefox webkit
 
 # Linux dependencies
-pwsh src/JobLens.Cli/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install --with-deps chromium
 ```
 
 On Linux CI, prefer the official Playwright Docker image or `install --with-deps`.
@@ -673,7 +683,7 @@ Rules:
   `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run the same steps.
 - No-cert fallback stays available: `DOTNET_API_URL=http://127.0.0.1:5207`
   plus both `BFF_TLS_*` lines commented out for a plain-http BFF.
-- Browsers: Chrome/Safari accept `https://127.0.0.1:3000` via the step-1
+- Chromium-based browsers and Safari accept `https://127.0.0.1:3000` via the step-1
   keychain trust. Firefox uses its own store: import `localhost-cert.pem`
   or add a one-time exception.
 - Verify with `curl https://localhost:5208/api/v1/health` (direct) and
@@ -743,7 +753,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "11.0.x"
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
       - run: dotnet test --no-build --filter "Category!=Live&Category!=E2E"
@@ -754,7 +764,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "11.0.x"
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
       # On Linux, doctor --install-browsers should pass --with-deps
@@ -864,22 +874,23 @@ playwright-report/
 
 ## 11. Quality gates
 
-Every pull request / phase exit (verified counts, 2026-11-01 — all green, zero failures):
+Every pull request / phase exit (verified counts 2026-11-17. All green except 16 environment-blocked browser tests, see below):
 
 | Suite | Command | Tests |
 |---|---|---|
-| `JobScrape.Domain.Tests` | `dotnet run --project src/backend/JobScrape.Domain.Tests` | 368 |
-| `JobScrape.Application.Tests` | `dotnet run --project src/backend/JobScrape.Application.Tests` | 92 |
-| `JobScrape.Infrastructure.Tests` | `dotnet run --project src/backend/JobScrape.Infrastructure.Tests` | 32 |
-| `JobScrape.Api.Tests` | `dotnet run --project src/backend/JobScrape.Api.Tests` | 42 |
-| `JobScrape.Architecture.Tests` | `dotnet run --project src/backend/JobScrape.Architecture.Tests` | 15 |
+| `JobScrape.Domain.Tests` | `dotnet run --project src/backend/JobScrape.Domain.Tests` | 492 |
+| `JobScrape.Application.Tests` | `dotnet run --project src/backend/JobScrape.Application.Tests` | 255 |
+| `JobScrape.Infrastructure.Tests` | `dotnet run --project src/backend/JobScrape.Infrastructure.Tests` | 365 |
+| `JobScrape.Api.Tests` | `dotnet run --project src/backend/JobScrape.Api.Tests` | 169 |
+| `JobScrape.Architecture.Tests` | `dotnet run --project src/backend/JobScrape.Architecture.Tests` | 38 |
+| `JobScrape.Mcp.Tests` | `dotnet run --project src/backend/JobScrape.Mcp.Tests` | 56 |
 | Frontend (`bun test` + `bun check`) | `bun test`, `bun check` in `src/frontend/` | 47 |
 
-549 backend + 47 frontend = **596 tests, 0 failed.**
+1375 backend + 47 frontend = **1422 tests: 1406 passed, 16 blocked.** The 16 blocked tests all sit in `JobScrape.Infrastructure.Tests` and fail only on the missing Playwright browser binary (`Executable doesn't exist ... chromium_headless_shell`). They need the §7.3 browser install on the machine; no code failure sits behind them.
 
 > **Backend note (native MTP, `src/backend/`):** `global.json` opts into the
 > Microsoft.Testing.Platform runner, so tests execute with
-> `dotnet run --project <Tests>` (no `dotnet test` VSTest bridge on .NET 10).
+> `dotnet run --project <Tests>` (no `dotnet test` VSTest bridge on .NET 11).
 > Coverage comes from the per-project
 > `Microsoft.Testing.Extensions.CodeCoverage` extension, merged with the
 > repo-local `dotnet-coverage` tool (`.config/dotnet-tools.json`).

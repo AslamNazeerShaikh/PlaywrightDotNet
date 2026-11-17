@@ -61,8 +61,7 @@ namespace JobScrape.Infrastructure.Composition
                 var mustChange = user.HasClaim(claim =>
                     claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
                 );
-                var actor =
-                    user.FindFirst(IdentityClaimTypes.Subject)?.Value
+                var actor = user.FindFirst(IdentityClaimTypes.Subject)?.Value
                     ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
                     ?? CallerContext.LocalOperator.ActorId;
                 var roles = user.FindAll(IdentityClaimTypes.Role)
@@ -133,17 +132,12 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<LoginHandler>();
             services.AddTransient<SetupPasswordHandler>();
             services.AddTransient<ChangePasswordHandler>();
-            services.AddTransient<CreateUserHandler>(provider => new CreateUserHandler(
-                provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IRoleRepository>(),
-                provider.GetRequiredService<IUnitOfWork>(),
-                provider.GetRequiredService<TimeProvider>()
-            ));
+            services.AddTransient<CreateUserHandler>();
             services.AddTransient<GetUserHandler>();
             services.AddTransient<ListUsersHandler>();
             services.AddTransient<AssignRoleHandler>();
             services.AddTransient<RevokeRoleHandler>();
-            services.AddTransient<CreateRoleHandler>();
+            services.AddTransient<EnsureRoleHandler>();
             services.AddTransient<GetRoleHandler>();
             services.AddTransient<ListRolesHandler>();
             services.AddTransient<GrantPermissionHandler>();
@@ -160,8 +154,8 @@ namespace JobScrape.Infrastructure.Composition
                 // removed from the production configuration.
                 var seed = provider.GetRequiredService<IOptions<AdminSeedOptions>>().Value;
                 var email = seed.Email ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-                var secret =
-                    seed.SetupSecret ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
+                var secret = seed.SetupSecret
+                    ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
                 return new AdminSeedHostedService(
                     provider.GetRequiredService<IServiceScopeFactory>(),
                     provider.GetRequiredService<TimeProvider>(),
@@ -173,6 +167,10 @@ namespace JobScrape.Infrastructure.Composition
             // The scrape itself: scoped, because it holds the run's unit of
             // work; the coordinator resolves it in a fresh scope per run.
             services.AddScoped<RunScrapeHandler>();
+
+            // Storage retention: expired postings and artifact directories
+            // leave once at startup, then daily.
+            services.AddHostedService<StorageRetentionService>();
 
             // Runs outlive their request: one coordinator executes them in
             // the background, cancels on shutdown, and fails runs a crash

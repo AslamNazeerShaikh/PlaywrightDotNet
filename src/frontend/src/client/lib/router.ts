@@ -17,6 +17,7 @@ export type DeckRoute =
   | "roles"
   | "quotas";
 
+/** Every deck stop in rail order: id, stable section code, and display label. */
 export const ROUTES: ReadonlyArray<{ id: DeckRoute; code: string; label: string }> = [
   { id: "overview", code: "01", label: "Overview" },
   { id: "health", code: "02", label: "Engine Health" },

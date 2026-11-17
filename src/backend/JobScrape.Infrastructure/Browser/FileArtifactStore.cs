@@ -18,7 +18,8 @@ namespace JobScrape.Infrastructure.Browser
     public sealed partial class FileArtifactStore : IArtifactStore
     {
         /// <summary>
-        /// Most HTML bytes kept per capture.
+        /// Most HTML characters kept per capture. The page text is truncated
+        /// to this many UTF-16 characters before it is written.
         /// </summary>
         public const int MaxHtmlChars = 2_000_000;
 
@@ -73,47 +74,57 @@ namespace JobScrape.Infrastructure.Browser
                 $"{_clock.GetUtcNow().ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture)}-{assessment.Kind}"
             );
             var directory = _files.Combine(_settings.ArtifactsRoot, relative);
-            _files.CreateDirectory(directory);
 
-            var page = _pool.Find(context.BrowserProfileId);
-            await _files.WriteAllTextAsync(
-                _files.Combine(directory, "assessment.json"),
-                JsonSerializer.Serialize(
-                    new
-                    {
-                        kind = assessment.Kind.ToString(),
-                        confidence = assessment.Confidence,
-                        evidence = assessment.Evidence,
-                        url = page?.Url,
-                    }
-                ),
-                Encoding.UTF8,
-                cancellationToken
-            );
-
-            if (page is not null)
+            // Capture is best effort: a full disk, a read-only artifacts root,
+            // or a closed page is logged and never fails the run.
+            try
             {
-                try
-                {
-                    await page.ScreenshotAsync(
-                        new PageScreenshotOptions
+                _files.CreateDirectory(directory);
+
+                var page = _pool.Find(context.BrowserProfileId);
+                await _files.WriteAllTextAsync(
+                    _files.Combine(directory, "assessment.json"),
+                    JsonSerializer.Serialize(
+                        new
                         {
-                            Path = _files.Combine(directory, "screenshot.png"),
-                            FullPage = true,
+                            kind = assessment.Kind.ToString(),
+                            confidence = assessment.Confidence,
+                            evidence = assessment.Evidence,
+                            url = page?.Url,
                         }
-                    );
-                    var html = await page.ContentAsync();
-                    await _files.WriteAllTextAsync(
-                        _files.Combine(directory, "page.html"),
-                        html.Length > MaxHtmlChars ? html[..MaxHtmlChars] : html,
-                        Encoding.UTF8,
-                        cancellationToken
-                    );
-                }
-                catch (PlaywrightException ex)
+                    ),
+                    Encoding.UTF8,
+                    cancellationToken
+                );
+
+                if (page is not null)
                 {
-                    LogCaptureFailed(_logger, ex, context.RunId.Value);
+                    try
+                    {
+                        await page.ScreenshotAsync(
+                            new PageScreenshotOptions
+                            {
+                                Path = _files.Combine(directory, "screenshot.png"),
+                                FullPage = true,
+                            }
+                        );
+                        var html = await page.ContentAsync();
+                        await _files.WriteAllTextAsync(
+                            _files.Combine(directory, "page.html"),
+                            html.Length > MaxHtmlChars ? html[..MaxHtmlChars] : html,
+                            Encoding.UTF8,
+                            cancellationToken
+                        );
+                    }
+                    catch (PlaywrightException ex)
+                    {
+                        LogCaptureFailed(_logger, ex, context.RunId.Value);
+                    }
                 }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                LogCaptureFailed(_logger, ex, context.RunId.Value);
             }
 
             return relative.Replace(_files.DirectorySeparatorChar, '/');
