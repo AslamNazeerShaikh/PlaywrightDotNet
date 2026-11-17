@@ -186,6 +186,20 @@ namespace JobScrape.Domain.Tests.Sourcing
         }
 
         [Fact]
+        public void RecordPostedDateMismatchCountsWhileFetching()
+        {
+            var searching = Searching();
+            var enriching = Enriching();
+
+            searching.RecordPostedDateMismatch();
+            enriching.RecordPostedDateMismatch();
+
+            Assert.Equal(1, searching.Stats.PostedDateMismatches);
+            Assert.Equal(1, enriching.Stats.PostedDateMismatches);
+            Assert.Throws<DomainException>(() => Persisting().RecordPostedDateMismatch());
+        }
+
+        [Fact]
         public void BeginEnrichingRequiresSearchingAndDetailCap()
         {
             Assert.Throws<DomainException>(() => Searching(maxDetails: 0).BeginEnriching());
