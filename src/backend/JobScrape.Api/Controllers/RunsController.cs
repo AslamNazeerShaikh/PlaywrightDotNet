@@ -3,6 +3,7 @@ using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Features.Runs;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -180,10 +181,7 @@ namespace JobScrape.Api.Controllers
                 }
             }
 
-            if (
-                !Enum.TryParse<ExportFormat>(format, ignoreCase: true, out var parsed)
-                || !Enum.IsDefined(parsed)
-            )
+            if (!EnumNames.TryParse<ExportFormat>(format, out var parsed))
             {
                 return Errors
                     .ExportFormatUnsupported(format, ExportFormatSupport.Enabled(_flags))

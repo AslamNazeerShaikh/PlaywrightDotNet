@@ -258,6 +258,38 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task GetRoleByNumberIs404()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            // "1" is Operator's ordinal, but a closed name is not a number.
+            using var response = await admin.GetAsync("api/v1/roles/1", Ct);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("ROLE_NOT_FOUND", body.GetProperty("code").GetString());
+        }
+
+        [Fact]
+        public async Task AssignRoleByNumberIs400WithRoleError()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            using var response = await admin.PostAsJsonAsync(
+                $"api/v1/users/{Guid.NewGuid():D}/roles",
+                new { role = "1" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("VALIDATION_FAILED", body.GetProperty("code").GetString());
+            Assert.True(body.GetProperty("errors").TryGetProperty("role", out _));
+        }
+
+        [Fact]
         public async Task LoginWithNullBodyIs400WithBodyError()
         {
             await using var factory = new ApiFactory();
