@@ -25,16 +25,6 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         /// </summary>
         internal const int RetentionHours = 24;
 
-        /// <summary>
-        /// SQLite extended result code for a composite primary-key violation.
-        /// </summary>
-        private const int SqlitePrimaryKeyConstraintExtendedCode = 1555;
-
-        /// <summary>
-        /// SQLite extended result code for a unique constraint violation.
-        /// </summary>
-        private const int SqliteUniqueConstraintExtendedCode = 2067;
-
         /// <inheritdoc />
         public async Task<IdempotencyEntry?> GetAsync(
             string ownerKey,
@@ -131,7 +121,7 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             {
                 await db.SaveChangesAsync(cancellationToken);
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            catch (DbUpdateException ex) when (db.IsUniqueViolation(ex))
             {
                 // Lost the insert race against another writer. The first writer
                 // owns the stored response; discard this one.
@@ -180,7 +170,7 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
                 await db.SaveChangesAsync(cancellationToken);
                 return true;
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            catch (DbUpdateException ex) when (db.IsUniqueViolation(ex))
             {
                 db.ChangeTracker.Clear();
                 return false;
@@ -255,21 +245,6 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Returns true when the exception is a SQLite unique-constraint
-        /// violation, so only genuine lost races are swallowed.
-        /// </summary>
-        /// <param name="exception">The caught update exception.</param>
-        /// <returns>True for a unique violation.</returns>
-        private static bool IsUniqueViolation(DbUpdateException exception)
-        {
-            return exception.InnerException is SqliteException sqlite
-                && (
-                    sqlite.SqliteExtendedErrorCode == SqliteUniqueConstraintExtendedCode
-                    || sqlite.SqliteExtendedErrorCode == SqlitePrimaryKeyConstraintExtendedCode
-                );
         }
 
         [LoggerMessage(
