@@ -5,7 +5,7 @@ namespace JobScrape.Mcp.Tools
 {
     /// <summary>
     /// Maps expected handler failures to MCP tool errors. The installed
-    /// <c>ModelContextProtocol</c> 2.3.1 <see cref="McpException"/> carries
+    /// <c>ModelContextProtocol</c> 2.4.0 <see cref="McpException"/> carries
     /// only a message, so the stable <see cref="ErrorInfo.Code"/> travels
     /// inside it ahead of the operator-safe detail.
     /// </summary>

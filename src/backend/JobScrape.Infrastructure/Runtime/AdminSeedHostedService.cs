@@ -17,7 +17,9 @@ namespace JobScrape.Infrastructure.Runtime
     /// <c>ADMIN_SETUP_SECRET</c> environment variables remain as fallback),
     /// assigns (creating) the admin role with
     /// every catalog permission, and leaves the account awaiting first
-    /// login. A non-empty users table is a no-op. Secrets are never logged.
+    /// login. Every start also ensures the usage-quota definitions and the
+    /// three role rows; only the admin account is skipped when any user
+    /// exists. Secrets are never logged.
     /// </summary>
     public sealed partial class AdminSeedHostedService : IHostedService
     {

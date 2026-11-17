@@ -42,8 +42,10 @@ namespace JobScrape.Application.Abstractions
     ) : ICallerContext
     {
         /// <summary>
-        /// Gets the local default: loopback callers with no transport
-        /// identity run as this actor until JWT wiring lands.
+        /// Gets the fallback actor for hosts with no transport identity. The
+        /// API never signs a request in as this actor: unauthenticated
+        /// callers get an empty context, and only an authenticated principal
+        /// missing both its subject and email falls back to this actor id.
         /// </summary>
         public static CallerContext LocalOperator { get; } =
             new("local-operator", Array.Empty<string>(), Array.Empty<string>());

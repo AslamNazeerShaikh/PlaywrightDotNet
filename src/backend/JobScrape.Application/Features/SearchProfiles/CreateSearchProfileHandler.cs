@@ -10,8 +10,10 @@ namespace JobScrape.Application.Features.SearchProfiles
     /// Creates a search profile. <see cref="SearchProfileValidator"/> checks
     /// every field at the request boundary and reports it by JSON name, so
     /// the domain only ever sees valid input. Caps default to the source's
-    /// policy limits and may only be tightened: fewer pages, jobs, or details
-    /// and longer delays (docs/12-web-cockpit.md §14.5).
+    /// policy limits; page and job caps may rise only to that source's
+    /// ceiling, detail caps may not exceed the source default, and delays may
+    /// not run shorter than the source minimum
+    /// (docs/12-web-cockpit.md §14.5).
     /// </summary>
     public sealed class CreateSearchProfileHandler
     {

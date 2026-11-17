@@ -111,8 +111,10 @@ namespace JobScrape.Api
 
             var app = builder.Build();
 
-            // Development-only document and reference endpoints; never
-            // proxied by the cockpit BFF and never exposed beyond loopback.
+            // Development-only document and reference endpoints; the cockpit
+            // BFF does not proxy them. Binding is host configuration: the
+            // development launch profile uses loopback, but Kestrel honors
+            // whatever URLs the operator supplies.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi().AllowAnonymous();
@@ -146,8 +148,9 @@ namespace JobScrape.Api
             app.UseMiddleware<UsageQuotaMiddleware>();
             app.MapControllers();
 
-            // MCP lives beside the controllers on /mcp; loopback only, like
-            // every other endpoint in this host, and bearer-authorized.
+            // MCP lives beside the controllers on /mcp and is
+            // bearer-authorized. Like every endpoint, its reach is the host's
+            // configured binding, not a rule enforced here.
             app.MapMcp("/mcp").RequireAuthorization();
 
             // Run disposes the host on every exit path; that disposes the
