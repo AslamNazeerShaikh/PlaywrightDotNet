@@ -34,7 +34,7 @@ namespace JobScrape.Application.Tests
         [Fact]
         public void ValueOnFailureThrows()
         {
-            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Validation);
             var result = Result.Fail<string>(error);
 
             Assert.Throws<InvalidOperationException>(() => result.Value);

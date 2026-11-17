@@ -17,7 +17,7 @@ namespace JobScrape.Application.Tests
         [Fact]
         public void FailCarriesError()
         {
-            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Unexpected);
+            var error = new ErrorInfo("INTERNAL_ERROR", "Title", "Detail", ErrorKind.Validation);
 
             var result = Result.Fail(error);
 

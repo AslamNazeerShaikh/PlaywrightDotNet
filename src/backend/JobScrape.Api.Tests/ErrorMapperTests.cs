@@ -83,12 +83,9 @@ namespace JobScrape.Api.Tests
         [InlineData(ErrorKind.Forbidden, StatusCodes.Status403Forbidden)]
         [InlineData(ErrorKind.RateLimited, StatusCodes.Status429TooManyRequests)]
         [InlineData(ErrorKind.QuotaExceeded, StatusCodes.Status429TooManyRequests)]
-        [InlineData(ErrorKind.Challenge, StatusCodes.Status409Conflict)]
         [InlineData(ErrorKind.CoolingDown, StatusCodes.Status423Locked)]
-        [InlineData(ErrorKind.SourceChanged, StatusCodes.Status502BadGateway)]
         [InlineData(ErrorKind.Unavailable, StatusCodes.Status503ServiceUnavailable)]
         [InlineData(ErrorKind.Storage, StatusCodes.Status507InsufficientStorage)]
-        [InlineData(ErrorKind.Unexpected, StatusCodes.Status500InternalServerError)]
         public async Task KindMapsToExpectedStatus(ErrorKind kind, int expectedStatus)
         {
             var error = new ErrorInfo("CODE", "Title", "Detail.", kind);
@@ -96,6 +93,16 @@ namespace JobScrape.Api.Tests
             var status = await ExecuteAsync(error.ToProblem());
 
             Assert.Equal(expectedStatus, status);
+        }
+
+        [Fact]
+        public async Task UndefinedKindFallsBackTo500()
+        {
+            var error = new ErrorInfo("CODE", "Title", "Detail.", (ErrorKind)99);
+
+            var status = await ExecuteAsync(error.ToProblem());
+
+            Assert.Equal(StatusCodes.Status500InternalServerError, status);
         }
 
         [Fact]
@@ -114,7 +121,7 @@ namespace JobScrape.Api.Tests
         public async Task ActiveActivitySuppliesTraceId()
         {
             using var activity = new Activity("ErrorMapperTests").Start();
-            var error = new ErrorInfo("CODE", "Title", "Detail.", ErrorKind.Unexpected);
+            var error = new ErrorInfo("CODE", "Title", "Detail.", (ErrorKind)99);
 
             var status = await ExecuteAsync(error.ToProblem());
 

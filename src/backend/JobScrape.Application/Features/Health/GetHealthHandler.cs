@@ -33,8 +33,8 @@ namespace JobScrape.Application.Features.Health
         {
             // Synchronous work wrapped for the async handler contract.
             // Task.FromResult avoids an async state machine for a method
-            // that never awaits; cancellationToken is accepted to keep the
-            // uniform handler signature for future I/O (e.g. disk checks).
+            // that never awaits; cancellationToken is accepted only to keep
+            // the uniform handler signature. Liveness performs no I/O.
             var response = new GetHealthResponse("healthy", _clock.GetUtcNow());
             return Task.FromResult(response);
         }
