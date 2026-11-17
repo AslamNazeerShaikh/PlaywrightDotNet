@@ -61,18 +61,37 @@ namespace JobScrape.Infrastructure.Export
 
         /// <summary>
         /// Quotes one CSV field: wrapped in quotes when it holds a comma,
-        /// quote, or line break, with inner quotes doubled (RFC 4180).
+        /// quote, or line break, with inner quotes doubled (RFC 4180). A
+        /// leading <c>=</c>, <c>+</c>, <c>-</c>, <c>@</c>, tab, or carriage
+        /// return is prefixed with an apostrophe so spreadsheet apps open
+        /// scraped text as text instead of executing it as a formula.
         /// </summary>
         /// <param name="value">The field text.</param>
         /// <returns>The escaped field.</returns>
         public static string CsvField(string value)
         {
+            var safe = SafeCell(value);
             return
-                value.Contains(',')
-                || value.Contains('"')
-                || value.Contains('\n')
-                || value.Contains('\r')
-                ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
+                safe.Contains(',')
+                || safe.Contains('"')
+                || safe.Contains('\n')
+                || safe.Contains('\r')
+                ? $"\"{safe.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
+                : safe;
+        }
+
+        /// <summary>
+        /// Neutralizes a cell that a spreadsheet app would otherwise run as a
+        /// formula. Scraped text is untrusted: any cell whose first character
+        /// is <c>=</c>, <c>+</c>, <c>-</c>, <c>@</c>, tab, or carriage return
+        /// gets a leading apostrophe.
+        /// </summary>
+        /// <param name="value">The cell text.</param>
+        /// <returns>The cell text, safe to open in a spreadsheet app.</returns>
+        public static string SafeCell(string value)
+        {
+            return value.Length > 0 && value[0] is '=' or '+' or '-' or '@' or '\t' or '\r'
+                ? string.Concat("'", value)
                 : value;
         }
 

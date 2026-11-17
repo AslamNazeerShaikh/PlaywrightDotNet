@@ -94,6 +94,44 @@ namespace JobScrape.Infrastructure.Tests.Export
             );
         }
 
+        [Theory]
+        [InlineData("=cmd|'/c calc'!A0")]
+        [InlineData("+1+1")]
+        [InlineData("-2+3")]
+        [InlineData("@SUM(A1:A2)")]
+        public async Task CsvNeutralizesFormulaPayloads(string payload)
+        {
+            var writer = new CsvPostingWriter();
+
+            var file = await writer.WriteAsync("postings.csv", [Posting(title: payload)], Ct);
+            var text = System.Text.Encoding.UTF8.GetString(file.Content);
+
+            Assert.Contains($"'{payload}", text, StringComparison.Ordinal);
+            Assert.DoesNotContain($"\"{payload}\"", text, StringComparison.Ordinal);
+        }
+
+        [Theory]
+        [InlineData("=cmd|'/c calc'!A0")]
+        [InlineData("+1+1")]
+        [InlineData("-2+3")]
+        [InlineData("@SUM(A1:A2)")]
+        public async Task XlsxNeutralizesFormulaPayloads(string payload)
+        {
+            var writer = new ExcelPostingWriter();
+
+            var file = await writer.WriteAsync("postings.xlsx", [Posting(title: payload)], Ct);
+
+            using var stream = new MemoryStream(file.Content);
+            using var workbook = new XLWorkbook(stream);
+            var sheet = workbook.Worksheet("Jobs");
+            var cell = sheet.Cell(2, 1);
+            // ClosedXML turns the leading apostrophe into the workbook's
+            // quote-prefix style: the stored cell stays text, never a formula.
+            Assert.False(cell.HasFormula);
+            Assert.True(cell.Style.IncludeQuotePrefix);
+            Assert.Equal(payload, cell.GetString());
+        }
+
         [Fact]
         public async Task WritersRejectNulls()
         {
