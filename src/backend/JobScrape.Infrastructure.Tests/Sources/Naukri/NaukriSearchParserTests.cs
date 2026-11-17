@@ -160,9 +160,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 ["011126000201", "011126000202"],
                 page.Jobs.Select(job => job.ExternalJobId)
             );
-            Assert.DoesNotContain(
-                page.Jobs,
-                job => job.Title.StartsWith("Trap", StringComparison.Ordinal)
+            Assert.DoesNotContain(page.Jobs, job =>
+                job.Title.StartsWith("Trap", StringComparison.Ordinal)
             );
 
             // Visible cards whose only link is off-host, javascript:, or hidden

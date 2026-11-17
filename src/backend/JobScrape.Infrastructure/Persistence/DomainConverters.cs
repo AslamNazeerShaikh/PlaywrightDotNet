@@ -225,10 +225,8 @@ namespace JobScrape.Infrastructure.Persistence
                         && left.Select(key => key.Value)
                             .SequenceEqual(right.Select(key => key.Value)),
             keys =>
-                keys.Aggregate(
-                    0,
-                    (hash, key) =>
-                        HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(key.Value))
+                keys.Aggregate(0, (hash, key) =>
+                    HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(key.Value))
                 ),
             keys => keys.ToList()
         );
@@ -244,13 +242,8 @@ namespace JobScrape.Infrastructure.Persistence
                         && left.Select(skill => skill.NormalizedName)
                             .SequenceEqual(right.Select(skill => skill.NormalizedName)),
             skills =>
-                skills.Aggregate(
-                    0,
-                    (hash, skill) =>
-                        HashCode.Combine(
-                            hash,
-                            StringComparer.Ordinal.GetHashCode(skill.NormalizedName)
-                        )
+                skills.Aggregate(0, (hash, skill) =>
+                    HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(skill.NormalizedName))
                 ),
             skills => skills.ToArray()
         );

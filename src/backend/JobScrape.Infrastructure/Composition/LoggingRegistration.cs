@@ -107,44 +107,36 @@ namespace JobScrape.Infrastructure.Composition
                     var options = provider.GetRequiredService<IOptions<LoggingOptions>>().Value;
                     var directory = Path.GetFullPath(options.Directory, contentRoot);
                     logger.WriteTo.Console(new RenderedCompactJsonFormatter());
-                    AddAsyncFileSink(
-                        logger,
-                        sink =>
-                            sink.File(
-                                new CompactJsonFormatter(),
-                                Path.Combine(directory, $"{prefix}-.jsonl"),
-                                fileSizeLimitBytes: options.FileSizeLimitBytes,
-                                rollingInterval: RollingInterval.Day,
-                                rollOnFileSizeLimit: true,
-                                retainedFileCountLimit: 200,
-                                retainedFileTimeLimit: TimeSpan.FromDays(options.RetentionDays)
-                            )
+                    AddAsyncFileSink(logger, sink =>
+                        sink.File(
+                            new CompactJsonFormatter(),
+                            Path.Combine(directory, $"{prefix}-.jsonl"),
+                            fileSizeLimitBytes: options.FileSizeLimitBytes,
+                            rollingInterval: RollingInterval.Day,
+                            rollOnFileSizeLimit: true,
+                            retainedFileCountLimit: 200,
+                            retainedFileTimeLimit: TimeSpan.FromDays(options.RetentionDays)
+                        )
                     );
-                    AddAsyncFileSink(
-                        logger,
-                        sink =>
-                            sink.File(
-                                Path.Combine(directory, $"{prefix}-.log"),
-                                outputTemplate: PlainTextOutputTemplate,
-                                formatProvider: CultureInfo.InvariantCulture,
-                                fileSizeLimitBytes: options.PlainTextFileSizeLimitBytes,
-                                rollingInterval: options.PlainTextRollingInterval switch
-                                {
-                                    "Hour" => RollingInterval.Hour,
-                                    "Day" => RollingInterval.Day,
-                                    // Reachable only if validation is bypassed (Options.Create in
-                                    // tests) or the logger builds before ValidateOnStart; fail closed.
-                                    _ => throw new InvalidOperationException(
-                                        $"Unsupported PlainTextRollingInterval '{options.PlainTextRollingInterval}'."
-                                    ),
-                                },
-                                rollOnFileSizeLimit: true,
-                                retainedFileCountLimit: 336,
-                                retainedFileTimeLimit: TimeSpan.FromDays(
-                                    options.PlainTextRetentionDays
-                                )
-                            )
-                    );
+                    AddAsyncFileSink(logger, sink => sink.File(
+                            Path.Combine(directory, $"{prefix}-.log"),
+                            outputTemplate: PlainTextOutputTemplate,
+                            formatProvider: CultureInfo.InvariantCulture,
+                            fileSizeLimitBytes: options.PlainTextFileSizeLimitBytes,
+                            rollingInterval: options.PlainTextRollingInterval switch
+                            {
+                                "Hour" => RollingInterval.Hour,
+                                "Day" => RollingInterval.Day,
+                                // Reachable only if validation is bypassed (Options.Create in
+                                // tests) or the logger builds before ValidateOnStart; fail closed.
+                                _ => throw new InvalidOperationException(
+                                    $"Unsupported PlainTextRollingInterval '{options.PlainTextRollingInterval}'."
+                                ),
+                            },
+                            rollOnFileSizeLimit: true,
+                            retainedFileCountLimit: 336,
+                            retainedFileTimeLimit: TimeSpan.FromDays(options.PlainTextRetentionDays)
+                        ));
                 },
                 preserveStaticLogger: true
             );

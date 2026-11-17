@@ -117,13 +117,11 @@ namespace JobScrape.Api
             {
                 app.MapOpenApi().AllowAnonymous();
 
-                app.MapScalarApiReference(
-                        "/scalar",
-                        options =>
-                            options
-                                .WithTitle("JobLens API v1")
-                                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-                                .AddPreferredSecuritySchemes("Bearer")
+                app.MapScalarApiReference("/scalar", options =>
+                        options
+                            .WithTitle("JobLens API v1")
+                            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+                            .AddPreferredSecuritySchemes("Bearer")
                     )
                     .AllowAnonymous();
             }

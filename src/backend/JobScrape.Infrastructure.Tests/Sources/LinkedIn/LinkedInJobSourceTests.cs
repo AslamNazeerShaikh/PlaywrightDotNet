@@ -79,20 +79,17 @@ namespace JobScrape.Infrastructure.Tests.Sources.LinkedIn
         {
             var page = await _pool.OpenAsync(_profile, Ct);
             var html = LinkedInTestPages.Fixture("search-guest.html");
-            await page.Context.RouteAsync(
-                "https://www.linkedin.com/**",
-                async route =>
-                {
-                    await route.FulfillAsync(
-                        new RouteFulfillOptions
-                        {
-                            Status = 200,
-                            ContentType = "text/html; charset=utf-8",
-                            Body = html,
-                        }
-                    );
-                }
-            );
+            await page.Context.RouteAsync("https://www.linkedin.com/**", async route =>
+            {
+                await route.FulfillAsync(
+                    new RouteFulfillOptions
+                    {
+                        Status = 200,
+                        ContentType = "text/html; charset=utf-8",
+                        Body = html,
+                    }
+                );
+            });
             var source = new LinkedInJobSource(
                 _pool,
                 new FakeTimeProvider(Now),

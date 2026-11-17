@@ -153,8 +153,8 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 SalaryRaw = string.IsNullOrWhiteSpace(salaryRaw) ? null : salaryRaw,
                 Salary = IndeedFields.Salary(salaryRaw),
                 PostedRaw = postedRaw,
-                PostedAt =
-                    IndeedFields.IsoDate(jsonLd?.DatePosted) ?? IndeedFields.Posted(postedRaw, now),
+                PostedAt = IndeedFields.IsoDate(jsonLd?.DatePosted)
+                    ?? IndeedFields.Posted(postedRaw, now),
                 Description = Description(document, jsonLd),
                 Skills = IndeedFields.Skills(
                     jsonLd?.Skills is { Count: > 0 } skills
@@ -183,8 +183,7 @@ namespace JobScrape.Infrastructure.Sources.Indeed
             string? shown
         )
         {
-            var text =
-                shown
+            var text = shown
                 ?? string.Join(
                     ", ",
                     (jsonLd?.Localities ?? [])

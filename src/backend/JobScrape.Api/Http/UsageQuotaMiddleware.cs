@@ -232,18 +232,15 @@ namespace JobScrape.Api.Http
             DateTimeOffset now
         )
         {
-            return _cache.GetOrCreate(
-                CounterKey(actor, scope),
-                entry =>
+            return _cache.GetOrCreate(CounterKey(actor, scope), entry =>
+            {
+                entry.AbsoluteExpiration = now + definition.Window;
+                return new Counter
                 {
-                    entry.AbsoluteExpiration = now + definition.Window;
-                    return new Counter
-                    {
-                        Start = now,
-                        Generation = Interlocked.Increment(ref _nextWindowGeneration),
-                    };
-                }
-            )!;
+                    Start = now,
+                    Generation = Interlocked.Increment(ref _nextWindowGeneration),
+                };
+            })!;
         }
 
         /// <summary>

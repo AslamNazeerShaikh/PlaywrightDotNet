@@ -158,15 +158,13 @@ namespace JobScrape.Api.Http.Auth
             authorization.SetFallbackPolicy(
                 new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()
             );
-            authorization.AddPolicy(
-                AuthPolicies.RequireAdmin,
-                policy => policy.AddRequirements(new AdminRequirement())
+            authorization.AddPolicy(AuthPolicies.RequireAdmin, policy =>
+                policy.AddRequirements(new AdminRequirement())
             );
             foreach (var permission in PermissionCatalog.Keys)
             {
-                authorization.AddPolicy(
-                    permission.Value,
-                    policy => policy.AddRequirements(new PermissionRequirement(permission.Value))
+                authorization.AddPolicy(permission.Value, policy =>
+                    policy.AddRequirements(new PermissionRequirement(permission.Value))
                 );
             }
 
@@ -211,38 +209,34 @@ namespace JobScrape.Api.Http.Auth
                 );
                 // Per-account login budget, keyed by the submitted email
                 // when present, otherwise the client IP.
-                options.AddPolicy(
-                    RateLimitPolicies.Login,
-                    context =>
-                        RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: GetLoginPartitionKey(context),
-                            factory: _ => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = LoginPermitLimit,
-                                Window = TimeSpan.FromMinutes(1),
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                                QueueLimit = 0,
-                                AutoReplenishment = true,
-                            }
-                        )
+                options.AddPolicy(RateLimitPolicies.Login, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: GetLoginPartitionKey(context),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = LoginPermitLimit,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            QueueLimit = 0,
+                            AutoReplenishment = true,
+                        }
+                    )
                 );
 
                 // Separate setup-password budget, so setup spam cannot burn an
                 // account's login budget.
-                options.AddPolicy(
-                    RateLimitPolicies.Setup,
-                    context =>
-                        RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: GetLoginPartitionKey(context),
-                            factory: _ => new FixedWindowRateLimiterOptions
-                            {
-                                PermitLimit = LoginPermitLimit,
-                                Window = TimeSpan.FromMinutes(1),
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                                QueueLimit = 0,
-                                AutoReplenishment = true,
-                            }
-                        )
+                options.AddPolicy(RateLimitPolicies.Setup, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: GetLoginPartitionKey(context),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = LoginPermitLimit,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            QueueLimit = 0,
+                            AutoReplenishment = true,
+                        }
+                    )
                 );
             });
             return services;

@@ -78,9 +78,8 @@ namespace JobScrape.Application.Tests.Scraping
                 ["1", "3", "4"],
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
             );
-            var drop = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            var drop = Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("stale posted date", StringComparison.Ordinal)
             );
             Assert.Equal(LogLevel.Warning, drop.Level);
         }
@@ -117,9 +116,8 @@ namespace JobScrape.Application.Tests.Scraping
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).ToArray()
             );
             Assert.Equal(2, harness.Source.Requests.Count);
-            var drop = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            var drop = Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("stale posted date", StringComparison.Ordinal)
             );
             Assert.Equal(LogLevel.Warning, drop.Level);
         }
@@ -146,9 +144,8 @@ namespace JobScrape.Application.Tests.Scraping
             Assert.Equal(1, run.Stats.PostingsFound);
             var posting = Assert.Single(harness.Store.Postings);
             Assert.Equal(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero), posting.PostedAt);
-            Assert.DoesNotContain(
-                harness.Logger.Entries,
-                e => e.Message.Contains("stale posted date", StringComparison.Ordinal)
+            Assert.DoesNotContain(harness.Logger.Entries, e =>
+                e.Message.Contains("stale posted date", StringComparison.Ordinal)
             );
         }
 
@@ -180,9 +177,8 @@ namespace JobScrape.Application.Tests.Scraping
                 ["1", "3"],
                 harness.Store.Postings.Select(p => p.ExternalJobId.Value).Order()
             );
-            var drop = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("skill mismatch", StringComparison.Ordinal)
+            var drop = Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("skill mismatch", StringComparison.Ordinal)
             );
             Assert.Contains("2", drop.Message, StringComparison.Ordinal);
         }
@@ -220,9 +216,8 @@ namespace JobScrape.Application.Tests.Scraping
             var run = Assert.Single(harness.Store.Runs);
             Assert.Equal(1, run.Stats.PostedDateMismatches);
             Assert.Equal(Now.AddHours(-5), Assert.Single(harness.Store.Postings).PostedAt);
-            var mismatch = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("posted-date mismatch", StringComparison.Ordinal)
+            var mismatch = Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("posted-date mismatch", StringComparison.Ordinal)
             );
             Assert.Equal(LogLevel.Warning, mismatch.Level);
         }
@@ -238,9 +233,8 @@ namespace JobScrape.Application.Tests.Scraping
             await RunOkAsync(harness);
 
             Assert.Equal(0, Assert.Single(harness.Store.Runs).Stats.PostedDateMismatches);
-            Assert.DoesNotContain(
-                harness.Logger.Entries,
-                e => e.Message.Contains("posted-date mismatch", StringComparison.Ordinal)
+            Assert.DoesNotContain(harness.Logger.Entries, e =>
+                e.Message.Contains("posted-date mismatch", StringComparison.Ordinal)
             );
         }
 
