@@ -24,6 +24,7 @@ import { useRenderLog } from "./lib/debug.ts";
 import { formatClock } from "./lib/format.ts";
 import { type DeckRoute, parseRoute } from "./lib/router.ts";
 import {
+  formatMs,
   latencyStats,
   type LogEvent,
   pushEvent,
@@ -206,9 +207,7 @@ export function App({
           at: formatClock(at),
           kind: ok ? "ok" : "err",
           code: ok ? "HEALTHY" : result.problem.code,
-          detail: ok
-            ? `engine healthy in ${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
-            : result.problem.title,
+          detail: ok ? `engine healthy in ${formatMs(ms)}` : result.problem.title,
         }),
       );
     } finally {
@@ -579,26 +578,13 @@ export function App({
     }
   }
 
-  // Restore: always attempt GET /bff/session on mount (skipped for test seam).
+  // Restore: always attempt GET /bff/session on mount (skipped for test seam). A stored setup
+  // email is handled inside refreshMe, which prefers the setup screen over the sign-in form.
   useEffect(() => {
     if (initialSession !== undefined) {
       return;
     }
-    let alive = true;
-    void (async () => {
-      const setupEmail = safeSessionStorage("jobscrape.setupEmail");
-      await refreshMe();
-      // If restore found anonymous but a setup email is stored, prefer setup state.
-      if (alive && setupEmail && authState.kind === "anonymous") {
-        setAuthState({ kind: "setup", email: setupEmail, problem: null });
-      }
-      if (alive) {
-        // restoring already replaced by refreshMe; ensure not stuck
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+    void refreshMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -11,6 +11,7 @@ export interface Sample {
   ok: boolean;
 }
 
+/** Aggregate latency readout: count, last, min, max, and lower-median p50 (ms). */
 export interface LatencyStats {
   count: number;
   last: number;
@@ -19,6 +20,7 @@ export interface LatencyStats {
   p50: number;
 }
 
+/** One ops killfeed row: when, what kind, which stable code, and the detail line. */
 export interface LogEvent {
   at: string;
   kind: "ok" | "err" | "info";
@@ -26,7 +28,9 @@ export interface LogEvent {
   detail: string;
 }
 
+/** Rolling sample cap for the latency chart. */
 export const MAX_SAMPLES = 60;
+/** Rolling cap for the ops event log. */
 export const MAX_EVENTS = 80;
 
 /** Appends a sample, keeping the newest `cap` entries. */

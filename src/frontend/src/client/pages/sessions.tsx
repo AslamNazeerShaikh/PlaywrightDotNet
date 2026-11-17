@@ -23,8 +23,13 @@ import { SOURCES } from "./profiles.tsx";
  * implemented yet; the page says so instead of offering buttons that cannot work.
  */
 export const ENGINES = ["Chromium", "Firefox", "WebKit"] as const;
+/** The channel the bundled Playwright build supports. */
 export const CHANNELS = ["Bundled"] as const;
 
+/**
+ * Browser-profile management: create one persistent identity per source, list session health, and
+ * edit the selected profile. `onCreate`/`onUpdate` resolve true on success.
+ */
 export function SessionsPage({
   sessions,
   listProblem,
@@ -233,6 +238,10 @@ export function SessionsPage({
               <StateRow state="New" text="Never verified, or reset. Needs a login and a probe." />
               <StateRow state="Healthy" text="A probe verified the session." />
               <StateRow
+                state="Challenged"
+                text="A wall was hit; the next launch needs a manual check before it is trusted."
+              />
+              <StateRow
                 state="CoolingDown"
                 text="Stopped after a wall; launches are blocked until the cooldown ends."
               />
@@ -346,6 +355,7 @@ export function stateLabel(state: SessionPayload["state"]): string {
   return constantCase(state);
 }
 
+/** Tone for a session state tag: healthy is ok, reset is bad, any waiting state is warn. */
 export function stateTone(state: SessionPayload["state"]): "ok" | "warn" | "bad" | undefined {
   if (state === "Healthy") {
     return "ok";

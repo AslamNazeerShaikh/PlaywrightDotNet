@@ -7,6 +7,7 @@ export function readText(data: FormData, key: string): string {
   return String(data.get(key) ?? "").trim();
 }
 
+/** Reads a numeric field; blank or non-finite input becomes null. */
 export function readNumber(data: FormData, key: string): number | null {
   const raw = readText(data, key);
   if (raw === "") {
@@ -16,6 +17,7 @@ export function readNumber(data: FormData, key: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+/** Reads a comma-separated field into trimmed, non-empty items. */
 export function readList(data: FormData, key: string): string[] {
   return readText(data, key)
     .split(",")

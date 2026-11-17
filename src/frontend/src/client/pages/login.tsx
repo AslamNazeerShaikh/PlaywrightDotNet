@@ -41,6 +41,10 @@ export function AuthProblem({ problem }: { problem: ApiProblem }) {
   );
 }
 
+/**
+ * Sign-in form. `onLogin` resolves true on success; a false answer leaves the problem for
+ * {@link AuthProblem}. `onFirstLogin` carries the typed email to the setup screen.
+ */
 export function LoginPage({
   initialEmail,
   busy,
@@ -139,6 +143,10 @@ export function LoginPage({
   );
 }
 
+/**
+ * First-login form: trades the seeded secret for a password. `onSetup` resolves true when the
+ * server accepted it; a false answer leaves the problem for {@link AuthProblem}.
+ */
 export function SetupPasswordPage({
   initialEmail,
   busy,

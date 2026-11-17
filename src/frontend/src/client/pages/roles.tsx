@@ -5,6 +5,7 @@ import { Scramble } from "../components/scramble.tsx";
 import {
   type ApiClient,
   type ApiProblem,
+  newIdempotencyKey,
   PERMISSION_CATALOG,
   type RoleResponse,
 } from "../lib/api.ts";
@@ -277,15 +278,6 @@ export function RolesPage({
       </Module>
     </>
   );
-}
-
-/** One idempotency key per submit, so a double click never creates two roles. */
-function newIdempotencyKey(): string {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
-  }
 }
 
 /** Re-exported for tests: write access to role grants needs roles.write. */
