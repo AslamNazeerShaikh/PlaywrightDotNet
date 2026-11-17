@@ -4,8 +4,10 @@ using JobScrape.Application.Features.Scraping;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Common;
 using JobScrape.Infrastructure.Browser;
+using JobScrape.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 
 namespace JobScrape.Infrastructure.Runtime
@@ -23,6 +25,9 @@ namespace JobScrape.Infrastructure.Runtime
         // All injected and never mutated; _active is guarded by _lock.
         private readonly IServiceScopeFactory _scopes;
         private readonly IBrowserSessionPool _pool;
+        private readonly BrowserSessionSettings _settings;
+        private readonly StorageOptions _storage;
+        private readonly IFileSystem _files;
         private readonly TimeProvider _clock;
         private readonly ILogger<RunCoordinator> _logger;
         private readonly CancellationTokenSource _stopping = new();
@@ -35,22 +40,34 @@ namespace JobScrape.Infrastructure.Runtime
         /// </summary>
         /// <param name="scopes">Creates one scope per run.</param>
         /// <param name="pool">Releases the run's browser when it ends.</param>
+        /// <param name="settings">Provides the resolved artifacts root.</param>
+        /// <param name="storage">Provides the free-space floor.</param>
+        /// <param name="files">Probes the volume's free space.</param>
         /// <param name="clock">The time source.</param>
         /// <param name="logger">The logger.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunCoordinator(
             IServiceScopeFactory scopes,
             IBrowserSessionPool pool,
+            BrowserSessionSettings settings,
+            IOptions<StorageOptions> storage,
+            IFileSystem files,
             TimeProvider clock,
             ILogger<RunCoordinator> logger
         )
         {
             ArgumentNullException.ThrowIfNull(scopes);
             ArgumentNullException.ThrowIfNull(pool);
+            ArgumentNullException.ThrowIfNull(settings);
+            ArgumentNullException.ThrowIfNull(storage);
+            ArgumentNullException.ThrowIfNull(files);
             ArgumentNullException.ThrowIfNull(clock);
             ArgumentNullException.ThrowIfNull(logger);
             _scopes = scopes;
             _pool = pool;
+            _settings = settings;
+            _storage = storage.Value;
+            _files = files;
             _clock = clock;
             _logger = logger;
         }
@@ -62,6 +79,16 @@ namespace JobScrape.Infrastructure.Runtime
         )
         {
             ArgumentNullException.ThrowIfNull(request);
+
+            // Writes stop below the configured floor: artifacts and the
+            // SQLite file share a volume, and a full disk corrupts both.
+            var freeBytes = _files.GetAvailableFreeBytes(_settings.ArtifactsRoot);
+            if (freeBytes < _storage.MinimumFreeDiskBytes)
+            {
+                return Result.Fail<Guid>(
+                    Errors.StorageLowDisk(freeBytes, _storage.MinimumFreeDiskBytes)
+                );
+            }
 
             ActiveRun run;
             lock (_lock)

@@ -43,6 +43,16 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public void StorageLowDiskCarriesTheFloorAndAvailableSpace()
+        {
+            var error = Errors.StorageLowDisk(1_024, 2_048);
+
+            Assert.Equal(("STORAGE_LOW_DISK", ErrorKind.Storage), (error.Code, error.Kind));
+            Assert.Equal(1_024L, error.Metadata!["freeBytes"]);
+            Assert.Equal(2_048L, error.Metadata["minimumBytes"]);
+        }
+
+        [Fact]
         public void ValidationFailedRejectsNullDetail()
         {
             Assert.Throws<ArgumentNullException>(() =>

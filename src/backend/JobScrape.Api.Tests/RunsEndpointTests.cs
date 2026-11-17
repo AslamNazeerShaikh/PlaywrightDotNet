@@ -106,6 +106,62 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task StartRunRefusesBelowTheDiskFloor()
+        {
+            await using var factory = new ApiFactory
+            {
+                TestServices = services =>
+                    services.AddSingleton<JobScrape.Infrastructure.Browser.IFileSystem>(
+                        new EmptyDiskFileSystem()
+                    ),
+            };
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            using var response = await admin.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = Guid.NewGuid(), browserProfileId = Guid.NewGuid() },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.InsufficientStorage, response.StatusCode);
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal("STORAGE_LOW_DISK", problem.GetProperty("code").GetString());
+        }
+
+        /// <summary>
+        /// Reports no free space, so the run gate refuses before any lookup.
+        /// </summary>
+        private sealed class EmptyDiskFileSystem : JobScrape.Infrastructure.Browser.IFileSystem
+        {
+            public char DirectorySeparatorChar => '/';
+
+            public string Combine(params string[] paths) => string.Join('/', paths);
+
+            public void CreateDirectory(string path) => throw new NotSupportedException();
+
+            public bool DirectoryExists(string? path) => false;
+
+            public void MoveDirectory(string source, string destination) =>
+                throw new NotSupportedException();
+
+            public Task WriteAllTextAsync(
+                string path,
+                string contents,
+                System.Text.Encoding encoding,
+                CancellationToken cancellationToken
+            ) => throw new NotSupportedException();
+
+            public long GetAvailableFreeBytes(string path) => 0;
+
+            public IReadOnlyList<string> EnumerateDirectories(string path) => [];
+
+            public DateTime GetLastWriteTimeUtc(string path) => DateTime.UnixEpoch;
+
+            public void DeleteDirectory(string path, bool recursive) =>
+                throw new NotSupportedException();
+        }
+
+        [Fact]
         public async Task StartFollowAndReadPostingsThroughSqlite()
         {
             await using var factory = Factory(new FakeSource());

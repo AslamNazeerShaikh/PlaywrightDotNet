@@ -168,6 +168,10 @@ namespace JobScrape.Infrastructure.Composition
             // work; the coordinator resolves it in a fresh scope per run.
             services.AddScoped<RunScrapeHandler>();
 
+            // Storage retention: expired postings and artifact directories
+            // leave once at startup, then daily.
+            services.AddHostedService<StorageRetentionService>();
+
             // Runs outlive their request: one coordinator executes them in
             // the background, cancels on shutdown, and fails runs a crash
             // left mid-flight on the next start.

@@ -231,6 +231,26 @@ namespace JobScrape.Infrastructure.Tests.Browser
                 Writes.Add(path, contents);
                 return Task.CompletedTask;
             }
+
+            public long GetAvailableFreeBytes(string path)
+            {
+                throw new NotSupportedException("The artifact store never probes free space.");
+            }
+
+            public IReadOnlyList<string> EnumerateDirectories(string path)
+            {
+                throw new NotSupportedException("The artifact store never enumerates directories.");
+            }
+
+            public DateTime GetLastWriteTimeUtc(string path)
+            {
+                throw new NotSupportedException("The artifact store never reads write times.");
+            }
+
+            public void DeleteDirectory(string path, bool recursive)
+            {
+                throw new NotSupportedException("The artifact store never deletes directories.");
+            }
         }
     }
 }
