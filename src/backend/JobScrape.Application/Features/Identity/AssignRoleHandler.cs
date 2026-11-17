@@ -6,9 +6,9 @@ using JobScrape.Domain.Identity;
 namespace JobScrape.Application.Features.Identity
 {
     /// <summary>
-    /// Assigns and revokes roles. Revoking the admin role from the last
-    /// admin is refused: at least one other user must hold it. Duplicate
-    /// assignment is a conflict; revoking an unassigned role converges.
+    /// Assigns roles. Revoking the admin role from the last admin is refused:
+    /// at least one other user must hold it. Duplicate assignment is a
+    /// conflict; revoking an unassigned role converges.
     /// </summary>
     public sealed class AssignRoleHandler
     {
@@ -59,52 +59,23 @@ namespace JobScrape.Application.Features.Identity
             CancellationToken cancellationToken
         )
         {
-            UserId id;
-            try
+            var resolved = await RoleAssignmentResolver.ResolveAsync(
+                _users,
+                _roles,
+                _caller,
+                userId,
+                roleName,
+                cancellationToken
+            );
+            if (resolved.IsFailure)
             {
-                id = UserId.From(userId);
-            }
-            catch (DomainException ex)
-            {
-                return Result.Fail(
-                    Errors.ValidationFailed(
-                        ex.Message,
-                        new Dictionary<string, string[]> { ["userId"] = [ex.Message] }
-                    )
-                );
-            }
-
-            if (Guid.TryParse(_caller.ActorId, out var callerId) && callerId == id.Value)
-            {
-                return Result.Fail(Errors.AccessDenied());
-            }
-
-            if (
-                roleName == RoleName.Admin
-                && !_caller.Roles.Any(role =>
-                    string.Equals(role, RoleName.Admin.ToString(), StringComparison.Ordinal)
-                )
-            )
-            {
-                return Result.Fail(Errors.AccessDenied());
-            }
-
-            var user = await _users.GetAsync(id, cancellationToken);
-            if (user is null)
-            {
-                return Result.Fail(Errors.UserNotFound(userId.ToString()));
-            }
-
-            var role = await _roles.GetByNameAsync(roleName, cancellationToken);
-            if (role is null)
-            {
-                return Result.Fail(Errors.RoleNotFound(roleName.ToString()));
+                return Result.Fail(resolved.Error);
             }
 
             try
             {
-                user.AssignRole(role.Id);
-                user.BumpTokenVersion();
+                resolved.Value.User.AssignRole(resolved.Value.Role.Id);
+                resolved.Value.User.BumpTokenVersion();
             }
             catch (DomainException)
             {
