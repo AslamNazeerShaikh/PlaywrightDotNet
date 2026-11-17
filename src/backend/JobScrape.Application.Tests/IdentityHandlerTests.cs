@@ -1163,11 +1163,9 @@ namespace JobScrape.Application.Tests
 
             Assert.True(result.IsSuccess);
             Assert.DoesNotContain(unknownRoleId, user.Roles);
-            Assert.Single(
-                logger.Entries,
-                entry =>
-                    entry.Level == LogLevel.Warning
-                    && entry.Message.Contains("Dropped unknown role", StringComparison.Ordinal)
+            Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Warning
+                && entry.Message.Contains("Dropped unknown role", StringComparison.Ordinal)
             );
             Assert.Equal(1, unitOfWork.Saves);
         }
@@ -1244,14 +1242,9 @@ namespace JobScrape.Application.Tests
             Assert.Contains(PermissionKey.From("runs.read"), tokens.SeenPermissions!);
             Assert.Contains(PermissionKey.From("profiles.read"), tokens.SeenPermissions!);
             Assert.DoesNotContain(unknownKey, tokens.SeenPermissions!);
-            Assert.Single(
-                logger.Entries,
-                entry =>
-                    entry.Level == LogLevel.Warning
-                    && entry.Message.Contains(
-                        "Dropped unknown permission",
-                        StringComparison.Ordinal
-                    )
+            Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Warning
+                && entry.Message.Contains("Dropped unknown permission", StringComparison.Ordinal)
             );
             Assert.Equal(1, unitOfWork.Saves);
         }

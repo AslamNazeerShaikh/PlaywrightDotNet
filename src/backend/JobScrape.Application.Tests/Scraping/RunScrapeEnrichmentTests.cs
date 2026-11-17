@@ -204,14 +204,12 @@ namespace JobScrape.Application.Tests.Scraping
 
             await RunAsync(harness);
 
-            var retry = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Properties.ContainsKey("Step")
+            var retry = Assert.Single(harness.Logger.Entries, e =>
+                e.Properties.ContainsKey("Step")
             );
             Assert.Equal("detail 1", retry.Properties["Step"]);
-            var stop = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Properties.ContainsKey("Detail")
+            var stop = Assert.Single(harness.Logger.Entries, e =>
+                e.Properties.ContainsKey("Detail")
             );
             Assert.Equal(2, stop.Properties["Detail"]);
         }

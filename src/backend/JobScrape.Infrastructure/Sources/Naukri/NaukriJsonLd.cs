@@ -205,8 +205,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 Title = Scalar(Property(posting, "title")),
                 DescriptionHtml = Scalar(Property(posting, "description")),
-                Identifier =
-                    Scalar(Property(identifier, "value"))
+                Identifier = Scalar(Property(identifier, "value"))
                     ?? (identifier?.ValueKind == JsonValueKind.Object ? null : Scalar(identifier)),
                 DatePosted = Scalar(Property(posting, "datePosted")),
                 Company = Scalar(Property(Property(posting, "hiringOrganization"), "name")),

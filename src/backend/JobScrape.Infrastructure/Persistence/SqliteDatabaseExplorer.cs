@@ -136,8 +136,7 @@ namespace JobScrape.Infrastructure.Persistence
         {
             var columns = await ReadColumnsAsync(connection, tableName, cancellationToken);
             var foreignKeys = await ReadForeignKeysAsync(connection, tableName, cancellationToken);
-            var pkColumn =
-                columns.FirstOrDefault(c => c.PrimaryKey)?.Name
+            var pkColumn = columns.FirstOrDefault(c => c.PrimaryKey)?.Name
                 ?? (columns.Count > 0 ? columns[0].Name : string.Empty);
 
             return new DatabaseTableSchema(tableName, columns, foreignKeys, pkColumn);

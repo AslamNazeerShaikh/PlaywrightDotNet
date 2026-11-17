@@ -17,8 +17,8 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         ILogger<IdempotencyStore>? logger = null
     ) : IIdempotencyStore
     {
-        private readonly ILogger<IdempotencyStore> _logger =
-            logger ?? NullLogger<IdempotencyStore>.Instance;
+        private readonly ILogger<IdempotencyStore> _logger = logger
+            ?? NullLogger<IdempotencyStore>.Instance;
 
         /// <summary>
         /// How long a stored response replays, in hours.

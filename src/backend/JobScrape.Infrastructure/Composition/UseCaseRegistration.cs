@@ -61,8 +61,7 @@ namespace JobScrape.Infrastructure.Composition
                 var mustChange = user.HasClaim(claim =>
                     claim.Type == IdentityClaimTypes.MustChangePassword && claim.Value == "true"
                 );
-                var actor =
-                    user.FindFirst(IdentityClaimTypes.Subject)?.Value
+                var actor = user.FindFirst(IdentityClaimTypes.Subject)?.Value
                     ?? user.FindFirst(IdentityClaimTypes.Email)?.Value
                     ?? CallerContext.LocalOperator.ActorId;
                 var roles = user.FindAll(IdentityClaimTypes.Role)
@@ -160,8 +159,8 @@ namespace JobScrape.Infrastructure.Composition
                 // removed from the production configuration.
                 var seed = provider.GetRequiredService<IOptions<AdminSeedOptions>>().Value;
                 var email = seed.Email ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-                var secret =
-                    seed.SetupSecret ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
+                var secret = seed.SetupSecret
+                    ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
                 return new AdminSeedHostedService(
                     provider.GetRequiredService<IServiceScopeFactory>(),
                     provider.GetRequiredService<TimeProvider>(),

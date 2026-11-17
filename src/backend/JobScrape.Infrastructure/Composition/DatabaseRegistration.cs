@@ -39,8 +39,7 @@ namespace JobScrape.Infrastructure.Composition
 
             // Read directly (not through IOptions) because registration needs
             // the path now; the same section is still validated on start.
-            var storage =
-                configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+            var storage = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
                 ?? new StorageOptions();
             var path = Path.GetFullPath(storage.DatabasePath, contentRoot);
             var directory = Path.GetDirectoryName(path);
@@ -95,8 +94,7 @@ namespace JobScrape.Infrastructure.Composition
             ArgumentNullException.ThrowIfNull(configuration);
             ArgumentNullException.ThrowIfNull(contentRoot);
 
-            var storage =
-                configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+            var storage = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
                 ?? new StorageOptions();
             var path = Path.GetFullPath(storage.DatabasePath, contentRoot);
             var connectionString = new SqliteConnectionStringBuilder

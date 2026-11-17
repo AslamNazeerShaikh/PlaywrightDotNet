@@ -83,8 +83,8 @@ namespace JobScrape.Infrastructure.Runtime
             }
 
             var email = _adminEmail ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-            var secret =
-                _adminSetupSecret ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
+            var secret = _adminSetupSecret
+                ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(secret))
             {
                 LogSeedSkipped(_logger);
@@ -203,8 +203,7 @@ namespace JobScrape.Infrastructure.Runtime
                     // intentionally removed. Save only when something changed.
                     if (name == RoleName.Admin)
                     {
-                        var existing =
-                            existingRoles.FirstOrDefault(role => role.Name == name)
+                        var existing = existingRoles.FirstOrDefault(role => role.Name == name)
                             ?? await roles.GetByNameAsync(name, cancellationToken);
                         if (existing is not null)
                         {
