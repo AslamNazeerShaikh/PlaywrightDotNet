@@ -397,31 +397,23 @@ namespace JobScrape.Application.Features.Scraping
         }
 
         /// <summary>
-        /// Checks the request shape before any lookup.
+        /// Checks the consent prerequisite before any lookup. Request ids are
+        /// validated at the API edge, and the id factories reject empty
+        /// values, so this gate does not repeat that check.
         /// </summary>
         /// <param name="request">The run request.</param>
-        /// <returns>A validation error, or null when valid.</returns>
+        /// <returns>A validation error, or null when the consent is present.</returns>
         private static ErrorInfo? Validate(RunScrapeRequest request)
         {
-            var errors = new Dictionary<string, string[]>();
-            if (request.ProfileId.Value == Guid.Empty)
-            {
-                errors["profileId"] = ["A search profile id is required."];
-            }
-
-            if (request.BrowserProfileId.Value == Guid.Empty)
-            {
-                errors["browserProfileId"] = ["A browser profile id is required."];
-            }
-
-            if (request.Consent is null)
-            {
-                errors["consent"] = ["Compliance consent is required."];
-            }
-
-            return errors.Count == 0
-                ? null
-                : Errors.ValidationFailed("The request contains invalid fields.", errors);
+            return request.Consent is null
+                ? Errors.ValidationFailed(
+                    "The request contains invalid fields.",
+                    new Dictionary<string, string[]>
+                    {
+                        ["consent"] = ["Compliance consent is required."],
+                    }
+                )
+                : null;
         }
 
         /// <summary>
