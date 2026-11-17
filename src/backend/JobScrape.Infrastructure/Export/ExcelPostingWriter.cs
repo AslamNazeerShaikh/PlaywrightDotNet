@@ -39,7 +39,7 @@ namespace JobScrape.Infrastructure.Export
                 var values = ExportColumns.Row(posting);
                 for (var column = 0; column < values.Length; column++)
                 {
-                    sheet.Cell(row, column + 1).Value = values[column];
+                    sheet.Cell(row, column + 1).Value = ExportColumns.SafeCell(values[column]);
                 }
 
                 // Link the posting URL cell so it opens in Excel.
