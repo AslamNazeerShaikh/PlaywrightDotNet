@@ -5,6 +5,10 @@ Source of truth: https://github.com/backnotprop/pstack (standalone mirror of `cu
 Vendor packs (dotnet, testing, UI, graphify) and ECC are synced separately; see `docs/18-harness-packs.md`.
 The `.claude/` tree is a separate port checkout and is never touched by these syncs.
 
+## 2026-11-17 — local divergence: reply evidence rule (both trees)
+
+Deliberate local change, not upstream: the Writing the reply evidence bullet now groups sources once per section instead of tagging every sentence, and keeps verify-before-claim as its own bullet. Mirrored in `.opencode/skills/poteto-mode/SKILL.md` and `.claude/skills/poteto-mode/SKILL.md`. Future pstack re-vendors must preserve this divergence.
+
 ## 2026-11-08 — harness freshness audit: mattpocock re-vendor, other packs checked (no changes)
 
 Full audit of all four harness packs against upstream (2026-11-08; design `docs/superpowers/specs/2026-11-08-harness-freshness-design.md`, plan `docs/superpowers/plans/2026-11-08-harness-freshness-plan.md`):
