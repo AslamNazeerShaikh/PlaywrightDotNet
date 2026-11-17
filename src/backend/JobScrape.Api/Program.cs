@@ -129,11 +129,14 @@ namespace JobScrape.Api
             DatabaseRegistration.MigrateInDevelopment(app);
 
             app.UseMiddleware<CorrelationMiddleware>();
+            // First after correlation: limiter, authentication, authorization,
+            // idempotency, and quota failures all surface as Problem Details
+            // rather than an empty 500.
+            app.UseExceptionHandler();
             app.UseMiddleware<LoginIpRateLimitMiddleware>();
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseExceptionHandler();
             // One completion event per request, written through this host's
             // logger rather than the static Log.Logger.
             app.UseSerilogRequestLogging(options =>
