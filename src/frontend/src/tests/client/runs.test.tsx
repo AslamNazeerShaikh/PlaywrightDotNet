@@ -199,7 +199,11 @@ describe("run helpers", () => {
 function runsBackend(
   companies: string[] = ["Infosys", "TCS"],
   failExport?: ApiProblem,
-  options: { expectedBody?: StartRunInput; runPatch?: Partial<RunPayload> } = {},
+  options: {
+    expectedBody?: StartRunInput;
+    runPatch?: Partial<RunPayload>;
+    failCancel?: ApiProblem;
+  } = {},
 ) {
   const runs: RunPayload[] = [];
   const calls: string[] = [];
@@ -240,7 +244,7 @@ function runsBackend(
             name: "naukri-main",
             sourceKey: "naukri",
             engine: "Chromium",
-            channel: "Chrome",
+            channel: "Bundled",
             state: "New",
             canLaunch: true,
           },
@@ -309,6 +313,16 @@ function runsBackend(
               : null,
         },
       };
+    }
+    const cancelMatch = /^\/api\/v1\/runs\/(r\d+)\/cancel$/.exec(url);
+    if (cancelMatch && init?.method === "POST") {
+      if (options.failCancel !== undefined) {
+        return reply(options.failCancel.status, options.failCancel);
+      }
+      const index = runs.findIndex((r) => r.id === cancelMatch[1]);
+      const cancelled: RunPayload = { ...runs[index]!, stage: "Cancelled", isTerminal: true };
+      runs[index] = cancelled;
+      return reply(200, cancelled);
     }
     const postings = /^\/api\/v1\/runs\/(r\d+)\/postings(\?|$)/.exec(url);
     if (postings) {
@@ -511,6 +525,27 @@ describe("runs page", () => {
     fireEvent.click(queries.getByRole("button", { name: "Export all as CSV" }));
     await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("ROW_NOT_FOUND"));
   }, 15_000);
+
+  test("a failed cancel shows the problem code", async () => {
+    const { client } = runsBackend(["Infosys", "TCS"], undefined, {
+      failCancel: {
+        status: 409,
+        title: "The run already finished.",
+        detail: "",
+        code: "RUN_NOT_CANCELLABLE",
+      },
+    });
+    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    const cancel = await waitFor(() => queries.getByRole("button", { name: "CANCEL RUN" }));
+    fireEvent.click(cancel);
+
+    await waitFor(() =>
+      expect(queries.getByRole("alert").textContent).toContain("RUN_NOT_CANCELLABLE"),
+    );
+  });
 
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {
     const { client } = runsBackend();

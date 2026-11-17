@@ -17,7 +17,9 @@ namespace JobScrape.Infrastructure.Runtime
     /// <c>ADMIN_SETUP_SECRET</c> environment variables remain as fallback),
     /// assigns (creating) the admin role with
     /// every catalog permission, and leaves the account awaiting first
-    /// login. A non-empty users table is a no-op. Secrets are never logged.
+    /// login. Every start also ensures the usage-quota definitions and the
+    /// three role rows; only the admin account is skipped when any user
+    /// exists. Secrets are never logged.
     /// </summary>
     public sealed partial class AdminSeedHostedService : IHostedService
     {
@@ -83,8 +85,8 @@ namespace JobScrape.Infrastructure.Runtime
             }
 
             var email = _adminEmail ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-            var secret =
-                _adminSetupSecret ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
+            var secret = _adminSetupSecret
+                ?? Environment.GetEnvironmentVariable("ADMIN_SETUP_SECRET");
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(secret))
             {
                 LogSeedSkipped(_logger);
@@ -203,8 +205,7 @@ namespace JobScrape.Infrastructure.Runtime
                     // intentionally removed. Save only when something changed.
                     if (name == RoleName.Admin)
                     {
-                        var existing =
-                            existingRoles.FirstOrDefault(role => role.Name == name)
+                        var existing = existingRoles.FirstOrDefault(role => role.Name == name)
                             ?? await roles.GetByNameAsync(name, cancellationToken);
                         if (existing is not null)
                         {

@@ -136,8 +136,7 @@ namespace JobScrape.Infrastructure.Persistence
         {
             var columns = await ReadColumnsAsync(connection, tableName, cancellationToken);
             var foreignKeys = await ReadForeignKeysAsync(connection, tableName, cancellationToken);
-            var pkColumn =
-                columns.FirstOrDefault(c => c.PrimaryKey)?.Name
+            var pkColumn = columns.FirstOrDefault(c => c.PrimaryKey)?.Name
                 ?? (columns.Count > 0 ? columns[0].Name : string.Empty);
 
             return new DatabaseTableSchema(tableName, columns, foreignKeys, pkColumn);
@@ -226,9 +225,19 @@ namespace JobScrape.Infrastructure.Persistence
             var parameters = new DynamicParameters();
             parameters.Add("limit", limit);
             parameters.Add("offset", offset);
+            // Offset paging needs a total order: without one SQLite may
+            // return a different order per page and a boundary repeats or
+            // skips rows. Every app table has a primary key; rowid is the
+            // fallback for a table that does not.
+            var columns = await ReadColumnsAsync(connection, tableName, cancellationToken);
+            var keyColumns = columns
+                .Where(column => column.PrimaryKey)
+                .Select(column => Quote(column.Name))
+                .ToList();
+            var orderBy = keyColumns.Count > 0 ? string.Join(", ", keyColumns) : "rowid";
             var dataRows = await connection.QueryAsync<dynamic>(
                 new CommandDefinition(
-                    $"SELECT * FROM {Quote(tableName)} LIMIT @limit OFFSET @offset;",
+                    $"SELECT * FROM {Quote(tableName)} ORDER BY {orderBy} LIMIT @limit OFFSET @offset;",
                     parameters,
                     cancellationToken: cancellationToken
                 )

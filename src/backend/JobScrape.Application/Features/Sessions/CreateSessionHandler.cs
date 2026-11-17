@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
 
@@ -8,9 +9,9 @@ namespace JobScrape.Application.Features.Sessions
     /// <summary>
     /// Creates a browser profile in the <c>New</c> state. Every field is
     /// validated at the request boundary with the domain's own rules
-    /// (<see cref="BrowserProfile.IsValidName"/>, engine/channel pairing), so
-    /// the aggregate only ever sees valid input. Logging in is a separate,
-    /// manual step that needs the Playwright session manager.
+    /// (<see cref="BrowserProfile.IsValidName"/> and the defined engine and
+    /// channel values), so the aggregate only ever sees valid input. Logging
+    /// in is a separate, manual step that needs the Playwright session manager.
     /// </summary>
     public sealed class CreateSessionHandler
     {
@@ -20,34 +21,24 @@ namespace JobScrape.Application.Features.Sessions
         private readonly TimeProvider _clock;
 
         /// <summary>
-        /// Gets the calling actor. Stored for future authorization; the
-        /// single local user is always permitted, so creates are not gated.
-        /// </summary>
-        public ICallerContext Caller { get; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="CreateSessionHandler"/> class.
         /// </summary>
         /// <param name="profiles">The browser profile repository.</param>
         /// <param name="unitOfWork">Commits the new profile.</param>
         /// <param name="clock">The time source.</param>
-        /// <param name="caller">The calling actor. Must not be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public CreateSessionHandler(
             IBrowserProfileRepository profiles,
             IUnitOfWork unitOfWork,
-            TimeProvider clock,
-            ICallerContext caller
+            TimeProvider clock
         )
         {
             ArgumentNullException.ThrowIfNull(profiles);
             ArgumentNullException.ThrowIfNull(unitOfWork);
             ArgumentNullException.ThrowIfNull(clock);
-            ArgumentNullException.ThrowIfNull(caller);
             _profiles = profiles;
             _unitOfWork = unitOfWork;
             _clock = clock;
-            Caller = caller;
         }
 
         /// <summary>
@@ -85,7 +76,7 @@ namespace JobScrape.Application.Features.Sessions
             var engine = BrowserEngine.Chromium;
             if (
                 request.Engine is not null
-                && !SessionValidation.TryParseEnum(request.Engine, out engine)
+                && !EnumNames.TryParse(request.Engine, out engine)
             )
             {
                 errors["engine"] = ["Choose Chromium, Firefox, or WebKit."];
@@ -94,14 +85,10 @@ namespace JobScrape.Application.Features.Sessions
             var channel = BrowserChannel.Bundled;
             if (
                 request.Channel is not null
-                && !SessionValidation.TryParseEnum(request.Channel, out channel)
+                && !EnumNames.TryParse(request.Channel, out channel)
             )
             {
-                errors["channel"] = ["Choose Bundled, Chrome, or Edge."];
-            }
-            else if (channel != BrowserChannel.Bundled && engine != BrowserEngine.Chromium)
-            {
-                errors["channel"] = [$"The {channel} channel requires the Chromium engine."];
+                errors["channel"] = ["Choose Bundled."];
             }
 
             if (errors.Count > 0)

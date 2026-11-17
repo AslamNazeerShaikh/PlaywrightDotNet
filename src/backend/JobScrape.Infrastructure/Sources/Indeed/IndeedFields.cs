@@ -46,17 +46,13 @@ namespace JobScrape.Infrastructure.Sources.Indeed
                 return null;
             }
 
-            var visible = string.Create(
-                raw.Length,
-                raw,
-                static (span, source) =>
+            var visible = string.Create(raw.Length, raw, static (span, source) =>
+            {
+                for (var index = 0; index < source.Length; index++)
                 {
-                    for (var index = 0; index < source.Length; index++)
-                    {
-                        span[index] = char.IsControl(source[index]) ? ' ' : source[index];
-                    }
+                    span[index] = char.IsControl(source[index]) ? ' ' : source[index];
                 }
-            );
+            });
             var collapsed = Text.Collapse(visible);
             if (collapsed.Length > maxLength)
             {

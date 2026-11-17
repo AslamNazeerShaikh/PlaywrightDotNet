@@ -18,9 +18,9 @@
     "semantic_hash": ""
   },
   "docs/00-executive-summary.md": {
-    "mtime": 1794219268.4525468,
-    "seen": 1794245668.757909,
-    "ast_hash": "50407151058aeccb2cfd3ac1fc99551d",
+    "mtime": 1794391540.9203978,
+    "seen": 1794393066.682247,
+    "ast_hash": "9c41b6b7840fdcf374b2111022e42da2",
     "semantic_hash": ""
   },
   "docs/01-research-analysis.md": {
@@ -30,21 +30,21 @@
     "semantic_hash": "2b76b11e29baa16b43881d4ecd93b855"
   },
   "docs/02-architecture.md": {
-    "mtime": 1794303570.0166717,
-    "seen": 1794308065.276744,
-    "ast_hash": "fe923a13c72c05c9f8d1d089e42ec1d5",
+    "mtime": 1794391531.5603757,
+    "seen": 1794393066.6822479,
+    "ast_hash": "f0cbaf07b92d949dddbf1e5508c872f3",
     "semantic_hash": ""
   },
   "docs/03-domain-model.md": {
-    "mtime": 1794259488.5299983,
-    "seen": 1794308065.2767448,
-    "ast_hash": "f1f536c87cbf09d9d9cd153275784888",
+    "mtime": 1794391535.6444886,
+    "seen": 1794393066.6822479,
+    "ast_hash": "5dfbc3677a83e1063b6d2a92e092e5f8",
     "semantic_hash": ""
   },
   "docs/04-solution-and-tooling.md": {
-    "mtime": 1794219268.453105,
-    "seen": 1794245668.757911,
-    "ast_hash": "6272ee1b8710bb94b72963f11078c144",
+    "mtime": 1794391500.5326371,
+    "seen": 1794393066.6822479,
+    "ast_hash": "6df05867da0c13cea0c85ecbe9798e2d",
     "semantic_hash": ""
   },
   "docs/05-gameplan.md": {
@@ -60,9 +60,9 @@
     "semantic_hash": "808604589edbfd08c85d070fccfa24b1"
   },
   "docs/07-anti-bot-and-compliance.md": {
-    "mtime": 1794219268.4532604,
-    "seen": 1794245668.7579122,
-    "ast_hash": "82d256fb066c7c4d531be38126400040",
+    "mtime": 1794391153.6030526,
+    "seen": 1794393066.68225,
+    "ast_hash": "900de1bf06cd73fb0bd5357e01011582",
     "semantic_hash": ""
   },
   "docs/08-site-playbooks.md": {
@@ -72,9 +72,9 @@
     "semantic_hash": ""
   },
   "docs/09-operations-runbook.md": {
-    "mtime": 1794219268.453564,
-    "seen": 1794245668.757913,
-    "ast_hash": "aa81d10f10b8014bafb9bd72b65e6c86",
+    "mtime": 1794391853.5164273,
+    "seen": 1794393066.682251,
+    "ast_hash": "d35858c507451e8bdb95706b46f6dabf",
     "semantic_hash": ""
   },
   "docs/10-adr/0001-dotnet-10-lts.md": {
@@ -144,10 +144,10 @@
     "semantic_hash": ""
   },
   "docs/11-open-decisions.md": {
-    "mtime": 1793457083.701782,
-    "seen": 1793606170.349705,
-    "ast_hash": "c3259b3793bed2e26261a990038cccdb",
-    "semantic_hash": "c3259b3793bed2e26261a990038cccdb"
+    "mtime": 1794391551.7325485,
+    "seen": 1794393066.68226,
+    "ast_hash": "e9e35556387d8985bd953d49b5367061",
+    "semantic_hash": ""
   },
   "docs/12-web-cockpit.md": {
     "mtime": 1794259488.5304208,
@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794219269.0055504,
-    "seen": 1794245668.757927,
-    "ast_hash": "30de259b7a6554db7de7e0f1bc22bed8",
+    "mtime": 1794391564.519867,
+    "seen": 1794393066.682265,
+    "ast_hash": "7a4824224ba50f07a254fb799b44b680",
     "semantic_hash": ""
   },
   ".config/dotnet-tools.json": {
@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Properties/launchSettings.json": {
-    "mtime": 1794219268.5001378,
-    "seen": 1794245668.757431,
-    "ast_hash": "2cd41d45ebc892b2bb0dacb49d70f787",
+    "mtime": 1794334644.4303417,
+    "seen": 1794390311.406473,
+    "ast_hash": "3a071d61aa52f4f8195a5764062cf5dc",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/appsettings.json": {
@@ -384,9 +384,9 @@
     "semantic_hash": "9480448c82da2f3cbc5b3507b0399708"
   },
   "src/frontend/README.md": {
-    "mtime": 1794308037.516931,
-    "seen": 1794308065.276777,
-    "ast_hash": "45661dca0cb594e2990216b06ac1fdee",
+    "mtime": 1794392352.7175276,
+    "seen": 1794393066.682281,
+    "ast_hash": "49c8ced211f567ca90e7735905c09d01",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/ErrorInfoTests.cs": {
@@ -486,9 +486,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/lib/api.ts": {
-    "mtime": 1794259488.5642216,
-    "seen": 1794308065.276356,
-    "ast_hash": "eee224230e5440ae84a9d47dc9e7ca94",
+    "mtime": 1794389937.1408443,
+    "seen": 1794390311.40667,
+    "ast_hash": "1696280a8683bf6145fc6e50257b44b5",
     "semantic_hash": ""
   },
   "src/frontend/src/client/main.tsx": {
@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Sourcing/JobPosting.cs": {
-    "mtime": 1794219268.5182667,
-    "seen": 1794245668.757517,
+    "mtime": 1794333739.983677,
+    "seen": 1794333994.6731808,
     "ast_hash": "b7c51ae00205f9bf0601ce2ace0837c1",
     "semantic_hash": ""
   },
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Access/BrowserProfileTests.cs": {
-    "mtime": 1794219268.5106106,
-    "seen": 1794245668.757486,
-    "ast_hash": "7876db77c5b1d71129aa9f57b677097d",
+    "mtime": 1794389820.4132457,
+    "seen": 1794390311.4065359,
+    "ast_hash": "627b0b386e6788010589060505e11445",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain.Tests/Access/PolicyTests.cs": {
@@ -1050,21 +1050,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Access/BrowserChannel.cs": {
-    "mtime": 1794219268.5145464,
-    "seen": 1794245668.757499,
-    "ast_hash": "8d35ded27ffdca16f66a32ec002e7182",
+    "mtime": 1794389809.1729531,
+    "seen": 1794390311.4065511,
+    "ast_hash": "fd06dd0c0b1251eb6c214233f9e59388",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Access/BrowserEngine.cs": {
-    "mtime": 1794219268.5146008,
-    "seen": 1794245668.757499,
-    "ast_hash": "a112546c13f82b1aaf3d09b3966bbf46",
+    "mtime": 1794389809.1728907,
+    "seen": 1794390311.4065511,
+    "ast_hash": "6b62253e4212e22fa48b879c17fe9ff2",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Access/BrowserProfile.cs": {
-    "mtime": 1794219268.5147312,
-    "seen": 1794245668.7575,
-    "ast_hash": "9cc10f079fb7480c7b657e87497ddd06",
+    "mtime": 1794389809.179956,
+    "seen": 1794390311.406552,
+    "ast_hash": "8d13fa3b061b1410883677cfb50dcef7",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Domain/Access/ChallengeAction.cs": {
@@ -1368,15 +1368,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/PersistenceTests.cs": {
-    "mtime": 1794259488.562268,
-    "seen": 1794308065.276273,
-    "ast_hash": "26121b0ceaef785c27624380e36a968d",
+    "mtime": 1794390091.69962,
+    "seen": 1794390311.406589,
+    "ast_hash": "ad09870752493618b5cdcfb3a95582fb",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/RunScrapeOnSqliteTests.cs": {
-    "mtime": 1794219268.5230572,
-    "seen": 1794245668.757532,
-    "ast_hash": "1a7a81d68110f58102eaf867e6390483",
+    "mtime": 1794392826.6516562,
+    "seen": 1794393066.6818109,
+    "ast_hash": "d4870494466662b0b5d260fa56212004",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/TestDatabase.cs": {
@@ -1440,8 +1440,8 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Migrations/JobScrapeDbContextModelSnapshot.cs": {
-    "mtime": 1794259488.5630748,
-    "seen": 1794308065.276314,
+    "mtime": 1794389992.153673,
+    "seen": 1794390311.406633,
     "ast_hash": "af62111b3a91682fe80146bb8f9e33ce",
     "semantic_hash": ""
   },
@@ -1698,9 +1698,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api.Tests/SessionsEndpointTests.cs": {
-    "mtime": 1794219268.4976945,
-    "seen": 1794245668.75742,
-    "ast_hash": "72c1f98484c5768945aa090d58e75d55",
+    "mtime": 1794389951.0555964,
+    "seen": 1794390311.4064589,
+    "ast_hash": "bef47354c53a8494e53580412063ff98",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Controllers/SessionsController.cs": {
@@ -1710,21 +1710,21 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/SessionHandlersTests.cs": {
-    "mtime": 1794219268.501824,
-    "seen": 1794245668.757441,
-    "ast_hash": "a8f76a1be36fb666f3c845082032c356",
+    "mtime": 1794390090.636866,
+    "seen": 1794390311.406484,
+    "ast_hash": "96923f184e3e17fc6994d64322d70ecd",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/CreateSessionHandler.cs": {
-    "mtime": 1794219268.5088978,
-    "seen": 1794245668.757477,
-    "ast_hash": "20a30d30ef5b3a9b28b29854308848a7",
+    "mtime": 1794389898.9971855,
+    "seen": 1794390311.406524,
+    "ast_hash": "ef6eeda5932eb1a9bd43cb0d9ef56bca",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/CreateSessionRequest.cs": {
-    "mtime": 1794219268.5089545,
-    "seen": 1794245668.757477,
-    "ast_hash": "297419464cad70a067d25f8819e581c1",
+    "mtime": 1794389898.9891505,
+    "seen": 1794390311.406525,
+    "ast_hash": "d1937893f6c8eadd46f56f5f94cd4908",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/GetSessionHandler.cs": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/SessionResponse.cs": {
-    "mtime": 1794219268.5092173,
-    "seen": 1794245668.757479,
-    "ast_hash": "d634df280d8b7114145fec2ef0d01109",
+    "mtime": 1794389898.9891498,
+    "seen": 1794390311.406527,
+    "ast_hash": "de73820c453c62ffc2f0b2ad7d7f38bc",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Persistence/SessionReadStoreTests.cs": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/sessions.tsx": {
-    "mtime": 1794219268.5407372,
-    "seen": 1794245668.757601,
-    "ast_hash": "db2eaf82bc84b744471d6764d1ff88e2",
+    "mtime": 1794389937.1432745,
+    "seen": 1794390311.4066792,
+    "ast_hash": "6c5e54228a2eb85c09934b75755fd93b",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/sessions.test.ts": {
@@ -1926,9 +1926,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Browser/BrowserSessionPool.cs": {
-    "mtime": 1794219268.5270476,
-    "seen": 1794245668.7575428,
-    "ast_hash": "dc23c87cf0c27168ef697c6ba56f4e1a",
+    "mtime": 1794389919.4158373,
+    "seen": 1794390311.406603,
+    "ast_hash": "5312ea29ac017143cab26438d2b173d4",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Browser/BrowserSessionSettings.cs": {
@@ -2028,9 +2028,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/runs.test.tsx": {
-    "mtime": 1794259488.565327,
-    "seen": 1794308065.276376,
-    "ast_hash": "0fa1413738303d94f1e1256a35cddce6",
+    "mtime": 1794389937.1409695,
+    "seen": 1794390311.406688,
+    "ast_hash": "a6c9d08cffc270dceb2fa44b98f0fe17",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Sources/Naukri/Fixtures/README.md": {
@@ -5802,9 +5802,9 @@
     "semantic_hash": ""
   },
   "vendor/download-ubol.sh": {
-    "mtime": 1794219268.5449522,
-    "seen": 1794245668.757616,
-    "ast_hash": "ee2adddbaf4e7c7b34de1161fccc8a3f",
+    "mtime": 1794391639.1835332,
+    "seen": 1794393066.6819131,
+    "ast_hash": "3f576602e097f15779cfc2e91342be6b",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api.Tests/DatabaseEndpointTests.cs": {
@@ -5820,9 +5820,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/UpdateSessionHandlerTests.cs": {
-    "mtime": 1794219268.5019178,
-    "seen": 1794245668.757442,
-    "ast_hash": "62e85943ad090a83023b6765140ea42f",
+    "mtime": 1794389868.866943,
+    "seen": 1794390311.406484,
+    "ast_hash": "117df653fbd5166c6a71be055309b7de",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IBrowserProfileWorkspace.cs": {
@@ -5880,15 +5880,15 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/UpdateSessionHandler.cs": {
-    "mtime": 1794219268.5093865,
-    "seen": 1794245668.75748,
-    "ast_hash": "68183797ca6bb404d2d068d7f8b5d822",
+    "mtime": 1794389898.9890661,
+    "seen": 1794390311.406528,
+    "ast_hash": "67fb0e4e81269ad47bda5f314d5cbaad",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Features/Sessions/UpdateSessionRequest.cs": {
-    "mtime": 1794219268.5094652,
-    "seen": 1794245668.75748,
-    "ast_hash": "44fdd5191a18c7494bfd701153c570b5",
+    "mtime": 1794389898.9891436,
+    "seen": 1794390311.406528,
+    "ast_hash": "19a4e7abc11db886d4c847151c05992f",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure.Tests/Browser/BrowserProfileRenameTests.cs": {
@@ -6150,9 +6150,9 @@
     "semantic_hash": ""
   },
   "tools/screenshots/capture.ts": {
-    "mtime": 1794219268.5446908,
-    "seen": 1794245668.757615,
-    "ast_hash": "d7fa6f223937d5d9fd1f30587f2b9863",
+    "mtime": 1794392371.5785124,
+    "seen": 1794393066.681912,
+    "ast_hash": "0b66c11228caabdf87fc14412719138e",
     "semantic_hash": ""
   },
   ".opencode/skills/dotnet-breaking-changes/SKILL.md": {
@@ -6204,9 +6204,9 @@
     "semantic_hash": ""
   },
   "tools/screenshots/README.md": {
-    "mtime": 1794219268.5446107,
-    "seen": 1794245668.757941,
-    "ast_hash": "5c2050b1e18a0f66e8e73e32ce20ef7f",
+    "mtime": 1794392378.038948,
+    "seen": 1794393066.682282,
+    "ast_hash": "6b4d91543394faedda330ec5623076da",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/ICallerContext.cs": {
@@ -6228,9 +6228,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Composition/LoggingRegistration.cs": {
-    "mtime": 1794219268.528066,
-    "seen": 1794245668.757548,
-    "ast_hash": "fd669e91487572741c4bc9e9ebaf5f03",
+    "mtime": 1794326803.6829932,
+    "seen": 1794328224.397019,
+    "ast_hash": "7152a537046f4c177c9d9552795177f8",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Composition/OptionsRegistration.cs": {
@@ -6516,9 +6516,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Api/Http/UsageQuotaMiddleware.cs": {
-    "mtime": 1794219268.4998136,
-    "seen": 1794245668.75743,
-    "ast_hash": "40cdb5479fd719ebf6240446b4993b26",
+    "mtime": 1794326831.864805,
+    "seen": 1794328224.396886,
+    "ast_hash": "8e85c3333f1da87bf6a7f059b6fe50b4",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/IdentityHandlerTests.cs": {
@@ -6528,9 +6528,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application.Tests/QuotaHandlerTests.cs": {
-    "mtime": 1794219268.5011306,
-    "seen": 1794245668.7574358,
-    "ast_hash": "8f9c659916b8ea9b64b5211ecf39646f",
+    "mtime": 1794326843.9940822,
+    "seen": 1794328224.396893,
+    "ast_hash": "540277a399b38cfc6de719c499211960",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IIdempotencyStore.cs": {
@@ -6552,9 +6552,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IUsageQuotaRepository.cs": {
-    "mtime": 1794219268.5035014,
-    "seen": 1794245668.757449,
-    "ast_hash": "677017504ece5a06f168baad0fe899f9",
+    "mtime": 1794326812.7640944,
+    "seen": 1794328224.396907,
+    "ast_hash": "d16987ca24bf6b5e69d55e1f87469449",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Application/Abstractions/IUserRepository.cs": {
@@ -6864,9 +6864,9 @@
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/UsageQuotaRepository.cs": {
-    "mtime": 1794219268.531436,
-    "seen": 1794245668.757567,
-    "ast_hash": "e1c9fef43f3aba417a8548f2c15a7689",
+    "mtime": 1794326822.6010568,
+    "seen": 1794328224.3970408,
+    "ast_hash": "162e460f5aa36af0f46c6a00b30da1f5",
     "semantic_hash": ""
   },
   "src/backend/JobScrape.Infrastructure/Persistence/Repositories/UserRepository.cs": {
@@ -7416,9 +7416,9 @@
     "semantic_hash": ""
   },
   "src/frontend/playwright.config.ts": {
-    "mtime": 1794219268.5380564,
-    "seen": 1794245668.757591,
-    "ast_hash": "e60ffe24394d386917ffbdd069866bbb",
+    "mtime": 1794389282.4189951,
+    "seen": 1794390311.406666,
+    "ast_hash": "7867b040df40d95bde3dc56d5383b492",
     "semantic_hash": ""
   },
   "src/frontend/src/client/pages/database-schema-erd.tsx": {
@@ -7464,9 +7464,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/e2e/runs.e2e.ts": {
-    "mtime": 1794303570.0186775,
-    "seen": 1794308065.276383,
-    "ast_hash": "96047ea4f1994d6c7b301eef769ff4fd",
+    "mtime": 1794389937.140977,
+    "seen": 1794390311.4066932,
+    "ast_hash": "13c2caa20756f3d5de7a81ee2fa686b0",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/e2e/support.ts": {
@@ -9474,9 +9474,9 @@
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/info-tip.test.tsx": {
-    "mtime": 1794259488.5651147,
-    "seen": 1794308065.276373,
-    "ast_hash": "b0bb17cdca96b3c66f658c0b7ba47622",
+    "mtime": 1794389937.1409054,
+    "seen": 1794390311.4066849,
+    "ast_hash": "132241e325f182f6bd0b4fd65344d10f",
     "semantic_hash": ""
   },
   "src/frontend/src/tests/client/topology.test.tsx": {
@@ -9489,6 +9489,102 @@
     "mtime": 1794259488.5660856,
     "seen": 1794308065.276384,
     "ast_hash": "5ec3afb0e319a0a316950d950bf1d3dc",
+    "semantic_hash": ""
+  },
+  ".opencode/plugins/graphify.js": {
+    "mtime": 1793457083.6751373,
+    "seen": 1794326523.6947541,
+    "ast_hash": "dedd29af2cb8a6160dbaf9742a5080d4",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Architecture.Tests/StrictArchitectureTests.cs": {
+    "mtime": 1794392738.453019,
+    "seen": 1794393066.681756,
+    "ast_hash": "0cd2b2fb93a13a54a2823e25386eb836",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/SKILL.md": {
+    "mtime": 1793457083.6871295,
+    "seen": 1794326523.695304,
+    "ast_hash": "5bd0c585c5fa42bb9a682a5900cfa556",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/add-watch.md": {
+    "mtime": 1793457083.6872752,
+    "seen": 1794326523.6953049,
+    "ast_hash": "c1f65eb4102ad515149303c7f296b718",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/exports.md": {
+    "mtime": 1793457083.6876388,
+    "seen": 1794326523.6953049,
+    "ast_hash": "73968e2842f6eb742f96cf04c1f8db68",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1793280348.7701304,
+    "seen": 1794326523.695306,
+    "ast_hash": "b50f43d87ae9a11bcf1082942e1f99d4",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1793457083.6878147,
+    "seen": 1794326523.695306,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/hooks.md": {
+    "mtime": 1793280348.7707472,
+    "seen": 1794326523.695306,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/query.md": {
+    "mtime": 1793457083.6880255,
+    "seen": 1794326523.695307,
+    "ast_hash": "d650e8b65648aa27c5f99c3742e010c9",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/transcribe.md": {
+    "mtime": 1793457083.6881664,
+    "seen": 1794326523.695307,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/graphify/references/update.md": {
+    "mtime": 1793457083.6884239,
+    "seen": 1794326523.695307,
+    "ast_hash": "54bb75d63631ba69e65d5908d52fbbd0",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-11-10-strict-arch-tests-design.md": {
+    "mtime": 1794333842.049635,
+    "seen": 1794333994.673676,
+    "ast_hash": "5492d7658fb153eccd7219d898c76561",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261111093952_MigrateChannelsToBundled.Designer.cs": {
+    "mtime": 1794389992.1533456,
+    "seen": 1794390311.406632,
+    "ast_hash": "39666514814e41017770df044d8d99b7",
+    "semantic_hash": ""
+  },
+  "src/backend/JobScrape.Infrastructure/Persistence/Migrations/20261111093952_MigrateChannelsToBundled.cs": {
+    "mtime": 1794390066.1282167,
+    "seen": 1794390311.406632,
+    "ast_hash": "9799cb0215c38a12b7de99415916171f",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-11-11-bundled-browser-ubol-max.md": {
+    "mtime": 1794389187.9957523,
+    "seen": 1794390311.407059,
+    "ast_hash": "a7e882a7a3312bc26f40daa0c2f313f7",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-11-11-bundled-browser-ubol-max-design.md": {
+    "mtime": 1794389147.9663596,
+    "seen": 1794390311.407061,
+    "ast_hash": "8aee7024097bd0148ba08a0befec52e2",
     "semantic_hash": ""
   }
 }

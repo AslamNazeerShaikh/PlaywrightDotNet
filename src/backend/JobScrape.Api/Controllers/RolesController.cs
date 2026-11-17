@@ -3,6 +3,7 @@ using JobScrape.Api.Http;
 using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ namespace JobScrape.Api.Controllers
         // Constructor-injected handlers, never mutated.
         private readonly ListRolesHandler _list;
         private readonly GetRoleHandler _get;
-        private readonly CreateRoleHandler _create;
+        private readonly EnsureRoleHandler _ensure;
         private readonly GrantPermissionHandler _grant;
         private readonly RevokePermissionHandler _revoke;
 
@@ -31,26 +32,26 @@ namespace JobScrape.Api.Controllers
         /// </summary>
         /// <param name="list">Lists roles.</param>
         /// <param name="get">Gets one role.</param>
-        /// <param name="create">Creates roles.</param>
+        /// <param name="ensure">Ensures roles exist.</param>
         /// <param name="grant">Grants permissions.</param>
         /// <param name="revoke">Revokes permissions.</param>
         /// <exception cref="ArgumentNullException">Thrown when any handler is null.</exception>
         public RolesController(
             ListRolesHandler list,
             GetRoleHandler get,
-            CreateRoleHandler create,
+            EnsureRoleHandler ensure,
             GrantPermissionHandler grant,
             RevokePermissionHandler revoke
         )
         {
             ArgumentNullException.ThrowIfNull(list);
             ArgumentNullException.ThrowIfNull(get);
-            ArgumentNullException.ThrowIfNull(create);
+            ArgumentNullException.ThrowIfNull(ensure);
             ArgumentNullException.ThrowIfNull(grant);
             ArgumentNullException.ThrowIfNull(revoke);
             _list = list;
             _get = get;
-            _create = create;
+            _ensure = ensure;
             _grant = grant;
             _revoke = revoke;
         }
@@ -79,7 +80,7 @@ namespace JobScrape.Api.Controllers
         [Authorize(Policy = AuthPolicies.RolesRead)]
         public async Task<IResult> GetAsync(string name, CancellationToken cancellationToken)
         {
-            if (!TryParseRole(name, out var role))
+            if (!EnumNames.TryParse<RoleName>(name, out var role))
             {
                 return Errors.RoleNotFound(name).ToProblem();
             }
@@ -89,13 +90,15 @@ namespace JobScrape.Api.Controllers
         }
 
         /// <summary>
-        /// Creates a role with no granted permissions.
+        /// Ensures a closed role row exists with no granted permissions.
+        /// Idempotent: the three names are seeded at startup, so a repeat
+        /// reports the existing row rather than a conflict.
         /// </summary>
-        /// <param name="request">The role to create.</param>
+        /// <param name="request">The role to ensure.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>
-        /// 201 with the new role id and its <c>Location</c>; 409
-        /// <c>ROLE_NAME_TAKEN</c> when it exists.
+        /// 200 with the existing role id; 201 with the new role id and its
+        /// <c>Location</c> when the row had to be created.
         /// </returns>
         [HttpPost]
         [Authorize(Policy = AuthPolicies.RolesWrite)]
@@ -117,13 +120,13 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
             }
 
-            if (!TryParseRole(request!.Name, out var role))
+            if (!EnumNames.TryParse<RoleName>(request!.Name, out var role))
             {
                 return Errors
                     .ValidationFailed(
@@ -136,10 +139,16 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var result = await _create.HandleAsync(role, cancellationToken);
-            return result.IsSuccess
-                ? Results.Created($"/api/v1/roles/{role}", new { id = result.Value })
-                : result.Error.ToProblem();
+            var result = await _ensure.HandleAsync(role, cancellationToken);
+            if (result.IsFailure)
+            {
+                return result.Error.ToProblem();
+            }
+
+            var outcome = result.Value;
+            return outcome.Created
+                ? Results.Created($"/api/v1/roles/{role}", new { id = outcome.Id })
+                : Results.Ok(new { id = outcome.Id });
         }
 
         /// <summary>
@@ -174,13 +183,13 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
             }
 
-            if (!TryParseRole(name, out var role))
+            if (!EnumNames.TryParse<RoleName>(name, out var role))
             {
                 return Errors.RoleNotFound(name).ToProblem();
             }
@@ -209,7 +218,7 @@ namespace JobScrape.Api.Controllers
             CancellationToken cancellationToken
         )
         {
-            if (!TryParseRole(name, out var role))
+            if (!EnumNames.TryParse<RoleName>(name, out var role))
             {
                 return Errors.RoleNotFound(name).ToProblem();
             }
@@ -221,40 +230,6 @@ namespace JobScrape.Api.Controllers
 
             var result = await _revoke.HandleAsync(role, key, cancellationToken);
             return result.IsSuccess ? Results.Ok() : result.Error.ToProblem();
-        }
-
-        /// <summary>
-        /// Parses a closed role name, case-insensitively.
-        /// </summary>
-        /// <param name="raw">The raw role name.</param>
-        /// <param name="name">The parsed name.</param>
-        /// <returns>True when the name is a defined role.</returns>
-        private static bool TryParseRole(string? raw, out RoleName name)
-        {
-            return Enum.TryParse(raw, ignoreCase: true, out name) && Enum.IsDefined(name);
-        }
-
-        /// <summary>
-        /// Maps data-annotation failures to a coded validation problem.
-        /// </summary>
-        /// <returns>The problem, or null when the model is valid.</returns>
-        private IResult? ModelProblem()
-        {
-            if (ModelState.IsValid)
-            {
-                return null;
-            }
-
-            var errors = ModelState
-                .Where(pair => pair.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    pair => pair.Key,
-                    pair => pair.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
-                    StringComparer.Ordinal
-                );
-            return Errors
-                .ValidationFailed("The request contains invalid fields.", errors)
-                .ToProblem();
         }
     }
 

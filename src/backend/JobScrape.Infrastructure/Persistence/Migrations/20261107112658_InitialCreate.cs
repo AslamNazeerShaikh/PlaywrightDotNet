@@ -47,15 +47,12 @@ namespace JobScrape.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey(
-                        "PK_idempotency_keys",
-                        x => new
-                        {
-                            x.owner_key,
-                            x.endpoint,
-                            x.key,
-                        }
-                    );
+                    table.PrimaryKey("PK_idempotency_keys", x => new
+                    {
+                        x.owner_key,
+                        x.endpoint,
+                        x.key,
+                    });
                 }
             );
 

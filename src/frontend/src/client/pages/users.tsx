@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { CodeTag, Field, Module, plural, RefreshButton } from "../components/modules.tsx";
 import { Scramble } from "../components/scramble.tsx";
-import type { ApiClient, ApiProblem, MeResponse, UserResponse } from "../lib/api.ts";
+import {
+  type ApiClient,
+  type ApiProblem,
+  type MeResponse,
+  newIdempotencyKey,
+  type UserResponse,
+} from "../lib/api.ts";
 import { hasAnyPermission, isTokenFailure } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
@@ -42,6 +48,7 @@ export function UsersPage({
   const [mutating, setMutating] = useState<string | null>(null);
   const [mutateProblem, setMutateProblem] = useState<ApiProblem | null>(null);
   const ticket = useRef(0);
+  const detailTicket = useRef(0);
 
   async function fail(problem: ApiProblem): Promise<boolean> {
     if (isTokenFailure(problem)) {
@@ -92,7 +99,11 @@ export function UsersPage({
   }
 
   async function loadDetail(id: string) {
+    const mine = ++detailTicket.current;
     const { result } = await client.getUser(id);
+    if (mine !== detailTicket.current) {
+      return;
+    }
     if (result.ok) {
       setDetail(result.value);
       setDetailProblem(null);
@@ -445,13 +456,4 @@ export function UsersPage({
       )}
     </>
   );
-}
-
-/** One idempotency key per submit, so a double click never creates two users. */
-function newIdempotencyKey(): string {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
-  }
 }

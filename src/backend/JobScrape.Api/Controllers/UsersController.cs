@@ -3,6 +3,7 @@ using JobScrape.Api.Http;
 using JobScrape.Api.Http.Auth;
 using JobScrape.Application.Features.Identity;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -113,7 +114,7 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
@@ -160,13 +161,13 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
             }
 
-            if (!TryParseRole(request!.Role, out var role))
+            if (!EnumNames.TryParse<RoleName>(request!.Role, out var role))
             {
                 return Errors
                     .ValidationFailed(
@@ -201,7 +202,7 @@ namespace JobScrape.Api.Controllers
             CancellationToken cancellationToken
         )
         {
-            if (!TryParseRole(role, out var name))
+            if (!EnumNames.TryParse<RoleName>(role, out var name))
             {
                 return Errors
                     .ValidationFailed(
@@ -216,40 +217,6 @@ namespace JobScrape.Api.Controllers
 
             var result = await _revoke.HandleAsync(id, name, cancellationToken);
             return result.IsSuccess ? Results.Ok() : result.Error.ToProblem();
-        }
-
-        /// <summary>
-        /// Parses a closed role name, case-insensitively.
-        /// </summary>
-        /// <param name="raw">The raw role name.</param>
-        /// <param name="name">The parsed name.</param>
-        /// <returns>True when the name is a defined role.</returns>
-        private static bool TryParseRole(string? raw, out RoleName name)
-        {
-            return Enum.TryParse(raw, ignoreCase: true, out name) && Enum.IsDefined(name);
-        }
-
-        /// <summary>
-        /// Maps data-annotation failures to a coded validation problem.
-        /// </summary>
-        /// <returns>The problem, or null when the model is valid.</returns>
-        private IResult? ModelProblem()
-        {
-            if (ModelState.IsValid)
-            {
-                return null;
-            }
-
-            var errors = ModelState
-                .Where(pair => pair.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    pair => pair.Key,
-                    pair => pair.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
-                    StringComparer.Ordinal
-                );
-            return Errors
-                .ValidationFailed("The request contains invalid fields.", errors)
-                .ToProblem();
         }
     }
 

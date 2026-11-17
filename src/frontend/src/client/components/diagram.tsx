@@ -5,6 +5,7 @@
  */
 export type DiagramTone = "green" | "cyan" | "violet" | "amber" | "red" | "gray";
 
+/** Theme-token triple (stroke, fill, text) for each semantic diagram tone. */
 export const TONE: Record<DiagramTone, { stroke: string; fill: string; text: string }> = {
   green: { stroke: "var(--sig)", fill: "var(--diagram-green-soft)", text: "var(--sig)" },
   cyan: { stroke: "var(--brand-2)", fill: "var(--diagram-cyan-soft)", text: "var(--brand-2)" },

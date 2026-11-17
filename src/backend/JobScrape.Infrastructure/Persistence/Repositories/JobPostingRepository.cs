@@ -18,8 +18,8 @@ namespace JobScrape.Infrastructure.Persistence.Repositories
         )
         {
             return db.JobPostings.Local.FirstOrDefault(posting =>
-                    posting.Source == source && posting.ExternalJobId == externalJobId
-                )
+                posting.Source == source && posting.ExternalJobId == externalJobId
+            )
                 ?? await db.JobPostings.FirstOrDefaultAsync(
                     posting => posting.Source == source && posting.ExternalJobId == externalJobId,
                     cancellationToken

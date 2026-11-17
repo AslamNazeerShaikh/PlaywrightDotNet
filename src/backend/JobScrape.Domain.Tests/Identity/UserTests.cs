@@ -164,6 +164,17 @@ namespace JobScrape.Domain.Tests.Identity
         }
 
         [Fact]
+        public void BumpTokenVersionInvalidatesIssuedTokensOnDemand()
+        {
+            var user = ReadyUser();
+            var issued = user.TokenVersion;
+
+            user.BumpTokenVersion();
+
+            Assert.Equal(issued + 1, user.TokenVersion);
+        }
+
+        [Fact]
         public void NonPositiveMaxAttemptsIsRejected()
         {
             var user = ReadyUser();

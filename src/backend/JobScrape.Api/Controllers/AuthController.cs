@@ -77,7 +77,7 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
@@ -124,7 +124,7 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
@@ -177,7 +177,7 @@ namespace JobScrape.Api.Controllers
                     .ToProblem();
             }
 
-            var invalid = ModelProblem();
+            var invalid = this.ModelProblem();
             if (invalid is not null)
             {
                 return invalid;
@@ -216,29 +216,6 @@ namespace JobScrape.Api.Controllers
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
             return Ok(new MeResponse(email, roles, permissions));
-        }
-
-        /// <summary>
-        /// Maps data-annotation failures to a coded validation problem.
-        /// </summary>
-        /// <returns>The problem, or null when the model is valid.</returns>
-        private IResult? ModelProblem()
-        {
-            if (ModelState.IsValid)
-            {
-                return null;
-            }
-
-            var errors = ModelState
-                .Where(pair => pair.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    pair => pair.Key,
-                    pair => pair.Value!.Errors.Select(error => error.ErrorMessage).ToArray(),
-                    StringComparer.Ordinal
-                );
-            return Errors
-                .ValidationFailed("The request contains invalid fields.", errors)
-                .ToProblem();
         }
     }
 

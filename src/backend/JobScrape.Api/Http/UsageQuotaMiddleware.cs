@@ -1,15 +1,15 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
 using JobScrape.Domain.Access;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace JobScrape.Api.Http
 {
     /// <summary>
     /// Fixed-window per-user usage quotas for REST plus web MCP. Counts
-    /// live in memory, keyed by user plus scope plus window, so a restart
+    /// live in a process dictionary keyed by user plus scope, so a restart
     /// resets counters but never the persisted definitions. Anonymous,
     /// health, and auth paths are exempt; everything else under
     /// <c>/api/v1/*</c> counts as <c>Api</c> and <c>/mcp</c> as <c>Mcp</c>.
@@ -33,6 +33,17 @@ namespace JobScrape.Api.Http
         internal const string DefinitionsCacheKey = "usage-quota-definitions";
 
         private static readonly TimeSpan DefinitionsCacheLifetime = TimeSpan.FromMinutes(1);
+
+        /// <summary>
+        /// One counter per authenticated actor and scope. Entries outlive a
+        /// window and reset in place: removing them while a request still
+        /// holds the reference would split one window across two counters.
+        /// Growth is bounded by the number of distinct actors, which the
+        /// identity store bounds.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, Counter> _counters = new(
+            StringComparer.Ordinal
+        );
 
         private readonly RequestDelegate _next;
         private readonly IMemoryCache _cache;
@@ -84,7 +95,7 @@ namespace JobScrape.Api.Http
             }
 
             var actor = context.RequestServices.GetRequiredService<ICallerContext>().ActorId;
-            var counter = CounterFor(actor, scope.Value, definition, now);
+            var counter = CounterFor(actor, scope.Value, now);
             bool overLimit;
             TimeSpan retryAfter;
             long requestGeneration;
@@ -95,7 +106,6 @@ namespace JobScrape.Api.Http
                     counter.Start = now;
                     counter.Count = 0;
                     counter.Generation = Interlocked.Increment(ref _nextWindowGeneration);
-                    _cache.Set(CounterKey(actor, scope.Value), counter, now + definition.Window);
                 }
 
                 counter.Count++;
@@ -207,7 +217,7 @@ namespace JobScrape.Api.Http
             var stored = await quotas.ListAsync(context.RequestAborted);
             if (stored.Count == 0)
             {
-                stored = await SeedAsync(context);
+                stored = await quotas.EnsureSeededAsync(context.RequestAborted);
             }
 
             var definitions = stored
@@ -218,62 +228,24 @@ namespace JobScrape.Api.Http
         }
 
         /// <summary>
-        /// Inserts the starting budgets when the table is empty. A lost
-        /// insert race re-reads instead of failing the request.
-        /// </summary>
-        /// <param name="context">The HTTP context carrying the scoped services.</param>
-        /// <returns>The stored definitions.</returns>
-        private static async Task<IReadOnlyList<UsageQuota>> SeedAsync(HttpContext context)
-        {
-            var quotas = context.RequestServices.GetRequiredService<IUsageQuotaRepository>();
-            var unitOfWork = context.RequestServices.GetRequiredService<IUnitOfWork>();
-            foreach (var quota in UsageQuotaDefaults.All())
-            {
-                await quotas.AddAsync(quota, context.RequestAborted);
-            }
-
-            try
-            {
-                await unitOfWork.SaveChangesAsync(context.RequestAborted);
-            }
-            catch (DbUpdateException)
-            {
-                context
-                    .RequestServices.GetRequiredService<JobScrape.Infrastructure.Persistence.JobScrapeDbContext>()
-                    .ChangeTracker.Clear();
-            }
-
-            return await quotas.ListAsync(context.RequestAborted);
-        }
-
-        /// <summary>
-        /// Gets the caller's counter for the current window, creating it on
-        /// first use with an expiry at the window end.
+        /// Gets the caller's counter, creating it on first use. GetOrAdd is
+        /// atomic: every concurrent caller receives the same instance even
+        /// when the factory runs more than once, so no increment is orphaned.
         /// </summary>
         /// <param name="actor">The caller identity.</param>
         /// <param name="scope">The governed surface.</param>
-        /// <param name="definition">The live definition.</param>
         /// <param name="now">The current time.</param>
         /// <returns>The mutable counter.</returns>
-        private Counter CounterFor(
-            string actor,
-            QuotaScope scope,
-            Definition definition,
-            DateTimeOffset now
-        )
+        private Counter CounterFor(string actor, QuotaScope scope, DateTimeOffset now)
         {
-            return _cache.GetOrCreate(
+            return _counters.GetOrAdd(
                 CounterKey(actor, scope),
-                entry =>
+                _ => new Counter
                 {
-                    entry.AbsoluteExpiration = now + definition.Window;
-                    return new Counter
-                    {
-                        Start = now,
-                        Generation = Interlocked.Increment(ref _nextWindowGeneration),
-                    };
+                    Start = now,
+                    Generation = Interlocked.Increment(ref _nextWindowGeneration),
                 }
-            )!;
+            );
         }
 
         /// <summary>
@@ -297,25 +269,24 @@ namespace JobScrape.Api.Http
         private sealed record Definition(QuotaScope Scope, int Limit, TimeSpan Window);
 
         /// <summary>
-        /// The mutable fixed-window counter. Guarded by lock at each use;
-        /// instances are never shared across keys.
+        /// The mutable fixed-window counter. Guarded by the instance lock at
+        /// each use; instances are never shared across keys.
         /// </summary>
         private sealed class Counter
         {
             /// <summary>
-            /// Gets or sets when the current window started.
+            /// When the current window started.
             /// </summary>
             public DateTimeOffset Start;
 
             /// <summary>
-            /// Gets or sets the requests counted in the current window.
+            /// Requests counted in the current window.
             /// </summary>
             public int Count;
 
             /// <summary>
-            /// Gets or sets the window generation, incremented on every
-            /// reset, so refunds can be scoped to the window that counted
-            /// the request.
+            /// The window generation, incremented on every reset, so refunds
+            /// can be scoped to the window that counted the request.
             /// </summary>
             public long Generation;
         }

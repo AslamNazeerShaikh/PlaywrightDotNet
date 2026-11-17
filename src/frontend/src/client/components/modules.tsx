@@ -37,6 +37,7 @@ export function Module({
   );
 }
 
+/** One framed readout: a label, its value, and an optional ok/bad/warn tone. */
 export function Stat({
   label,
   value,
@@ -55,10 +56,12 @@ export function Stat({
   );
 }
 
+/** A stable code tag: the API's snake-case code, optionally toned. */
 export function CodeTag({ code, tone }: { code: string; tone?: "ok" | "bad" | "warn" }) {
   return <span className={`code-tag${tone !== undefined ? ` ${tone}` : ""}`}>{code}</span>;
 }
 
+/** Pretty-printed JSON exactly as the API returned it; `label` names the block. */
 export function JsonBlock({ value, label }: { value: unknown; label: string }) {
   useRenderLog(`JsonBlock:${label}`);
   return (

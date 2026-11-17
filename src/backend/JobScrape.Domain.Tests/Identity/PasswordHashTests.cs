@@ -68,6 +68,18 @@ namespace JobScrape.Domain.Tests.Identity
             Assert.Throws<DomainException>(() => PasswordHash.Restore(good.Salt, good.Hash, 0));
         }
 
+        [Fact]
+        public void EqualityCoversNullWrongTypeAndHashCode()
+        {
+            var original = PasswordHash.Create(Good);
+            var restored = PasswordHash.Restore(original.Salt, original.Hash, original.Iterations);
+
+            Assert.False(original.Equals((PasswordHash?)null));
+            Assert.False(original.Equals((object?)"not-a-hash"));
+            Assert.True(original.Equals((object?)restored));
+            Assert.Equal(original.GetHashCode(), restored.GetHashCode());
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]

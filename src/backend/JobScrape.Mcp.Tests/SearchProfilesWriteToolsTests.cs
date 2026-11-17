@@ -55,16 +55,12 @@ namespace JobScrape.Mcp.Tests
                     profiles,
                     profiles,
                     catalog,
-                    clock,
-                    CallerContext.LocalOperator
-                ),
+                    clock),
                 new UpdateSearchProfileHandler(
                     profiles,
                     profiles,
                     catalog,
-                    clock,
-                    CallerContext.LocalOperator
-                ),
+                    clock),
                 new FakeCaller()
             );
         }
@@ -285,16 +281,12 @@ namespace JobScrape.Mcp.Tests
                 profiles,
                 profiles,
                 catalog,
-                clock,
-                CallerContext.LocalOperator
-            );
+                clock);
             var update = new UpdateSearchProfileHandler(
                 profiles,
                 profiles,
                 catalog,
-                clock,
-                CallerContext.LocalOperator
-            );
+                clock);
             var caller = new FakeCaller();
             Assert.Throws<ArgumentNullException>(() =>
                 new SearchProfilesWriteTools(null!, update, caller)

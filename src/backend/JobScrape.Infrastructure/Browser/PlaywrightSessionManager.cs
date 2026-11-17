@@ -57,8 +57,7 @@ namespace JobScrape.Infrastructure.Browser
             ArgumentNullException.ThrowIfNull(source);
 
             // The run handler loaded and gated this profile in the same scope.
-            var profile =
-                await _profiles.GetAsync(profileId, cancellationToken)
+            var profile = await _profiles.GetAsync(profileId, cancellationToken)
                 ?? throw new InvalidOperationException(
                     $"Browser profile '{profileId}' disappeared during the run."
                 );

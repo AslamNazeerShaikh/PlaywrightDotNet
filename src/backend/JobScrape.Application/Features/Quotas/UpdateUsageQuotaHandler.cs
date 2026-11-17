@@ -1,5 +1,6 @@
 using JobScrape.Application.Abstractions;
 using JobScrape.Application.Results;
+using JobScrape.Application.Validation;
 using JobScrape.Domain;
 using JobScrape.Domain.Access;
 
@@ -48,10 +49,7 @@ namespace JobScrape.Application.Features.Quotas
             CancellationToken cancellationToken
         )
         {
-            if (
-                !Enum.TryParse<QuotaScope>(scope, ignoreCase: true, out var parsed)
-                || !Enum.IsDefined(parsed)
-            )
+            if (!EnumNames.TryParse<QuotaScope>(scope, out var parsed))
             {
                 return Result.Fail<QuotaResponse>(Errors.UnknownQuotaScope(scope));
             }
@@ -59,19 +57,25 @@ namespace JobScrape.Application.Features.Quotas
             var quota = await _quotas.GetAsync(parsed, cancellationToken);
             if (quota is null)
             {
+                // Validate the limit and the window through the domain's own
+                // rules, one at a time, so a failure names the offending field.
                 UsageQuota created;
                 try
                 {
-                    created = UsageQuota.Create(parsed, limit, window);
+                    created = UsageQuota.Create(parsed, limit, TimeSpan.FromMinutes(1));
                 }
                 catch (DomainException ex)
                 {
-                    return Result.Fail<QuotaResponse>(
-                        Errors.ValidationFailed(
-                            ex.Message,
-                            new Dictionary<string, string[]> { ["limit"] = [ex.Message] }
-                        )
-                    );
+                    return Result.Fail<QuotaResponse>(InvalidField("limit", ex));
+                }
+
+                try
+                {
+                    created.SetWindow(window);
+                }
+                catch (DomainException ex)
+                {
+                    return Result.Fail<QuotaResponse>(InvalidField("window", ex));
                 }
 
                 await _quotas.AddAsync(created, cancellationToken);
@@ -84,20 +88,37 @@ namespace JobScrape.Application.Features.Quotas
             try
             {
                 quota.SetLimit(limit);
+            }
+            catch (DomainException ex)
+            {
+                return Result.Fail<QuotaResponse>(InvalidField("limit", ex));
+            }
+
+            try
+            {
                 quota.SetWindow(window);
             }
             catch (DomainException ex)
             {
-                return Result.Fail<QuotaResponse>(
-                    Errors.ValidationFailed(
-                        ex.Message,
-                        new Dictionary<string, string[]> { ["limit"] = [ex.Message] }
-                    )
-                );
+                return Result.Fail<QuotaResponse>(InvalidField("window", ex));
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Ok(new QuotaResponse(parsed.ToString(), quota.Limit, quota.Window));
+        }
+
+        /// <summary>
+        /// Builds a validation failure naming the field the domain refused.
+        /// </summary>
+        /// <param name="field">The JSON request field.</param>
+        /// <param name="exception">The domain failure.</param>
+        /// <returns>A <c>VALIDATION_FAILED</c> error for that field.</returns>
+        private static ErrorInfo InvalidField(string field, DomainException exception)
+        {
+            return Errors.ValidationFailed(
+                exception.Message,
+                new Dictionary<string, string[]> { [field] = [exception.Message] }
+            );
         }
     }
 }

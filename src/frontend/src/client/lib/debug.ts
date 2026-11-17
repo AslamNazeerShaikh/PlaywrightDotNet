@@ -32,6 +32,7 @@ export function renderCount(name: string): number {
   return counts.get(name) ?? 0;
 }
 
+/** Counts this render and logs mount/unmount when `?renders=1`; safe outside a browser. */
 export function useRenderLog(name: string): void {
   const count = useRef(0);
   count.current += 1;

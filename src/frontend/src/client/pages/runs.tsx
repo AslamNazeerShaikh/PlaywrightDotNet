@@ -34,6 +34,7 @@ export const RUN_POLL_MS = 2000;
 /** Runs history page size, mirroring the database grid's LIMIT. */
 export const RUNS_LIMIT = 50;
 
+/** Postings per page in the run detail table. */
 export const POSTINGS_LIMIT = 200;
 
 /** Lifecycle stages a healthy run walks through, in order. */
@@ -78,6 +79,7 @@ export function RunsPage({
   const [exportProblem, setExportProblem] = useState<ApiProblem | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelProblem, setCancelProblem] = useState<ApiProblem | null>(null);
   // Latest-wins for the history list, and a stable handle on the event
   // sink so the polling effect is keyed on the run alone.
   const listTicket = useRef(0);
@@ -110,6 +112,7 @@ export function RunsPage({
     setPostingsOffset(0);
     setPostingsTotal(0);
     setExportProblem(null);
+    setCancelProblem(null);
     setSelectedId(id);
   }
 
@@ -210,6 +213,7 @@ export function RunsPage({
       return;
     }
     setStartProblem(null);
+    setCancelProblem(null);
     setRuns((rs) => upsertRun(rs, result.value));
     setPostings(null);
     setPostingsOffset(0);
@@ -269,7 +273,10 @@ export function RunsPage({
     const { result } = await client.cancelRun(id);
     setCancelling(false);
     if (result.ok) {
+      setCancelProblem(null);
       setRuns((rs) => upsertRun(rs, result.value));
+    } else {
+      setCancelProblem(result.problem);
     }
   }
 
@@ -444,11 +451,20 @@ export function RunsPage({
         {selected === null ? (
           <p className="status-line">Select a run to follow it.</p>
         ) : (
-          <RunDetail
-            run={selected}
-            cancelling={cancelling}
-            onCancel={() => void cancel(selected.id)}
-          />
+          <>
+            <RunDetail
+              run={selected}
+              cancelling={cancelling}
+              onCancel={() => void cancel(selected.id)}
+            />
+            {cancelProblem !== null && (
+              <p className="alert" role="alert">
+                <CodeTag code={cancelProblem.code} tone={codeTone(cancelProblem.code)} />{" "}
+                {cancelProblem.title}
+                {cancelProblem.detail !== "" ? ` — ${cancelProblem.detail}` : ""}
+              </p>
+            )}
+          </>
         )}
       </Module>
 

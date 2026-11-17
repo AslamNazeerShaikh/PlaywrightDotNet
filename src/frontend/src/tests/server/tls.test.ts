@@ -31,6 +31,15 @@ describe("loadTls", () => {
     ).rejects.toThrow("BFF_TLS_CERT_FILE not found");
   });
 
+  test("throws with the fix when only one half of the pair is configured", async () => {
+    await expect(loadTls({ ...base, tlsCertFile: "./.certs/cert.pem" })).rejects.toThrow(
+      "BFF_TLS_CERT_FILE and BFF_TLS_KEY_FILE must be set together",
+    );
+    await expect(loadTls({ ...base, tlsKeyFile: "./.certs/key.pem" })).rejects.toThrow(
+      "BFF_TLS_CERT_FILE and BFF_TLS_KEY_FILE must be set together",
+    );
+  });
+
   test("loads an existing keypair", async () => {
     scratch = await mkdtemp(join(tmpdir(), "bff-tls-"));
     const cert = join(scratch, "cert.pem");

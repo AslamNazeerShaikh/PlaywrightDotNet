@@ -411,10 +411,7 @@ namespace JobScrape.Api.Tests
                 new { name = "Operator" },
                 Ct
             );
-            Assert.True(
-                seedOperator.StatusCode == HttpStatusCode.Created
-                    || seedOperator.StatusCode == HttpStatusCode.Conflict
-            );
+            Assert.Equal(HttpStatusCode.OK, seedOperator.StatusCode);
 
             using var response = await admin.PostAsJsonAsync(
                 $"api/v1/users/{userId:D}/roles",
@@ -442,10 +439,7 @@ namespace JobScrape.Api.Tests
                     new { name = roleName },
                     Ct
                 );
-                Assert.True(
-                    seed.StatusCode == HttpStatusCode.Created
-                        || seed.StatusCode == HttpStatusCode.Conflict
-                );
+                Assert.Equal(HttpStatusCode.OK, seed.StatusCode);
             }
 
             using var grant = await admin.PostAsJsonAsync(
@@ -643,6 +637,40 @@ namespace JobScrape.Api.Tests
             Assert.Contains(
                 "Viewer",
                 createdUser.GetProperty("roles").EnumerateArray().Select(role => role.GetString())
+            );
+        }
+
+        [Fact]
+        public async Task CreateRoleEnsuresASeededRoleAndReturns200()
+        {
+            await using var factory = new ApiFactory();
+            using var admin = await AuthTestHelper.CreateAdminClientAsync(factory, Ct);
+
+            using var first = await admin.PostAsJsonAsync(
+                "api/v1/roles",
+                new { name = "Operator" },
+                Ct
+            );
+            using var second = await admin.PostAsJsonAsync(
+                "api/v1/roles",
+                new { name = "operator" },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+            var firstBody = await first.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            var secondBody = await second.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Equal(
+                firstBody.GetProperty("id").GetGuid(),
+                secondBody.GetProperty("id").GetGuid()
+            );
+
+            using var list = await admin.GetAsync("api/v1/roles", Ct);
+            var roles = await list.Content.ReadFromJsonAsync<JsonElement>(Ct);
+            Assert.Single(
+                roles.GetProperty("roles").EnumerateArray(),
+                role => role.GetProperty("name").GetString() == "Operator"
             );
         }
 

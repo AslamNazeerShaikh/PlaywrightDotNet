@@ -18,6 +18,10 @@ const DEFAULT_PORT = 3000;
 /** Matches this repo: `JobScrape.Api` serves HTTPS on 5208 in Development. */
 const DEFAULT_DOTNET_API_URL = "https://localhost:5208";
 
+/**
+ * Parses the environment into a validated config. Throws on an invalid port, a non-http(s) API URL,
+ * or a half-configured TLS pair.
+ */
 export function parseConfig(env: Record<string, string | undefined>): CockpitConfig {
   const port = parsePort(env["PORT"]);
   const dotnetApiUrl = parseApiUrl(env["DOTNET_API_URL"]);

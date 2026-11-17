@@ -22,9 +22,7 @@ namespace JobScrape.Application.Tests
                 new CreateSessionHandler(
                     store,
                     store,
-                    new FakeTimeProvider(Now),
-                    CallerContext.LocalOperator
-                ),
+                    new FakeTimeProvider(Now)),
                 store
             );
         }
@@ -68,8 +66,8 @@ namespace JobScrape.Application.Tests
         [Theory]
         [InlineData("firefox", null, "Firefox", "Bundled")]
         [InlineData("WEBKIT", "bundled", "WebKit", "Bundled")]
-        [InlineData("chromium", "Edge", "Chromium", "Edge")]
-        [InlineData(null, "chrome", "Chromium", "Chrome")]
+        [InlineData("chromium", "Bundled", "Chromium", "Bundled")]
+        [InlineData(null, "BUNDLED", "Chromium", "Bundled")]
         public async Task AcceptsValidEngineAndChannelPairs(
             string? engine,
             string? channel,
@@ -110,9 +108,9 @@ namespace JobScrape.Application.Tests
         [InlineData("-1", null, "engine")]
         [InlineData("Chromium,Firefox", null, "engine")]
         [InlineData(null, "2", "channel")]
-        [InlineData("Firefox", "Chrome", "channel")]
-        [InlineData("WebKit", "Edge", "channel")]
-        public async Task RejectsNumericUndefinedAndInvalidPairings(
+        [InlineData(null, "Chrome", "channel")]
+        [InlineData("Firefox", "Edge", "channel")]
+        public async Task RejectsNumericUndefinedAndUnknownChannels(
             string? engine,
             string? channel,
             string field
@@ -128,6 +126,24 @@ namespace JobScrape.Application.Tests
             );
 
             Assert.Equal([field], errors.Keys);
+        }
+
+        [Theory]
+        [InlineData("Chrome")]
+        [InlineData("Edge")]
+        public async Task RejectsAnyChannelOtherThanBundled(string channel)
+        {
+            var (handler, _) = Create();
+
+            var errors = FieldErrors(
+                await handler.HandleAsync(
+                    new CreateSessionRequest("p", "naukri", null, channel),
+                    Ct
+                )
+            );
+
+            Assert.Equal(["channel"], errors.Keys);
+            Assert.Equal(["Choose Bundled."], errors["channel"]);
         }
 
         [Theory]
@@ -214,16 +230,13 @@ namespace JobScrape.Application.Tests
             var clock = new FakeTimeProvider();
 
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(null!, store, clock, CallerContext.LocalOperator)
+                new CreateSessionHandler(null!, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, null!, clock, CallerContext.LocalOperator)
+                new CreateSessionHandler(store, null!, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, store, null!, CallerContext.LocalOperator)
-            );
-            Assert.Throws<ArgumentNullException>(() =>
-                new CreateSessionHandler(store, store, clock, null!)
+                new CreateSessionHandler(store, store, null!)
             );
             Assert.Throws<ArgumentNullException>(() => new ListSessionsHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new GetSessionHandler(null!));

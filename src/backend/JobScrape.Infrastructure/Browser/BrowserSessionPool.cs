@@ -86,7 +86,6 @@ namespace JobScrape.Infrastructure.Browser
                             new BrowserTypeLaunchPersistentContextOptions
                             {
                                 Headless = _settings.Headless,
-                                Channel = Channel(profile.Channel),
                                 // Real window size and the browser's own user agent:
                                 // no spoofing (docs/07-anti-bot-and-compliance.md).
                                 ViewportSize = ViewportSize.NoViewport,
@@ -324,22 +323,6 @@ namespace JobScrape.Infrastructure.Browser
                 BrowserEngine.Firefox => playwright.Firefox,
                 BrowserEngine.WebKit => playwright.Webkit,
                 _ => playwright.Chromium,
-            };
-        }
-
-        /// <summary>
-        /// Maps the domain channel to Playwright's channel name; bundled
-        /// browsers have none.
-        /// </summary>
-        /// <param name="channel">The channel.</param>
-        /// <returns>The channel name, or null for the bundled browser.</returns>
-        internal static string? Channel(BrowserChannel channel)
-        {
-            return channel switch
-            {
-                BrowserChannel.Chrome => "chrome",
-                BrowserChannel.Edge => "msedge",
-                _ => null,
             };
         }
 

@@ -5,6 +5,9 @@
  * stable `code` contract — the UI maps codes, never prose (see docs/14-application-patterns.md
  * §6).
  */
+import { renderDebugEnabled } from "./debug.ts";
+
+/** GET /api/v1/health: liveness plus the server clock. */
 export interface HealthPayload {
   status: string;
   timeUtc: string;
@@ -33,6 +36,7 @@ export interface SearchProfilePayload {
   updatedAt: string;
 }
 
+/** GET /api/v1/search-profiles: one page plus the total count. */
 export interface SearchProfileList {
   items: SearchProfilePayload[];
   total: number;
@@ -71,6 +75,7 @@ export interface SourceStatus {
   };
 }
 
+/** GET /api/v1/sources: every source plus the snapshot time. */
 export interface SourceList {
   items: SourceStatus[];
   asOf: string;
@@ -82,7 +87,7 @@ export interface SessionPayload {
   name: string;
   sourceKey: string;
   engine: "Chromium" | "Firefox" | "WebKit";
-  channel: "Bundled" | "Chrome" | "Edge";
+  channel: "Bundled";
   state: "New" | "Healthy" | "Challenged" | "CoolingDown" | "Expired" | "ResetRequired";
   userDataDirectory: string;
   canLaunch: boolean;
@@ -92,6 +97,7 @@ export interface SessionPayload {
   lastVerifiedAt: string | null;
 }
 
+/** GET /api/v1/sessions: browser profiles plus the total count. */
 export interface SessionList {
   items: SessionPayload[];
   total: number;
@@ -240,6 +246,7 @@ export interface UserResponse {
   roles: string[];
 }
 
+/** GET /api/v1/users: the admin list wrapper. */
 export interface UserListResponse {
   users: UserResponse[];
 }
@@ -251,6 +258,7 @@ export interface RoleResponse {
   permissions: string[];
 }
 
+/** GET /api/v1/roles: the role list wrapper. */
 export interface RoleListResponse {
   roles: RoleResponse[];
 }
@@ -263,6 +271,7 @@ export interface QuotaResponse {
   window: string;
 }
 
+/** GET /api/v1/quotas: the quota list wrapper. */
 export interface QuotaListResponse {
   quotas: QuotaResponse[];
 }
@@ -282,6 +291,7 @@ export const PERMISSION_CATALOG = [
   "sources.read",
 ] as const;
 
+/** One key of {@link PERMISSION_CATALOG}. */
 export type PermissionKey = (typeof PERMISSION_CATALOG)[number];
 
 /** Body of POST /api/v1/auth/login. */
@@ -320,8 +330,6 @@ export interface UpdateQuotaInput {
   window: string;
 }
 
-import { renderDebugEnabled } from "./debug.ts";
-
 /** RFC 9457 problem body plus the stable `code`, optional field `errors`, and 429 backoff. */
 export interface ApiProblem {
   status: number;
@@ -333,6 +341,7 @@ export interface ApiProblem {
   retryAfter?: number | null;
 }
 
+/** Expected-failure envelope: the value, or the API problem. */
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; problem: ApiProblem };
 
 /** A result plus how long the round trip took and when it finished. */
@@ -342,11 +351,13 @@ export interface Timed<T> {
   at: string;
 }
 
+/** One table in the database grid: name plus row count. */
 export interface DbTableInfo {
   name: string;
   rowCount: number;
 }
 
+/** One column from PRAGMA table_info. */
 export interface DbColumnInfo {
   name: string;
   type: string;
@@ -355,6 +366,7 @@ export interface DbColumnInfo {
   defaultValue: string | null;
 }
 
+/** One foreign-key edge from PRAGMA foreign_key_list. */
 export interface DbForeignKeyInfo {
   column: string;
   referencedTable: string;
@@ -363,6 +375,7 @@ export interface DbForeignKeyInfo {
   onDelete?: string | null;
 }
 
+/** One table's full schema: columns, foreign keys, and primary key. */
 export interface DbTableSchema {
   name: string;
   columns: DbColumnInfo[];
@@ -370,11 +383,13 @@ export interface DbTableSchema {
   primaryKeyColumn: string;
 }
 
+/** One page of table rows plus the total count. */
 export interface DbRowsResult {
   rows: Record<string, unknown>[];
   total: number;
 }
 
+/** Minimal fetch surface the client needs, so tests can pass a stub. */
 export type FetchImpl = (
   input: string,
   init?: RequestInit,
@@ -387,7 +402,11 @@ export type FetchImpl = (
   headers?: { get(name: string): string | null };
 }>;
 
-export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as FetchImpl) {
+/**
+ * Builds the typed client over `fetchImpl` (real `fetch` by default); failures surface as
+ * {@link ApiProblem}.
+ */
+export function createApiClient(fetchImpl: FetchImpl = fetch) {
   const authed = <T>(
     method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
     path: string,
@@ -498,6 +517,15 @@ export function createApiClient(fetchImpl: FetchImpl = fetch as unknown as Fetch
 
 /** The client surface consumed by components. Passed as a prop for testability. */
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+/** One idempotency key per mutating submit, so a double click never creates two records. */
+export function newIdempotencyKey(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  }
+}
 
 async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
   const start = performance.now();

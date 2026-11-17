@@ -211,9 +211,8 @@ namespace JobScrape.Application.Tests.Scraping
                 ],
                 harness.Source.Requests
             );
-            var retry = Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            var retry = Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("retrying page 2", StringComparison.Ordinal)
             );
             Assert.Equal(summary.RunId, retry.Properties["RunId"]);
             Assert.Equal(2, retry.Properties["Page"]);
@@ -250,9 +249,8 @@ namespace JobScrape.Application.Tests.Scraping
                 ],
                 harness.Source.Requests
             );
-            Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("retrying page 2", StringComparison.Ordinal)
             );
             Assert.Equal(
                 ["1", "3", "4", "5"],
@@ -307,9 +305,8 @@ namespace JobScrape.Application.Tests.Scraping
                 ],
                 harness.Source.Requests
             );
-            Assert.Single(
-                harness.Logger.Entries,
-                e => e.Message.Contains("retrying page 2", StringComparison.Ordinal)
+            Assert.Single(harness.Logger.Entries, e =>
+                e.Message.Contains("retrying page 2", StringComparison.Ordinal)
             );
             Assert.DoesNotContain(harness.Store.Postings, p => p.ExternalJobId.Value == "1");
             Assert.Equal(
@@ -432,7 +429,7 @@ namespace JobScrape.Application.Tests.Scraping
         // ---- gates ----
 
         [Fact]
-        public async Task RejectsEmptyIdsAndMissingConsentBeforeAnyLookup()
+        public async Task RejectsMissingConsentBeforeAnyLookup()
         {
             var harness = new ScrapeHarness();
 
@@ -444,7 +441,9 @@ namespace JobScrape.Application.Tests.Scraping
             var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
                 result.Error.Metadata!["errors"]
             );
-            Assert.Equal(["browserProfileId", "consent", "profileId"], errors.Keys.Order());
+            // Request ids are the API edge's concern; this gate only owns the
+            // consent prerequisite every direct caller must supply.
+            Assert.Equal(["consent"], errors.Keys.Order());
             Assert.Empty(harness.Store.Circuits);
         }
 
@@ -945,11 +944,9 @@ namespace JobScrape.Application.Tests.Scraping
             var summary = await RunOkAsync(harness);
 
             var entries = harness.Logger.Entries;
-            Assert.Contains(
-                entries,
-                e =>
-                    e.Properties.ContainsKey("{OriginalFormat}")
-                    && e.Message.Contains("started", StringComparison.Ordinal)
+            Assert.Contains(entries, e =>
+                e.Properties.ContainsKey("{OriginalFormat}")
+                && e.Message.Contains("started", StringComparison.Ordinal)
             );
             var retry = Assert.Single(entries, e => e.Properties.ContainsKey("Attempt"));
             Assert.Equal(1, retry.Properties["Attempt"]);
@@ -979,9 +976,8 @@ namespace JobScrape.Application.Tests.Scraping
                 "SOURCE_DISABLED",
                 Assert.Single(refused.Logger.Entries).Properties["ErrorCode"]
             );
-            Assert.Contains(
-                capped.Logger.Entries,
-                e => Equals(e.Properties.GetValueOrDefault("Reason"), "job cap reached")
+            Assert.Contains(capped.Logger.Entries, e =>
+                Equals(e.Properties.GetValueOrDefault("Reason"), "job cap reached")
             );
         }
 

@@ -79,20 +79,17 @@ namespace JobScrape.Infrastructure.Tests.Sources.Indeed
         {
             var page = await _pool.OpenAsync(_profile, Ct);
             var html = IndeedTestPages.Fixture("search-normal.html");
-            await page.Context.RouteAsync(
-                "https://in.indeed.com/**",
-                async route =>
-                {
-                    await route.FulfillAsync(
-                        new RouteFulfillOptions
-                        {
-                            Status = 200,
-                            ContentType = "text/html; charset=utf-8",
-                            Body = html,
-                        }
-                    );
-                }
-            );
+            await page.Context.RouteAsync("https://in.indeed.com/**", async route =>
+            {
+                await route.FulfillAsync(
+                    new RouteFulfillOptions
+                    {
+                        Status = 200,
+                        ContentType = "text/html; charset=utf-8",
+                        Body = html,
+                    }
+                );
+            });
             var source = new IndeedJobSource(
                 _pool,
                 new FakeTimeProvider(Now),

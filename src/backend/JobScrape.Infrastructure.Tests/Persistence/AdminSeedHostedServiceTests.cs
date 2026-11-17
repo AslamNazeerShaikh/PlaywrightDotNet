@@ -59,8 +59,14 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             var first = hosted1.StartAsync(Ct);
             var second = hosted2.StartAsync(Ct);
 
-            await CompleteWithinAsync(gateState.Arrived.Task, "seed race gate");
-            gateState.Release.SetResult();
+            // Hold each stage until both instances have staged the same
+            // insert, so both stages race instead of only the first pair of
+            // arrivals reaching the gate.
+            await CompleteWithinAsync(gateState.Roles.Arrived.Task, "role seed race gate");
+            gateState.Roles.Release.SetResult();
+
+            await CompleteWithinAsync(gateState.Users.Arrived.Task, "user seed race gate");
+            gateState.Users.Release.SetResult();
 
             await CompleteWithinAsync(Task.WhenAll(first, second), "seed race completion");
 
@@ -78,8 +84,9 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.Equal(allUsers.Count, allUsers.Select(user => user.Id).Distinct().Count());
             Assert.Equal(allRoles.Count, allRoles.Select(role => role.Id).Distinct().Count());
 
-            // Both the role save and the user save race exactly once:
-            // one loser per stage, one warning each.
+            // Each gate held both instances until both had staged the same
+            // insert, so exactly one instance loses at each stage: one
+            // warning for the role save and one for the user save.
             Assert.Equal(
                 2,
                 logger.Entries.Count(entry =>
@@ -175,11 +182,30 @@ namespace JobScrape.Infrastructure.Tests.Persistence
 
         internal sealed class GateState
         {
-            public int Arrivals;
-            public TaskCompletionSource Arrived { get; } =
-                new(TaskCreationOptions.RunContinuationsAsynchronously);
-            public TaskCompletionSource Release { get; } =
-                new(TaskCreationOptions.RunContinuationsAsynchronously);
+            public Gate Roles { get; } = new();
+
+            public Gate Users { get; } = new();
+
+            internal sealed class Gate
+            {
+                private int _arrivals;
+
+                public TaskCompletionSource Arrived { get; } =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public TaskCompletionSource Release { get; } =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public async Task ArriveAndWaitAsync(CancellationToken cancellationToken)
+                {
+                    if (Interlocked.Increment(ref _arrivals) == 2)
+                    {
+                        Arrived.TrySetResult();
+                    }
+
+                    await Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
 
         internal sealed class UserSaveGateInterceptor : SaveChangesInterceptor
@@ -197,25 +223,32 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                 CancellationToken cancellationToken = default
             )
             {
-                // Gate role and user saves alike so both stages genuinely
-                // race; quota definitions are seeded before either gate and
-                // stay uncontended by design.
-                if (
-                    eventData.Context is not null
-                    && eventData
-                        .Context.ChangeTracker.Entries()
-                        .Any(entry =>
-                            entry.State == EntityState.Added
-                            && (entry.Entity is User || entry.Entity is Domain.Identity.Role)
-                        )
-                )
+                // Gate each stage separately so both instances stage the same
+                // insert before either commits; quota definitions are seeded
+                // before both gates and stay uncontended by design. A user
+                // wins over a role because the user save is the later stage.
+                if (eventData.Context is not null)
                 {
-                    if (Interlocked.Increment(ref _state.Arrivals) == 2)
+                    var addedEntities = eventData
+                        .Context.ChangeTracker.Entries()
+                        .Where(entry => entry.State == EntityState.Added)
+                        .Select(entry => entry.Entity)
+                        .ToList();
+
+                    GateState.Gate? gate = null;
+                    if (addedEntities.Any(entity => entity is User))
                     {
-                        _state.Arrived.TrySetResult();
+                        gate = _state.Users;
+                    }
+                    else if (addedEntities.Any(entity => entity is Domain.Identity.Role))
+                    {
+                        gate = _state.Roles;
                     }
 
-                    await _state.Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    if (gate is not null)
+                    {
+                        await gate.ArriveAndWaitAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
                 return await base.SavingChangesAsync(eventData, result, cancellationToken);
