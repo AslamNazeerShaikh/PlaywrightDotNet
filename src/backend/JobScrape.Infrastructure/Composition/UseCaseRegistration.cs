@@ -132,12 +132,7 @@ namespace JobScrape.Infrastructure.Composition
             services.AddTransient<LoginHandler>();
             services.AddTransient<SetupPasswordHandler>();
             services.AddTransient<ChangePasswordHandler>();
-            services.AddTransient<CreateUserHandler>(provider => new CreateUserHandler(
-                provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IRoleRepository>(),
-                provider.GetRequiredService<IUnitOfWork>(),
-                provider.GetRequiredService<TimeProvider>()
-            ));
+            services.AddTransient<CreateUserHandler>();
             services.AddTransient<GetUserHandler>();
             services.AddTransient<ListUsersHandler>();
             services.AddTransient<AssignRoleHandler>();
