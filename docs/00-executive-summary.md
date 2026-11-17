@@ -1,6 +1,6 @@
 # Executive Summary
 
-> **Decision in one line:** Build **JobLens**, a .NET 10 modular monolith and CLI that uses Playwright for .NET to collect public job postings from Naukri, Indeed, and (opt-in) LinkedIn, stores them in SQLite, and exports analysis-ready CSV/Excel — with compliance-first anti-bot controls, not evasion tooling.
+> **Decision in one line:** Build **JobLens**, a .NET 11 modular monolith and CLI that uses Playwright for .NET to collect public job postings from Naukri, Indeed, and (opt-in) LinkedIn, stores them in SQLite, and exports analysis-ready CSV/Excel, with compliance-first anti-bot controls, not evasion tooling.
 
 ---
 
@@ -11,7 +11,7 @@ Build a brand-new automation/web-scraping solution that:
 - Runs on **macOS, Linux, and Windows**.
 - Works with **bundled Chromium, Firefox, and WebKit** where technically possible.
 - Targets **Naukri**, **LinkedIn**, and **Indeed India**.
-- Uses **.NET 10**, **latest xUnit**, and **latest Playwright**.
+- Uses **.NET 11**, **latest xUnit**, and **latest Playwright**.
 - Follows **Clean Architecture, DDD, TDD, SOLID, YAGNI, and DRY** where each adds value.
 - Reuses the **anti-bot lessons** of the old Python project without copying its structure or mess.
 - Is understandable to a developer who knows C#/OOP and ASP.NET Core Web APIs but not xUnit or Playwright.
@@ -60,20 +60,20 @@ No stack is undetectable. The realistic goal is **not getting banned**, which co
 
 ## 3. Why this stack
 
-| Choice | Version (verified 2026-10-29) | Why |
+| Choice | Version (verified 2026-11-17) | Why |
 |---|---|---|
-| **.NET 10 LTS** | SDK `10.0.403`, runtime `10.0.14` | Supported until **2028-11-14**; cross-platform; strong async/DI/tooling; familiar to you. |
-| **xUnit.net v3** | `xunit.v3` `4.0.2`, adapter `4.0.1` | v2 is in maintenance; v3 has in-process runner, Microsoft Testing Platform support, assembly fixtures, dynamic skip, `TestContext`, and first-class Playwright integration. |
+| **.NET 11** | SDK `11.0.100`, runtime `11.0.0` | Cross-platform; strong async/DI/tooling; familiar to you. |
+| **xUnit.net v3** | `xunit.v3` `4.0.3`, adapter `4.0.1` | v2 is in maintenance; v3 has in-process runner, Microsoft Testing Platform support, assembly fixtures, dynamic skip, `TestContext`, and first-class Playwright integration. |
 | **Playwright for .NET** | `1.64.1` | Chromium/Firefox/WebKit on all three OSes, auto-wait, locators, tracing, codegen, persistent contexts, network interception. |
 | **Microsoft.Playwright.Xunit.v3** | `1.64.1` | Official `PageTest` base class for xUnit v3. |
-| **SQLite + EF Core 10** | `10.0.14` | Zero-ops local database, cross-platform, transactional, easy backup, good enough for personal volume. PostgreSQL remains an option later. |
+| **SQLite + EF Core 11** | `11.0.0` | Zero-ops local database, cross-platform, transactional, easy backup, good enough for personal volume. PostgreSQL remains an option later. |
 | **System.CommandLine** | `2.0.14` | Stable, testable CLI parsing without a heavy framework. |
-| **Microsoft.Extensions.Hosting** | `10.0.14` | DI, configuration, logging, cancellation, lifetime — the ASP.NET Core patterns you already know. |
+| **Microsoft.Extensions.Hosting** | `11.0.0` | DI, configuration, logging, cancellation, lifetime, the ASP.NET Core patterns you already know. |
 | **Serilog** | `10.0.0` | Structured JSON file logs with enrichers, daily retention, correlation, and redaction; console + async file sinks. |
 | **Polly v8** | via `Microsoft.Extensions.Http.Resilience` `10.0.0` | HTTP retry, circuit breaker, timeout, and safe fallback for optional API clients; browser navigation keeps its own stop-on-wall policy. |
-| **AngleSharp** | `1.8.6` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
+| **AngleSharp** | `1.10.4` | CSS-selector HTML parsing for fixtures and server-rendered pages; no browser needed in unit tests. |
 | **ClosedXML** | `0.105.1` | Trusted cross-platform Excel with hyperlinks. |
-| **Scalar.AspNetCore** | `2.18.5` | Local interactive API reference/testing at `/scalar`; Development only, paired with `Microsoft.AspNetCore.OpenApi` `10.0.14`. |
+| **Scalar.AspNetCore** | `3.0.0` | Local interactive API reference/testing at `/scalar`; Development only, paired with `Microsoft.AspNetCore.OpenApi` `11.0.0`. |
 
 Deliberately **not** used in v1: CQRS, MediatR, AutoMapper, FluentValidation, Selenium, microservices, message buses, dashboards, ML ranking. Each can be added when a real requirement appears; none is needed to ship the first vertical slice.
 

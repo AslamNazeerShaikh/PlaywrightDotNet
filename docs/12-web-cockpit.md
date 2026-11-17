@@ -102,7 +102,7 @@ flowchart LR
         AUTH["Cookie · CSRF · CSP"]
     end
 
-    subgraph DotNet[".NET 10 API — loopback only"]
+    subgraph DotNet[".NET 11 API, loopback only"]
         API["ASP.NET Core minimal API"]
         APP["Application handlers"]
         INF["Infrastructure adapters"]
@@ -918,7 +918,7 @@ if (app.Environment.IsDevelopment())
 - **Testing flow:** start `JobLens.Api`, open `/scalar`, authorize with the dev token, then exercise `GET /api/v1/health`, `GET /api/v1/runs`, and `POST /api/v1/runs` with an `Idempotency-Key`.
 - **Contract check:** compare the Scalar view with `/openapi/v1.json`; generated TypeScript must come from the same document, not a hand-maintained copy.
 
-Packages: `Microsoft.AspNetCore.OpenApi` `10.0.14` and `Scalar.AspNetCore` `2.18.5` (Development only).
+Packages: `Microsoft.AspNetCore.OpenApi` `11.0.0` and `Scalar.AspNetCore` `3.0.0` (Development only).
 
 ---
 
