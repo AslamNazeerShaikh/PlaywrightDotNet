@@ -1037,7 +1037,7 @@ flowchart LR
 
 ### 13.2 Linux server / CI
 
-No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test` per test project (native MTP runner), `dotnet-coverage` merge for the 100% gate, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (no automated test touches the network; the Naukri run was verified by hand). The `Category=Browser` tests need Playwright's Chromium installed on the runner (see the runbook's install command).
+No CI workflow exists in the repo yet. When one lands: `dotnet build` with warnings-as-errors, `dotnet test --project` per test project with `--filter-not-trait "Category=Browser"` (native MTP runner), coverage via the built-in `--coverage --coverage-output-format cobertura` collector, `bun run format:check` + `bun test` for `src/frontend/`. No live scraping in CI (no automated test touches the network; the Naukri run was verified by hand). The `Category=Browser` tests need Playwright's Chromium installed on the runner (see the runbook's install command).
 
 ### 13.3 API and cockpit (present, v1)
 
