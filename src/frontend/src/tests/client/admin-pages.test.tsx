@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
-import type { ApiClient, MeResponse } from "../../client/lib/api.ts";
+import type { ApiClient, MeResponse, UserResponse } from "../../client/lib/api.ts";
 import { PERMISSION_CATALOG } from "../../client/lib/api.ts";
 import { QuotasPage } from "../../client/pages/quotas.tsx";
 import { RolesPage } from "../../client/pages/roles.tsx";
@@ -35,6 +35,13 @@ const oneUser = {
   roles: ["Admin"],
 };
 
+const secondUser: UserResponse = {
+  id: "u2",
+  email: "b@x.com",
+  mustChangePassword: true,
+  roles: ["Viewer"],
+};
+
 function usersClient(calls: { getUser: string[] }): ApiClient {
   return {
     listUsers: async () => ({
@@ -62,6 +69,40 @@ function usersClient(calls: { getUser: string[] }): ApiClient {
   } as unknown as ApiClient;
 }
 
+function racingUsersClient(): {
+  client: ApiClient;
+  called: string[];
+  resolveUser: (id: string, user: UserResponse) => void;
+} {
+  const at = new Date().toISOString();
+  const called: string[] = [];
+  const pending = new Map<string, (user: UserResponse) => void>();
+  const client = {
+    listUsers: async () => ({
+      result: { ok: true, value: { users: [oneUser, secondUser] } },
+      ms: 1,
+      at,
+    }),
+    listRoles: async () => ({
+      result: { ok: true, value: { roles: [{ id: "r1", name: "Admin", permissions: [] }] } },
+      ms: 1,
+      at,
+    }),
+    getUser: (id: string) =>
+      new Promise((resolve) => {
+        called.push(id);
+        pending.set(id, (user: UserResponse) =>
+          resolve({ result: { ok: true, value: user }, ms: 1, at }),
+        );
+      }),
+  } as unknown as ApiClient;
+  return {
+    client,
+    called,
+    resolveUser: (id, user) => pending.get(id)?.(user),
+  };
+}
+
 describe("users detail", () => {
   test("re-fetches the selected user when the client prop is hot-swapped", async () => {
     const first = { getUser: [] as string[] };
@@ -78,6 +119,26 @@ describe("users detail", () => {
     queries.rerender(<UsersPage client={clientB} me={adminMe} onUnauthorized={() => undefined} />);
 
     await waitFor(() => expect(second.getUser).toEqual(["u1"]));
+  });
+
+  test("ignores a stale detail answer after a newer selection", async () => {
+    const { client, called, resolveUser } = racingUsersClient();
+    const queries = render(
+      <UsersPage client={client} me={adminMe} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("button", { name: "a@x.com" })).toBeTruthy());
+    fireEvent.click(queries.getByRole("button", { name: "a@x.com" }));
+    await waitFor(() => expect(called).toEqual(["u1"]));
+    fireEvent.click(queries.getByRole("button", { name: "b@x.com" }));
+    await waitFor(() => expect(called).toEqual(["u1", "u2"]));
+
+    resolveUser("u2", secondUser);
+    await waitFor(() => expect(queries.getByRole("table", { name: "b@x.com roles" })).toBeTruthy());
+    resolveUser("u1", oneUser);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(queries.queryByRole("table", { name: "a@x.com roles" })).toBeNull();
+    expect(queries.getByRole("table", { name: "b@x.com roles" })).toBeTruthy();
   });
 });
 

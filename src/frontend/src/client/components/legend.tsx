@@ -8,12 +8,14 @@ import { useRenderLog } from "../lib/debug.ts";
  * vocabulary, no per-page drift.
  */
 
+/** One legend row: a stable key, its swatch, and the decoded text. */
 export interface LegendItem {
   key: string;
   swatch: ReactNode;
   text: string;
 }
 
+/** Decodes a color/shape key wherever it carries meaning; `label` names the list for assistive tech. */
 export function Legend({ label, items }: { label: string; items: LegendItem[] }) {
   useRenderLog("Legend");
   return (
@@ -65,12 +67,14 @@ export function Cross({ color }: { color: string }) {
   );
 }
 
+/** One glossary entry: the shorthand, its full name, and the one-line hint. */
 export interface GlossaryTerm {
   abbr: string;
   full: string;
   hint: string;
 }
 
+/** Expands every abbreviation once, as a definition list keyed by `abbr`. */
 export function Glossary({ terms }: { terms: GlossaryTerm[] }) {
   useRenderLog("Glossary");
   return (

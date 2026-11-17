@@ -163,6 +163,7 @@ export function Meter({
   );
 }
 
+/** Human sentence for the circuit breaker: closed wall count, half-open probe, or open until. */
 export function circuitText(circuit: SourceStatus["circuit"]): string {
   if (circuit.state === "Closed") {
     return circuit.recentFailures === 0

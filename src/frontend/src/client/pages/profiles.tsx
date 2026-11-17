@@ -26,6 +26,10 @@ import { readList, readNumber, readText } from "../lib/forms.ts";
  */
 export const SOURCES = ["naukri", "indeed", "linkedin"] as const;
 
+/**
+ * Search-profile management: create form with inline server field errors, the persisted table, and
+ * the selected profile's detail and edit form. `onCreate`/`onUpdate` resolve true on success.
+ */
 export function ProfilesPage({
   profiles,
   listProblem,
@@ -223,7 +227,7 @@ export function ProfilesPage({
                     </td>
                     <td>{p.keywords}</td>
                     <td>{p.remoteOnly ? "remote" : p.locations.join(", ")}</td>
-                    <td>{`${p.startPage ?? 1}–${(p.startPage ?? 1) + p.maxPages - 1}p · ${p.maxJobs}j · ${p.maxDetails}d`}</td>
+                    <td>{`${pagesLabel(p.startPage, p.maxPages)}p · ${p.maxJobs}j · ${p.maxDetails}d`}</td>
                     <td>
                       <CodeTag
                         code={p.enabled ? "ENABLED" : "DISABLED"}
@@ -277,7 +281,7 @@ export function ProfilesPage({
                   />
                   <DetailRow
                     label="Caps"
-                    value={`pages ${selected.startPage ?? 1}–${(selected.startPage ?? 1) + selected.maxPages - 1} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
+                    value={`pages ${pagesLabel(selected.startPage, selected.maxPages)} · ${plural(selected.maxJobs, "job")} · ${plural(selected.maxDetails, "detail")}`}
                   />
                   <DetailRow
                     label="Delay window"
@@ -552,6 +556,12 @@ export function readForm(data: FormData): CreateProfileInput {
     requiredSkills: readList(data, "requiredSkills"),
     companies: readList(data, "companies"),
   };
+}
+
+/** Page span a profile requests, e.g. "31–60"; a missing start page reads as 1. */
+function pagesLabel(startPage: number | null | undefined, maxPages: number): string {
+  const first = startPage ?? 1;
+  return `${first}–${first + maxPages - 1}`;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
