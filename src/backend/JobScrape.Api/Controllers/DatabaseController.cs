@@ -36,95 +36,64 @@ namespace JobScrape.Api.Controllers
 
         /// <summary>Gets schema.</summary>
         [HttpGet("tables/{table}/schema")]
-        public async Task<IResult> SchemaAsync(string table, CancellationToken cancellationToken)
+        public Task<IResult> SchemaAsync(string table, CancellationToken cancellationToken)
         {
-            try
-            {
-                var schema = await _explorer.GetSchemaAsync(table, cancellationToken);
-                return schema is null
-                    ? Errors.TableNotFound(table).ToProblem()
-                    : Results.Ok(schema);
-            }
-            catch (TableNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (KeyNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (ArgumentException ex)
-            {
-                return Errors.InvalidTable(ex.Message).ToProblem();
-            }
+            return GuardedAsync(
+                table,
+                async () =>
+                {
+                    var schema = await _explorer.GetSchemaAsync(table, cancellationToken);
+                    return schema is null
+                        ? Errors.TableNotFound(table).ToProblem()
+                        : Results.Ok(schema);
+                },
+                writes: false
+            );
         }
 
         /// <summary>Lists rows.</summary>
         [HttpGet("tables/{table}/rows")]
-        public async Task<IResult> RowsAsync(
+        public Task<IResult> RowsAsync(
             string table,
             [FromQuery] int offset = 0,
             [FromQuery] int limit = 50,
             CancellationToken cancellationToken = default
         )
         {
-            try
-            {
-                var result = await _explorer.ListRowsAsync(table, offset, limit, cancellationToken);
-                return Results.Ok(result);
-            }
-            catch (TableNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (KeyNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (ArgumentException ex)
-            {
-                return Errors.InvalidTable(ex.Message).ToProblem();
-            }
+            return GuardedAsync(
+                table,
+                async () =>
+                    Results.Ok(await _explorer.ListRowsAsync(table, offset, limit, cancellationToken)),
+                writes: false
+            );
         }
 
         /// <summary>Inserts a row.</summary>
         [HttpPost("tables/{table}/rows")]
-        public async Task<IResult> InsertAsync(
+        public Task<IResult> InsertAsync(
             string table,
             [FromBody] Dictionary<string, System.Text.Json.JsonElement>? values,
             CancellationToken cancellationToken
         )
         {
-            try
-            {
-                await _explorer.InsertRowAsync(
-                    table,
-                    values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
-                    cancellationToken
-                );
-                return Results.NoContent();
-            }
-            catch (TableNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (KeyNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (ArgumentException ex)
-            {
-                return Errors.InvalidInput(ex.Message).ToProblem();
-            }
-            catch (Microsoft.Data.Sqlite.SqliteException)
-            {
-                return Errors.DatabaseError().ToProblem();
-            }
+            return GuardedAsync(
+                table,
+                async () =>
+                {
+                    await _explorer.InsertRowAsync(
+                        table,
+                        values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
+                        cancellationToken
+                    );
+                    return Results.NoContent();
+                },
+                writes: true
+            );
         }
 
         /// <summary>Updates a row.</summary>
         [HttpPut("tables/{table}/rows")]
-        public async Task<IResult> UpdateAsync(
+        public Task<IResult> UpdateAsync(
             string table,
             [FromBody] UpdateRowRequest? request,
             CancellationToken cancellationToken
@@ -133,53 +102,63 @@ namespace JobScrape.Api.Controllers
             var primaryKeyValue = request?.PrimaryKeyValue;
             if (string.IsNullOrWhiteSpace(primaryKeyValue))
             {
-                return Errors.InvalidInput("PrimaryKeyValue is required.").ToProblem();
+                return Task.FromResult(Errors.InvalidInput("PrimaryKeyValue is required.").ToProblem());
             }
 
-            try
-            {
-                await _explorer.UpdateRowAsync(
-                    table,
-                    primaryKeyValue,
-                    request!.Values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
-                    cancellationToken
-                );
-                return Results.NoContent();
-            }
-            catch (RowNotFoundException ex)
-            {
-                return Errors.TableRowNotFound(ex.TableName, ex.PrimaryKeyValue).ToProblem();
-            }
-            catch (TableNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (KeyNotFoundException)
-            {
-                return Errors.TableNotFound(table).ToProblem();
-            }
-            catch (ArgumentException ex)
-            {
-                return Errors.InvalidInput(ex.Message).ToProblem();
-            }
-            catch (Microsoft.Data.Sqlite.SqliteException)
-            {
-                return Errors.DatabaseError().ToProblem();
-            }
+            return GuardedAsync(
+                table,
+                async () =>
+                {
+                    await _explorer.UpdateRowAsync(
+                        table,
+                        primaryKeyValue,
+                        request!.Values ?? new Dictionary<string, System.Text.Json.JsonElement>(),
+                        cancellationToken
+                    );
+                    return Results.NoContent();
+                },
+                writes: true
+            );
         }
 
         /// <summary>Deletes a row.</summary>
         [HttpDelete("tables/{table}/rows/{primaryKeyValue}")]
-        public async Task<IResult> DeleteAsync(
+        public Task<IResult> DeleteAsync(
             string table,
             string primaryKeyValue,
             CancellationToken cancellationToken
         )
         {
+            return GuardedAsync(
+                table,
+                async () =>
+                {
+                    await _explorer.DeleteRowAsync(table, primaryKeyValue, cancellationToken);
+                    return Results.NoContent();
+                },
+                writes: true
+            );
+        }
+
+        /// <summary>
+        /// Runs one explorer call and maps the port's expected failures. Reads
+        /// report an invalid table name as <c>INVALID_TABLE</c>; writes report
+        /// it as <c>INVALID_INPUT</c>, because the same guard also rejects a
+        /// body with no usable column.
+        /// </summary>
+        /// <param name="table">The requested table, echoed in the problem.</param>
+        /// <param name="action">The explorer call.</param>
+        /// <param name="writes">True for insert, update, and delete.</param>
+        /// <returns>The action's result, or the mapped problem.</returns>
+        private static async Task<IResult> GuardedAsync(
+            string table,
+            Func<Task<IResult>> action,
+            bool writes
+        )
+        {
             try
             {
-                await _explorer.DeleteRowAsync(table, primaryKeyValue, cancellationToken);
-                return Results.NoContent();
+                return await action();
             }
             catch (RowNotFoundException ex)
             {
@@ -195,7 +174,9 @@ namespace JobScrape.Api.Controllers
             }
             catch (ArgumentException ex)
             {
-                return Errors.InvalidInput(ex.Message).ToProblem();
+                return writes
+                    ? Errors.InvalidInput(ex.Message).ToProblem()
+                    : Errors.InvalidTable(ex.Message).ToProblem();
             }
             catch (Microsoft.Data.Sqlite.SqliteException)
             {
