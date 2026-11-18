@@ -214,37 +214,50 @@ export function RunsPage({
     const tick = async () => {
       try {
         if (document.visibilityState !== "hidden") {
-          const [run, list] = await Promise.all([
+          // Settle both answers: one rejecting sibling must never discard the other's session
+          // death or terminal stage.
+          const [run, list] = await Promise.allSettled([
             client.getRun(selectedId),
             client.listRunPostings(selectedId, postingsOffset, POSTINGS_LIMIT),
           ]);
           if (!alive) {
             return;
           }
-          if (!list.result.ok) {
-            if (fail(list.result.problem)) {
-              return;
-            }
-            setPostingsProblem(list.result.problem);
-          } else {
-            setPostings(list.result.value.items);
-            setPostingsTotal(list.result.value.total);
-            setPostingsProblem(null);
-          }
-          if (!run.result.ok && fail(run.result.problem)) {
+          const runProblem =
+            run.status === "fulfilled" && !run.value.result.ok ? run.value.result.problem : null;
+          const listProblem =
+            list.status === "fulfilled" && !list.value.result.ok ? list.value.result.problem : null;
+          // Session death wins over every other outcome, whichever sibling carried it.
+          if (
+            (runProblem !== null && fail(runProblem)) ||
+            (listProblem !== null && fail(listProblem))
+          ) {
             return;
           }
-          if (run.result.ok) {
-            const current = run.result.value;
+          if (list.status === "fulfilled" && list.value.result.ok) {
+            setPostings(list.value.result.value.items);
+            setPostingsTotal(list.value.result.value.total);
+            setPostingsProblem(null);
+          } else if (listProblem !== null) {
+            setPostingsProblem(listProblem);
+          } else {
+            // The postings answer rejected outright.
+            setPostingsProblem(POSTINGS_POLL_FAILED);
+          }
+          if (run.status === "fulfilled" && run.value.result.ok) {
+            const current = run.value.result.value;
             setRuns((rs) => upsertRun(rs, current));
             terminalRef.current = current.isTerminal;
             if (current.isTerminal) {
               if (sawActive) {
-                onEventRef.current(finishedEvent(current, run.at));
+                onEventRef.current(finishedEvent(current, run.value.at));
               }
               return;
             }
             sawActive = true;
+          } else if (run.status === "rejected" && terminalRef.current) {
+            // The run answer never arrived; do not keep retrying a run already known finished.
+            return;
           }
         }
       } catch {
