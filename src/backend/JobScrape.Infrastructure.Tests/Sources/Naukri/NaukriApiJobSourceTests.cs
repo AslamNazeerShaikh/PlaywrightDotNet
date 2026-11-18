@@ -548,6 +548,43 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             Assert.DoesNotContain("TAIL-MARKER", failure.Message, StringComparison.Ordinal);
         }
 
+        [Fact]
+        public async Task DetailFailureBodyEchoingTheTokenNeverReachesAnyLogEntry()
+        {
+            // The detail request mints its own token under the job id, so the
+            // detail preview needs its own redaction: a rejected detail
+            // answer that quotes the request would leak it.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(request => new HttpResponseMessage(
+                HttpStatusCode.InternalServerError
+            )
+            {
+                Content = new StringContent(
+                    "{\"error\":\"detail\",\"nkparam\":\""
+                        + Assert.Single(request.Headers.GetValues("nkparam"))
+                        + "\"}",
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            });
+            using var source = Source(NoSearch(), handler, logger);
+
+            var result = await source.GetDetailAsync(Context(), DetailJob(), Ct);
+
+            Assert.Null(result.Detail);
+            Assert.Equal(ChallengeKind.TransientError, result.Challenge.Kind);
+
+            var token = Header(Assert.Single(handler.Requests), "nkparam");
+            Assert.NotEmpty(token);
+            AssertTokenNeverLogged(logger.Entries, token);
+
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            var body = Assert.IsType<string>(failure.Properties["Body"]);
+            Assert.Contains("[redacted]", body, StringComparison.Ordinal);
+            Assert.Contains("\"detail\"", body, StringComparison.Ordinal);
+            Assert.Contains("[redacted]", failure.Message, StringComparison.Ordinal);
+        }
+
         // ---- pacing ----
 
         [Fact]
@@ -893,6 +930,29 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             );
             Assert.NotEmpty(values);
             return string.Join(' ', values);
+        }
+
+        /// <summary>
+        /// Asserts the token appears in no rendered message and no structured
+        /// property value of the recorded entries.
+        /// </summary>
+        /// <param name="entries">The recorded log entries.</param>
+        /// <param name="token">The request token that must not survive.</param>
+        private static void AssertTokenNeverLogged(IReadOnlyList<LogEntry> entries, string token)
+        {
+            Assert.NotEmpty(entries);
+            foreach (var entry in entries)
+            {
+                Assert.DoesNotContain(token, entry.Message, StringComparison.Ordinal);
+                foreach (var value in entry.Properties.Values)
+                {
+                    Assert.DoesNotContain(
+                        token,
+                        value?.ToString() ?? string.Empty,
+                        StringComparison.Ordinal
+                    );
+                }
+            }
         }
 
         private sealed record RunOutcome(
