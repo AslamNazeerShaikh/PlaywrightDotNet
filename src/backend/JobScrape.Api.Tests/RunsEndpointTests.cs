@@ -609,12 +609,7 @@ namespace JobScrape.Api.Tests
         // or the unsupported-format 400. The run id need not exist: the gate
         // runs before the store read.
         [Fact]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task ExportCsv_RespectsFlag()
+        public async Task ExportCsvRespectsFlag()
         {
             await using var baseFactory = Factory(new FakeSource());
             using var factory = baseFactory.WithWebHostBuilder(builder =>
@@ -633,12 +628,7 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task ExportXlsx_RespectsFlag()
+        public async Task ExportXlsxRespectsFlag()
         {
             await using var baseFactory = Factory(new FakeSource());
             using var factory = baseFactory.WithWebHostBuilder(builder =>
@@ -659,12 +649,7 @@ namespace JobScrape.Api.Tests
         // A format-less export resolves to XLSX when CSV is turned off: the
         // caller asked for "whatever the host can serve".
         [Fact]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task ExportDefault_FallsBackToXlsxWhenCsvOff()
+        public async Task ExportDefaultFallsBackToXlsxWhenCsvOff()
         {
             await using var baseFactory = Factory(new FakeSource());
             using var factory = baseFactory.WithWebHostBuilder(builder =>
@@ -699,12 +684,7 @@ namespace JobScrape.Api.Tests
 
         // Both formats off and no format given: the export has nothing to serve.
         [Fact]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task ExportDefault_WithBothFormatsOffIs404()
+        public async Task ExportDefaultWithBothFormatsOffIs404()
         {
             await using var baseFactory = Factory(new FakeSource());
             using var factory = baseFactory.WithWebHostBuilder(builder =>
