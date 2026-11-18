@@ -189,6 +189,8 @@ namespace JobScrape.Application.Tests.Scraping
 
             public List<BrowserProfile> BrowserProfiles { get; } = [];
 
+            public int BrowserProfileLookups { get; private set; }
+
             public List<SourceQuota> Quotas { get; } = [];
 
             public List<SourceCircuitBreaker> Circuits { get; } = [];
@@ -295,6 +297,7 @@ namespace JobScrape.Application.Tests.Scraping
                 CancellationToken cancellationToken
             )
             {
+                BrowserProfileLookups++;
                 return Task.FromResult(BrowserProfiles.FirstOrDefault(p => p.Id == id));
             }
 

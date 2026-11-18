@@ -14,11 +14,12 @@ namespace JobScrape.Infrastructure.Tests.Configuration
 {
     public sealed class OptionsTests
     {
-        private static SourceOptions Naukri(bool enabled = true)
+        private static SourceOptions Naukri(bool enabled = true, bool apiOnly = true)
         {
             return new SourceOptions
             {
                 Enabled = enabled,
+                ApiOnly = apiOnly,
                 BaseUrl = "https://www.naukri.com",
                 MaxPagesPerSearch = 3,
                 MaxJobsPerRun = 60,
@@ -207,6 +208,38 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.Equal(2, settings.DailyRunCap);
             Assert.Equal(TimeSpan.FromMinutes(45), settings.ChallengeCooldown);
             Assert.Null(catalog.Find(SourceKey.Indeed));
+        }
+
+        [Fact]
+        public void MapperScopesApiOnlyToNaukri()
+        {
+            var catalog = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["naukri"] = Naukri(),
+                        ["indeed"] = Naukri(),
+                    },
+                }
+            );
+
+            Assert.True(catalog.Find(SourceKey.Naukri)!.ApiOnly);
+            // The shared options class defaults ApiOnly to true; only Naukri
+            // has an API fast path, so the flag must not leak to Indeed.
+            Assert.False(catalog.Find(SourceKey.Indeed)!.ApiOnly);
+
+            var browser = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["naukri"] = Naukri(apiOnly: false),
+                    },
+                }
+            );
+
+            Assert.False(browser.Find(SourceKey.Naukri)!.ApiOnly);
         }
 
         [Fact]

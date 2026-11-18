@@ -323,6 +323,48 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task StartRunWithoutASessionSucceedsForAnApiOnlySource()
+        {
+            await using var factory = Factory(new FakeSource());
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, _) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            var done = await WaitAsync(client, run!.Id, r => r.IsTerminal);
+            Assert.Equal("Completed", done.Stage);
+        }
+
+        [Fact]
+        public async Task StartRunWithoutASessionStillFailsForABrowserSource()
+        {
+            await using var factory = Factory(new FakeSource());
+            using var configured = factory.WithWebHostBuilder(builder =>
+                builder.UseSetting("JobScrape:Sources:naukri:ApiOnly", "false")
+            );
+            using var client = await configured.CreateAdminClientAsync(Ct);
+            var (profile, _) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile },
+                Ct
+            );
+
+            Assert.Equal(HttpStatusCode.BadRequest, started.StatusCode);
+            var errors = (await started.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty(
+                "errors"
+            );
+            Assert.True(errors.TryGetProperty("browserProfileId", out _));
+        }
+
+        [Fact]
         public async Task RunEndsCleanlyWhenTheListingRefusesTheNextPage()
         {
             await using var factory = Factory(new FakeSource { RefusesBeyondLastPage = true });
