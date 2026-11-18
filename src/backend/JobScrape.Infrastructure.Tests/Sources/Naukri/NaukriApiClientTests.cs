@@ -157,6 +157,32 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         }
 
         [Fact]
+        public async Task MissingRowArraysAreSchemaDriftNotAnEmptyPage()
+        {
+            var bodies = new[]
+            {
+                """{ "noOfJobs": 5 }""",
+                """{ "noOfJobs": 5, "jobDetails": {} }""",
+                """{ "noOfJobs": 5, "jobs": "not-an-array" }""",
+            };
+
+            foreach (var body in bodies)
+            {
+                using var client = Client(new FakeHandler(_ => JsonResponse(body)));
+
+                var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+                // Neither key holding an array is drift, not a listing end:
+                // only an empty array may end the listing cleanly.
+                Assert.Equal(ChallengeKind.SourceChanged, page.Challenge.Kind);
+                Assert.Contains("json", page.Challenge.Evidence, StringComparison.Ordinal);
+                Assert.Empty(page.Rows);
+                Assert.Equal(0, page.Total);
+                Assert.False(page.EndOfListing);
+            }
+        }
+
+        [Fact]
         public async Task BadRowsDropWithWarningInsteadOfPoisoning()
         {
             var logger = new RecordingLogger();

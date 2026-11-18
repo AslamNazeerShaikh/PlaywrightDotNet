@@ -116,6 +116,17 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             Assert.Equal(ChallengeKind.None, naukri.Kind);
             Assert.Equal(0, skipped.Calls);
 
+            // Indeed keeps its own ApiOnly=true here but must still delegate:
+            // only the Naukri key may select the API-only shortcut.
+            var indeed = await apiOnly.EnsureSessionAsync(
+                SourceKey.Indeed,
+                BrowserProfileId.New(),
+                Ct
+            );
+            Assert.Equal(ChallengeKind.None, indeed.Kind);
+            Assert.Equal(1, skipped.Calls);
+            Assert.Equal(SourceKey.Indeed, skipped.LastSource);
+
             var browser = new RecordingSessions();
             var browserOnly = new ApiOnlySessionManager(
                 browser,
@@ -638,9 +649,11 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             return response;
         }
 
-        private static string SearchJson(int total, params object[] jobs)
+        private static string SearchJson(int total, params object[] rows)
         {
-            return JsonSerializer.Serialize(new { noOfJobs = total, jobs });
+            // The live body names the row array jobDetails; every handler
+            // test drives that wire format end to end.
+            return JsonSerializer.Serialize(new { noOfJobs = total, jobDetails = rows });
         }
 
         private static string ExternalRowsJson()
