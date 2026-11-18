@@ -8,6 +8,7 @@ namespace JobScrape.Application.Features.Sources
     /// <param name="Key">Lowercase source key.</param>
     /// <param name="Tier">Compliance tier: <c>Standard</c>, <c>Restricted</c>, or <c>HighRisk</c>.</param>
     /// <param name="Enabled">Whether configuration enables the source.</param>
+    /// <param name="ApiOnly">True when the source fetches through its API and runs need no browser session.</param>
     /// <param name="Gate">The compliance gate under the configured consent flags.</param>
     /// <param name="Policy">Default caps and pacing for new profiles.</param>
     /// <param name="Quota">Today's usage against the daily caps.</param>
@@ -16,6 +17,7 @@ namespace JobScrape.Application.Features.Sources
         string Key,
         string Tier,
         bool Enabled,
+        bool ApiOnly,
         SourceGate Gate,
         SourcePolicy Policy,
         SourceQuotaUsage Quota,

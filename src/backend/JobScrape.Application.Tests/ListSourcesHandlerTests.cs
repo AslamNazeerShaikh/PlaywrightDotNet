@@ -23,7 +23,11 @@ namespace JobScrape.Application.Tests
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-        private static SourceSettings Settings(SourceKey source, bool enabled = true)
+        private static SourceSettings Settings(
+            SourceKey source,
+            bool enabled = true,
+            bool apiOnly = false
+        )
         {
             return new SourceSettings(
                 source,
@@ -34,7 +38,8 @@ namespace JobScrape.Application.Tests
                 Policy.MaxPages,
                 Policy.MaxJobs,
                 TimeSpan.FromMinutes(45),
-                Policy
+                Policy,
+                apiOnly
             );
         }
 
@@ -72,6 +77,23 @@ namespace JobScrape.Application.Tests
             Assert.Equal(new SourceCircuit("Closed", null, false, 0, 0), naukri.Circuit);
             Assert.Empty(store.Quotas);
             Assert.Empty(store.Circuits);
+        }
+
+        [Fact]
+        public async Task ReportsEachSourcesTransport()
+        {
+            var store = new ScrapeHarness.InMemoryStore();
+            var handler = Create(
+                store,
+                ComplianceConsent.None,
+                Settings(SourceKey.Naukri, apiOnly: true),
+                Settings(SourceKey.Indeed)
+            );
+
+            var items = (await handler.HandleAsync(Ct)).Items;
+
+            Assert.True(items.Single(item => item.Key == "naukri").ApiOnly);
+            Assert.False(items.Single(item => item.Key == "indeed").ApiOnly);
         }
 
         [Fact]

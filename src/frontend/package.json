@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
     "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/dev.ts",
+    "dev:http": "DOTNET_API_URL=http://127.0.0.1:5207 bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
@@ -20,6 +21,7 @@
     "test:flags": "bun ./src/tests/e2e/validate-flags.ts",
     "test:pretest": "bun ./src/tests/e2e/validate-pretest.ts",
     "api:types": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bunx --bun openapi-typescript@7.13.0 https://localhost:5208/openapi/v1.json -o ./src/shared/contracts.ts",
+    "api:types:http": "bunx --bun openapi-typescript@7.13.0 http://localhost:5207/openapi/v1.json -o ./src/shared/contracts.ts",
     "audit": "bun audit"
   },
   "dependencies": {

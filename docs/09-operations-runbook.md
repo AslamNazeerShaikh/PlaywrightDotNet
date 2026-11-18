@@ -39,9 +39,9 @@ cd src/frontend && bun run dev
 
 Then, in the cockpit:
 
-1. `#/sessions` — create a session for `naukri` (engine `Chromium`, channel `Bundled`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret.
+1. `#/sessions` — on the browser path (`ApiOnly=false`), create a session for `naukri` (engine `Chromium`, channel `Bundled`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret. On the default API path (`ApiOnly=true`) the page marks `naukri` as `API` and turns creation off — no session is needed; skip to step 2.
 2. `#/profiles` — create a search profile (keywords, cities, caps).
-3. `#/runs` — pick an enabled profile and a launchable session of the same source, then **Start**. A **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends.
+3. `#/runs` — pick an enabled profile, then **Start**. The form asks for a launchable session of the same source only on the browser path; with the default (`ApiOnly=true`) the session picker is gone entirely and the run sends no `browserProfileId`, which the API accepts only when the profile's source is API-only. On the browser path (`JobScrape:Sources:naukri:ApiOnly=false`), a **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends. With the default (`ApiOnly=true`) no window opens — the run fetches Naukri's `jobapi` endpoints directly and the browser never launches; see §5.5.
 4. The run detail polls every 2 s (stage track, page/posting/detail meters, postings table). **Cancel** stops the run cooperatively and keeps partial results.
 
 Rules the API enforces:
@@ -197,6 +197,8 @@ RUN dotnet restore && dotnet build -warnaserror
 
 ## 4. First browser session
 
+> Browser path. With the default `JobScrape:Sources:naukri:ApiOnly=true`, the API fast path serves Naukri and no browser session is launched for it; the flow below applies when the flag is `false`. See §5.5.
+
 ```bash
 # Create a profile (search intent).
 dotnet run --project src/JobLens.Cli -- search create \
@@ -266,6 +268,8 @@ dotnet run --project src/JobLens.Cli -- export --format csv --out artifacts/expo
 3. Reduce pages/details/day.
 4. Resume with one page; if it repeats, open the circuit for 24h.
 
+The Naukri API path reports the same wall as `406` → `RateLimited`; see §5.5 for the throttle-vs-key-rotation distinction before resuming.
+
 ### 5.3 If a run exits with a parse/source change (`6`)
 
 1. Inspect the saved HTML/artifact.
@@ -279,6 +283,27 @@ dotnet run --project src/JobLens.Cli -- export --format csv --out artifacts/expo
 2. Review log retention/artifact retention; delete expired data only.
 3. Fix permissions or the locked file; do not delete the active run.
 4. Re-run after the free-space check passes.
+
+### 5.5 Naukri API fast path (`JobScrape:Sources:naukri:ApiOnly`)
+
+Naukri has two transports behind the same adapter key (`naukri`): the Playwright browser path and the `jobapi` fast path. The fast path is the default; the flag opts out:
+
+- Flag: `JobScrape:Sources:naukri:ApiOnly`, per source, bound from `JobScrape:Sources:naukri`. Default `true`, also set explicitly in `appsettings.json`.
+- `false` restores the Playwright browser path unchanged (headed first contact, click-Next pagination, the §3.2–§3.5 playbook flow).
+- Per source only — not a global feature toggle; [Feature toggles](21-feature-toggles.md) documents `JobScrape:Features` and nothing else. Indeed and LinkedIn are unaffected.
+- On the API path the browser never launches (the session manager reports Naukri ready without it). Caps, daily page/detail/run quotas, challenge cooldowns, politeness delays (2.5–6.0 s for Naukri), resume position, and the one-run-at-a-time rule all apply unchanged.
+- No login, cookies, TLS impersonation, or proxies are used or permitted on either transport. The full request contract, row mapping, and status mapping live in [Site Playbooks §3.6](08-site-playbooks.md).
+
+**What `406` means for an operator**
+
+Naukri's API answers `406` for two different problems, and they need different responses. A single `406` classifies the page as `RateLimited`: the run moves to stage `RateLimited` with partial results kept, and — because the API's `406` carries no `Retry-After` — the default 30-minute rate-limit cooldown applies.
+
+| Signal | Likely meaning | Operator response |
+|---|---|---|
+| A one-off or occasional `406` (200s interleaved) | Naukri throttled the request | Treat as a rate limit: wait out the cooldown; do not retry immediately; lower the caps and raise the delays (slow the run down) before the next run. |
+| Three consecutive `406`s | The embedded `nkparam` public key has rotated — same request shape now fails for everyone until the key is replaced | Cooling down will not help. Stop scheduling Naukri runs; the fix is a code update replacing the key in `NaukriRequestToken.cs`. Report it; resume only after the update ships. |
+
+The adapter counts consecutive `406`s process-wide (across runs) and logs `the embedded API key has likely rotated` at warning level once the count reaches three; the classification's evidence then reads `status=406; N consecutive 406s: key rotation likely` in the wall log line. A run that hit one `406` is throttled; a dry spell of `406`s with no interleaved `200`s is rotation. A `406` during detail enrichment stops enrichment for that run only; the listings collected so far are kept. Rotation is not self-healing and is not something caps or retries can fix — it needs the key update.
 
 ---
 
@@ -465,7 +490,8 @@ jq -c 'select(.TraceId == "00-...-01")' artifacts/logs/joblens-api-*.jsonl
 | Browser closes immediately | Headless/display issue | Use headed on desktop; `xvfb-run` on server. |
 | `Target page, context or browser has been closed` | Crash/profile lock | Check logs; ensure no other process uses the profile. |
 | `ProcessSingleton`/profile lock | Two processes share a user-data dir (the API itself runs one at a time) | Close any browser you opened on the profile directory; remove a stale lock only after the process exits. |
-| Naukri blocked/empty | Akamai challenge or headless | Keep `JobScrape:Browser:Headless=false`; check the run's `assessment.json`/`screenshot.png`; wait out the cooldown. |
+| Naukri blocked/empty (browser path) | Akamai challenge or headless | Keep `JobScrape:Browser:Headless=false`; check the run's `assessment.json`/`screenshot.png`; wait out the cooldown. |
+| Naukri API `406` (run stage `RateLimited`) | Naukri throttled the request, or the embedded `nkparam` key rotated | One-off: cool down (30-minute default). Three consecutive `406`s: key rotation — needs a code update; see §5.5. |
 | Indeed Cloudflare “Just a moment” | Managed challenge | Stop; wait; normal network; no bypass. |
 | LinkedIn auth wall/999 | Rate limit/auth wall | Stop; wait; manual session; consider disabling. |
 | `database is locked` | Concurrent writer/long transaction | One writer; WAL; `busy_timeout`; retry the operation. |

@@ -465,6 +465,15 @@ export function App({
     } catch {
       // ignore
     }
+    // Page problems belong to the dead session: a fresh sign-in must not remount a page whose
+    // stale 401 routes it straight back out.
+    setProfilesProblem(null);
+    setCreateProblem(null);
+    setUpdateProfileProblem(null);
+    setSourcesProblem(null);
+    setSessionsProblem(null);
+    setCreateSessionProblem(null);
+    setUpdateSessionProblem(null);
     setAuthState({ kind: "anonymous", email: "", problem: noticeFor(problem), notice: null });
   }
 
@@ -648,6 +657,8 @@ export function App({
     }
     if (route === "sessions") {
       void loadersRef.current.loadSessions();
+      // The transport flag lives on the source, so the session form needs the snapshot too.
+      void loadersRef.current.loadSources();
     }
   }, [route, routeDenied]);
 
@@ -844,6 +855,7 @@ export function App({
             onRefresh={() => void loadProfiles()}
             updating={updatingProfile}
             updateProblem={updateProfileProblem}
+            onUnauthorized={endSession}
           />
         )}
         {me !== null && !routeDenied && route === "sources" && (
@@ -857,6 +869,7 @@ export function App({
         {me !== null && !routeDenied && route === "sessions" && (
           <SessionsPage
             sessions={sessions}
+            sources={sources}
             listProblem={sessionsProblem}
             loading={sessionsLoading}
             creating={creatingSession}
@@ -871,10 +884,11 @@ export function App({
             onRefresh={() => void loadSessions()}
             updating={updatingSession}
             updateProblem={updateSessionProblem}
+            onUnauthorized={endSession}
           />
         )}
         {me !== null && !routeDenied && route === "runs" && (
-          <RunsPage client={activeClient} onEvent={logEvent} />
+          <RunsPage client={activeClient} onEvent={logEvent} onUnauthorized={endSession} />
         )}
         {me !== null && !routeDenied && route === "topology" && (
           <TopologyPage upstream={upstream} />

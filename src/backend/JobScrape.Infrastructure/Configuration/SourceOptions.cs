@@ -16,6 +16,14 @@ namespace JobScrape.Infrastructure.Configuration
         public bool Enabled { get; init; }
 
         /// <summary>
+        /// Gets a value indicating whether runs fetch through the source's
+        /// API endpoints instead of the browser. Defaults to true, so the
+        /// API path is the fast default; set it to false to restore the
+        /// Playwright browser path for this source.
+        /// </summary>
+        public bool ApiOnly { get; init; } = true;
+
+        /// <summary>
         /// Gets the source's base URL.
         /// </summary>
         [Required]

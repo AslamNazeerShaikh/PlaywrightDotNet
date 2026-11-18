@@ -200,7 +200,7 @@ namespace JobScrape.Application.Features.Scraping
             var run = scope.Run;
             var session = await _sessions.EnsureSessionAsync(
                 scope.Context.Source,
-                scope.Browser.Id,
+                scope.Context.BrowserProfileId,
                 cancellationToken
             );
             if (session.Kind != ChallengeKind.None)
@@ -315,42 +315,49 @@ namespace JobScrape.Application.Features.Scraping
                 return Result.Fail<RunScope>(Errors.SourceCoolingDown(source, circuit.OpenUntil));
             }
 
-            var browser = await _stores.BrowserProfiles.GetAsync(
-                request.BrowserProfileId,
-                cancellationToken
-            );
-            if (browser is null)
+            // API-only runs never open a browser, so they name no session:
+            // skip the profile lookup and its launch-readiness checks. A
+            // source that drives a browser still requires a launchable one.
+            BrowserProfile? browser = null;
+            if (!settings.ApiOnly || request.BrowserProfileId != default)
             {
-                return Result.Fail<RunScope>(
-                    Errors.BrowserProfileNotFound(request.BrowserProfileId.Value)
+                browser = await _stores.BrowserProfiles.GetAsync(
+                    request.BrowserProfileId,
+                    cancellationToken
                 );
-            }
+                if (browser is null)
+                {
+                    return Result.Fail<RunScope>(
+                        Errors.BrowserProfileNotFound(request.BrowserProfileId.Value)
+                    );
+                }
 
-            if (browser.Source != source)
-            {
-                return Result.Fail<RunScope>(
-                    Errors.ValidationFailed(
-                        "The request contains invalid fields.",
-                        new Dictionary<string, string[]>
-                        {
-                            ["browserProfileId"] =
-                            [
-                                $"Browser profile is bound to '{browser.Source}', not '{source}'.",
-                            ],
-                        }
-                    )
-                );
-            }
+                if (browser.Source != source)
+                {
+                    return Result.Fail<RunScope>(
+                        Errors.ValidationFailed(
+                            "The request contains invalid fields.",
+                            new Dictionary<string, string[]>
+                            {
+                                ["browserProfileId"] =
+                                [
+                                    $"Browser profile is bound to '{browser.Source}', not '{source}'.",
+                                ],
+                            }
+                        )
+                    );
+                }
 
-            if (!browser.CanLaunch(now))
-            {
-                return Result.Fail<RunScope>(
-                    Errors.SessionUnavailable(
-                        browser.Id.Value,
-                        browser.State == SessionState.ResetRequired,
-                        browser.CooldownUntil
-                    )
-                );
+                if (!browser.CanLaunch(now))
+                {
+                    return Result.Fail<RunScope>(
+                        Errors.SessionUnavailable(
+                            browser.Id.Value,
+                            browser.State == SessionState.ResetRequired,
+                            browser.CooldownUntil
+                        )
+                    );
+                }
             }
 
             var quota = await FindOrStartQuotaAsync(source, now, cancellationToken);
@@ -370,14 +377,14 @@ namespace JobScrape.Application.Features.Scraping
             var run = ScrapeRun.Create(profile, now, request.OnlyNew);
             await _stores.Runs.AddAsync(run, cancellationToken);
             run.Start(now);
-            browser.MarkUsed(now);
+            browser?.MarkUsed(now);
             await _stores.UnitOfWork.SaveChangesAsync(cancellationToken);
             LogStarted(_logger, run.Id.Value, source.Value, profile.Id.Value);
 
             var context = new SourceRunContext(
                 run.Id,
                 source,
-                browser.Id,
+                request.BrowserProfileId,
                 profile.Criteria,
                 profile.Limits.StartPage
             );
@@ -562,13 +569,19 @@ namespace JobScrape.Application.Features.Scraping
             TimeSpan cooldown
         )
         {
+            // API-only runs have no browser session to blame.
+            if (scope.Browser is not { } browser)
+            {
+                return;
+            }
+
             if (kind != ChallengeKind.LoginRequired)
             {
-                scope.Browser.MarkChallenged(kind, now, cooldown);
+                browser.MarkChallenged(kind, now, cooldown);
             }
-            else if (scope.Browser.State == SessionState.Healthy)
+            else if (browser.State == SessionState.Healthy)
             {
-                scope.Browser.MarkExpired();
+                browser.MarkExpired();
             }
         }
 
@@ -696,7 +709,7 @@ namespace JobScrape.Application.Features.Scraping
                 }
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
-                    scope.Browser.ConsecutiveChallenges,
+                    scope.Browser?.ConsecutiveChallenges ?? 0,
                     scope.Settings.ChallengeCooldown
                 );
                 if (decision.Action == ChallengeAction.Retry)
@@ -1073,7 +1086,7 @@ namespace JobScrape.Application.Features.Scraping
 
                 var decision = ChallengePolicy.Decide(
                     result.Challenge,
-                    scope.Browser.ConsecutiveChallenges,
+                    scope.Browser?.ConsecutiveChallenges ?? 0,
                     scope.Settings.ChallengeCooldown
                 );
                 if (decision.Action == ChallengeAction.Pause)
@@ -1321,7 +1334,7 @@ namespace JobScrape.Application.Features.Scraping
             ScrapeRun run,
             IJobSource adapter,
             SourceSettings settings,
-            BrowserProfile browser,
+            BrowserProfile? browser,
             SourceQuota quota,
             SourceCircuitBreaker circuit,
             SourceRunContext context,
@@ -1335,7 +1348,7 @@ namespace JobScrape.Application.Features.Scraping
 
             public SourceSettings Settings { get; } = settings;
 
-            public BrowserProfile Browser { get; } = browser;
+            public BrowserProfile? Browser { get; } = browser;
 
             public SourceQuota Quota { get; } = quota;
 

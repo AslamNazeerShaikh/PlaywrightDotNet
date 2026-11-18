@@ -517,6 +517,40 @@ namespace JobScrape.Application.Tests.Scraping
             harness.Store.BrowserProfiles.Clear();
 
             Assert.Equal("BROWSER_PROFILE_NOT_FOUND", (await RunFailAsync(harness)).Code);
+            Assert.Equal(1, harness.Store.BrowserProfileLookups);
+        }
+
+        [Fact]
+        public async Task ApiOnlySourceRunsWithoutABrowserProfile()
+        {
+            var harness = new ScrapeHarness();
+            harness.Settings = harness.Settings with { ApiOnly = true };
+            harness.Source.Then(Page(null, Job("1")));
+
+            var result = await harness
+                .Build()
+                .HandleAsync(harness.Request with { BrowserProfileId = default }, Ct);
+
+            Assert.True(result.IsSuccess, result.IsFailure ? result.Error.Code : null);
+            Assert.Equal(RunStage.Completed, result.Value.Stage);
+            Assert.Equal(0, harness.Store.BrowserProfileLookups);
+            // The session port is still consulted; the API-only decorator
+            // reports readiness without launching a browser.
+            Assert.Equal(1, harness.Sessions.Calls);
+        }
+
+        [Fact]
+        public async Task BrowserSourceStillNeedsABrowserProfile()
+        {
+            var harness = new ScrapeHarness();
+
+            var result = await harness
+                .Build()
+                .HandleAsync(harness.Request with { BrowserProfileId = default }, Ct);
+
+            Assert.Equal("BROWSER_PROFILE_NOT_FOUND", result.Error.Code);
+            Assert.Equal(1, harness.Store.BrowserProfileLookups);
+            Assert.Equal(0, harness.Sessions.Calls);
         }
 
         [Fact]

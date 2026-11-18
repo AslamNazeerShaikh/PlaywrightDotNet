@@ -15,6 +15,7 @@ import type {
   SearchProfilePayload,
   UpdateProfileInput,
 } from "../lib/api.ts";
+import { useTokenFailureRedirect } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { readList, readNumber, readText } from "../lib/forms.ts";
 
@@ -43,6 +44,7 @@ export function ProfilesPage({
   onRefresh,
   updating,
   updateProblem,
+  onUnauthorized,
 }: {
   profiles: SearchProfilePayload[] | null;
   listProblem: ApiProblem | null;
@@ -56,8 +58,10 @@ export function ProfilesPage({
   onRefresh: () => void;
   updating: boolean;
   updateProblem: ApiProblem | null;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("ProfilesPage");
+  useTokenFailureRedirect([listProblem, createProblem, updateProblem], onUnauthorized);
   const selected = profiles?.find((p) => p.id === selectedId) ?? null;
   const fieldErrors = createProblem?.errors ?? {};
   const updateFieldErrors = updateProblem?.errors ?? {};

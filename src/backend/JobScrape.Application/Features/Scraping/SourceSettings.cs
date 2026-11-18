@@ -21,6 +21,10 @@ namespace JobScrape.Application.Features.Scraping
     /// The policy caps and delay window for this source: new profiles start
     /// with them, and a profile may only tighten them, never loosen them.
     /// </param>
+    /// <param name="ApiOnly">
+    /// True when the source fetches through its API and needs no browser
+    /// session; false when runs drive a browser.
+    /// </param>
     public sealed record SourceSettings(
         SourceKey Source,
         bool Enabled,
@@ -30,6 +34,7 @@ namespace JobScrape.Application.Features.Scraping
         int MaxPagesCeiling,
         int MaxJobsCeiling,
         TimeSpan ChallengeCooldown,
-        RunLimits DefaultLimits
+        RunLimits DefaultLimits,
+        bool ApiOnly = false
     );
 }

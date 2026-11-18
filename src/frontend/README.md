@@ -23,18 +23,41 @@
 ## Prerequisites
 
 - Bun `1.4.4` (`bun --version`).
-- The .NET API running loopback-only (defaults below assume it):
-  `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj`
-  (serves `http://localhost:5207` + `https://localhost:5208` in Development).
-- One-time dev-cert trust so the BFF can call the API over HTTPS (see
-  [HTTPS dev loop](#https-dev-loop)).
+- The .NET API running loopback-only on its `http` profile — the default, no
+  cert and no admin step:
+  `dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http`
+  serves `http://localhost:5207`.
+- Optional: the [HTTPS dev loop](#https-dev-loop-optional) is the alternate
+  lane (`https://localhost:5208` plus an https BFF) and needs a one-time
+  dev-cert trust; nothing in the default path below touches certs.
+
+Quick start (plain HTTP, zero admin steps):
+
+```bash
+# terminal 1 — API on http://localhost:5207
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
+
+# terminal 2 — BFF on http://127.0.0.1:3000
+cd src/frontend && bun run dev:http
+```
+
+Open `http://127.0.0.1:3000/#/overview`. `dev:http` pins
+`DOTNET_API_URL=http://127.0.0.1:5207` and sets no `NODE_EXTRA_CA_CERTS`, so a
+fresh clone needs no `.env` at all. If you do copy `.env.example`, use its
+commented http-only block: the active block there is the https lane, whose
+`BFF_TLS_*` paths would otherwise make the BFF look for cert files.
+
+Verify: `curl http://localhost:5207/api/v1/health` (API),
+`curl http://127.0.0.1:3000/api/v1/health` (BFF proxy, must return `healthy`,
+which also proves Bun booted without a CA file).
 
 ## Commands (run from `src/frontend/`)
 
 | Command                                   | What it does                                             |
 | ----------------------------------------- | -------------------------------------------------------- |
 | `bun install`                             | Resolve + install; writes `bun.lock` (committed).        |
-| `bun run dev`                             | BFF with HMR (`:3000`, HTTPS) + Tailwind watcher, in parallel. Needs the one-time cert setup below; no manual export (scripts carry `NODE_EXTRA_CA_CERTS`). |
+| `bun run dev:http`                        | Default lane: BFF with HMR on `http://127.0.0.1:3000`, pinned to `http://127.0.0.1:5207`; no cert, no `.env`. Run `bun run dev:css` alongside when editing styles. |
+| `bun run dev`                             | HTTPS lane: BFF with HMR (`:3000`, HTTPS) + Tailwind watcher, in parallel. Needs the optional cert setup below; no manual export (scripts carry `NODE_EXTRA_CA_CERTS`). |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
 | `bun test`                                | Config, proxy, routes, router, telemetry, API client, profile form, runs page, deck pages. |
@@ -43,11 +66,14 @@
 | `bun run test:pretest`                    | Pre-test live validation (`src/tests/e2e/validate-pretest.ts`): boots a temp backend + seeded admin, then pins the login/setup/lockout/role/rate-limit/idempotency/quota/MCP matrices and the `PASSWORD_SETUP_COMPLETE`, `ACCOUNT_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `QUOTA_EXCEEDED` codes over HTTP, including quota counter resets across restarts. Cleans up on every exit path; nonzero exit on any failure. |
 | `bun check`                               | Typecheck (built into Bun, no `tsc` script).             |
 | `bun run format` / `bun run format:check` | `bun fmt` (no Prettier/Biome).                           |
-| `bun run api:types`                       | Regenerate OpenAPI contract types (needs the API up).    |
+| `bun run api:types:http`                  | Regenerate OpenAPI contract types from the http lane (`:5207`); no cert. |
+| `bun run api:types`                       | Regenerate OpenAPI contract types from the https lane (needs the dev cert). |
 | `bun audit`                               | Dependency audit.                                        |
 
 Copy `.env.example` to `.env` to override `PORT` (default `3000`) or
-`DOTNET_API_URL` (default `https://localhost:5208`).
+`DOTNET_API_URL` (default `https://localhost:5208`, the https lane). The file
+also carries a commented http-only block (`http://127.0.0.1:5207`, TLS lines
+commented); the http lane works without any `.env` at all.
 
 ### End-to-end
 
@@ -75,15 +101,16 @@ admin, then HTTP checks for the unified 401 oracle, `PASSWORD_SETUP_COMPLETE`,
 denials, the shipped default seed, and startup rejection of the demo secret.
 It also cleans up on SIGINT/SIGTERM and exits nonzero on any failed check.
 
-## HTTPS dev loop
+## HTTPS dev loop (optional)
 
-Both hops are TLS in the local loop: the API serves
-`https://localhost:5208` (its `https` applicationUrl in
-`src/backend/JobScrape.Api/Properties/launchSettings.json`), the BFF
-proxies to it, and the deck itself is served over `https://127.0.0.1:3000`
-using the same dev cert (its SANs cover `localhost` and `127.0.0.1`).
-Bun does not read the macOS keychain, so the dev cert must be trusted
-**and** exported. One-time setup per machine (run from the repo root):
+Optional alternate lane; the default path above needs no cert. This lane keeps
+both hops on TLS: the API serves `https://localhost:5208` (its `https`
+applicationUrl in `src/backend/JobScrape.Api/Properties/launchSettings.json`),
+the BFF proxies to it, and the deck itself is served over
+`https://127.0.0.1:3000` using the same dev cert (its SANs cover `localhost`
+and `127.0.0.1`). Bun does not read the macOS keychain, so the dev cert must
+be trusted **and** exported. One-time setup per machine (run from the repo
+root):
 
 ```bash
 # 1. Trust the .NET HTTPS dev cert (may prompt for a keychain password).
@@ -107,7 +134,7 @@ chmod 600 src/frontend/.certs/localhost-key.pem
 
 # 4. Copy env and start both servers.
 cp src/frontend/.env.example src/frontend/.env
-dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile https
 cd src/frontend && bun run dev
 ```
 
@@ -128,11 +155,13 @@ Notes:
 - Regenerate per machine, never commit: `.env` and `.certs/` are gitignored.
   If the cert expires or `fetch` fails with
   `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, re-run steps 1–3.
-- No-cert fallback: `DOTNET_API_URL=http://127.0.0.1:5207` needs no trust
-  or export; comment out `BFF_TLS_CERT_FILE`/`BFF_TLS_KEY_FILE` for a
-  plain-http BFF.
-- `launchSettings.json` keeps both URLs (`5207` http, `5208` https) so plain
-  `dotnet run --launch-profile http` serves both with no extra flags.
+- Plain HTTP needs none of this: it is the default lane above
+  (`--launch-profile http` + `bun run dev:http`), and `.env.example`'s
+  commented http-only block is its `.env` equivalent.
+- `launchSettings.json` keeps two profiles: `http` (first, so bare `dotnet run`
+  picks it) serves `http://localhost:5207`, and `https` serves
+  `https://localhost:5208`. Each profile serves its own URL; the https lane
+  needs the explicit `--launch-profile https` from step 4.
 
 ## Layout
 
@@ -277,8 +306,9 @@ Rules that follow from the baseline:
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
 - **Port defaults are `5207` (http) + `5208` (https), not `5080`.** The doc's service table says
-  `5080`; the repo's `launchSettings.json` serves both loopback URLs. The BFF default
-  follows repo reality (`https://localhost:5208`); the table needs a fix-up.
+  `5080`; the repo's `launchSettings.json` splits them across two profiles (`http` → `5207`,
+  `https` → `5208`). The BFF default follows the https profile (`https://localhost:5208`), and
+  `dev:http` follows the http one; the table needs a fix-up.
 - **No TanStack, no shadcn, no SSE yet.** A handful of fetches do not earn a
   query client (YAGNI). The runs vertical shipped without SSE: it uses the
   spec's documented fallback, polling `GET /api/v1/runs/{id}` every 2 s

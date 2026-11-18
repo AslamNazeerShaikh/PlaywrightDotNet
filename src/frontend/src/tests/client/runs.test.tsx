@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
@@ -203,6 +203,8 @@ function runsBackend(
     expectedBody?: StartRunInput;
     runPatch?: Partial<RunPayload>;
     failCancel?: ApiProblem;
+    /** The source's transport flag; omitted means the sources snapshot is unavailable. */
+    apiOnly?: boolean;
   } = {},
 ) {
   const runs: RunPayload[] = [];
@@ -250,6 +252,15 @@ function runsBackend(
           },
         ],
         total: 1,
+      });
+    }
+    if (url === "/api/v1/sources") {
+      if (options.apiOnly === undefined) {
+        return reply(404, { status: 404, title: "Not found", detail: "", code: "BFF_NOT_FOUND" });
+      }
+      return reply(200, {
+        asOf: "2026-11-02T08:00:00Z",
+        items: [{ key: "naukri", apiOnly: options.apiOnly }],
       });
     }
     if (url === "/api/v1/runs" && init?.method === "POST") {
@@ -379,7 +390,9 @@ describe("runs page", () => {
   test("starts a run, follows it to completion, then stops polling", async () => {
     const { client, calls } = runsBackend();
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
 
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
     expect(queries.getByText("No runs yet. Start one to see it here.")).toBeDefined();
@@ -436,7 +449,9 @@ describe("runs page", () => {
 
   test("hides company split links when the run has no company list", async () => {
     const { client } = runsBackend([]);
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -456,7 +471,9 @@ describe("runs page", () => {
   test("export buttons download the blob with the server filename", async () => {
     const { client } = runsBackend();
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -510,7 +527,9 @@ describe("runs page", () => {
       detail: "Run 'r1' does not exist.",
       code: "ROW_NOT_FOUND",
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -535,7 +554,9 @@ describe("runs page", () => {
         code: "RUN_NOT_CANCELLABLE",
       },
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -549,7 +570,9 @@ describe("runs page", () => {
 
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {
     const { client } = runsBackend();
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     expect(queries.getByText(/^Inputs: /).textContent).toContain(
@@ -567,7 +590,9 @@ describe("runs page", () => {
 
   test("renders the NEW ONLY checkbox unchecked by default", async () => {
     const { client } = runsBackend();
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
     const checkbox = queries.getByRole("checkbox", { name: "New only" }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
@@ -578,7 +603,9 @@ describe("runs page", () => {
       expectedBody: { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: true },
     });
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.click(queries.getByRole("checkbox", { name: "New only" }));
@@ -594,7 +621,9 @@ describe("runs page", () => {
     const { client } = runsBackend(["Infosys", "TCS"], undefined, {
       runPatch: { onlyNew: true },
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -606,4 +635,280 @@ describe("runs page", () => {
     );
     expect(queries.getByText(/the list holds postings first seen in this run/)).toBeDefined();
   });
+
+  test("an API-only source drops the session step and sends no browser profile", async () => {
+    const { client, posted } = runsBackend(["Infosys", "TCS"], undefined, {
+      apiOnly: true,
+      expectedBody: { profileId: "p1", enrich: true, onlyNew: false },
+    });
+    const events: LogEvent[] = [];
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() =>
+      expect(queries.getByRole("option", { name: /backend · naukri/ })).toBeDefined(),
+    );
+
+    // The session step does not exist in API mode, so nothing to disable or explain away.
+    expect(queries.queryByRole("combobox", { name: "Session" })).toBeNull();
+    expect(queries.queryByText(/Create a naukri session/)).toBeNull();
+    expect(queries.getByText("API", { selector: ".code-tag" })).toBeDefined();
+    expect(queries.getByText(/no browser session is needed/, { selector: "p" })).toBeDefined();
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(events.map((e) => e.code)).toContain("RUN_STARTED"));
+    expect(posted).toEqual([{ profileId: "p1", enrich: true, onlyNew: false }]);
+    expect("browserProfileId" in (posted[0] ?? {})).toBe(false);
+  });
+
+  test("a browser source keeps the session step and sends its session", async () => {
+    const { client, posted } = runsBackend(["Infosys", "TCS"], undefined, { apiOnly: false });
+    const events: LogEvent[] = [];
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    expect(queries.getByRole("combobox", { name: "Session" })).toBeDefined();
+    expect(queries.queryByText(/no browser session is needed/, { selector: "p" })).toBeNull();
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(events.map((e) => e.code)).toContain("RUN_STARTED"));
+    expect(posted).toEqual([
+      { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: false },
+    ]);
+  });
+});
+
+/** A failed timed call for overriding one client method in a test. */
+function failedCall(problem: ApiProblem) {
+  return {
+    result: { ok: false as const, problem },
+    ms: 1,
+    at: "2026-11-02T08:00:01Z",
+  };
+}
+
+describe("runs page postings failures", () => {
+  test("a thrown postings fetch shows a problem and keeps polling", async () => {
+    const { client: base } = runsBackend();
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      listRunPostings: () => {
+        postingsCalls += 1;
+        throw new Error("boom");
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+    expect(queries.getByRole("alert").textContent).not.toContain("boom");
+    expect(queries.queryByText("Loading postings…")).toBeNull();
+    // The loop survives the throw: the next poll runs on its own.
+    await waitFor(() => expect(postingsCalls).toBeGreaterThan(1), { timeout: 6000 });
+  }, 15_000);
+
+  test("RETRY refetches the postings and clears the problem on success", async () => {
+    const unavailable: ApiProblem = {
+      status: 503,
+      title: "Postings are unavailable.",
+      detail: "",
+      code: "BAD_RESPONSE",
+    };
+    const { client: base } = runsBackend(["Infosys", "TCS"], undefined, {
+      runPatch: { isTerminal: true },
+    });
+    let failuresLeft = 1;
+    const client = {
+      ...base,
+      listRunPostings: (id: string, offset?: number, limit?: number) => {
+        if (failuresLeft > 0) {
+          failuresLeft -= 1;
+          return Promise.resolve(failedCall(unavailable));
+        }
+        return base.listRunPostings(id, offset, limit);
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+
+    fireEvent.click(queries.getByRole("button", { name: "RETRY" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
+    );
+    expect(queries.queryByRole("alert")).toBeNull();
+  }, 15_000);
+
+  test("a terminal run with a failing postings list shows the error, not the spinner", async () => {
+    const unavailable: ApiProblem = {
+      status: 503,
+      title: "Postings are unavailable.",
+      detail: "",
+      code: "BAD_RESPONSE",
+    };
+    const { client: base } = runsBackend(["Infosys", "TCS"], undefined, {
+      runPatch: { isTerminal: true },
+    });
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      listRunPostings: () => {
+        postingsCalls += 1;
+        return Promise.resolve(failedCall(unavailable));
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+    expect(queries.getByRole("alert").textContent).toContain("Postings are unavailable.");
+    expect(queries.queryByText("Loading postings…")).toBeNull();
+
+    // Terminal: the failed poll is the last one.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(postingsCalls).toBe(1);
+  }, 15_000);
+
+  test("session death on the follow poll still routes out", async () => {
+    const unauthorized: ApiProblem = {
+      status: 401,
+      title: "Your session ended. Sign in again to pick up any account changes.",
+      detail: "",
+      code: "UNAUTHENTICATED",
+    };
+    const onUnauthorized = mock((_problem: ApiProblem) => undefined);
+    const { client: base } = runsBackend();
+    const client = {
+      ...base,
+      getRun: () => Promise.resolve(failedCall(unauthorized)),
+      listRunPostings: () => Promise.resolve(failedCall(unauthorized)),
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={onUnauthorized} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(onUnauthorized.mock.calls[0]?.[0]).toEqual(unauthorized);
+    // The shell owns the sign-in route; the page never shows a postings error for it.
+    expect(queries.queryByRole("alert")).toBeNull();
+    expect(queries.queryByRole("button", { name: "RETRY" })).toBeNull();
+  }, 15_000);
+
+  test("a rejecting sibling never hides a 401 run answer", async () => {
+    const unauthorized: ApiProblem = {
+      status: 401,
+      title: "Your session ended. Sign in again to pick up any account changes.",
+      detail: "",
+      code: "UNAUTHENTICATED",
+    };
+    const onUnauthorized = mock((_problem: ApiProblem) => undefined);
+    const { client: base } = runsBackend();
+    const client = {
+      ...base,
+      getRun: () => Promise.resolve(failedCall(unauthorized)),
+      listRunPostings: () => Promise.reject(new Error("boom")),
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={onUnauthorized} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(onUnauthorized.mock.calls[0]?.[0]).toEqual(unauthorized);
+    expect(queries.queryByRole("alert")).toBeNull();
+  }, 15_000);
+
+  test("a rejecting sibling does not lose a terminal run answer", async () => {
+    const completed: RunPayload = {
+      ...baseRun,
+      id: "r1",
+      stage: "Completed",
+      isTerminal: true,
+      finishedAt: "2026-11-02T08:00:42Z",
+    };
+    const { client: base } = runsBackend();
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      getRun: () =>
+        Promise.resolve({
+          result: { ok: true as const, value: completed },
+          ms: 1,
+          at: "2026-11-02T08:00:42Z",
+        }),
+      listRunPostings: () => {
+        postingsCalls += 1;
+        return Promise.reject(new Error("boom"));
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("COMPLETED"));
+    expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
+    expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE");
+
+    // Terminal: the failed poll is the last one.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(postingsCalls).toBe(1);
+  }, 15_000);
+
+  test("re-selecting the active run refetches its postings", async () => {
+    const { client, calls } = runsBackend();
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    const postingsCalls = () =>
+      calls.filter((call) => call.startsWith("GET /api/v1/runs/r1/postings?")).length;
+    // First selection: the immediate tick plus the one poll that makes the run terminal.
+    expect(postingsCalls()).toBe(2);
+    fireEvent.click(queries.getByRole("button", { name: "2026-11-02 08:00:00" }));
+
+    await waitFor(() => expect(postingsCalls()).toBe(3));
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
+    );
+  }, 15_000);
 });

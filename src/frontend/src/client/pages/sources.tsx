@@ -62,6 +62,7 @@ function SourceCard({ source, code }: { source: SourceStatus; code: string }) {
   return (
     <Module code={code} title={source.key.toUpperCase()} span="span-4">
       <div className="tag-row" aria-label={`${source.key} status`}>
+        <CodeTag code={source.apiOnly ? "API" : "BROWSER"} />
         <CodeTag code={source.tier.toUpperCase()} tone={tierTone(source.tier)} />
         <CodeTag
           code={source.enabled ? "ENABLED" : "DISABLED"}

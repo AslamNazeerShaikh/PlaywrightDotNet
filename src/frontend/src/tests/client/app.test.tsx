@@ -69,6 +69,7 @@ const sourceList = {
   items: [
     {
       key: "indeed",
+      apiOnly: true,
       tier: "Restricted",
       enabled: false,
       gate: {
@@ -103,6 +104,7 @@ const sourceList = {
     },
     {
       key: "naukri",
+      apiOnly: false,
       tier: "Standard",
       enabled: true,
       gate: { allowed: true, reason: null },
@@ -523,8 +525,10 @@ describe("ops deck", () => {
     expect(indeed.textContent).toContain("RESTRICTED");
     expect(indeed.textContent).toContain("GATE BLOCKED");
     expect(indeed.textContent).toContain("AcknowledgeSourceRisk=true");
+    expect(indeed.textContent).toContain("API");
     const naukri = queries.getByRole("region", { name: "NAUKRI" });
     expect(naukri.textContent).toContain("GATE OPEN");
+    expect(naukri.textContent).toContain("BROWSER");
     expect(naukri.textContent).toContain("CIRCUIT OPEN");
     expect(naukri.textContent).toContain("Runs: 1 · no daily cap");
     expect(naukri.textContent).toContain("open until 2026-11-03T08:00:00Z");

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   CodeTag,
   codeTone,
@@ -11,10 +13,13 @@ import type {
   ApiProblem,
   CreateSessionInput,
   SessionPayload,
+  SourceList,
   UpdateSessionInput,
 } from "../lib/api.ts";
+import { useTokenFailureRedirect } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
+import { sourceApiOnly } from "../lib/transport.ts";
 import { SOURCES } from "./profiles.tsx";
 
 /**
@@ -32,6 +37,7 @@ export const CHANNELS = ["Bundled"] as const;
  */
 export function SessionsPage({
   sessions,
+  sources,
   listProblem,
   loading,
   creating,
@@ -43,8 +49,11 @@ export function SessionsPage({
   onRefresh,
   updating,
   updateProblem,
+  onUnauthorized,
 }: {
   sessions: SessionPayload[] | null;
+  /** The sources snapshot, for each source's transport flag. Missing reads browser. */
+  sources: SourceList | null;
   listProblem: ApiProblem | null;
   loading: boolean;
   creating: boolean;
@@ -56,11 +65,16 @@ export function SessionsPage({
   onRefresh: () => void;
   updating: boolean;
   updateProblem: ApiProblem | null;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("SessionsPage");
+  useTokenFailureRedirect([listProblem, createProblem, updateProblem], onUnauthorized);
   const fieldErrors = createProblem?.errors ?? {};
   const updateFieldErrors = updateProblem?.errors ?? {};
   const selected = sessions?.find((s) => s.id === selectedId) ?? null;
+  const [createSource, setCreateSource] = useState<string>(SOURCES[0] ?? "naukri");
+  // An API-only source launches no browser, so a browser profile for it would sit unused.
+  const createApiOnly = sourceApiOnly(sources, createSource);
 
   async function submitUpdate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,6 +86,9 @@ export function SessionsPage({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (createApiOnly) {
+      return;
+    }
     const form = event.currentTarget;
     const data = new FormData(form);
     const created = await onCreate({
@@ -101,48 +118,75 @@ export function SessionsPage({
         note="POST /api/v1/sessions. The name is also the profile's directory."
       >
         <form onSubmit={submit} aria-label="New browser profile" noValidate>
-          <Field label="NAME" name="name" errors={fieldErrors}>
-            <input
-              className="input"
-              name="name"
-              aria-label="Profile name"
-              placeholder="naukri-main"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Field>
+          {!createApiOnly && (
+            <Field label="NAME" name="name" errors={fieldErrors}>
+              <input
+                className="input"
+                name="name"
+                aria-label="Profile name"
+                placeholder="naukri-main"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+          )}
           <Field label="SOURCE" name="sourceKey" errors={fieldErrors}>
-            <select className="input" name="sourceKey" aria-label="Source" defaultValue="naukri">
+            <select
+              className="input"
+              name="sourceKey"
+              aria-label="Source"
+              value={createSource}
+              onChange={(e) => setCreateSource(e.currentTarget.value)}
+            >
               {SOURCES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {sourceApiOnly(sources, s) ? `${s} · API` : s}
                 </option>
               ))}
             </select>
           </Field>
-          <div className="field-pair">
-            <Field label="ENGINE" name="engine" errors={fieldErrors}>
-              <select className="input" name="engine" aria-label="Engine" defaultValue="Chromium">
-                {ENGINES.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="CHANNEL" name="channel" errors={fieldErrors}>
-              <select className="input" name="channel" aria-label="Channel" defaultValue="Bundled">
-                {CHANNELS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <button type="submit" className="btn" disabled={creating}>
-            {creating ? "SAVING…" : "CREATE BROWSER PROFILE"}
-          </button>
+          {createApiOnly ? (
+            <p className="status-line">
+              <CodeTag code="API" /> This source runs API-only: it needs no browser profile, so
+              creation is off.
+            </p>
+          ) : (
+            <>
+              <div className="field-pair">
+                <Field label="ENGINE" name="engine" errors={fieldErrors}>
+                  <select
+                    className="input"
+                    name="engine"
+                    aria-label="Engine"
+                    defaultValue="Chromium"
+                  >
+                    {ENGINES.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="CHANNEL" name="channel" errors={fieldErrors}>
+                  <select
+                    className="input"
+                    name="channel"
+                    aria-label="Channel"
+                    defaultValue="Bundled"
+                  >
+                    {CHANNELS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <button type="submit" className="btn" disabled={creating}>
+                {creating ? "SAVING…" : "CREATE BROWSER PROFILE"}
+              </button>
+            </>
+          )}
         </form>
         {createProblem !== null && (
           <p className="alert" role="alert">
