@@ -303,30 +303,52 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Builds the verified search URL, including every documented
-        /// parameter even when its value is empty.
+        /// Builds the HAR-verified search URL. A keyword-only search sends
+        /// <c>urlType=search_by_keyword</c>; a located search sends
+        /// <c>urlType=search_by_key_loc</c> and mirrors the query under the
+        /// short <c>k</c>/<c>l</c> keys. <c>sort</c> is always sent; the
+        /// optional filters are omitted when unset rather than sent empty,
+        /// as the manual-search HAR does.
         /// </summary>
         /// <param name="criteria">The search criteria.</param>
         /// <param name="pageNumber">The one-based page number.</param>
         /// <returns>The absolute request URI.</returns>
         private static Uri SearchUri(SearchCriteria criteria, int pageNumber)
         {
-            var query = string.Join(
-                '&',
+            var locations = string.Join(", ", criteria.Locations);
+            var located = criteria.Locations.Count > 0;
+            var pairs = new List<string>(11)
+            {
                 Pair("noOfResults", PageSize.ToString(CultureInfo.InvariantCulture)),
                 Pair("pageNo", pageNumber.ToString(CultureInfo.InvariantCulture)),
-                Pair("urlType", "search_by_keyword"),
+                Pair("urlType", located ? "search_by_key_loc" : "search_by_keyword"),
                 Pair("searchType", "adv"),
                 Pair("keyword", criteria.Keywords),
-                Pair("location", string.Join(", ", criteria.Locations)),
-                Pair("sort", "f"),
-                Pair(
-                    "experience",
-                    criteria.ExperienceYears?.ToString(CultureInfo.InvariantCulture)
-                ),
-                Pair("jobAge", criteria.PostedWithinDays?.ToString(CultureInfo.InvariantCulture))
-            );
-            return new Uri($"{SearchBaseUrl}?{query}", UriKind.Absolute);
+                Pair("location", locations),
+            };
+
+            // The located wire shape mirrors the query under the short keys;
+            // a keyword-only search never carries them.
+            if (located)
+            {
+                pairs.Add(Pair("k", criteria.Keywords));
+                pairs.Add(Pair("l", locations));
+            }
+
+            pairs.Add(Pair("sort", "f"));
+            if (criteria.ExperienceYears is { } experienceYears)
+            {
+                pairs.Add(
+                    Pair("experience", experienceYears.ToString(CultureInfo.InvariantCulture))
+                );
+            }
+
+            if (criteria.PostedWithinDays is { } postedWithinDays)
+            {
+                pairs.Add(Pair("jobAge", postedWithinDays.ToString(CultureInfo.InvariantCulture)));
+            }
+
+            return new Uri($"{SearchBaseUrl}?{string.Join('&', pairs)}", UriKind.Absolute);
         }
 
         /// <summary>

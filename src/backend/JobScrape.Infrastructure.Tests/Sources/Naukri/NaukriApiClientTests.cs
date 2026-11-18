@@ -26,6 +26,20 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 requiredSkills: []
             );
 
+        /// <summary>
+        /// The same keywords with no locations (remote-only) and no optional
+        /// filters: the keyword-only search shape.
+        /// </summary>
+        private static SearchCriteria KeywordOnlyCriteria() =>
+            new(
+                "asp.net core",
+                [],
+                experienceYears: null,
+                postedWithinDays: null,
+                remoteOnly: true,
+                requiredSkills: []
+            );
+
         private static string Fixture(string name) =>
             File.ReadAllText(
                 Path.Combine(AppContext.BaseDirectory, "Sources", "Naukri", "Fixtures", name)
@@ -92,13 +106,15 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             Assert.Equal("www.naukri.com", request.Uri?.IdnHost);
 
             var query = Query(request.Uri);
-            Assert.Equal(9, query.Count);
+            Assert.Equal(11, query.Count);
             Assert.Equal("20", query["noOfResults"]);
             Assert.Equal("1", query["pageNo"]);
-            Assert.Equal("search_by_keyword", query["urlType"]);
+            Assert.Equal("search_by_key_loc", query["urlType"]);
             Assert.Equal("adv", query["searchType"]);
             Assert.Equal("asp.net core", query["keyword"]);
             Assert.Equal("Pune", query["location"]);
+            Assert.Equal("asp.net core", query["k"]);
+            Assert.Equal("Pune", query["l"]);
             Assert.Equal("f", query["sort"]);
             Assert.Equal("5", query["experience"]);
             Assert.Equal("7", query["jobAge"]);
@@ -116,6 +132,140 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 Header(handler.Requests[0], "nkparam"),
                 Header(handler.Requests[1], "nkparam")
             );
+        }
+
+        // ---- query shape (tools/artifacts/Naukri.har) ----
+
+        [Fact]
+        public async Task KeywordOnlySearchKeepsTheKeywordUrlType()
+        {
+            // The manual-search HAR sends urlType=search_by_keyword with no
+            // k/l mirrors for a keyword-only search; only a located search
+            // switches urlType.
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            using var client = Client(handler);
+
+            await client.FetchPageAsync(KeywordOnlyCriteria(), 1, Ct);
+
+            var query = Query(Assert.Single(handler.Requests).Uri);
+            Assert.Equal(
+                ["keyword", "location", "noOfResults", "pageNo", "searchType", "sort", "urlType"],
+                query.Keys.Order(StringComparer.Ordinal)
+            );
+            Assert.Equal("search_by_keyword", query["urlType"]);
+            Assert.Equal("asp.net core", query["keyword"]);
+            Assert.Equal(string.Empty, query["location"]);
+            Assert.Equal("f", query["sort"]);
+        }
+
+        [Fact]
+        public async Task LocatedSearchUsesKeyLocUrlTypeWithKeywordAndLocationMirrors()
+        {
+            // With locations the HAR sends urlType=search_by_key_loc and
+            // mirrors the query under the short k/l keys.
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            using var client = Client(handler);
+
+            var criteria = new SearchCriteria(
+                "asp.net core",
+                ["Pune", "Mumbai"],
+                experienceYears: null,
+                postedWithinDays: null,
+                remoteOnly: false,
+                requiredSkills: []
+            );
+
+            await client.FetchPageAsync(criteria, 2, Ct);
+
+            var query = Query(Assert.Single(handler.Requests).Uri);
+            Assert.Equal("search_by_key_loc", query["urlType"]);
+            Assert.Equal("asp.net core", query["keyword"]);
+            Assert.Equal("Pune, Mumbai", query["location"]);
+            Assert.Equal("asp.net core", query["k"]);
+            Assert.Equal("Pune, Mumbai", query["l"]);
+            Assert.Equal("2", query["pageNo"]);
+            Assert.Equal("f", query["sort"]);
+        }
+
+        [Fact]
+        public async Task UnsetOptionalFiltersAreOmitted()
+        {
+            // The HAR only carries experience/jobAge when the UI has a value;
+            // an unset filter is left out instead of sent empty.
+            var keywordOnly = new FakeHandler(_ =>
+                JsonResponse(Fixture("search-api-normal.json"))
+            );
+            using (var client = Client(keywordOnly))
+            {
+                await client.FetchPageAsync(KeywordOnlyCriteria(), 1, Ct);
+            }
+
+            var located = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            SearchCriteria noFilters = new(
+                "asp.net core",
+                ["Pune"],
+                experienceYears: null,
+                postedWithinDays: null,
+                remoteOnly: false,
+                requiredSkills: []
+            );
+            using (var client = Client(located))
+            {
+                await client.FetchPageAsync(noFilters, 1, Ct);
+            }
+
+            foreach (var handler in new[] { keywordOnly, located })
+            {
+                var query = Query(Assert.Single(handler.Requests).Uri);
+                Assert.False(query.ContainsKey("experience"));
+                Assert.False(query.ContainsKey("jobAge"));
+                // Freshness-first: sort is always sent.
+                Assert.Equal("f", query["sort"]);
+            }
+        }
+
+        [Fact]
+        public async Task SetOptionalFiltersAreSentIndependently()
+        {
+            // Each filter appears only when set: experience alone leaves
+            // jobAge out, and both set still send both values.
+            var experienceOnly = new FakeHandler(_ =>
+                JsonResponse(Fixture("search-api-normal.json"))
+            );
+            using (var client = Client(experienceOnly))
+            {
+                var criteria = new SearchCriteria(
+                    "asp.net core",
+                    [],
+                    experienceYears: 6,
+                    postedWithinDays: null,
+                    remoteOnly: true,
+                    requiredSkills: []
+                );
+                await client.FetchPageAsync(criteria, 1, Ct);
+            }
+
+            var both = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            using (var client = Client(both))
+            {
+                var criteria = new SearchCriteria(
+                    "asp.net core",
+                    ["Pune"],
+                    experienceYears: 5,
+                    postedWithinDays: 7,
+                    remoteOnly: false,
+                    requiredSkills: []
+                );
+                await client.FetchPageAsync(criteria, 1, Ct);
+            }
+
+            var experienceQuery = Query(Assert.Single(experienceOnly.Requests).Uri);
+            Assert.Equal("6", experienceQuery["experience"]);
+            Assert.False(experienceQuery.ContainsKey("jobAge"));
+
+            var bothQuery = Query(Assert.Single(both.Requests).Uri);
+            Assert.Equal("5", bothQuery["experience"]);
+            Assert.Equal("7", bothQuery["jobAge"]);
         }
 
         [Fact]
