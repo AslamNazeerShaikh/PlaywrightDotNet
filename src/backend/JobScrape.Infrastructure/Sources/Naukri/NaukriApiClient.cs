@@ -341,8 +341,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Maps a <c>200</c> body. A body without a <c>jobs</c> array is
-        /// schema drift and becomes a wall; an empty array is a clean end.
+        /// Maps a <c>200</c> body. A body without a <c>jobDetails</c> (or
+        /// fallback <c>jobs</c>) array is schema drift and becomes a wall; an
+        /// empty array is a clean end.
         /// </summary>
         /// <param name="body">The response body.</param>
         /// <param name="pageNumber">The page number, for the warning.</param>
@@ -353,11 +354,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 using var document = JsonDocument.Parse(body);
                 var root = document.RootElement;
-                if (
-                    root.ValueKind != JsonValueKind.Object
-                    || !root.TryGetProperty("jobs", out var jobs)
-                    || jobs.ValueKind != JsonValueKind.Array
-                )
+                if (root.ValueKind != JsonValueKind.Object || RowArray(root) is not { } jobs)
                 {
                     return Wall(ChallengeKind.SourceChanged, 0.8, "json");
                 }
@@ -394,6 +391,34 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 return Wall(ChallengeKind.SourceChanged, 0.8, "json");
             }
+        }
+
+        /// <summary>
+        /// Finds the search row array: the live body names it
+        /// <c>jobDetails</c> (verified probe 2026-11-18), while <c>jobs</c>
+        /// stays accepted for tolerance.
+        /// </summary>
+        /// <param name="root">The response object.</param>
+        /// <returns>The array, or null when neither key holds one.</returns>
+        private static JsonElement? RowArray(JsonElement root)
+        {
+            if (
+                root.TryGetProperty("jobDetails", out var details)
+                && details.ValueKind == JsonValueKind.Array
+            )
+            {
+                return details;
+            }
+
+            if (
+                root.TryGetProperty("jobs", out var jobs)
+                && jobs.ValueKind == JsonValueKind.Array
+            )
+            {
+                return jobs;
+            }
+
+            return null;
         }
 
         /// <summary>
