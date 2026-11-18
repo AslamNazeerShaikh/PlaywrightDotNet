@@ -21,11 +21,14 @@ import type {
   RunPosting,
   SearchProfilePayload,
   SessionPayload,
+  SourceList,
+  StartRunInput,
 } from "../lib/api.ts";
 import { isTokenFailure } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { formatClock } from "../lib/format.ts";
 import type { LogEvent } from "../lib/telemetry.ts";
+import { sourceApiOnly } from "../lib/transport.ts";
 import { stateLabel } from "./sessions.tsx";
 import { Meter } from "./sources.tsx";
 
@@ -72,6 +75,7 @@ export function RunsPage({
   const [loading, setLoading] = useState(false);
   const [profiles, setProfiles] = useState<SearchProfilePayload[]>([]);
   const [sessions, setSessions] = useState<SessionPayload[]>([]);
+  const [sources, setSources] = useState<SourceList | null>(null);
   const [profileId, setProfileId] = useState("");
   const [starting, setStarting] = useState(false);
   const [startProblem, setStartProblem] = useState<ApiProblem | null>(null);
@@ -132,27 +136,33 @@ export function RunsPage({
     setSelectedId(id);
   }
 
-  // Once per visit: the run form's options.
+  // Once per visit: the run form's options. Sources ride along so an API-only source can drop the
+  // session step; a failed or missing snapshot keeps the browser flow.
   useEffect(() => {
     let alive = true;
-    void Promise.all([client.listProfiles(), client.listSessions()]).then(([p, s]) => {
-      if (!alive) {
-        return;
-      }
-      for (const result of [p.result, s.result]) {
-        if (!result.ok && fail(result.problem)) {
+    void Promise.all([client.listProfiles(), client.listSessions(), client.listSources()]).then(
+      ([p, s, src]) => {
+        if (!alive) {
           return;
         }
-      }
-      if (p.result.ok) {
-        const enabled = p.result.value.items.filter((x) => x.enabled);
-        setProfiles(enabled);
-        setProfileId((current) => current || (enabled[0]?.id ?? ""));
-      }
-      if (s.result.ok) {
-        setSessions(s.result.value.items);
-      }
-    });
+        for (const result of [p.result, s.result, src.result]) {
+          if (!result.ok && fail(result.problem)) {
+            return;
+          }
+        }
+        if (p.result.ok) {
+          const enabled = p.result.value.items.filter((x) => x.enabled);
+          setProfiles(enabled);
+          setProfileId((current) => current || (enabled[0]?.id ?? ""));
+        }
+        if (s.result.ok) {
+          setSessions(s.result.value.items);
+        }
+        if (src.result.ok) {
+          setSources(src.result.value);
+        }
+      },
+    );
     return () => {
       alive = false;
     };
@@ -213,6 +223,8 @@ export function RunsPage({
   }, [client, selectedId, postingsOffset]);
 
   const profile = profiles.find((p) => p.id === profileId) ?? null;
+  // API-only sources never launch a browser, so the session step does not exist for them.
+  const apiOnlyMode = profile !== null && sourceApiOnly(sources, profile.sourceKey);
   const usable = sessions.filter((s) => s.sourceKey === profile?.sourceKey);
   const selected = runs?.find((r) => r.id === selectedId) ?? null;
   const selectedCompanies = selected?.companies ?? [];
@@ -222,12 +234,15 @@ export function RunsPage({
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     setStarting(true);
-    const { result, at } = await client.startRun({
+    // No browserProfileId key at all in API mode: the contract accepts it missing, and an empty
+    // string would pretend a session was meant to be picked.
+    const input: StartRunInput = {
       profileId,
-      browserProfileId: String(data.get("browserProfileId") ?? ""),
+      ...(apiOnlyMode ? {} : { browserProfileId: String(data.get("browserProfileId") ?? "") }),
       enrich: data.get("enrich") !== null,
       onlyNew: data.get("onlyNew") !== null,
-    });
+    };
+    const { result, at } = await client.startRun(input);
     setStarting(false);
     if (!result.ok) {
       if (fail(result.problem)) {
@@ -330,10 +345,14 @@ export function RunsPage({
         title="Start a run"
         span="span-5"
         note={
-          <>
-            POST /api/v1/runs. A browser window opens: Naukri blocks{" "}
-            <Abbr term="headless" full="a browser without a visible window" /> first contact.
-          </>
+          apiOnlyMode ? (
+            <>POST /api/v1/runs. This source runs API-only: no browser window opens.</>
+          ) : (
+            <>
+              POST /api/v1/runs. A browser window opens: Naukri blocks{" "}
+              <Abbr term="headless" full="a browser without a visible window" /> first contact.
+            </>
+          )
         }
       >
         <form onSubmit={start} aria-label="Start a run" noValidate>
@@ -353,21 +372,27 @@ export function RunsPage({
               ))}
             </select>
           </Field>
-          <Field label="SESSION" name="browserProfileId" errors={fieldErrors}>
-            <select
-              className="input"
-              name="browserProfileId"
-              aria-label="Session"
-              key={profile?.sourceKey ?? "none"}
-            >
-              {usable.length === 0 && <option value="">No session for this source</option>}
-              {usable.map((s) => (
-                <option key={s.id} value={s.id} disabled={!s.canLaunch}>
-                  {`${s.name} · ${s.engine}/${s.channel} · ${stateLabel(s.state)}`}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {apiOnlyMode ? (
+            <p className="status-line">
+              <CodeTag code="API" /> This source runs API-only: no browser session is needed.
+            </p>
+          ) : (
+            <Field label="SESSION" name="browserProfileId" errors={fieldErrors}>
+              <select
+                className="input"
+                name="browserProfileId"
+                aria-label="Session"
+                key={profile?.sourceKey ?? "none"}
+              >
+                {usable.length === 0 && <option value="">No session for this source</option>}
+                {usable.map((s) => (
+                  <option key={s.id} value={s.id} disabled={!s.canLaunch}>
+                    {`${s.name} · ${s.engine}/${s.channel} · ${stateLabel(s.state)}`}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           {profile !== null && <p className="status-line">{profileInputs(profile)}</p>}
           <label className="check">
             <input type="checkbox" name="enrich" aria-label="Enrich" defaultChecked /> VISIT DETAIL
@@ -381,12 +406,12 @@ export function RunsPage({
           <button
             type="submit"
             className="btn"
-            disabled={starting || profile === null || usable.length === 0}
+            disabled={starting || profile === null || (!apiOnlyMode && usable.length === 0)}
           >
             {starting ? "STARTING…" : "START RUN"}
           </button>
         </form>
-        {profile !== null && usable.length === 0 && (
+        {profile !== null && !apiOnlyMode && usable.length === 0 && (
           <p className="status-line">
             Create a {profile.sourceKey} session on the Sessions page first.
           </p>

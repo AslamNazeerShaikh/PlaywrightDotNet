@@ -63,6 +63,7 @@ function SessionsHarness({ onUnauthorized }: { onUnauthorized: (problem: ApiProb
   return (
     <SessionsPage
       sessions={[]}
+      sources={null}
       listProblem={null}
       loading={false}
       creating={false}
