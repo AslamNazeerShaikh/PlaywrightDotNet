@@ -1,0 +1,60 @@
+{
+  "noOfJobs": 23312,
+  "jobDetails": [
+    {
+      "jobId": "181126000001",
+      "title": "Python Developer",
+      "companyName": "Acme Systems",
+      "experienceText": "3-6 Yrs",
+      "tagsAndSkills": "Python, Django, PostgreSQL",
+      "jdURL": "/job-listings-python-developer-acme-systems-181126000001?src=jobsearchDesk",
+      "staticUrl": "https://www.naukri.com/job-listings-python-developer-acme-systems-181126000001",
+      "logoPathV3": "https://img.naukri.com/logo/acme.png",
+      "salaryDetail": {
+        "hideSalary": false,
+        "minimumSalary": 1200000,
+        "maximumSalary": 2000000,
+        "currency": "INR"
+      },
+      "placeholders": [
+        { "type": "location", "label": "Remote - Pune" },
+        { "type": "experience", "label": "3-6 Yrs" },
+        { "type": "salary", "label": "12-20 Lacs PA" }
+      ],
+      "ambitionBoxData": { "AggregateRating": 4.1, "ReviewsCount": 1234 },
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793527200000,
+      "minimumExperience": 3,
+      "maximumExperience": 6
+    },
+    {
+      "jobId": "181126000002",
+      "title": "Backend Engineer",
+      "companyName": "Globex",
+      "experienceText": "2-4 Yrs",
+      "tagsAndSkills": "Python, FastAPI, Redis",
+      "jdURL": "/job-listings-backend-engineer-globex-181126000002",
+      "staticUrl": "https://www.naukri.com/job-listings-backend-engineer-globex-181126000002",
+      "logoPathV3": "https://img.naukri.com/logo/globex.png",
+      "salaryDetail": {
+        "hideSalary": true,
+        "minimumSalary": 0,
+        "maximumSalary": 0,
+        "currency": "INR"
+      },
+      "placeholders": [
+        { "type": "location", "label": "Hybrid - Bengaluru" },
+        { "type": "experience", "label": "2-4 Yrs" }
+      ],
+      "ambitionBoxData": { "AggregateRating": 3.8, "ReviewsCount": 456 },
+      "companyApplyJob": true,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793440800000,
+      "minimumExperience": 2,
+      "maximumExperience": 4
+    }
+  ]
+}

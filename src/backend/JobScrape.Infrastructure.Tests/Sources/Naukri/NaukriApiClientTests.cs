@@ -119,6 +119,44 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         }
 
         [Fact]
+        public async Task MapsLiveJobDetailsKeyThroughTheSharedGate()
+        {
+            // The live jobapi/v3/search body carries its rows under
+            // jobDetails (verified probe 2026-11-18); jobs stays accepted as
+            // a tolerance fallback.
+            var handler = new FakeHandler(_ =>
+                JsonResponse(Fixture("search-api-jobdetails.json"))
+            );
+            using var client = Client(handler);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.Equal(ChallengeKind.None, page.Challenge.Kind);
+            Assert.Equal(23312, page.Total);
+            Assert.Equal(0, page.DroppedRows);
+            Assert.Equal(2, page.Rows.Count);
+
+            var first = page.Rows[0].Snapshot;
+            Assert.Equal("181126000001", first.ExternalJobId);
+            Assert.Equal("Python Developer", first.Title);
+            Assert.Equal("Acme Systems", first.Company);
+            Assert.Equal(["Python", "Django", "PostgreSQL"], first.Skills);
+            Assert.Equal(
+                new SalaryRange(1_200_000m, 2_000_000m, "INR", SalaryPeriod.Year),
+                first.Salary
+            );
+            var location = Assert.IsType<JobLocation>(first.Location);
+            Assert.Equal(WorkMode.Remote, location.WorkMode);
+            Assert.Equal("Pune", location.City);
+            Assert.False(page.Rows[0].ExternalPortal);
+
+            // The company-portal flag still comes from the same row fields.
+            Assert.True(page.Rows[1].ExternalPortal);
+            Assert.Null(page.Rows[1].Snapshot.Salary);
+            Assert.Equal(WorkMode.Hybrid, page.Rows[1].Snapshot.Location?.WorkMode);
+        }
+
+        [Fact]
         public async Task BadRowsDropWithWarningInsteadOfPoisoning()
         {
             var logger = new RecordingLogger();
