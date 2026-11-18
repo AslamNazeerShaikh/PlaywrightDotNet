@@ -115,6 +115,65 @@ describe("blocked direct auth endpoints", () => {
   }
 });
 
+describe("api proxy unsafe calls without a session", () => {
+  const handler = createHandler({ port: 3000, dotnetApiUrl: "http://127.0.0.1:1" });
+
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+    test(`${method} without a session cookie answers 401 UNAUTHENTICATED, not 403`, async () => {
+      const upstream = hitCountingUpstream();
+      const localHandler = createHandler({ port: 3000, dotnetApiUrl: upstream.url });
+
+      const res = await localHandler.fetch(
+        new Request("http://bff/api/v1/search-profiles", {
+          method,
+          headers: { "content-type": "application/json", ...csrfHeaders },
+          body: method === "DELETE" ? undefined : "{}",
+        }),
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.headers.get("content-type")).toContain("application/problem+json");
+      const body = (await res.json()) as { status: number; code: string };
+      expect(body.status).toBe(401);
+      expect(body.code).toBe("UNAUTHENTICATED");
+      expect(upstream.hits()).toBe(0);
+    });
+  }
+
+  test("a session cookie with a bad CSRF pair still answers 403 CSRF_FAILED", async () => {
+    const res = await handler.fetch(
+      new Request("http://bff/api/v1/search-profiles", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://bff",
+          "sec-fetch-site": "same-origin",
+          cookie: "jobscrape_session=jwt-1",
+        },
+        body: "{}",
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("CSRF_FAILED");
+  });
+
+  test("anonymous GET and HEAD still proxy upstream", async () => {
+    const upstream = hitCountingUpstream();
+    const localHandler = createHandler({ port: 3000, dotnetApiUrl: upstream.url });
+
+    const get = await localHandler.fetch(new Request("http://bff/api/v1/health"));
+    const head = await localHandler.fetch(
+      new Request("http://bff/api/v1/health", { method: "HEAD" }),
+    );
+
+    expect(get.status).toBe(200);
+    expect(head.status).toBe(200);
+    expect(upstream.hits()).toBe(2);
+  });
+});
+
 describe("proxy upstream 401", () => {
   const changePasswordHeaders = {
     origin: "http://bff",

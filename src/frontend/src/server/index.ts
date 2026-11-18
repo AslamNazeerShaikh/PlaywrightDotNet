@@ -92,8 +92,8 @@ export function healthResponse(config: CockpitConfig): Response {
 }
 
 /**
- * `/api/*` entry: blocks the hidden auth endpoints, enforces the origin/CSRF guard on unsafe
- * methods, then proxies to the data plane.
+ * `/api/*` entry: blocks the hidden auth endpoints, answers unsafe calls that carry no session with
+ * the routable 401, enforces the origin/CSRF guard on the rest, then proxies to the data plane.
  */
 export function apiProxy(req: Request, config: CockpitConfig): Promise<Response> {
   const url = new URL(req.url);
@@ -115,6 +115,11 @@ export function apiProxy(req: Request, config: CockpitConfig): Promise<Response>
 
   const unsafe = req.method !== "GET" && req.method !== "HEAD";
   if (unsafe && url.pathname.startsWith("/api/")) {
+    // No session means no CSRF secret to protect: answer the routable 401 the client signs out
+    // on instead of a 403 that reads like a bad form and leaves the deck looking signed in.
+    if (readSessionToken(req) === null) {
+      return Promise.resolve(sessionEndedResponse());
+    }
     const csrf = csrfCheck(req);
     if (!csrf.ok) {
       return Promise.resolve(csrf.response);
@@ -222,6 +227,20 @@ function csrfMatches(cookie: string | undefined, header: string | null): boolean
 function csrfPairMatches(req: Request): boolean {
   const cookies = parseCookies(req.headers.get("cookie"));
   return csrfMatches(cookies["jobscrape_csrf"], req.headers.get("x-csrf-token"));
+}
+
+/** 401 problem the client routes to sign-in when an unsafe call arrives with no session. */
+function sessionEndedResponse(): Response {
+  return Response.json(
+    {
+      type: "https://jobscrape.local/problems/unauthorized",
+      title: "Unauthorized",
+      status: 401,
+      detail: "The session ended. Sign in again.",
+      code: "UNAUTHENTICATED",
+    },
+    { status: 401, headers: { "content-type": "application/problem+json" } },
+  );
 }
 
 function problemResponse(status: number, code: string, detail: string): Response {

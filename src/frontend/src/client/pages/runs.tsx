@@ -22,6 +22,7 @@ import type {
   SearchProfilePayload,
   SessionPayload,
 } from "../lib/api.ts";
+import { isTokenFailure } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { formatClock } from "../lib/format.ts";
 import type { LogEvent } from "../lib/telemetry.ts";
@@ -57,9 +58,11 @@ export const RUN_STAGES = [
 export function RunsPage({
   client,
   onEvent,
+  onUnauthorized,
 }: {
   client: ApiClient;
   onEvent: (event: LogEvent) => void;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("RunsPage");
   const [runs, setRuns] = useState<RunPayload[] | null>(null);
@@ -85,6 +88,19 @@ export function RunsPage({
   const listTicket = useRef(0);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+  // Stable handle on the sign-out handler so the polling effect does not restart when App
+  // re-renders and hands down a fresh closure.
+  const onUnauthorizedRef = useRef(onUnauthorized);
+  onUnauthorizedRef.current = onUnauthorized;
+
+  /** True when the call failed because the session died; the shell already routed to sign-in. */
+  function fail(problem: ApiProblem): boolean {
+    if (isTokenFailure(problem)) {
+      onUnauthorizedRef.current(problem);
+      return true;
+    }
+    return false;
+  }
 
   async function loadRuns() {
     const ticket = ++listTicket.current;
@@ -98,7 +114,7 @@ export function RunsPage({
       setRunsTotal(result.value.total);
       setListProblem(null);
       setSelectedId((current) => current ?? result.value.items[0]?.id ?? null);
-    } else {
+    } else if (!fail(result.problem)) {
       setListProblem(result.problem);
     }
     setLoading(false);
@@ -122,6 +138,11 @@ export function RunsPage({
     void Promise.all([client.listProfiles(), client.listSessions()]).then(([p, s]) => {
       if (!alive) {
         return;
+      }
+      for (const result of [p.result, s.result]) {
+        if (!result.ok && fail(result.problem)) {
+          return;
+        }
       }
       if (p.result.ok) {
         const enabled = p.result.value.items.filter((x) => x.enabled);
@@ -160,9 +181,15 @@ export function RunsPage({
         if (!alive) {
           return;
         }
+        if (!list.result.ok && fail(list.result.problem)) {
+          return;
+        }
         if (list.result.ok) {
           setPostings(list.result.value.items);
           setPostingsTotal(list.result.value.total);
+        }
+        if (!run.result.ok && fail(run.result.problem)) {
+          return;
         }
         if (run.result.ok) {
           const current = run.result.value;
@@ -203,6 +230,9 @@ export function RunsPage({
     });
     setStarting(false);
     if (!result.ok) {
+      if (fail(result.problem)) {
+        return;
+      }
       setStartProblem(result.problem);
       onEventRef.current({
         at: formatClock(at),
@@ -236,6 +266,9 @@ export function RunsPage({
     try {
       const { result, at } = await client.downloadRunExport(selected.id, format, group);
       if (!result.ok) {
+        if (fail(result.problem)) {
+          return;
+        }
         setExportProblem(result.problem);
         onEventRef.current({
           at: formatClock(at),
@@ -275,7 +308,7 @@ export function RunsPage({
     if (result.ok) {
       setCancelProblem(null);
       setRuns((rs) => upsertRun(rs, result.value));
-    } else {
+    } else if (!fail(result.problem)) {
       setCancelProblem(result.problem);
     }
   }
