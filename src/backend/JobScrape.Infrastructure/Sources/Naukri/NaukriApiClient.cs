@@ -286,8 +286,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         }
 
         /// <summary>
-        /// Creates the production transport: redirects are never followed and
-        /// compressed responses are accepted.
+        /// Creates the production transport: redirects are never followed,
+        /// compressed responses are accepted, and pooled connections rotate
+        /// every two minutes so stale DNS cannot pin a dead address for the
+        /// life of the singleton client.
         /// </summary>
         /// <returns>The handler; the caller owns it.</returns>
         internal static SocketsHttpHandler CreateTransportHandler()
@@ -296,6 +298,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 AllowAutoRedirect = false,
                 AutomaticDecompression = DecompressionMethods.All,
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             };
         }
 
