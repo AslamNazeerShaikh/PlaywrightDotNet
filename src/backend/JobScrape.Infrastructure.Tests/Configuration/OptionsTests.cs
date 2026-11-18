@@ -260,6 +260,32 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void ApiOnlyDefaultsToTrue()
+        {
+            Assert.True(new SourceOptions().ApiOnly);
+        }
+
+        [Fact]
+        public void ApiOnlyBindsFalseFromConfiguration()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["JobScrape:Sources:naukri:ApiOnly"] = "false",
+                    }
+                )
+                .Build();
+
+            var sources = configuration
+                .GetSection(SourcesOptions.SectionName)
+                .Get<SourcesOptions>();
+
+            Assert.NotNull(sources);
+            Assert.False(sources.Sources["naukri"].ApiOnly);
+        }
+
+        [Fact]
         public void FeaturesDefaultsAreAllTrue()
         {
             var features = new FeaturesOptions();
