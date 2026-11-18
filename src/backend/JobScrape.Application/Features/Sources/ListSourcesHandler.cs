@@ -73,6 +73,7 @@ namespace JobScrape.Application.Features.Sources
                         settings.Source.Value,
                         settings.Source.Tier.ToString(),
                         settings.Enabled,
+                        settings.ApiOnly,
                         new SourceGate(gate.IsAllowed, gate.Reason),
                         new SourcePolicy(
                             limits.MaxPages,

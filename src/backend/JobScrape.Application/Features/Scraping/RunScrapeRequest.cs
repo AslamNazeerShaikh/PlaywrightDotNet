@@ -7,7 +7,10 @@ namespace JobScrape.Application.Features.Scraping
     /// A request to execute one search profile.
     /// </summary>
     /// <param name="ProfileId">The search profile to run.</param>
-    /// <param name="BrowserProfileId">The browser profile whose session to use; must be bound to the same source.</param>
+    /// <param name="BrowserProfileId">
+    /// The browser profile whose session to use; must be bound to the same
+    /// source. Empty only for an API-only source, whose runs open no browser.
+    /// </param>
     /// <param name="Consent">The operator's risk acknowledgments.</param>
     /// <param name="Enrich">False skips detail pages (CLI <c>--no-enrich</c>).</param>
     /// <param name="OnlyNew">True runs only postings not seen before; defaults to the full run.</param>

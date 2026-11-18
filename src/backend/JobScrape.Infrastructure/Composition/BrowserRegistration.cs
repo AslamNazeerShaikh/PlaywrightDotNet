@@ -110,7 +110,9 @@ namespace JobScrape.Infrastructure.Composition
         internal static bool UsesNaukriApi(SourcesOptions sources)
         {
             ArgumentNullException.ThrowIfNull(sources);
-            return sources.Sources.GetValueOrDefault(SourceKey.Naukri.Value)?.ApiOnly ?? true;
+            return sources.Sources.GetValueOrDefault(SourceKey.Naukri.Value) is { } naukri
+                ? SourceSettingsMapper.IsApiOnly(SourceKey.Naukri, naukri)
+                : true;
         }
     }
 

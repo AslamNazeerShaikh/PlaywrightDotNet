@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using JobScrape.Api.Controllers;
 using JobScrape.Application.Features.Sources;
 using Xunit;
@@ -43,6 +44,22 @@ namespace JobScrape.Api.Tests
             Assert.NotNull(linkedin.Gate.Reason);
             Assert.Equal(1, linkedin.Quota.RunCap);
             Assert.Equal(1, body.Items[0].Quota.RunCap);
+        }
+
+        [Fact]
+        public async Task ReportsEachSourcesTransportAsCamelCaseJson()
+        {
+            await using var factory = new ApiFactory();
+            using var client = await factory.CreateAdminClientAsync(Ct);
+
+            var body = await client.GetStringAsync("api/v1/sources", Ct);
+            using var json = JsonDocument.Parse(body);
+            var items = json.RootElement.GetProperty("items").EnumerateArray().ToArray();
+
+            var naukri = items.Single(item => item.GetProperty("key").GetString() == "naukri");
+            var indeed = items.Single(item => item.GetProperty("key").GetString() == "indeed");
+            Assert.True(naukri.GetProperty("apiOnly").GetBoolean());
+            Assert.False(indeed.GetProperty("apiOnly").GetBoolean());
         }
 
         [Fact]
