@@ -817,6 +817,71 @@ describe("runs page postings failures", () => {
     expect(queries.queryByRole("button", { name: "RETRY" })).toBeNull();
   }, 15_000);
 
+  test("a rejecting sibling never hides a 401 run answer", async () => {
+    const unauthorized: ApiProblem = {
+      status: 401,
+      title: "Your session ended. Sign in again to pick up any account changes.",
+      detail: "",
+      code: "UNAUTHENTICATED",
+    };
+    const onUnauthorized = mock((_problem: ApiProblem) => undefined);
+    const { client: base } = runsBackend();
+    const client = {
+      ...base,
+      getRun: () => Promise.resolve(failedCall(unauthorized)),
+      listRunPostings: () => Promise.reject(new Error("boom")),
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={onUnauthorized} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(onUnauthorized.mock.calls[0]?.[0]).toEqual(unauthorized);
+    expect(queries.queryByRole("alert")).toBeNull();
+  }, 15_000);
+
+  test("a rejecting sibling does not lose a terminal run answer", async () => {
+    const completed: RunPayload = {
+      ...baseRun,
+      id: "r1",
+      stage: "Completed",
+      isTerminal: true,
+      finishedAt: "2026-11-02T08:00:42Z",
+    };
+    const { client: base } = runsBackend();
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      getRun: () =>
+        Promise.resolve({
+          result: { ok: true as const, value: completed },
+          ms: 1,
+          at: "2026-11-02T08:00:42Z",
+        }),
+      listRunPostings: () => {
+        postingsCalls += 1;
+        return Promise.reject(new Error("boom"));
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("COMPLETED"));
+    expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
+    expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE");
+
+    // Terminal: the failed poll is the last one.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(postingsCalls).toBe(1);
+  }, 15_000);
+
   test("re-selecting the active run refetches its postings", async () => {
     const { client, calls } = runsBackend();
     const queries = render(
@@ -835,10 +900,11 @@ describe("runs page postings failures", () => {
 
     const postingsCalls = () =>
       calls.filter((call) => call.startsWith("GET /api/v1/runs/r1/postings?")).length;
-    const before = postingsCalls();
+    // First selection: the immediate tick plus the one poll that makes the run terminal.
+    expect(postingsCalls()).toBe(2);
     fireEvent.click(queries.getByRole("button", { name: "2026-11-02 08:00:00" }));
 
-    await waitFor(() => expect(postingsCalls()).toBeGreaterThan(before));
+    await waitFor(() => expect(postingsCalls()).toBe(3));
     await waitFor(() =>
       expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
         "Senior .NET Developer",
