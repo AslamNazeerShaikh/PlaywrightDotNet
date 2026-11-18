@@ -215,7 +215,7 @@ As implemented (`JobScrape.Infrastructure/Sources/Naukri`): Naukri runs fetch th
 | `systemid` header | `Naukri` | `Naukri` |
 | `nkparam` header | fresh token per request, page tag `srp` | fresh token per request, page tag = job id |
 | Token payload | RSA PKCS#1 v1.5 of `v0\|<epoch-ms>\|121_<page>` under Naukri's published public key (512-bit; JobSpy `constant.py`, MIT) | same |
-| Params | `noOfResults=20`, `pageNo=N`, `urlType=search_by_keyword`, `searchType=adv`, `keyword`, `location` (comma-joined), `sort=f`, `experience` (when the profile sets years), `jobAge` (when the profile sets a recency window) | none (the job id is in the path) |
+| Params | `noOfResults=20`, `pageNo=N`, `urlType` (`search_by_keyword` keyword-only; `search_by_key_loc` with `k`/`l` mirrors when locations are set), `searchType=adv`, `keyword`, `location` (comma-joined), `sort=f`, `experience`/`jobAge` only when set | none (the job id is in the path) |
 
 Both send `Accept: application/json` and an honest Chrome user agent, time out at 25 s, and never follow redirects — a `3xx` answer is a wall, not a hop. Tokens are minted per request from a fresh timestamp and fresh padding (`NaukriRequestToken`); they are never replayed and never cached. Freshness-first: `jobAge` plus `sort=f`, with keyword/location/experience as plain params.
 
