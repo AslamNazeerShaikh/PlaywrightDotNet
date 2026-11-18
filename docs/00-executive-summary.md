@@ -31,9 +31,9 @@ A single deployable CLI with clean internal boundaries is the right size for one
 - Clean seams (`IJobSource`, repositories, policies) without distributed-systems overhead.
 - A straight path to the v2 local API and React/Bun cockpit if the use case grows: [Web Cockpit](12-web-cockpit.md).
 
-### Use Playwright browser automation as the default collection path
+### Use the API fast path for Naukri; browsers for the rest
 
-The three sites are JavaScript-heavy and protected by different bot-management layers. A real browser with a persistent profile is more robust than raw HTTP and easier to keep consistent. A private API fast path may be added for Naukri later **behind a feature flag**, with browser fallback, but it is not the foundation.
+Naukri runs use Naukri's own `jobapi` endpoints by default (`JobScrape:Sources:naukri:ApiOnly=true`), with the Playwright browser path as explicit opt-out. Indeed and LinkedIn stay browser-driven: those sites are JavaScript-heavy and protected by different bot-management layers, where a real browser with a persistent profile is more robust than raw HTTP. There is no browser fallback on the Naukri API path by design — a walled API run ends with its partials kept.
 
 ### Keep DDD focused
 
