@@ -198,7 +198,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             request.Headers.UserAgent.ParseAdd(UserAgent);
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                NaukriApiLog.Request(_logger, request);
+                NaukriApiLog.Request(
+                    _logger,
+                    request.Method.Method,
+                    request.RequestUri?.AbsoluteUri ?? string.Empty,
+                    NaukriApiLog.Headers(request)
+                );
             }
 
             HttpResponseMessage response;
@@ -238,7 +243,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     case 200:
                     {
                         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                        NaukriApiLog.Response(_logger, uri, 200, body);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            NaukriApiLog.Response(_logger, uri, 200, NaukriApiLog.BodyShape(body));
+                        }
+
                         return ParseDetail(body, job, uri);
                     }
                     case 406:
@@ -323,7 +332,16 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         )
         {
             var body = await NaukriApiLog.RejectedBodyAsync(response, cancellationToken);
-            NaukriApiLog.Failure(_logger, uri, status, reason, body);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                NaukriApiLog.Outcome(_logger, uri, status, string.Concat("reason=", reason));
+            }
+
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                NaukriApiLog.Preview(_logger, uri, status, reason, body);
+            }
+
             return result;
         }
 
@@ -474,7 +492,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var root = document.RootElement;
                 if (root.ValueKind != JsonValueKind.Object)
                 {
-                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    if (_logger.IsEnabled(LogLevel.Warning))
+                    {
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    }
+
                     return new JobDetailResult(
                         null,
                         new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")
@@ -484,7 +506,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var details = root.TryGetProperty("jobDetails", out var nested) ? nested : root;
                 if (details.ValueKind != JsonValueKind.Object)
                 {
-                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    if (_logger.IsEnabled(LogLevel.Warning))
+                    {
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    }
+
                     return new JobDetailResult(
                         null,
                         new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")
@@ -570,7 +596,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
             catch (JsonException)
             {
-                NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                }
+
                 return new JobDetailResult(
                     null,
                     new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")

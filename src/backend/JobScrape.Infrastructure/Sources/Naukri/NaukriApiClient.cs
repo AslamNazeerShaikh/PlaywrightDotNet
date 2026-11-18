@@ -151,7 +151,12 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             request.Headers.UserAgent.ParseAdd(UserAgent);
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                NaukriApiLog.Request(_logger, request);
+                NaukriApiLog.Request(
+                    _logger,
+                    request.Method.Method,
+                    request.RequestUri?.AbsoluteUri ?? string.Empty,
+                    NaukriApiLog.Headers(request)
+                );
             }
 
             HttpResponseMessage response;
@@ -185,11 +190,19 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     case 200:
                     {
                         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                        NaukriApiLog.Response(_logger, uri, 200, body);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            NaukriApiLog.Response(_logger, uri, 200, NaukriApiLog.BodyShape(body));
+                        }
+
                         return ParsePage(body, pageNumber, uri);
                     }
                     case 400:
-                        NaukriApiLog.Outcome(_logger, uri, 400, "end-of-listing");
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            NaukriApiLog.Outcome(_logger, uri, 400, "reason=end-of-listing");
+                        }
+
                         return new NaukriApiSearchPage([], 0, 0, true, ChallengeAssessment.Clear);
                     case 406:
                         return await RejectedAsync(
@@ -258,7 +271,16 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         )
         {
             var body = await NaukriApiLog.RejectedBodyAsync(response, cancellationToken);
-            NaukriApiLog.Failure(_logger, uri, status, reason, body);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                NaukriApiLog.Outcome(_logger, uri, status, string.Concat("reason=", reason));
+            }
+
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                NaukriApiLog.Preview(_logger, uri, status, reason, body);
+            }
+
             return page;
         }
 
@@ -431,7 +453,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var root = document.RootElement;
                 if (root.ValueKind != JsonValueKind.Object || RowArray(root) is not { } jobs)
                 {
-                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    if (_logger.IsEnabled(LogLevel.Warning))
+                    {
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    }
+
                     return Wall(ChallengeKind.SourceChanged, 0.8, "json");
                 }
 
@@ -465,7 +491,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
             catch (JsonException)
             {
-                NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                }
+
                 return Wall(ChallengeKind.SourceChanged, 0.8, "json");
             }
         }
@@ -814,11 +844,6 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         private static partial void LogRequestFailed(ILogger logger, Exception exception, int page);
     }
 
-    // CA1873 cannot see through these wrappers: every call below runs under
-    // an IsEnabled guard, so the header and shape strings are built only
-    // when the level is on. The analyzer only recognizes the direct call
-    // shape.
-#pragma warning disable CA1873
     /// <summary>
     /// The wire log shared by <see cref="NaukriApiClient"/> and
     /// <see cref="NaukriApiJobSource"/>: one information line per request
@@ -830,6 +855,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
     /// description, so one failed page would flood the retention window with
     /// content nobody reads. The failure preview is the single exception and
     /// stops at <see cref="BodyPreviewLimit"/> characters.
+    /// </para>
+    /// <para>
+    /// The caller checks <see cref="ILogger.IsEnabled"/> for the level before
+    /// calling, so every rendered header, shape, and preview string is built
+    /// only when that level is on.
     /// </para>
     /// </summary>
     internal static partial class NaukriApiLog
@@ -857,38 +887,28 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
         /// <summary>
         /// Logs the request method, the full URI (query string included; no
-        /// secret ever travels in the URL), and every header name with a
-        /// value only for the plaintext allow-list.
+        /// secret ever travels in the URL), and the pre-rendered header line.
         /// </summary>
         /// <param name="logger">The logger to write to.</param>
-        /// <param name="request">The built request.</param>
-        internal static void Request(ILogger logger, HttpRequestMessage request)
+        /// <param name="method">The request method.</param>
+        /// <param name="uri">The full request URI.</param>
+        /// <param name="headers">The header line from <see cref="Headers"/>.</param>
+        internal static void Request(ILogger logger, string method, string uri, string headers)
         {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                LogApiRequest(
-                    logger,
-                    request.Method.Method,
-                    request.RequestUri?.AbsoluteUri ?? string.Empty,
-                    Headers(request)
-                );
-            }
+            LogApiRequest(logger, method, uri, headers);
         }
 
         /// <summary>
-        /// Logs a response's status and body shape (byte count plus the
-        /// top-level JSON keys), never the body itself.
+        /// Logs a response's status and pre-rendered body shape (byte count
+        /// plus the top-level JSON keys), never the body itself.
         /// </summary>
         /// <param name="logger">The logger to write to.</param>
         /// <param name="uri">The request URI.</param>
         /// <param name="status">The response status.</param>
-        /// <param name="body">The response body, summarized only.</param>
-        internal static void Response(ILogger logger, Uri uri, int status, string body)
+        /// <param name="shape">The one-line shape from <see cref="BodyShape"/>.</param>
+        internal static void Response(ILogger logger, Uri uri, int status, string shape)
         {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                LogApiResponse(logger, uri.AbsoluteUri, status, BodyShape(body));
-            }
+            LogApiResponse(logger, uri.AbsoluteUri, status, shape);
         }
 
         /// <summary>
@@ -898,40 +918,17 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <param name="logger">The logger to write to.</param>
         /// <param name="uri">The request URI.</param>
         /// <param name="status">The response status.</param>
-        /// <param name="reason">The classification of the answer.</param>
-        internal static void Outcome(ILogger logger, Uri uri, int status, string reason)
+        /// <param name="shape">The one-line outcome text, such as <c>reason=end-of-listing</c>.</param>
+        internal static void Outcome(ILogger logger, Uri uri, int status, string shape)
         {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                LogApiResponse(logger, uri.AbsoluteUri, status, string.Concat("reason=", reason));
-            }
+            LogApiResponse(logger, uri.AbsoluteUri, status, shape);
         }
 
         /// <summary>
-        /// Logs a wall: the status and reason at Information, then the body
-        /// preview at Warning for the operator who has to inspect it.
-        /// </summary>
-        /// <param name="logger">The logger to write to.</param>
-        /// <param name="uri">The request URI.</param>
-        /// <param name="status">The response status.</param>
-        /// <param name="reason">The wall classification.</param>
-        /// <param name="body">The response body; only its capped preview is logged.</param>
-        internal static void Failure(
-            ILogger logger,
-            Uri uri,
-            int status,
-            string reason,
-            string body
-        )
-        {
-            Outcome(logger, uri, status, reason);
-            Preview(logger, uri, status, reason, body);
-        }
-
-        /// <summary>
-        /// Logs only the capped body preview at Warning. Used when the shape
-        /// line is already written and the body is classified into a wall
-        /// after parsing, such as schema drift on a <c>200</c>.
+        /// Logs only the capped body preview at Warning. Used on the failure
+        /// path, and when the shape line is already written and the body is
+        /// classified into a wall after parsing, such as schema drift on a
+        /// <c>200</c>.
         /// </summary>
         /// <param name="logger">The logger to write to.</param>
         /// <param name="uri">The request URI.</param>
@@ -946,19 +943,16 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             string body
         )
         {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                var shown = Math.Min(body.Length, BodyPreviewLimit);
-                LogApiFailure(
-                    logger,
-                    status,
-                    uri.AbsoluteUri,
-                    reason,
-                    body.Length,
-                    shown,
-                    body[..shown]
-                );
-            }
+            var shown = Math.Min(body.Length, BodyPreviewLimit);
+            LogApiFailure(
+                logger,
+                status,
+                uri.AbsoluteUri,
+                reason,
+                body.Length,
+                shown,
+                body[..shown]
+            );
         }
 
         /// <summary>
@@ -1007,7 +1001,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// </summary>
         /// <param name="request">The built request.</param>
         /// <returns>The rendered header line.</returns>
-        private static string Headers(HttpRequestMessage request)
+        internal static string Headers(HttpRequestMessage request)
         {
             List<string> rendered = [];
             foreach (var header in request.Headers)
@@ -1108,5 +1102,4 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             string body
         );
     }
-#pragma warning restore CA1873
 }

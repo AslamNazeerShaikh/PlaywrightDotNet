@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -26,15 +25,8 @@ namespace JobScrape.Api.Tests
             _factory = factory;
         }
 
-        // The brief names these tests with underscores; CA1707 would fail the
-        // build, so the rule is suppressed on the two methods, not repo-wide.
         [Fact]
-        [SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task FeaturesEndpoint_ReturnsShippedDefaults()
+        public async Task FeaturesEndpointReturnsShippedDefaults()
         {
             using var client = _factory.CreateClient();
 
@@ -66,12 +58,7 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
-        [SuppressMessage(
-            "Naming",
-            "CA1707:Identifiers should not contain underscores",
-            Justification = "Test names fixed by the feature-flags-foundation task brief."
-        )]
-        public async Task FeaturesEndpoint_ReflectsOverride()
+        public async Task FeaturesEndpointReflectsOverride()
         {
             using var factory = _factory.WithWebHostBuilder(builder =>
                 builder.UseSetting("JobScrape:Features:Health", "false")
