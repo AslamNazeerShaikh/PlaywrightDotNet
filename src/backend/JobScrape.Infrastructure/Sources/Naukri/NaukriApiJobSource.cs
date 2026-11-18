@@ -183,13 +183,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(job);
 
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                new Uri(
-                    DetailBaseUrl + Uri.EscapeDataString(job.ExternalJobId.Value),
-                    UriKind.Absolute
-                )
+            var uri = new Uri(
+                DetailBaseUrl + Uri.EscapeDataString(job.ExternalJobId.Value),
+                UriKind.Absolute
             );
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.TryAddWithoutValidation("appid", "121");
             request.Headers.TryAddWithoutValidation("systemid", "Naukri");
             request.Headers.TryAddWithoutValidation(
@@ -198,6 +196,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             );
             request.Headers.Accept.Add(new("application/json"));
             request.Headers.UserAgent.ParseAdd(UserAgent);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                NaukriApiLog.Request(_logger, request);
+            }
 
             HttpResponseMessage response;
             try
@@ -234,43 +236,95 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 switch ((int)response.StatusCode)
                 {
                     case 200:
-                        return ParseDetail(
-                            await response.Content.ReadAsStringAsync(cancellationToken),
-                            job
-                        );
+                    {
+                        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                        NaukriApiLog.Response(_logger, uri, 200, body);
+                        return ParseDetail(body, job, uri);
+                    }
                     case 406:
-                        return new JobDetailResult(
-                            null,
-                            new ChallengeAssessment(ChallengeKind.RateLimited, 0.95, "status=406")
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            406,
+                            "rate-limited",
+                            new JobDetailResult(
+                                null,
+                                new ChallengeAssessment(
+                                    ChallengeKind.RateLimited,
+                                    0.95,
+                                    "status=406"
+                                )
+                            ),
+                            cancellationToken
                         );
                     case >= 300 and < 400:
-                        return new JobDetailResult(
-                            null,
-                            FetchWall(
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            (int)response.StatusCode,
+                            "redirect",
+                            new JobDetailResult(
+                                null,
+                                FetchWall(
+                                    new ChallengeAssessment(
+                                        ChallengeKind.SoftChallenge,
+                                        0.9,
+                                        string.Create(
+                                            CultureInfo.InvariantCulture,
+                                            $"status={(int)response.StatusCode}"
+                                        )
+                                    )
+                                )
+                            ),
+                            cancellationToken
+                        );
+                    default:
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            (int)response.StatusCode,
+                            "transient",
+                            new JobDetailResult(
+                                null,
                                 new ChallengeAssessment(
-                                    ChallengeKind.SoftChallenge,
-                                    0.9,
+                                    ChallengeKind.TransientError,
+                                    0.8,
                                     string.Create(
                                         CultureInfo.InvariantCulture,
                                         $"status={(int)response.StatusCode}"
                                     )
                                 )
-                            )
-                        );
-                    default:
-                        return new JobDetailResult(
-                            null,
-                            new ChallengeAssessment(
-                                ChallengeKind.TransientError,
-                                0.8,
-                                string.Create(
-                                    CultureInfo.InvariantCulture,
-                                    $"status={(int)response.StatusCode}"
-                                )
-                            )
+                            ),
+                            cancellationToken
                         );
                 }
             }
+        }
+
+        /// <summary>
+        /// Reads and logs a rejected detail response's body, then returns the
+        /// already-classified result. Only the failure path may log body
+        /// content, and only through the shared capped preview.
+        /// </summary>
+        /// <param name="response">The rejected response.</param>
+        /// <param name="uri">The request URI, for the log line.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="reason">The classification, for the log line.</param>
+        /// <param name="result">The pre-classified detail result.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The detail result.</returns>
+        private async Task<JobDetailResult> RejectedAsync(
+            HttpResponseMessage response,
+            Uri uri,
+            int status,
+            string reason,
+            JobDetailResult result,
+            CancellationToken cancellationToken
+        )
+        {
+            var body = await NaukriApiLog.RejectedBodyAsync(response, cancellationToken);
+            NaukriApiLog.Failure(_logger, uri, status, reason, body);
+            return result;
         }
 
         /// <inheritdoc />
@@ -410,8 +464,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// </summary>
         /// <param name="body">The response body.</param>
         /// <param name="job">The posting being enriched.</param>
+        /// <param name="uri">The request URI, for the drift warning.</param>
         /// <returns>The detail snapshot, or the classification.</returns>
-        private static JobDetailResult ParseDetail(string body, JobReference job)
+        private JobDetailResult ParseDetail(string body, JobReference job, Uri uri)
         {
             try
             {
@@ -419,6 +474,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var root = document.RootElement;
                 if (root.ValueKind != JsonValueKind.Object)
                 {
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
                     return new JobDetailResult(
                         null,
                         new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")
@@ -428,6 +484,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var details = root.TryGetProperty("jobDetails", out var nested) ? nested : root;
                 if (details.ValueKind != JsonValueKind.Object)
                 {
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
                     return new JobDetailResult(
                         null,
                         new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")
@@ -513,6 +570,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
             catch (JsonException)
             {
+                NaukriApiLog.Preview(_logger, uri, 200, "json", body);
                 return new JobDetailResult(
                     null,
                     new ChallengeAssessment(ChallengeKind.SourceChanged, 0.8, "json")

@@ -16,6 +16,7 @@ using JobScrape.Infrastructure.Sources.Naukri;
 using JobScrape.Infrastructure.Tests.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -449,6 +450,104 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             );
         }
 
+        // ---- detail wire logging ----
+
+        [Fact]
+        public async Task DetailRequestLogsTheFullUriAndRedactsTheToken()
+        {
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("detail-api.json")));
+            using var source = Source(NoSearch(), handler, logger);
+
+            await source.GetDetailAsync(Context(), DetailJob(), Ct);
+
+            var request = Assert.Single(handler.Requests);
+            Assert.NotNull(request.Uri);
+            var entries = logger.Entries;
+            var requestLine = Assert.Single(entries, entry =>
+                entry.Level == LogLevel.Information
+                && entry.Message.StartsWith("Naukri API GET ", StringComparison.Ordinal)
+            );
+            Assert.Equal(request.Uri.AbsoluteUri, requestLine.Properties["Uri"]);
+            Assert.Contains(
+                "https://www.naukri.com/jobapi/v4/job/011126000001",
+                requestLine.Message,
+                StringComparison.Ordinal
+            );
+
+            var headers = Assert.IsType<string>(requestLine.Properties["Headers"]);
+            Assert.Contains("appid=121", headers, StringComparison.Ordinal);
+            Assert.Contains("systemid=Naukri", headers, StringComparison.Ordinal);
+            Assert.Contains("Accept=application/json", headers, StringComparison.Ordinal);
+            Assert.Contains("nkparam=[redacted]", headers, StringComparison.Ordinal);
+
+            var token = Header(request, "nkparam");
+            Assert.NotEmpty(token);
+            foreach (var entry in entries)
+            {
+                Assert.DoesNotContain(token, entry.Message, StringComparison.Ordinal);
+                foreach (var value in entry.Properties.Values)
+                {
+                    Assert.DoesNotContain(
+                        token,
+                        value?.ToString() ?? string.Empty,
+                        StringComparison.Ordinal
+                    );
+                }
+            }
+        }
+
+        [Fact]
+        public async Task DetailSuccessLogsTheShapeAndNeverTheBody()
+        {
+            var logger = new RecordingLogger();
+            var body = Fixture("detail-api.json");
+            using var source = Source(NoSearch(), new FakeHandler(_ => JsonResponse(body)), logger);
+
+            await source.GetDetailAsync(Context(), DetailJob(), Ct);
+
+            var entry = Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Information
+                && entry.Message.Contains("answered 200", StringComparison.Ordinal)
+            );
+            Assert.Contains("keys=jobDetails", entry.Message, StringComparison.Ordinal);
+            Assert.Contains(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"bytes={Encoding.UTF8.GetByteCount(body)}"
+                ),
+                entry.Message,
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(logger.Entries, logged =>
+                logged.Message.Contains(body[..200], StringComparison.Ordinal)
+            );
+        }
+
+        [Fact]
+        public async Task DetailWallLogsTheCappedBodyAtWarning()
+        {
+            var logger = new RecordingLogger();
+            var body = "{\"detail\":\"" + new string('x', 2_400) + "TAIL-MARKER\"}";
+            var handler = new FakeHandler(_ => new HttpResponseMessage(
+                HttpStatusCode.InternalServerError
+            )
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+            using var source = Source(NoSearch(), handler, logger);
+
+            var result = await source.GetDetailAsync(Context(), DetailJob(), Ct);
+
+            Assert.Null(result.Detail);
+            Assert.Equal(ChallengeKind.TransientError, result.Challenge.Kind);
+
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            Assert.Equal(body[..2_000], failure.Properties["Body"]);
+            Assert.Contains(body[..2_000], failure.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("TAIL-MARKER", failure.Message, StringComparison.Ordinal);
+        }
+
         // ---- pacing ----
 
         [Fact]
@@ -562,12 +661,17 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             return new RunOutcome(result.Value, postings, artifacts);
         }
 
-        private static NaukriApiJobSource Source(FakeHandler search, FakeHandler? detail = null)
+        private static NaukriApiJobSource Source(
+            FakeHandler search,
+            FakeHandler? detail = null,
+            ILogger<NaukriApiJobSource>? logger = null,
+            ILogger<NaukriApiClient>? clientLogger = null
+        )
         {
             return new NaukriApiJobSource(
                 new NaukriApiClient(
                     new HttpClient(search, disposeHandler: false),
-                    NullLogger<NaukriApiClient>.Instance
+                    clientLogger ?? NullLogger<NaukriApiClient>.Instance
                 ),
                 new HttpClient(
                     detail
@@ -576,9 +680,68 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                         ),
                     disposeHandler: false
                 ),
-                NullLogger<NaukriApiJobSource>.Instance
+                logger ?? NullLogger<NaukriApiJobSource>.Instance
             );
         }
+
+        private static FakeHandler NoSearch()
+        {
+            return new FakeHandler(_ => throw new InvalidOperationException("No search visit."));
+        }
+
+        private static JobReference DetailJob()
+        {
+            return new JobReference(
+                ExternalJobId.Create("011126000001"),
+                CanonicalUrl.Create(
+                    "https://www.naukri.com/job-listings-senior-dotnet-developer-contoso-011126000001",
+                    SourceKey.Naukri
+                )
+            );
+        }
+
+        private sealed class RecordingLogger : ILogger<NaukriApiJobSource>
+        {
+            public List<LogEntry> Entries { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull
+            {
+                return null;
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                return true;
+            }
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter
+            )
+            {
+                var properties = state is IEnumerable<KeyValuePair<string, object?>> pairs
+                    ? pairs.ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value,
+                        StringComparer.Ordinal
+                    )
+                    : [];
+                Entries.Add(
+                    new LogEntry(logLevel, formatter(state, exception), properties, exception)
+                );
+            }
+        }
+
+        private sealed record LogEntry(
+            LogLevel Level,
+            string Message,
+            Dictionary<string, object?> Properties,
+            Exception? Exception
+        );
 
         private static ServiceProvider RegistryProvider(SourcesOptions sources)
         {

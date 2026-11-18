@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using JobScrape.Domain.Access;
 using JobScrape.Domain.Common;
@@ -141,15 +142,17 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             ArgumentNullException.ThrowIfNull(criteria);
             ArgumentOutOfRangeException.ThrowIfLessThan(pageNumber, 1);
 
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                SearchUri(criteria, pageNumber)
-            );
+            var uri = SearchUri(criteria, pageNumber);
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.TryAddWithoutValidation("appid", "109");
             request.Headers.TryAddWithoutValidation("systemid", "Naukri");
             request.Headers.TryAddWithoutValidation("nkparam", NaukriRequestToken.Generate("srp"));
             request.Headers.Accept.Add(new("application/json"));
             request.Headers.UserAgent.ParseAdd(UserAgent);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                NaukriApiLog.Request(_logger, request);
+            }
 
             HttpResponseMessage response;
             try
@@ -180,34 +183,83 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 switch ((int)response.StatusCode)
                 {
                     case 200:
-                        return ParsePage(
-                            await response.Content.ReadAsStringAsync(cancellationToken),
-                            pageNumber
-                        );
+                    {
+                        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                        NaukriApiLog.Response(_logger, uri, 200, body);
+                        return ParsePage(body, pageNumber, uri);
+                    }
                     case 400:
+                        NaukriApiLog.Outcome(_logger, uri, 400, "end-of-listing");
                         return new NaukriApiSearchPage([], 0, 0, true, ChallengeAssessment.Clear);
                     case 406:
-                        return Wall(ChallengeKind.RateLimited, 0.95, "status=406");
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            406,
+                            "rate-limited",
+                            Wall(ChallengeKind.RateLimited, 0.95, "status=406"),
+                            cancellationToken
+                        );
                     case >= 300 and < 400:
-                        return Wall(
-                            ChallengeKind.SoftChallenge,
-                            0.9,
-                            string.Create(
-                                CultureInfo.InvariantCulture,
-                                $"status={(int)response.StatusCode}"
-                            )
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            (int)response.StatusCode,
+                            "redirect",
+                            Wall(
+                                ChallengeKind.SoftChallenge,
+                                0.9,
+                                string.Create(
+                                    CultureInfo.InvariantCulture,
+                                    $"status={(int)response.StatusCode}"
+                                )
+                            ),
+                            cancellationToken
                         );
                     default:
-                        return Wall(
-                            ChallengeKind.TransientError,
-                            0.8,
-                            string.Create(
-                                CultureInfo.InvariantCulture,
-                                $"status={(int)response.StatusCode}"
-                            )
+                        return await RejectedAsync(
+                            response,
+                            uri,
+                            (int)response.StatusCode,
+                            "transient",
+                            Wall(
+                                ChallengeKind.TransientError,
+                                0.8,
+                                string.Create(
+                                    CultureInfo.InvariantCulture,
+                                    $"status={(int)response.StatusCode}"
+                                )
+                            ),
+                            cancellationToken
                         );
                 }
             }
+        }
+
+        /// <summary>
+        /// Reads and logs a rejected response's body, then returns the
+        /// already-classified wall. Only the failure path may log body
+        /// content, and only through the shared capped preview.
+        /// </summary>
+        /// <param name="response">The rejected response.</param>
+        /// <param name="uri">The request URI, for the log line.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="reason">The classification, for the log line.</param>
+        /// <param name="page">The pre-classified wall.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The wall.</returns>
+        private async Task<NaukriApiSearchPage> RejectedAsync(
+            HttpResponseMessage response,
+            Uri uri,
+            int status,
+            string reason,
+            NaukriApiSearchPage page,
+            CancellationToken cancellationToken
+        )
+        {
+            var body = await NaukriApiLog.RejectedBodyAsync(response, cancellationToken);
+            NaukriApiLog.Failure(_logger, uri, status, reason, body);
+            return page;
         }
 
         /// <summary>
@@ -369,8 +421,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// </summary>
         /// <param name="body">The response body.</param>
         /// <param name="pageNumber">The page number, for the warning.</param>
+        /// <param name="uri">The request URI, for the drift warning.</param>
         /// <returns>The mapped page.</returns>
-        private NaukriApiSearchPage ParsePage(string body, int pageNumber)
+        private NaukriApiSearchPage ParsePage(string body, int pageNumber, Uri uri)
         {
             try
             {
@@ -378,6 +431,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 var root = document.RootElement;
                 if (root.ValueKind != JsonValueKind.Object || RowArray(root) is not { } jobs)
                 {
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
                     return Wall(ChallengeKind.SourceChanged, 0.8, "json");
                 }
 
@@ -411,6 +465,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             }
             catch (JsonException)
             {
+                NaukriApiLog.Preview(_logger, uri, 200, "json", body);
                 return Wall(ChallengeKind.SourceChanged, 0.8, "json");
             }
         }
@@ -758,4 +813,300 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         )]
         private static partial void LogRequestFailed(ILogger logger, Exception exception, int page);
     }
+
+    // CA1873 cannot see through these wrappers: every call below runs under
+    // an IsEnabled guard, so the header and shape strings are built only
+    // when the level is on. The analyzer only recognizes the direct call
+    // shape.
+#pragma warning disable CA1873
+    /// <summary>
+    /// The wire log shared by <see cref="NaukriApiClient"/> and
+    /// <see cref="NaukriApiJobSource"/>: one information line per request
+    /// with the full URI and its headers, one shape line per response, and a
+    /// capped body preview on the failure path only.
+    /// <para>
+    /// Bodies never log in full at Information. The file sinks retain 90
+    /// days, and the row and detail payloads carry every posting's full HTML
+    /// description, so one failed page would flood the retention window with
+    /// content nobody reads. The failure preview is the single exception and
+    /// stops at <see cref="BodyPreviewLimit"/> characters.
+    /// </para>
+    /// </summary>
+    internal static partial class NaukriApiLog
+    {
+        /// <summary>
+        /// The most response-body characters a failure line may carry.
+        /// </summary>
+        internal const int BodyPreviewLimit = 2_000;
+
+        // Enough to name a shape at a glance, small enough to stay one line.
+        private const int KeyLimit = 20;
+
+        // Only these header values log verbatim; no credential or cookie
+        // ever travels under them. Every other header name keeps its value
+        // hidden, nkparam included.
+        private static readonly HashSet<string> PlaintextHeaders = new(
+            StringComparer.OrdinalIgnoreCase
+        )
+        {
+            "appid",
+            "systemid",
+            "Accept",
+            "User-Agent",
+        };
+
+        /// <summary>
+        /// Logs the request method, the full URI (query string included; no
+        /// secret ever travels in the URL), and every header name with a
+        /// value only for the plaintext allow-list.
+        /// </summary>
+        /// <param name="logger">The logger to write to.</param>
+        /// <param name="request">The built request.</param>
+        internal static void Request(ILogger logger, HttpRequestMessage request)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                LogApiRequest(
+                    logger,
+                    request.Method.Method,
+                    request.RequestUri?.AbsoluteUri ?? string.Empty,
+                    Headers(request)
+                );
+            }
+        }
+
+        /// <summary>
+        /// Logs a response's status and body shape (byte count plus the
+        /// top-level JSON keys), never the body itself.
+        /// </summary>
+        /// <param name="logger">The logger to write to.</param>
+        /// <param name="uri">The request URI.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="body">The response body, summarized only.</param>
+        internal static void Response(ILogger logger, Uri uri, int status, string body)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                LogApiResponse(logger, uri.AbsoluteUri, status, BodyShape(body));
+            }
+        }
+
+        /// <summary>
+        /// Logs a response outcome without its body: the clean listing end
+        /// carries no wall, so nothing on it needs inspection.
+        /// </summary>
+        /// <param name="logger">The logger to write to.</param>
+        /// <param name="uri">The request URI.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="reason">The classification of the answer.</param>
+        internal static void Outcome(ILogger logger, Uri uri, int status, string reason)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                LogApiResponse(logger, uri.AbsoluteUri, status, string.Concat("reason=", reason));
+            }
+        }
+
+        /// <summary>
+        /// Logs a wall: the status and reason at Information, then the body
+        /// preview at Warning for the operator who has to inspect it.
+        /// </summary>
+        /// <param name="logger">The logger to write to.</param>
+        /// <param name="uri">The request URI.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="reason">The wall classification.</param>
+        /// <param name="body">The response body; only its capped preview is logged.</param>
+        internal static void Failure(
+            ILogger logger,
+            Uri uri,
+            int status,
+            string reason,
+            string body
+        )
+        {
+            Outcome(logger, uri, status, reason);
+            Preview(logger, uri, status, reason, body);
+        }
+
+        /// <summary>
+        /// Logs only the capped body preview at Warning. Used when the shape
+        /// line is already written and the body is classified into a wall
+        /// after parsing, such as schema drift on a <c>200</c>.
+        /// </summary>
+        /// <param name="logger">The logger to write to.</param>
+        /// <param name="uri">The request URI.</param>
+        /// <param name="status">The response status.</param>
+        /// <param name="reason">The wall classification.</param>
+        /// <param name="body">The response body; only its capped preview is logged.</param>
+        internal static void Preview(
+            ILogger logger,
+            Uri uri,
+            int status,
+            string reason,
+            string body
+        )
+        {
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                var shown = Math.Min(body.Length, BodyPreviewLimit);
+                LogApiFailure(
+                    logger,
+                    status,
+                    uri.AbsoluteUri,
+                    reason,
+                    body.Length,
+                    shown,
+                    body[..shown]
+                );
+            }
+        }
+
+        /// <summary>
+        /// Reads a rejected response's body for logging, degrading to an
+        /// empty preview when the stream cannot be read: a classified wall
+        /// must not become an exception just because its body is gone.
+        /// Cancellation still propagates.
+        /// </summary>
+        /// <param name="response">The rejected response.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The body text, or an empty string when unreadable.</returns>
+        internal static async Task<string> RejectedBodyAsync(
+            HttpResponseMessage response,
+            CancellationToken cancellationToken
+        )
+        {
+            try
+            {
+                return await response.Content.ReadAsStringAsync(cancellationToken);
+            }
+            catch (IOException)
+            {
+                return string.Empty;
+            }
+            catch (HttpRequestException)
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Summarizes a body as its UTF-8 byte count and at most
+        /// <see cref="KeyLimit"/> top-level JSON keys.
+        /// </summary>
+        /// <param name="body">The response body.</param>
+        /// <returns>The one-line shape.</returns>
+        internal static string BodyShape(string body)
+        {
+            var bytes = Encoding.UTF8.GetByteCount(body);
+            return string.Create(CultureInfo.InvariantCulture, $"bytes={bytes}; keys={Keys(body)}");
+        }
+
+        /// <summary>
+        /// Renders the request headers as one line: names in full, values
+        /// only for the allow-list, everything else as <c>[redacted]</c>.
+        /// </summary>
+        /// <param name="request">The built request.</param>
+        /// <returns>The rendered header line.</returns>
+        private static string Headers(HttpRequestMessage request)
+        {
+            List<string> rendered = [];
+            foreach (var header in request.Headers)
+            {
+                // User-Agent is a space-separated field, not a
+                // comma-combinable one: joining its parsed values with ", "
+                // would misreport what went on the wire.
+                var separator = string.Equals(
+                    header.Key,
+                    "User-Agent",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                    ? " "
+                    : ", ";
+                var value = PlaintextHeaders.Contains(header.Key)
+                    ? string.Join(separator, header.Value)
+                    : "[redacted]";
+                rendered.Add($"{header.Key}={value}");
+            }
+
+            return string.Join("; ", rendered);
+        }
+
+        /// <summary>
+        /// Lists the top-level JSON keys of a body, bounded by
+        /// <see cref="KeyLimit"/>.
+        /// </summary>
+        /// <param name="body">The response body.</param>
+        /// <returns>The keys, or a shape marker when the body is not a JSON object.</returns>
+        private static string Keys(string body)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(body);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return "<non-object>";
+                }
+
+                List<string> keys = [];
+                var truncated = false;
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    if (keys.Count == KeyLimit)
+                    {
+                        truncated = true;
+                        break;
+                    }
+
+                    keys.Add(property.Name);
+                }
+
+                var shape = string.Join(',', keys);
+                return truncated ? shape + ",..." : shape;
+            }
+            catch (JsonException)
+            {
+                return "<invalid-json>";
+            }
+        }
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Naukri API {Method} {Uri} headers: {Headers}"
+        )]
+        private static partial void LogApiRequest(
+            ILogger logger,
+            string method,
+            string uri,
+            string headers
+        );
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "Naukri API {Uri} answered {Status}: {Shape}"
+        )]
+        private static partial void LogApiResponse(
+            ILogger logger,
+            string uri,
+            int status,
+            string shape
+        );
+
+        // The one place a body may reach the log. It stops at the preview
+        // limit because the sinks retain 90 days and the row/detail payloads
+        // carry full HTML descriptions.
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "Naukri API {Status} wall on {Uri}: {Reason}; body ({TotalChars} chars, first {ShownChars} shown): {Body}"
+        )]
+        private static partial void LogApiFailure(
+            ILogger logger,
+            int status,
+            string uri,
+            string reason,
+            int totalChars,
+            int shownChars,
+            string body
+        );
+    }
+#pragma warning restore CA1873
 }
