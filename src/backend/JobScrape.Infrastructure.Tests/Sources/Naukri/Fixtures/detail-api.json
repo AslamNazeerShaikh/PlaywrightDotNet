@@ -1,0 +1,31 @@
+{
+  "jobDetails": {
+    "jobId": "011126000001",
+    "title": "Senior .NET Developer",
+    "companyName": "Contoso",
+    "companyDetail": {
+      "name": "Contoso Private Limited",
+      "companyUrl": "https://www.naukri.com/contoso-jobs-careers-1"
+    },
+    "jdURL": "/job-listings-senior-dotnet-developer-contoso-011126000001",
+    "staticUrl": "011126000001",
+    "description": "<div><p>Build &amp; run <b>.NET</b> services.</p><ul><li>C#</li><li>Azure</li></ul></div>",
+    "tagsAndSkills": "C#, ASP.NET Core, Azure",
+    "experienceText": "5-8 Yrs",
+    "salaryDetail": {
+      "hideSalary": false,
+      "minimumSalary": 1500000,
+      "maximumSalary": 2750000,
+      "currency": "INR"
+    },
+    "placeholders": [
+      {
+        "type": "location",
+        "label": "Hybrid - Pune"
+      }
+    ],
+    "createdDate": 1793527200000,
+    "clientCareersUrl": "",
+    "applyRedirectUrl": "https://careers.contoso.example/apply/1"
+  }
+}

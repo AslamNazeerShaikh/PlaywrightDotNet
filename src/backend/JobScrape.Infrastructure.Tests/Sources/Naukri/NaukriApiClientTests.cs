@@ -212,6 +212,17 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         }
 
         [Fact]
+        public void ProductionTransportRotatesPooledConnectionsEveryTwoMinutes()
+        {
+            // One long-lived client needs stale-DNS rotation at the
+            // factory-default cadence rather than a process-lifetime pool.
+            using var transport = NaukriApiClient.CreateTransportHandler();
+
+            Assert.Equal(TimeSpan.FromMinutes(2), transport.PooledConnectionLifetime);
+            Assert.False(transport.AllowAutoRedirect);
+        }
+
+        [Fact]
         public async Task OtherNon200MapsToTransientError()
         {
             var handler = new FakeHandler(_ => StatusResponse(HttpStatusCode.InternalServerError));
