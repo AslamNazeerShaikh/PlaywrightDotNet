@@ -31,6 +31,16 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         }
 
         [Fact]
+        public void ProductionKeyMintsA64ByteCipher()
+        {
+            // Pins the embedded 512-bit production key through the overload
+            // that uses it: a truncated or wrong key changes the cipher size.
+            var token = NaukriRequestToken.Generate("srp");
+
+            Assert.Equal(64, Convert.FromBase64String(token).Length);
+        }
+
+        [Fact]
         public void AcceptsArbitraryPageTag()
         {
             using var key = RSA.Create(2048);
