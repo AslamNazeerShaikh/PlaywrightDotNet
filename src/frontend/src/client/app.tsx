@@ -657,6 +657,8 @@ export function App({
     }
     if (route === "sessions") {
       void loadersRef.current.loadSessions();
+      // The transport flag lives on the source, so the session form needs the snapshot too.
+      void loadersRef.current.loadSources();
     }
   }, [route, routeDenied]);
 
@@ -867,6 +869,7 @@ export function App({
         {me !== null && !routeDenied && route === "sessions" && (
           <SessionsPage
             sessions={sessions}
+            sources={sources}
             listProblem={sessionsProblem}
             loading={sessionsLoading}
             creating={creatingSession}

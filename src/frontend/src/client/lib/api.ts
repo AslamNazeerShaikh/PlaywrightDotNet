@@ -45,6 +45,8 @@ export interface SearchProfileList {
 /** One configured source: policy, compliance gate, today's quota, and circuit state. */
 export interface SourceStatus {
   key: string;
+  /** True when the source answers over HTTP and launches no browser. */
+  apiOnly: boolean;
   tier: "Standard" | "Restricted" | "HighRisk";
   enabled: boolean;
   gate: { allowed: boolean; reason: string | null };
@@ -214,7 +216,8 @@ export interface RunPostingList {
 /** Body of POST /api/v1/runs. */
 export interface StartRunInput {
   profileId: string;
-  browserProfileId: string;
+  /** Omitted for API-only sources: no browser launches, so there is no session to pick. */
+  browserProfileId?: string;
   enrich: boolean;
   onlyNew: boolean;
 }

@@ -203,6 +203,8 @@ function runsBackend(
     expectedBody?: StartRunInput;
     runPatch?: Partial<RunPayload>;
     failCancel?: ApiProblem;
+    /** The source's transport flag; omitted means the sources snapshot is unavailable. */
+    apiOnly?: boolean;
   } = {},
 ) {
   const runs: RunPayload[] = [];
@@ -250,6 +252,15 @@ function runsBackend(
           },
         ],
         total: 1,
+      });
+    }
+    if (url === "/api/v1/sources") {
+      if (options.apiOnly === undefined) {
+        return reply(404, { status: 404, title: "Not found", detail: "", code: "BFF_NOT_FOUND" });
+      }
+      return reply(200, {
+        asOf: "2026-11-02T08:00:00Z",
+        items: [{ key: "naukri", apiOnly: options.apiOnly }],
       });
     }
     if (url === "/api/v1/runs" && init?.method === "POST") {
@@ -623,5 +634,50 @@ describe("runs page", () => {
       ).toBeDefined(),
     );
     expect(queries.getByText(/the list holds postings first seen in this run/)).toBeDefined();
+  });
+
+  test("an API-only source drops the session step and sends no browser profile", async () => {
+    const { client, posted } = runsBackend(["Infosys", "TCS"], undefined, {
+      apiOnly: true,
+      expectedBody: { profileId: "p1", enrich: true, onlyNew: false },
+    });
+    const events: LogEvent[] = [];
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() =>
+      expect(queries.getByRole("option", { name: /backend · naukri/ })).toBeDefined(),
+    );
+
+    // The session step does not exist in API mode, so nothing to disable or explain away.
+    expect(queries.queryByRole("combobox", { name: "Session" })).toBeNull();
+    expect(queries.queryByText(/Create a naukri session/)).toBeNull();
+    expect(queries.getByText("API", { selector: ".code-tag" })).toBeDefined();
+    expect(queries.getByText(/no browser session is needed/, { selector: "p" })).toBeDefined();
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(events.map((e) => e.code)).toContain("RUN_STARTED"));
+    expect(posted).toEqual([{ profileId: "p1", enrich: true, onlyNew: false }]);
+    expect("browserProfileId" in (posted[0] ?? {})).toBe(false);
+  });
+
+  test("a browser source keeps the session step and sends its session", async () => {
+    const { client, posted } = runsBackend(["Infosys", "TCS"], undefined, { apiOnly: false });
+    const events: LogEvent[] = [];
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    expect(queries.getByRole("combobox", { name: "Session" })).toBeDefined();
+    expect(queries.queryByText(/no browser session is needed/, { selector: "p" })).toBeNull();
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(events.map((e) => e.code)).toContain("RUN_STARTED"));
+    expect(posted).toEqual([
+      { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: false },
+    ]);
   });
 });
