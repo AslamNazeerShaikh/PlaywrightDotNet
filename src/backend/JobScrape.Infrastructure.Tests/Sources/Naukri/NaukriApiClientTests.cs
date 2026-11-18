@@ -499,6 +499,184 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             }
         }
 
+        // ---- wire logging ----
+
+        [Fact]
+        public async Task RequestLogCarriesTheFullUriWithQueryString()
+        {
+            // The token rides a header, never the URL, so the whole URI is
+            // safe to log and is the first thing a debugging operator needs.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            using var client = Client(handler, logger);
+
+            await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            var request = Assert.Single(handler.Requests);
+            Assert.NotNull(request.Uri);
+            var entry = Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Information
+                && entry.Message.StartsWith("Naukri API GET ", StringComparison.Ordinal)
+            );
+
+            Assert.Contains(request.Uri.AbsoluteUri, entry.Message, StringComparison.Ordinal);
+            Assert.Contains("pageNo=1", entry.Message, StringComparison.Ordinal);
+            Assert.Contains("keyword=asp.net%20core", entry.Message, StringComparison.Ordinal);
+            Assert.Equal("GET", entry.Properties["Method"]);
+            Assert.Equal(request.Uri.AbsoluteUri, entry.Properties["Uri"]);
+
+            var headers = Assert.IsType<string>(entry.Properties["Headers"]);
+            Assert.Contains("appid=109", headers, StringComparison.Ordinal);
+            Assert.Contains("systemid=Naukri", headers, StringComparison.Ordinal);
+            Assert.Contains("Accept=application/json", headers, StringComparison.Ordinal);
+            // The whole user agent, space-joined: the parsed values must not
+            // read as several comma-separated agents.
+            Assert.Contains("Chrome/142.0.0.0 Safari/537.36", headers, StringComparison.Ordinal);
+            Assert.Contains(
+                string.Join(' ', request.Headers["User-Agent"]),
+                headers,
+                StringComparison.Ordinal
+            );
+            Assert.Contains("nkparam=[redacted]", headers, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task TokenValueNeverReachesAnyLogEntry()
+        {
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
+            using var client = Client(handler, logger);
+
+            await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            var token = Header(Assert.Single(handler.Requests), "nkparam");
+            Assert.NotEmpty(token);
+            Assert.NotEmpty(logger.Entries);
+
+            foreach (var entry in logger.Entries)
+            {
+                Assert.DoesNotContain(token, entry.Message, StringComparison.Ordinal);
+                foreach (var value in entry.Properties.Values)
+                {
+                    Assert.DoesNotContain(
+                        token,
+                        value?.ToString() ?? string.Empty,
+                        StringComparison.Ordinal
+                    );
+                }
+            }
+
+            // Redaction is visible, not silent: the header name stays so an
+            // operator can see the token was sent.
+            Assert.Contains(logger.Entries, entry =>
+                entry.Properties.TryGetValue("Headers", out var headers)
+                && headers?.ToString()?.Contains("nkparam=[redacted]", StringComparison.Ordinal)
+                    == true
+            );
+        }
+
+        [Fact]
+        public async Task SuccessfulResponseLogsAShapeSummaryAndNeverTheBody()
+        {
+            var logger = new RecordingLogger();
+            var body = Fixture("search-api-normal.json");
+            using var client = Client(new FakeHandler(_ => JsonResponse(body)), logger);
+
+            await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            var entry = Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Information
+                && entry.Message.Contains("answered 200", StringComparison.Ordinal)
+            );
+            Assert.Contains(
+                $"bytes={Encoding.UTF8.GetByteCount(body)}; keys=noOfJobs,jobs",
+                entry.Message,
+                StringComparison.Ordinal
+            );
+
+            // A body at Information would flood the 90-day file sink with
+            // every row, so only the shape may appear.
+            Assert.DoesNotContain(body, entry.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(logger.Entries, logged =>
+                logged.Message.Contains(body[..200], StringComparison.Ordinal)
+            );
+        }
+
+        [Theory]
+        [InlineData(500, "transient")]
+        [InlineData(302, "redirect")]
+        [InlineData(406, "rate-limited")]
+        public async Task WallLogsAShapeLineAndTheCappedBodyAtWarning(int status, string reason)
+        {
+            var logger = new RecordingLogger();
+            var body = "{\"detail\":\"" + new string('x', 2_400) + "TAIL-MARKER\"}";
+            var handler = new FakeHandler(_ => new HttpResponseMessage((HttpStatusCode)status)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+            using var client = Client(handler, logger);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.NotEqual(ChallengeKind.None, page.Challenge.Kind);
+
+            var shape = Assert.Single(logger.Entries, entry =>
+                entry.Level == LogLevel.Information
+                && entry.Message.Contains(
+                    string.Create(CultureInfo.InvariantCulture, $"answered {status}"),
+                    StringComparison.Ordinal
+                )
+            );
+            Assert.Contains(
+                string.Concat("reason=", reason),
+                shape.Message,
+                StringComparison.Ordinal
+            );
+
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            Assert.Equal(body[..2_000], failure.Properties["Body"]);
+            Assert.Contains(body[..2_000], failure.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("TAIL-MARKER", failure.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task SchemaDriftWallAlsoLogsTheCappedBody()
+        {
+            // A 200 that fails to parse is a wall too: the body is the only
+            // evidence of what the source served instead of JSON.
+            var logger = new RecordingLogger();
+            var body = "<html><body>" + new string('y', 2_400) + "TAIL-MARKER</body></html>";
+            using var client = Client(new FakeHandler(_ => JsonResponse(body)), logger);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.Equal(ChallengeKind.SourceChanged, page.Challenge.Kind);
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            Assert.Equal(body[..2_000], failure.Properties["Body"]);
+            Assert.DoesNotContain("TAIL-MARKER", failure.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task UnreadableFailureBodyStillYieldsTheWall()
+        {
+            // A wall must not become an exception just because its body
+            // cannot be read; the preview degrades to empty.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(_ => new HttpResponseMessage(
+                HttpStatusCode.InternalServerError
+            )
+            {
+                Content = new UnreadableContent(),
+            });
+            using var client = Client(handler, logger);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.Equal(ChallengeKind.TransientError, page.Challenge.Kind);
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            Assert.Equal(string.Empty, failure.Properties["Body"]);
+        }
+
         // ---- helpers ----
 
         private static NaukriApiClient Client(
@@ -593,6 +771,20 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             IReadOnlyDictionary<string, string[]> Headers
         );
 
+        private sealed class UnreadableContent : HttpContent
+        {
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            {
+                throw new IOException("The body stream aborted.");
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = 0;
+                return false;
+            }
+        }
+
         private sealed class FakeHandler : HttpMessageHandler
         {
             private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
@@ -626,7 +818,9 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
 
         private sealed class RecordingLogger : ILogger<NaukriApiClient>
         {
-            public List<LogLevel> Levels { get; } = [];
+            public List<LogEntry> Entries { get; } = [];
+
+            public IEnumerable<LogLevel> Levels => Entries.Select(entry => entry.Level);
 
             public IDisposable? BeginScope<TState>(TState state)
                 where TState : notnull
@@ -647,8 +841,24 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 Func<TState, Exception?, string> formatter
             )
             {
-                Levels.Add(logLevel);
+                var properties = state is IEnumerable<KeyValuePair<string, object?>> pairs
+                    ? pairs.ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value,
+                        StringComparer.Ordinal
+                    )
+                    : [];
+                Entries.Add(
+                    new LogEntry(logLevel, formatter(state, exception), properties, exception)
+                );
             }
         }
+
+        private sealed record LogEntry(
+            LogLevel Level,
+            string Message,
+            Dictionary<string, object?> Properties,
+            Exception? Exception
+        );
     }
 }
