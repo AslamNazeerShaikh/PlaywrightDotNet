@@ -13,6 +13,7 @@ import type {
   SessionPayload,
   UpdateSessionInput,
 } from "../lib/api.ts";
+import { useTokenFailureRedirect } from "../lib/auth.ts";
 import { useRenderLog } from "../lib/debug.ts";
 import { readText } from "../lib/forms.ts";
 import { SOURCES } from "./profiles.tsx";
@@ -43,6 +44,7 @@ export function SessionsPage({
   onRefresh,
   updating,
   updateProblem,
+  onUnauthorized,
 }: {
   sessions: SessionPayload[] | null;
   listProblem: ApiProblem | null;
@@ -56,8 +58,10 @@ export function SessionsPage({
   onRefresh: () => void;
   updating: boolean;
   updateProblem: ApiProblem | null;
+  onUnauthorized: (problem: ApiProblem) => void;
 }) {
   useRenderLog("SessionsPage");
+  useTokenFailureRedirect([listProblem, createProblem, updateProblem], onUnauthorized);
   const fieldErrors = createProblem?.errors ?? {};
   const updateFieldErrors = updateProblem?.errors ?? {};
   const selected = sessions?.find((s) => s.id === selectedId) ?? null;

@@ -379,7 +379,9 @@ describe("runs page", () => {
   test("starts a run, follows it to completion, then stops polling", async () => {
     const { client, calls } = runsBackend();
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
 
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
     expect(queries.getByText("No runs yet. Start one to see it here.")).toBeDefined();
@@ -436,7 +438,9 @@ describe("runs page", () => {
 
   test("hides company split links when the run has no company list", async () => {
     const { client } = runsBackend([]);
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -456,7 +460,9 @@ describe("runs page", () => {
   test("export buttons download the blob with the server filename", async () => {
     const { client } = runsBackend();
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -510,7 +516,9 @@ describe("runs page", () => {
       detail: "Run 'r1' does not exist.",
       code: "ROW_NOT_FOUND",
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -535,7 +543,9 @@ describe("runs page", () => {
         code: "RUN_NOT_CANCELLABLE",
       },
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
@@ -549,7 +559,9 @@ describe("runs page", () => {
 
   test("a second start while one executes shows RUN_IN_PROGRESS", async () => {
     const { client } = runsBackend();
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     expect(queries.getByText(/^Inputs: /).textContent).toContain(
@@ -567,7 +579,9 @@ describe("runs page", () => {
 
   test("renders the NEW ONLY checkbox unchecked by default", async () => {
     const { client } = runsBackend();
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
     const checkbox = queries.getByRole("checkbox", { name: "New only" }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
@@ -578,7 +592,9 @@ describe("runs page", () => {
       expectedBody: { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: true },
     });
     const events: LogEvent[] = [];
-    const queries = render(<RunsPage client={client} onEvent={(e) => events.push(e)} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={(e) => events.push(e)} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.click(queries.getByRole("checkbox", { name: "New only" }));
@@ -594,7 +610,9 @@ describe("runs page", () => {
     const { client } = runsBackend(["Infosys", "TCS"], undefined, {
       runPatch: { onlyNew: true },
     });
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
