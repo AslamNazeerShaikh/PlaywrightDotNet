@@ -1,0 +1,81 @@
+{
+  "noOfJobs": 4,
+  "jobs": [
+    {
+      "jobId": "011126000003",
+      "title": "Backend Developer",
+      "companyName": "Litware",
+      "experienceText": "2-4 Yrs",
+      "tagsAndSkills": "Go, PostgreSQL",
+      "jdURL": "/job-listings-backend-developer-litware-011126000003",
+      "staticUrl": "https://www.naukri.com/job-listings-backend-developer-litware-011126000003",
+      "salaryDetail": {
+        "hideSalary": false,
+        "minimumSalary": 900000,
+        "maximumSalary": 1400000,
+        "currency": "INR"
+      },
+      "placeholders": [{ "type": "location", "label": "Pune" }],
+      "ambitionBoxData": { "AggregateRating": 4.0, "ReviewsCount": 88 },
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793592900000,
+      "minimumExperience": 2,
+      "maximumExperience": 4,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000004",
+      "title": null,
+      "companyName": "Tailspin",
+      "experienceText": "1-2 Yrs",
+      "tagsAndSkills": "Java",
+      "jdURL": "/job-listings-missing-title-tailspin-011126000004",
+      "staticUrl": "https://www.naukri.com/job-listings-missing-title-tailspin-011126000004",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Mumbai" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793592900000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "not-a-number",
+      "title": "Unaddressable Role",
+      "companyName": "Wingtip",
+      "experienceText": "0 Yrs",
+      "tagsAndSkills": "PHP",
+      "jdURL": "https://www.naukri.com/jobs-in-pune",
+      "staticUrl": "",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Pune" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793592900000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000005",
+      "title": "Hostile Date Developer",
+      "companyName": "Wingtip",
+      "experienceText": "0 Yrs",
+      "tagsAndSkills": "PHP",
+      "jdURL": "/job-listings-hostile-date-developer-wingtip-011126000005",
+      "staticUrl": "https://www.naukri.com/job-listings-hostile-date-developer-wingtip-011126000005",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Pune" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 999999999999999999999999999,
+      "noOfJobs": 4,
+      "jobDetails": []
+    }
+  ]
+}

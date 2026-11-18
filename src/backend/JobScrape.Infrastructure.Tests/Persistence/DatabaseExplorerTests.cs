@@ -22,18 +22,19 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                 // pages would not ascend and a boundary could repeat or skip.
                 create.CommandText = "CREATE TABLE paged (code TEXT PRIMARY KEY, name TEXT);";
                 await create.ExecuteNonQueryAsync(Ct);
-                foreach (var (code, name) in new[]
-                {
-                    ("c", "3"),
-                    ("a", "1"),
-                    ("e", "5"),
-                    ("b", "2"),
-                    ("d", "4"),
-                })
+                foreach (
+                    var (code, name) in new[]
+                    {
+                        ("c", "3"),
+                        ("a", "1"),
+                        ("e", "5"),
+                        ("b", "2"),
+                        ("d", "4"),
+                    }
+                )
                 {
                     await using var insert = connection.CreateCommand();
-                    insert.CommandText =
-                        "INSERT INTO paged (code, name) VALUES (@code, @name);";
+                    insert.CommandText = "INSERT INTO paged (code, name) VALUES (@code, @name);";
                     insert.Parameters.AddWithValue("@code", code);
                     insert.Parameters.AddWithValue("@name", name);
                     await insert.ExecuteNonQueryAsync(Ct);

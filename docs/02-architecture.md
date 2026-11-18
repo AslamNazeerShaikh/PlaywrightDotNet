@@ -1098,7 +1098,7 @@ The **Sourcing** domain stays job-specific. A future automation case (e.g., form
 - [ADR-0003: Playwright for .NET](10-adr/0003-playwright-dotnet.md)
 - [ADR-0004: Modular monolith + Clean Architecture](10-adr/0004-modular-monolith-clean-architecture.md)
 - [ADR-0005: SQLite + EF Core 10](10-adr/0005-sqlite-ef-core.md)
-- [ADR-0006: Browser-first with optional API fast path](10-adr/0006-browser-first-optional-api-fast-path.md)
+- [ADR-0006: Browser-first with optional API fast path](10-adr/0006-browser-first-optional-api-fast-path.md) (superseded for Naukri — API-first default since 2026-11-18; still current for Indeed/LinkedIn)
 - [ADR-0007: Compliance-first low-signal automation](10-adr/0007-compliance-first-low-signal-automation.md)
 - [ADR-0008: CLI first, API later](10-adr/0008-cli-first-api-later.md)
 - [ADR-0009: Test pyramid and coverage gates](10-adr/0009-test-pyramid-coverage-gates.md)

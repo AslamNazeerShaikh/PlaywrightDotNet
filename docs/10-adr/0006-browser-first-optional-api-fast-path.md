@@ -1,8 +1,13 @@
 # ADR-0006: Browser-First with Optional API Fast Path
 
-- **Status:** Accepted
+- **Status:** Superseded for Naukri (2026-11-18). Still in force for Indeed/LinkedIn.
 - **Date:** 2026-10-29
 - **Deciders:** Project owner
+
+> **Update 2026-11-18:** for Naukri the API fast path is now the default
+> (`JobScrape:Sources:naukri:ApiOnly=true`) with no browser fallback when
+> on; the browser path is the explicit opt-out (`ApiOnly=false`). The
+> browser-default/fallback decision below no longer applies to Naukri.
 
 ## Context
 

@@ -18,6 +18,8 @@ namespace JobScrape.Application.Features.Runs
         private readonly IRunLauncher _launcher;
         private readonly IRunStore _store;
         private readonly ComplianceConsent _consent;
+        private readonly ISearchProfileRepository _profiles;
+        private readonly SourceSettingsCatalog _sources;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StartRunHandler"/> class.
@@ -25,19 +27,27 @@ namespace JobScrape.Application.Features.Runs
         /// <param name="launcher">Executes runs in the background.</param>
         /// <param name="store">Reads the recorded run back.</param>
         /// <param name="consent">The operator's configured compliance consent.</param>
+        /// <param name="profiles">Resolves the run's source when no session is named.</param>
+        /// <param name="sources">The per-source settings, including the transport.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public StartRunHandler(
             IRunLauncher launcher,
             IRunStore store,
-            ComplianceConsent consent
+            ComplianceConsent consent,
+            ISearchProfileRepository profiles,
+            SourceSettingsCatalog sources
         )
         {
             ArgumentNullException.ThrowIfNull(launcher);
             ArgumentNullException.ThrowIfNull(store);
             ArgumentNullException.ThrowIfNull(consent);
+            ArgumentNullException.ThrowIfNull(profiles);
+            ArgumentNullException.ThrowIfNull(sources);
             _launcher = launcher;
             _store = store;
             _consent = consent;
+            _profiles = profiles;
+            _sources = sources;
         }
 
         /// <summary>
@@ -61,7 +71,13 @@ namespace JobScrape.Application.Features.Runs
                 errors["profileId"] = ["Choose a search profile."];
             }
 
-            if (request.BrowserProfileId == Guid.Empty)
+            // An API-only source never opens a browser, so its runs name no
+            // session. Every other source still requires one.
+            var apiOnly =
+                request.BrowserProfileId == Guid.Empty
+                && request.ProfileId != Guid.Empty
+                && await IsApiOnlyAsync(request.ProfileId, cancellationToken);
+            if (request.BrowserProfileId == Guid.Empty && !apiOnly)
             {
                 errors["browserProfileId"] = ["Choose a session for the profile's source."];
             }
@@ -71,10 +87,14 @@ namespace JobScrape.Application.Features.Runs
                 return Result.Fail<RunResponse>(RunIds.InvalidFields(errors));
             }
 
+            BrowserProfileId browserProfileId =
+                request.BrowserProfileId == Guid.Empty
+                    ? default
+                    : BrowserProfileId.From(request.BrowserProfileId);
             var started = await _launcher.StartAsync(
                 new RunScrapeRequest(
                     SearchProfileId.From(request.ProfileId),
-                    BrowserProfileId.From(request.BrowserProfileId),
+                    browserProfileId,
                     _consent,
                     request.Enrich,
                     request.OnlyNew
@@ -91,6 +111,23 @@ namespace JobScrape.Application.Features.Runs
             return run is null
                 ? Result.Fail<RunResponse>(Errors.RunNotFound(started.Value))
                 : Result.Ok(run);
+        }
+
+        /// <summary>
+        /// Whether the request's profile runs against an API-only source. An
+        /// unknown profile or source answers false, so the session stays
+        /// required and the run path reports the missing profile.
+        /// </summary>
+        /// <param name="profileId">The search profile id; never empty here.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>True when the run needs no browser session.</returns>
+        private async Task<bool> IsApiOnlyAsync(Guid profileId, CancellationToken cancellationToken)
+        {
+            var profile = await _profiles.GetAsync(
+                SearchProfileId.From(profileId),
+                cancellationToken
+            );
+            return profile is not null && (_sources.Find(profile.Source)?.ApiOnly ?? false);
         }
     }
 }

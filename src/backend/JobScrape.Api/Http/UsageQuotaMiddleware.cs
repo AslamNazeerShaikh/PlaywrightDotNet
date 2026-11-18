@@ -238,14 +238,11 @@ namespace JobScrape.Api.Http
         /// <returns>The mutable counter.</returns>
         private Counter CounterFor(string actor, QuotaScope scope, DateTimeOffset now)
         {
-            return _counters.GetOrAdd(
-                CounterKey(actor, scope),
-                _ => new Counter
-                {
-                    Start = now,
-                    Generation = Interlocked.Increment(ref _nextWindowGeneration),
-                }
-            );
+            return _counters.GetOrAdd(CounterKey(actor, scope), _ => new Counter
+            {
+                Start = now,
+                Generation = Interlocked.Increment(ref _nextWindowGeneration),
+            });
         }
 
         /// <summary>

@@ -59,13 +59,14 @@ namespace JobScrape.Mcp.Tests
         )
         {
             return new RunActionsTools(
-                new StartRunHandler(launcher, store, Consent),
-                new CancelRunHandler(
+                new StartRunHandler(
                     launcher,
-                    runs,
-                    unitOfWork,
                     store,
-                    new FixedClock(Now)),
+                    Consent,
+                    new NoProfiles(),
+                    new SourceSettingsCatalog([])
+                ),
+                new CancelRunHandler(launcher, runs, unitOfWork, store, new FixedClock(Now)),
                 caller ?? new FakeCaller()
             );
         }
@@ -373,13 +374,20 @@ namespace JobScrape.Mcp.Tests
         {
             var launcher = new FakeLauncher();
             var store = new FakeRunStore();
-            var start = new StartRunHandler(launcher, store, Consent);
+            var start = new StartRunHandler(
+                launcher,
+                store,
+                Consent,
+                new NoProfiles(),
+                new SourceSettingsCatalog([])
+            );
             var cancel = new CancelRunHandler(
                 launcher,
                 new FakeRuns(),
                 new FakeUnitOfWork(),
                 store,
-                new FixedClock(Now));
+                new FixedClock(Now)
+            );
             var caller = new FakeCaller();
             Assert.Throws<ArgumentNullException>(() => new RunActionsTools(null!, cancel, caller));
             Assert.Throws<ArgumentNullException>(() => new RunActionsTools(start, null!, caller));
@@ -410,6 +418,27 @@ namespace JobScrape.Mcp.Tests
             public override DateTimeOffset GetUtcNow()
             {
                 return now;
+            }
+        }
+
+        private sealed class NoProfiles : ISearchProfileRepository
+        {
+            public Task<SearchProfile?> GetAsync(
+                SearchProfileId id,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult<SearchProfile?>(null);
+            }
+
+            public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(false);
+            }
+
+            public Task AddAsync(SearchProfile profile, CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
             }
         }
 

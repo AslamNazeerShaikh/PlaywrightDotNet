@@ -52,7 +52,9 @@ describe("InfoTip", () => {
 
   test("one-line usage copy for the NEW ONLY control exists on the runs page", async () => {
     const client = createApiClient(runsBackend());
-    const queries = render(<RunsPage client={client} onEvent={() => undefined} />);
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
     await waitFor(() => expect(queries.getByRole("checkbox", { name: "New only" })).toBeDefined());
 
     const label = queries.getByRole("checkbox", { name: "New only" }).closest("label");

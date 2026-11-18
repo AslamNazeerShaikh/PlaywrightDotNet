@@ -668,9 +668,8 @@ namespace JobScrape.Api.Tests
 
             using var list = await admin.GetAsync("api/v1/roles", Ct);
             var roles = await list.Content.ReadFromJsonAsync<JsonElement>(Ct);
-            Assert.Single(
-                roles.GetProperty("roles").EnumerateArray(),
-                role => role.GetProperty("name").GetString() == "Operator"
+            Assert.Single(roles.GetProperty("roles").EnumerateArray(), role =>
+                role.GetProperty("name").GetString() == "Operator"
             );
         }
 

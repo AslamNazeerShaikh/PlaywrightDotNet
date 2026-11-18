@@ -1,0 +1,78 @@
+{
+  "noOfJobs": 4,
+  "jobs": [
+    {
+      "jobId": "011126000011",
+      "title": "Platform Engineer",
+      "companyName": "Adatum",
+      "experienceText": "4-7 Yrs",
+      "tagsAndSkills": "Kubernetes, Terraform",
+      "jdURL": "/job-listings-platform-engineer-adatum-011126000011",
+      "staticUrl": "https://www.naukri.com/job-listings-platform-engineer-adatum-011126000011",
+      "salaryDetail": {
+        "hideSalary": false,
+        "minimumSalary": 2000000,
+        "maximumSalary": 3000000,
+        "currency": "INR"
+      },
+      "placeholders": [{ "type": "location", "label": "Pune" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1794994200000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000012",
+      "title": "Site Reliability Engineer",
+      "companyName": "Northwind",
+      "experienceText": "5-9 Yrs",
+      "tagsAndSkills": "Linux, Prometheus",
+      "jdURL": "/job-listings-site-reliability-engineer-northwind-011126000012",
+      "staticUrl": "https://www.naukri.com/job-listings-site-reliability-engineer-northwind-011126000012",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Bengaluru" }],
+      "companyApplyJob": true,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1794994200000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000013",
+      "title": "Cloud Architect",
+      "companyName": "Litware",
+      "experienceText": "8-12 Yrs",
+      "tagsAndSkills": "Azure, IaC",
+      "jdURL": "/job-listings-cloud-architect-litware-011126000013",
+      "staticUrl": "https://www.naukri.com/job-listings-cloud-architect-litware-011126000013",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Hybrid - Pune" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "https://careers.litware.example/apply/9?src=naukri",
+      "applyRedirectUrl": "",
+      "createdDate": 1794994200000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000014",
+      "title": "Data Engineer",
+      "companyName": "Tailspin",
+      "experienceText": "3-6 Yrs",
+      "tagsAndSkills": "Spark, Python",
+      "jdURL": "/job-listings-data-engineer-tailspin-011126000014",
+      "staticUrl": "https://www.naukri.com/job-listings-data-engineer-tailspin-011126000014",
+      "salaryDetail": { "hideSalary": true },
+      "placeholders": [{ "type": "location", "label": "Remote" }],
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "https://jobs.tailspin.example/apply/7",
+      "createdDate": 1794994200000,
+      "noOfJobs": 4,
+      "jobDetails": []
+    }
+  ]
+}

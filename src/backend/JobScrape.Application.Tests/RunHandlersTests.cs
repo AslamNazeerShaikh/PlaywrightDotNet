@@ -19,18 +19,52 @@ namespace JobScrape.Application.Tests
 
         private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-        private static ScrapeRun Run(RunStage stage)
+        private static SearchProfile Profile(SourceKey source)
         {
-            var run = ScrapeRun.Create(
-                SearchProfile.Create(
-                    "backend",
-                    SourceKey.Naukri,
-                    new SearchCriteria("c#", ["Pune"], null, null, false, []),
-                    new RunLimits(3, 60, 60, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
-                    Now
-                ),
+            return SearchProfile.Create(
+                "backend",
+                source,
+                new SearchCriteria("c#", ["Pune"], null, null, false, []),
+                new RunLimits(3, 60, 60, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
                 Now
             );
+        }
+
+        private static SourceSettings SourceSettings(SourceKey source, bool apiOnly = false)
+        {
+            return new SourceSettings(
+                source,
+                true,
+                25,
+                60,
+                2,
+                3,
+                60,
+                TimeSpan.FromMinutes(45),
+                new RunLimits(3, 60, 60, TimeSpan.FromSeconds(2.5), TimeSpan.FromSeconds(6)),
+                apiOnly
+            );
+        }
+
+        private static StartRunHandler StartHandler(
+            FakeLauncher launcher,
+            IRunStore store,
+            ISearchProfileRepository? profiles = null,
+            params SourceSettings[] sources
+        )
+        {
+            return new StartRunHandler(
+                launcher,
+                store,
+                Consent,
+                profiles ?? new ScrapeHarness.InMemoryStore(),
+                new SourceSettingsCatalog(sources)
+            );
+        }
+
+        private static ScrapeRun Run(RunStage stage)
+        {
+            var run = ScrapeRun.Create(Profile(SourceKey.Naukri), Now);
             run.Start(Now);
             if (stage == RunStage.PausedForChallenge)
             {
@@ -52,57 +86,39 @@ namespace JobScrape.Application.Tests
             var launcher = new FakeLauncher();
             var memory = new ScrapeHarness.InMemoryStore();
             var clock = new FakeTimeProvider(Now);
+            var sources = new SourceSettingsCatalog([]);
             Assert.Throws<ArgumentNullException>(() =>
-                new StartRunHandler(null!, store, Consent)
+                new StartRunHandler(null!, store, Consent, memory, sources)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new StartRunHandler(launcher, null!, Consent)
+                new StartRunHandler(launcher, null!, Consent, memory, sources)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new StartRunHandler(launcher, store, null!)
+                new StartRunHandler(launcher, store, null!, memory, sources)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new StartRunHandler(launcher, store, Consent, null!, sources)
+            );
+            Assert.Throws<ArgumentNullException>(() =>
+                new StartRunHandler(launcher, store, Consent, memory, null!)
             );
             Assert.Throws<ArgumentNullException>(() => new ListRunsHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new GetRunHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new ListRunPostingsHandler(null!));
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    null!,
-                    memory,
-                    memory,
-                    store,
-                    clock)
+                new CancelRunHandler(null!, memory, memory, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    null!,
-                    memory,
-                    store,
-                    clock)
+                new CancelRunHandler(launcher, null!, memory, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    null!,
-                    store,
-                    clock)
+                new CancelRunHandler(launcher, memory, null!, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    memory,
-                    null!,
-                    clock)
+                new CancelRunHandler(launcher, memory, memory, null!, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    memory,
-                    store,
-                    null!)
+                new CancelRunHandler(launcher, memory, memory, store, null!)
             );
         }
 
@@ -110,10 +126,7 @@ namespace JobScrape.Application.Tests
         public async Task StartForwardsOnlyNewToTheLauncher()
         {
             var launcher = new FakeLauncher();
-            var handler = new StartRunHandler(
-                launcher,
-                new FakeRunStore(),
-                Consent);
+            var handler = StartHandler(launcher, new FakeRunStore());
             var request = new StartRunRequest(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -128,10 +141,7 @@ namespace JobScrape.Application.Tests
         public async Task StartForwardsOnlyNewFalseToTheLauncher()
         {
             var launcher = new FakeLauncher();
-            var handler = new StartRunHandler(
-                launcher,
-                new FakeRunStore(),
-                Consent);
+            var handler = StartHandler(launcher, new FakeRunStore());
             var request = new StartRunRequest(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -151,10 +161,8 @@ namespace JobScrape.Application.Tests
             var profileId = Guid.NewGuid();
             var browserId = Guid.NewGuid();
 
-            var result = await new StartRunHandler(
-                launcher,
-                store,
-                Consent).HandleAsync(new StartRunRequest(profileId, browserId, Enrich: false), Ct);
+            var result = await StartHandler(launcher, store)
+                .HandleAsync(new StartRunRequest(profileId, browserId, Enrich: false), Ct);
 
             Assert.Equal(run.Id.Value, result.Value.Id);
             var sent = Assert.Single(launcher.Started);
@@ -163,10 +171,7 @@ namespace JobScrape.Application.Tests
             Assert.Same(Consent, sent.Consent);
             Assert.False(sent.Enrich);
             await Assert.ThrowsAsync<ArgumentNullException>(() =>
-                new StartRunHandler(
-                    launcher,
-                    store,
-                    Consent).HandleAsync(null!, Ct)
+                StartHandler(launcher, store).HandleAsync(null!, Ct)
             );
         }
 
@@ -174,10 +179,13 @@ namespace JobScrape.Application.Tests
         public async Task StartRejectsEmptyIdsBeforeLaunching()
         {
             var launcher = new FakeLauncher();
-            var result = await new StartRunHandler(
-                launcher,
-                new FakeRunStore(),
-                Consent).HandleAsync(new StartRunRequest(Guid.Empty, Guid.Empty), Ct);
+            var result = await StartHandler(
+                    launcher,
+                    new FakeRunStore(),
+                    null,
+                    SourceSettings(SourceKey.Naukri, apiOnly: true)
+                )
+                .HandleAsync(new StartRunRequest(Guid.Empty, Guid.Empty), Ct);
 
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
             var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
@@ -188,21 +196,64 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task StartAcceptsAnEmptySessionForAnApiOnlySource()
+        {
+            var run = Run(RunStage.StartingSession);
+            var launcher = new FakeLauncher { Next = Result.Ok(run.Id.Value) };
+            var profiles = new ScrapeHarness.InMemoryStore();
+            profiles.SearchProfiles.Add(Profile(SourceKey.Naukri));
+
+            var result = await StartHandler(
+                    launcher,
+                    new FakeRunStore(RunResponse.From(run, "backend")),
+                    profiles,
+                    SourceSettings(SourceKey.Naukri, apiOnly: true)
+                )
+                .HandleAsync(
+                    new StartRunRequest(profiles.SearchProfiles[0].Id.Value, Guid.Empty),
+                    Ct
+                );
+
+            Assert.Equal(run.Id.Value, result.Value.Id);
+            Assert.Equal(Guid.Empty, Assert.Single(launcher.Started).BrowserProfileId.Value);
+        }
+
+        [Fact]
+        public async Task StartStillRequiresASessionForABrowserSource()
+        {
+            var launcher = new FakeLauncher();
+            var profiles = new ScrapeHarness.InMemoryStore();
+            profiles.SearchProfiles.Add(Profile(SourceKey.Naukri));
+
+            var result = await StartHandler(
+                    launcher,
+                    new FakeRunStore(),
+                    profiles,
+                    SourceSettings(SourceKey.Naukri)
+                )
+                .HandleAsync(
+                    new StartRunRequest(profiles.SearchProfiles[0].Id.Value, Guid.Empty),
+                    Ct
+                );
+
+            Assert.Equal("VALIDATION_FAILED", result.Error.Code);
+            var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+                result.Error.Metadata!["errors"]
+            );
+            Assert.Equal(["browserProfileId"], errors.Keys);
+            Assert.Empty(launcher.Started);
+        }
+
+        [Fact]
         public async Task StartReportsGateRefusalsAndAVanishedRun()
         {
             var refused = new FakeLauncher { Next = Result.Fail<Guid>(Errors.RunInProgress(null)) };
             var request = new StartRunRequest(Guid.NewGuid(), Guid.NewGuid());
-            var conflict = await new StartRunHandler(
-                refused,
-                new FakeRunStore(),
-                Consent).HandleAsync(request, Ct);
+            var conflict = await StartHandler(refused, new FakeRunStore()).HandleAsync(request, Ct);
             Assert.Equal("RUN_IN_PROGRESS", conflict.Error.Code);
 
             var ghost = new FakeLauncher { Next = Result.Ok(Guid.NewGuid()) };
-            var missing = await new StartRunHandler(
-                ghost,
-                new FakeRunStore(),
-                Consent).HandleAsync(request, Ct);
+            var missing = await StartHandler(ghost, new FakeRunStore()).HandleAsync(request, Ct);
             Assert.Equal("RUN_NOT_FOUND", missing.Error.Code);
         }
 
@@ -309,7 +360,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 new FakeRunStore(RunResponse.From(run, null)),
-                new FakeTimeProvider(Now));
+                new FakeTimeProvider(Now)
+            );
 
             var result = await handler.HandleAsync(run.Id.Value, Ct);
 
@@ -334,7 +386,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 store,
-                new FakeTimeProvider(Now.AddMinutes(1)));
+                new FakeTimeProvider(Now.AddMinutes(1))
+            );
 
             Assert.True((await handler.HandleAsync(paused.Id.Value, Ct)).IsSuccess);
             Assert.Equal(RunStage.Cancelled, paused.Stage);
@@ -365,7 +418,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 new FakeRunStore(),
-                new FakeTimeProvider(Now));
+                new FakeTimeProvider(Now)
+            );
 
             Assert.Equal(
                 "RUN_NOT_FOUND",

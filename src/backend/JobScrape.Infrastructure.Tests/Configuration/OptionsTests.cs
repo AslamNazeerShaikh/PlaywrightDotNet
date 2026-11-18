@@ -14,11 +14,12 @@ namespace JobScrape.Infrastructure.Tests.Configuration
 {
     public sealed class OptionsTests
     {
-        private static SourceOptions Naukri(bool enabled = true)
+        private static SourceOptions Naukri(bool enabled = true, bool apiOnly = true)
         {
             return new SourceOptions
             {
                 Enabled = enabled,
+                ApiOnly = apiOnly,
                 BaseUrl = "https://www.naukri.com",
                 MaxPagesPerSearch = 3,
                 MaxJobsPerRun = 60,
@@ -210,6 +211,38 @@ namespace JobScrape.Infrastructure.Tests.Configuration
         }
 
         [Fact]
+        public void MapperScopesApiOnlyToNaukri()
+        {
+            var catalog = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["naukri"] = Naukri(),
+                        ["indeed"] = Naukri(),
+                    },
+                }
+            );
+
+            Assert.True(catalog.Find(SourceKey.Naukri)!.ApiOnly);
+            // The shared options class defaults ApiOnly to true; only Naukri
+            // has an API fast path, so the flag must not leak to Indeed.
+            Assert.False(catalog.Find(SourceKey.Indeed)!.ApiOnly);
+
+            var browser = SourceSettingsMapper.ToCatalog(
+                new SourcesOptions
+                {
+                    Sources = new(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["naukri"] = Naukri(apiOnly: false),
+                    },
+                }
+            );
+
+            Assert.False(browser.Find(SourceKey.Naukri)!.ApiOnly);
+        }
+
+        [Fact]
         public void UnlimitedRunCapMapsToNullAndAnOmittedCapStaysZero()
         {
             var capped = Naukri();
@@ -257,6 +290,32 @@ namespace JobScrape.Infrastructure.Tests.Configuration
             Assert.Equal(3, limits.MaxPages);
             Assert.Equal(TimeSpan.FromMilliseconds(2500), limits.MinDelay);
             Assert.Equal(TimeSpan.FromMilliseconds(6000), limits.MaxDelay);
+        }
+
+        [Fact]
+        public void ApiOnlyDefaultsToTrue()
+        {
+            Assert.True(new SourceOptions().ApiOnly);
+        }
+
+        [Fact]
+        public void ApiOnlyBindsFalseFromConfiguration()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["JobScrape:Sources:naukri:ApiOnly"] = "false",
+                    }
+                )
+                .Build();
+
+            var sources = configuration
+                .GetSection(SourcesOptions.SectionName)
+                .Get<SourcesOptions>();
+
+            Assert.NotNull(sources);
+            Assert.False(sources.Sources["naukri"].ApiOnly);
         }
 
         [Fact]

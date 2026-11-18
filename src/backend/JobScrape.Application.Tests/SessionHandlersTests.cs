@@ -18,13 +18,7 @@ namespace JobScrape.Application.Tests
         private static (CreateSessionHandler Handler, ScrapeHarness.InMemoryStore Store) Create()
         {
             var store = new ScrapeHarness.InMemoryStore();
-            return (
-                new CreateSessionHandler(
-                    store,
-                    store,
-                    new FakeTimeProvider(Now)),
-                store
-            );
+            return (new CreateSessionHandler(store, store, new FakeTimeProvider(Now)), store);
         }
 
         private static IReadOnlyDictionary<string, string[]> FieldErrors(
