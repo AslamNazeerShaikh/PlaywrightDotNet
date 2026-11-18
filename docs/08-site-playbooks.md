@@ -101,6 +101,7 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 |---|---|
 | Compliance tier | **Standard** |
 | Default | Enabled |
+| Default transport | API fast path (Naukri `jobapi`, `JobScrape:Sources:naukri:ApiOnly=true`); no browser launches for Naukri. Opt out per source with `=false` to restore the browser path (§3.6) |
 | Login required? | No for public search/detail |
 | Primary anti-bot | Akamai (observed: `errors.edgesuite.net`) |
 | Headless | Blocked in the old project's measurements; use headed first contact (`JobScrape:Browser:Headless=false` by default) |
@@ -108,6 +109,8 @@ https://in.indeed.com/viewjob?jk=abcdef123456&from=serp&vjs=3
 | Recommended volume | 2–3 pages/run, 60 jobs/run, 2 runs/day; the shipped policy allows larger runs when the operator sets them |
 
 ### 3.2 Search flow
+
+> **Default path:** with the shipped default (`JobScrape:Sources:naukri:ApiOnly=true`) runs fetch through the API fast path — see §3.6. This section and §3.3–§3.5 describe the browser path, which runs when the flag is `false`.
 
 1. Optional warm-up: home page, pause, scroll once.
 2. Navigate to the slug search URL for page 1 (carries `k`, `l`, `nignbevent_src`, `experience`, and `jobAge` when a recency window is set).
@@ -179,6 +182,8 @@ https://www.naukri.com/job-listings-{slug}-{id}
 
 ### 3.5 Pagination invariants
 
+> Browser path (`ApiOnly=false`). The API path pages by `pageNo` and stops on the reported total instead — see §3.6.
+
 - Capture a page fingerprint before clicking Next: first card href + visible range text (e.g., `21–40 of 442`). *(Implemented: first card `data-job-id` + `span[class*="count-string"]` text.)*
 - After clicking, poll until the fingerprint changes; timeout ~20s. *(Implemented: 40 polls × 500 ms.)*
 - If the fingerprint does not change, stop (do not loop).
@@ -186,21 +191,49 @@ https://www.naukri.com/job-listings-{slug}-{id}
 - A cold `-N` load redirects to filtered page 1 (verified live 2026-11-04: a `-31` request served range 1 - 20 of 918 with filters intact), so a fresh run loads page 1 first to learn the size (a resumed run continues from its saved cursor), a start past the last page fails fast, and pre-window pages advance through Next clicks.
 - A refused page ends the listing one page earlier: when the site serves the listing's last page count instead of the requested `-N` page, the run stops before the refused page and completes without a repeated-fingerprint failure.
 
-### 3.6 Optional private API fast path (feature-flagged)
+### 3.6 API fast path (default on; browser path behind `ApiOnly=false`)
 
-The old project and third-party scrapers use Naukri's private search API:
+As implemented (`JobScrape.Infrastructure/Sources/Naukri`): Naukri runs fetch through Naukri's own `jobapi` endpoints by default. `NaukriApiJobSource` serves the same `IJobSource` contract and `SourceKey.Naukri` as `NaukriJobSource`; the registry selects it when the flag is on and never touches a browser object on that path (the session manager reports Naukri ready without launching Chromium). Caps, daily quotas, cooldowns, politeness delays (2.5–6.0 s for Naukri), resume, and the run handler are shared with the browser path. Setting the flag to `false` restores the Playwright path (§3.2–§3.5) unchanged.
 
-- `GET https://www.naukri.com/jobapi/v3/search` with `noOfResults=20`, keyword/location/experience/jobAge params.
-- Headers include `appid`, `systemid`, and an RSA-signed `nkparam` token.
-- Response includes `tagsAndSkills` (same key skills as the cards).
+**Transport selection**
 
-**Policy:**
+| Item | Value |
+|---|---|
+| Flag | `JobScrape:Sources:naukri:ApiOnly` (per source, bound from `JobScrape:Sources:naukri`) |
+| Default | `true` (also explicit in `appsettings.json`) |
+| `true` (default) | API path; the browser is never launched for Naukri |
+| `false` | Playwright browser path, unchanged |
+| Naming | Not a global feature toggle — `docs/21-feature-toggles.md` covers only `JobScrape:Features` |
+| Scope | Naukri only; Indeed/LinkedIn keep the browser path |
 
-- Feature flag `Sources:Naukri:UseApiFastPath=false` by default.
-- Only after a time-boxed spike proves it stable, compliant, and no-auth.
-- 403/406 → disable the fast path; fall back to browser.
-- Do not use the API to bypass a wall, login, or rate limit.
-- Do not implement token generation in v1 unless the spike is explicitly approved; browser-first is the product.
+**Request contract**
+
+| | Search | Detail |
+|---|---|---|
+| Request | `GET https://www.naukri.com/jobapi/v3/search` | `GET https://www.naukri.com/jobapi/v4/job/{id}` |
+| `appid` header | `109` | `121` |
+| `systemid` header | `Naukri` | `Naukri` |
+| `nkparam` header | fresh token per request, page tag `srp` | fresh token per request, page tag = job id |
+| Token payload | RSA PKCS#1 v1.5 of `v0\|<epoch-ms>\|121_<page>` under Naukri's published public key (512-bit; JobSpy `constant.py`, MIT) | same |
+| Params | `noOfResults=20`, `pageNo=N`, `urlType=search_by_keyword`, `searchType=adv`, `keyword`, `location` (comma-joined), `sort=f`, `experience` (when the profile sets years), `jobAge` (when the profile sets a recency window) | none (the job id is in the path) |
+
+Both send `Accept: application/json` and an honest Chrome user agent, time out at 25 s, and never follow redirects — a `3xx` answer is a wall, not a hop. Tokens are minted per request from a fresh timestamp and fresh padding (`NaukriRequestToken`); they are never replayed and never cached. Freshness-first: `jobAge` plus `sort=f`, with keyword/location/experience as plain params.
+
+Paging: `noOfResults=20`, `pageNo=N`. The loop stops at `max_jobs`, an empty page, `pageNo × 20 ≥ noOfJobs` (the reported total is authoritative), a `400` past the last page, or cancellation. Ids are deduped by `jobId` across pages.
+
+**Row mapping (pointer, not a copy):** rows map through the same field helpers the HTML parsers use — `NaukriApiClient.MapRow` → `NaukriFields` (`tagsAndSkills`, `companyName`, `salaryDetail`, `placeholders` for location/work mode, experience, epoch-ms `createdDate`). A row without a usable title, job id, or Naukri job link is dropped with a warning, never poisoning the page. Company-portal rows (`companyApplyJob`, `clientCareersUrl`, `applyRedirectUrl`) are flagged external and skipped — logged, never collected as ordinary postings; a duplicated id on a page keeps the first row. The live row array is `jobDetails` (verified probe 2026-11-18); `jobs` is accepted for tolerance. AmbitionBox ratings in `ambitionBoxData` are not carried into postings on either path.
+
+**Status mapping**
+
+| Answer | Search listing | Detail |
+|---|---|---|
+| `200` | rows parsed through the shared gate | detail snapshot parsed |
+| `400` | clean end of listing (no wall) | falls through to non-200 → `TransientError` |
+| `406` | `RateLimited` wall; run ends rate-limited with partials kept | `RateLimited`; enrichment stops, collected listings are kept |
+| `3xx` | wall (`SoftChallenge` mapped to `SourceChanged`); never followed | same via the wall mapper; never followed |
+| any other non-200, timeout, or network failure | `TransientError` (retried per policy; pagination stops when retries run out) | `TransientError` (retried per policy; recorded as a failure, enrichment continues) |
+
+`406` carries no `Retry-After`, so the rate-limit policy applies its default 30-minute cooldown. Three consecutive `406`s (counted process-wide, across runs) are treated as the rotated-key signature: the adapter logs `the embedded API key has likely rotated` at warning level and the classification's evidence becomes `status=406; N consecutive 406s: key rotation likely` in the wall log line. See the runbook §5.5 for the operator response. The API path is not a wall bypass: a `406` is a rate limit, not permission to retry harder, and the no-TLS-impersonation/no-proxies/no-login rules of [Anti-Bot & Compliance](07-anti-bot-and-compliance.md) apply unchanged.
 
 ### 3.7 Caps and challenge signatures
 
@@ -220,6 +253,7 @@ Challenge signals:
 - Visible text: “Access Denied”, “verify you are human”, “unusual traffic”, “pardon the interruption”.
 - No job anchors + visible block text.
 - Empty results with a login/challenge modal.
+- `406` from the API path (`ApiOnly=true`): `RateLimited`, not an Akamai page — see §3.6 and runbook §5.5; cool down, and treat three consecutive `406`s as a possible rotated API key.
 
 Response: stop, screenshot/HTML/trace, cooldown 45–60 min, manual solve, circuit open.
 
@@ -232,6 +266,7 @@ Response: stop, screenshot/HTML/trace, cooldown 45–60 min, manual solve, circu
 - `search-challenge.html` — Akamai-style block page.
 - `detail-normal.html` — description/skills/apply.
 - `detail-minimal.html` — missing fields.
+- API fast path fixtures: `search-api-normal.json`, `search-api-jobdetails.json`, `search-api-bad-row.json`, `search-api-external.json`, `detail-api.json` — API rows map through the same gate as cards.
 - `pagination-range.html` — range text + first-card fingerprint. *(Not created; `search-last-page.html` — range `121 - 131 of 131`, Next disabled — covers the last page instead, and the normal/last-page range texts cover the fingerprint.)*
 
 Fixture README must include capture date, URL shape, and selector version.
