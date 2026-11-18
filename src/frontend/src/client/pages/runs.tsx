@@ -52,6 +52,18 @@ export const RUN_STAGES = [
 ] as const;
 
 /**
+ * What a thrown postings poll surfaces. The transport layer already turns failed answers into
+ * problems; a throw means the call itself broke, so the page shows a stable code and never the
+ * exception text.
+ */
+const POSTINGS_POLL_FAILED: ApiProblem = {
+  status: 0,
+  title: "Postings unavailable",
+  detail: "The cockpit could not refresh this run's postings. Retry in a moment.",
+  code: "BAD_RESPONSE",
+};
+
+/**
  * Runs page: start a scrape for a saved search profile in one of its source's sessions, follow it
  * live, cancel it, and read the postings it found. The page owns its data: it loads runs and the
  * form's options once per visit, and polls only the selected run while it executes — one request
@@ -81,8 +93,12 @@ export function RunsPage({
   const [startProblem, setStartProblem] = useState<ApiProblem | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [postings, setPostings] = useState<RunPosting[] | null>(null);
+  const [postingsProblem, setPostingsProblem] = useState<ApiProblem | null>(null);
   const [postingsOffset, setPostingsOffset] = useState(0);
   const [postingsTotal, setPostingsTotal] = useState(0);
+  // Bumped when the same selection must be followed again: re-clicking the active history entry
+  // and RETRY reuse the follow effect rather than a second fetch path.
+  const [followSeq, setFollowSeq] = useState(0);
   const [exportProblem, setExportProblem] = useState<ApiProblem | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -90,6 +106,9 @@ export function RunsPage({
   // Latest-wins for the history list, and a stable handle on the event
   // sink so the polling effect is keyed on the run alone.
   const listTicket = useRef(0);
+  // Last known terminal state of the followed run, so the poll's catch path can stop a finished
+  // run without needing the answer that just threw.
+  const terminalRef = useRef(false);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
   // Stable handle on the sign-out handler so the polling effect does not restart when App
@@ -129,11 +148,20 @@ export function RunsPage({
 
   function select(id: string) {
     setPostings(null);
+    setPostingsProblem(null);
     setPostingsOffset(0);
     setPostingsTotal(0);
     setExportProblem(null);
     setCancelProblem(null);
     setSelectedId(id);
+    // The same id changes nothing the effect watches; the bump makes every click refetch.
+    setFollowSeq((n) => n + 1);
+  }
+
+  /** Clears a postings failure and refires the follow effect at once. */
+  function retryPostings() {
+    setPostingsProblem(null);
+    setFollowSeq((n) => n + 1);
   }
 
   // Once per visit: the run form's options. Sources ride along so an API-only source can drop the
@@ -174,7 +202,8 @@ export function RunsPage({
   }, [client, runsOffset]);
 
   // Follow the selected run: poll while it executes, fetch once when it
-  // is already finished, and log the moment it ends.
+  // is already finished, and log the moment it ends. The sequence bump re-runs it for a repeat
+  // click on the active entry or a RETRY; a thrown poll becomes a problem, never a dead loop.
   useEffect(() => {
     if (selectedId === null) {
       return;
@@ -183,34 +212,50 @@ export function RunsPage({
     let timer: ReturnType<typeof setTimeout> | undefined;
     let sawActive = false;
     const tick = async () => {
-      if (document.visibilityState !== "hidden") {
-        const [run, list] = await Promise.all([
-          client.getRun(selectedId),
-          client.listRunPostings(selectedId, postingsOffset, POSTINGS_LIMIT),
-        ]);
+      try {
+        if (document.visibilityState !== "hidden") {
+          const [run, list] = await Promise.all([
+            client.getRun(selectedId),
+            client.listRunPostings(selectedId, postingsOffset, POSTINGS_LIMIT),
+          ]);
+          if (!alive) {
+            return;
+          }
+          if (!list.result.ok) {
+            if (fail(list.result.problem)) {
+              return;
+            }
+            setPostingsProblem(list.result.problem);
+          } else {
+            setPostings(list.result.value.items);
+            setPostingsTotal(list.result.value.total);
+            setPostingsProblem(null);
+          }
+          if (!run.result.ok && fail(run.result.problem)) {
+            return;
+          }
+          if (run.result.ok) {
+            const current = run.result.value;
+            setRuns((rs) => upsertRun(rs, current));
+            terminalRef.current = current.isTerminal;
+            if (current.isTerminal) {
+              if (sawActive) {
+                onEventRef.current(finishedEvent(current, run.at));
+              }
+              return;
+            }
+            sawActive = true;
+          }
+        }
+      } catch {
         if (!alive) {
           return;
         }
-        if (!list.result.ok && fail(list.result.problem)) {
+        // The answer threw instead of arriving: keep the failure visible and the loop alive
+        // while the run may still move; a finished run stops here like any terminal poll.
+        setPostingsProblem(POSTINGS_POLL_FAILED);
+        if (terminalRef.current) {
           return;
-        }
-        if (list.result.ok) {
-          setPostings(list.result.value.items);
-          setPostingsTotal(list.result.value.total);
-        }
-        if (!run.result.ok && fail(run.result.problem)) {
-          return;
-        }
-        if (run.result.ok) {
-          const current = run.result.value;
-          setRuns((rs) => upsertRun(rs, current));
-          if (current.isTerminal) {
-            if (sawActive) {
-              onEventRef.current(finishedEvent(current, run.at));
-            }
-            return;
-          }
-          sawActive = true;
         }
       }
       timer = setTimeout(() => void tick(), RUN_POLL_MS);
@@ -220,13 +265,15 @@ export function RunsPage({
       alive = false;
       clearTimeout(timer);
     };
-  }, [client, selectedId, postingsOffset]);
+  }, [client, selectedId, postingsOffset, followSeq]);
 
   const profile = profiles.find((p) => p.id === profileId) ?? null;
   // API-only sources never launch a browser, so the session step does not exist for them.
   const apiOnlyMode = profile !== null && sourceApiOnly(sources, profile.sourceKey);
   const usable = sessions.filter((s) => s.sourceKey === profile?.sourceKey);
   const selected = runs?.find((r) => r.id === selectedId) ?? null;
+  // Keep the catch path honest about a run whose payload is already known to be finished.
+  terminalRef.current = selected?.isTerminal ?? false;
   const selectedCompanies = selected?.companies ?? [];
   const fieldErrors = startProblem?.errors ?? {};
 
@@ -261,6 +308,7 @@ export function RunsPage({
     setCancelProblem(null);
     setRuns((rs) => upsertRun(rs, result.value));
     setPostings(null);
+    setPostingsProblem(null);
     setPostingsOffset(0);
     setPostingsTotal(0);
     setSelectedId(result.value.id);
@@ -600,15 +648,26 @@ export function RunsPage({
             {exportProblem.detail !== "" ? ` — ${exportProblem.detail}` : ""}
           </p>
         )}
-        {selected === null || postings === null ? (
-          <p className="status-line">
-            {selected === null ? "No run selected." : "Loading postings…"}
+        {postingsProblem !== null && (
+          <p className="alert" role="alert">
+            <CodeTag code={postingsProblem.code} tone={codeTone(postingsProblem.code)} />{" "}
+            {postingsProblem.title}
+            {postingsProblem.detail !== "" ? ` — ${postingsProblem.detail}` : ""}{" "}
+            <button type="button" className="btn btn-ghost" onClick={retryPostings}>
+              RETRY
+            </button>
           </p>
-        ) : postings.length === 0 ? (
+        )}
+        {selected === null && <p className="status-line">No run selected.</p>}
+        {selected !== null && postings === null && postingsProblem === null && (
+          <p className="status-line">Loading postings…</p>
+        )}
+        {selected !== null && postings !== null && postings.length === 0 && (
           <p className="status-line">
             {selected.isTerminal ? "This run saw no postings." : "No postings yet."}
           </p>
-        ) : (
+        )}
+        {selected !== null && postings !== null && postings.length > 0 && (
           <>
             <div className="tbl-wrap">
               <table className="data" aria-label="Postings">
