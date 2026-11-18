@@ -1,0 +1,64 @@
+{
+  "noOfJobs": 25,
+  "jobs": [
+    {
+      "jobId": "011126000001",
+      "title": "Senior .NET Developer",
+      "companyName": "Contoso",
+      "experienceText": "5-8 Yrs",
+      "tagsAndSkills": "C#, ASP.NET Core, Azure, SQL Server",
+      "jdURL": "/job-listings-senior-dotnet-developer-contoso-011126000001?src=jobsearchDesk",
+      "staticUrl": "https://www.naukri.com/job-listings-senior-dotnet-developer-contoso-011126000001",
+      "logoPathV3": "https://img.naukri.com/logo/contoso.png",
+      "salaryDetail": {
+        "hideSalary": false,
+        "minimumSalary": 1500000,
+        "maximumSalary": 2750000,
+        "currency": "INR"
+      },
+      "placeholders": [
+        { "type": "location", "label": "Hybrid - Pune, Gurugram, Bengaluru" },
+        { "type": "experience", "label": "5-8 Yrs" },
+        { "type": "salary", "label": "15-27.5 Lacs PA" }
+      ],
+      "ambitionBoxData": { "AggregateRating": 4.1, "ReviewsCount": 1234 },
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1793527200000,
+      "minimumExperience": 5,
+      "maximumExperience": 8,
+      "noOfJobs": 25,
+      "jobDetails": []
+    },
+    {
+      "jobId": "011126000002",
+      "title": "Full Stack Developer",
+      "companyName": "Fabrikam",
+      "experienceText": "3 Yrs",
+      "tagsAndSkills": "React, Node.js",
+      "jdURL": "/job-listings-full-stack-developer-fabrikam-011126000002",
+      "staticUrl": "https://www.naukri.com/job-listings-full-stack-developer-fabrikam-011126000002",
+      "logoPathV3": "https://img.naukri.com/logo/fabrikam.png",
+      "salaryDetail": {
+        "hideSalary": true,
+        "minimumSalary": 0,
+        "maximumSalary": 0,
+        "currency": "INR"
+      },
+      "placeholders": [
+        { "type": "location", "label": "Remote" },
+        { "type": "experience", "label": "3 Yrs" }
+      ],
+      "ambitionBoxData": { "AggregateRating": 3.8, "ReviewsCount": 456 },
+      "companyApplyJob": false,
+      "clientCareersUrl": "",
+      "applyRedirectUrl": "",
+      "createdDate": 1794994200000,
+      "minimumExperience": 3,
+      "maximumExperience": 3,
+      "noOfJobs": 25,
+      "jobDetails": []
+    }
+  ]
+}
