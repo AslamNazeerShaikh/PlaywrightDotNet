@@ -40,13 +40,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             );
 
         private static SourceRunContext Context(int startPage = 1) =>
-            new(
-                ScrapeRunId.New(),
-                SourceKey.Naukri,
-                BrowserProfileId.New(),
-                Criteria(),
-                startPage
-            );
+            new(ScrapeRunId.New(), SourceKey.Naukri, BrowserProfileId.New(), Criteria(), startPage);
 
         private static string Fixture(string name) =>
             File.ReadAllText(
@@ -77,9 +71,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 provider.GetRequiredService<NaukriApiClient>(),
                 provider.GetRequiredService<NaukriApiClient>()
             );
-            Assert.IsAssignableFrom<IDisposable>(
-                provider.GetRequiredService<NaukriApiClient>()
-            );
+            Assert.IsAssignableFrom<IDisposable>(provider.GetRequiredService<NaukriApiClient>());
         }
 
         [Fact]
@@ -144,9 +136,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         {
             var handler = new FakeHandler(request =>
                 PageNumber(request) == 1
-                    ? JsonResponse(
-                        SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray())
-                    )
+                    ? JsonResponse(SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray()))
                     : StatusResponse(HttpStatusCode.NotAcceptable)
             );
 
@@ -167,10 +157,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             var handler = new FakeHandler(request =>
             {
                 var pageNumber = PageNumber(request);
-                var jobs = Enumerable
-                    .Range(((pageNumber - 1) * 20) + 1, 20)
-                    .Select(Job)
-                    .ToList();
+                var jobs = Enumerable.Range(((pageNumber - 1) * 20) + 1, 20).Select(Job).ToList();
                 if (pageNumber == 1)
                 {
                     // One row loses its title; the client drops it, but the
@@ -192,9 +179,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         {
             var handler = new FakeHandler(request =>
                 PageNumber(request) == 1
-                    ? JsonResponse(
-                        SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray())
-                    )
+                    ? JsonResponse(SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray()))
                     : StatusResponse(HttpStatusCode.BadRequest)
             );
 
@@ -212,9 +197,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         {
             var handler = new FakeHandler(request =>
                 PageNumber(request) == 1
-                    ? JsonResponse(
-                        SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray())
-                    )
+                    ? JsonResponse(SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray()))
                     : StatusResponse(HttpStatusCode.InternalServerError)
             );
 
@@ -234,9 +217,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         {
             var handler = new FakeHandler(request =>
                 PageNumber(request) == 1
-                    ? JsonResponse(
-                        SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray())
-                    )
+                    ? JsonResponse(SearchJson(40, Enumerable.Range(1, 20).Select(Job).ToArray()))
                     : RedirectResponse("https://www.naukri.com/nlogin/login")
             );
 
@@ -284,13 +265,21 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             using var source = Source(handler);
 
             var first = await source.SearchPageAsync(Context(), new SearchPageRequest(1, null), Ct);
-            var second = await source.SearchPageAsync(Context(), new SearchPageRequest(1, null), Ct);
+            var second = await source.SearchPageAsync(
+                Context(),
+                new SearchPageRequest(1, null),
+                Ct
+            );
             var third = await source.SearchPageAsync(Context(), new SearchPageRequest(1, null), Ct);
 
             Assert.Equal(ChallengeKind.RateLimited, first.Challenge.Kind);
             Assert.Equal(ChallengeKind.RateLimited, second.Challenge.Kind);
             Assert.Equal(ChallengeKind.RateLimited, third.Challenge.Kind);
-            Assert.DoesNotContain("key rotation", first.Challenge.Evidence, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "key rotation",
+                first.Challenge.Evidence,
+                StringComparison.Ordinal
+            );
             Assert.DoesNotContain(
                 "key rotation",
                 second.Challenge.Evidence,
@@ -399,7 +388,10 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 new SalaryRange(1_500_000m, 2_750_000m, "INR", SalaryPeriod.Year),
                 detail.Salary
             );
-            Assert.Equal(DateTimeOffset.FromUnixTimeMilliseconds(1_793_527_200_000), detail.PostedAt);
+            Assert.Equal(
+                DateTimeOffset.FromUnixTimeMilliseconds(1_793_527_200_000),
+                detail.PostedAt
+            );
             Assert.Equal("Build & run .NET services.\n- C#\n- Azure", detail.Description);
             Assert.Equal(["C#", "ASP.NET Core", "Azure"], detail.Skills);
             Assert.Equal("https://careers.contoso.example/apply/1", detail.ApplyUrl);
@@ -466,7 +458,8 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 JsonResponse(
                     SearchJson(
                         40,
-                        Enumerable.Range(((PageNumber(request) - 1) * 20) + 1, 20)
+                        Enumerable
+                            .Range(((PageNumber(request) - 1) * 20) + 1, 20)
                             .Select(Job)
                             .ToArray()
                     )

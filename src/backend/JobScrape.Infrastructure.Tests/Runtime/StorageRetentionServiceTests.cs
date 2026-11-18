@@ -84,7 +84,9 @@ namespace JobScrape.Infrastructure.Tests.Runtime
 
         private sealed class SweepFileSystem : IFileSystem
         {
-            private readonly Dictionary<string, DateTime> _directories = new(StringComparer.Ordinal);
+            private readonly Dictionary<string, DateTime> _directories = new(
+                StringComparer.Ordinal
+            );
 
             public List<string> Deleted { get; } = [];
 

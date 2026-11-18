@@ -192,9 +192,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
         {
             // The HAR only carries experience/jobAge when the UI has a value;
             // an unset filter is left out instead of sent empty.
-            var keywordOnly = new FakeHandler(_ =>
-                JsonResponse(Fixture("search-api-normal.json"))
-            );
+            var keywordOnly = new FakeHandler(_ => JsonResponse(Fixture("search-api-normal.json")));
             using (var client = Client(keywordOnly))
             {
                 await client.FetchPageAsync(KeywordOnlyCriteria(), 1, Ct);
@@ -274,9 +272,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             // The live jobapi/v3/search body carries its rows under
             // jobDetails (verified probe 2026-11-18); jobs stays accepted as
             // a tolerance fallback.
-            var handler = new FakeHandler(_ =>
-                JsonResponse(Fixture("search-api-jobdetails.json"))
-            );
+            var handler = new FakeHandler(_ => JsonResponse(Fixture("search-api-jobdetails.json")));
             using var client = Client(handler);
 
             var page = await client.FetchPageAsync(Criteria(), 1, Ct);

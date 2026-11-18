@@ -303,7 +303,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             var evidence = string.IsNullOrWhiteSpace(assessment.Evidence)
                 ? assessment.Kind.ToString()
                 : $"{assessment.Kind}: {assessment.Evidence}";
-            return new ChallengeAssessment(ChallengeKind.SourceChanged, assessment.Confidence, evidence);
+            return new ChallengeAssessment(
+                ChallengeKind.SourceChanged,
+                assessment.Confidence,
+                evidence
+            );
         }
 
         /// <summary>
@@ -381,10 +385,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         {
             return total <= 0
                 ? null
-                : Math.Max(
-                    1,
-                    (total + NaukriApiClient.PageSize - 1) / NaukriApiClient.PageSize
-                );
+                : Math.Max(1, (total + NaukriApiClient.PageSize - 1) / NaukriApiClient.PageSize);
         }
 
         /// <summary>
@@ -497,15 +498,13 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                         ExperienceMaxYears = maxYears,
                         SalaryRaw = salaryRaw,
                         Salary = salary,
-                        PostedAt =
-                            CreatedAt(details)
+                        PostedAt = CreatedAt(details)
                             ?? NaukriFields.IsoDate(
                                 Text(details, "postedOn") ?? Text(details, "postedDate")
                             ),
                         Description = Description(details),
                         Skills = Skills(details),
-                        ApplyUrl =
-                            NaukriFields.ExternalApplyUrl(Text(details, "clientCareersUrl"))
+                        ApplyUrl = NaukriFields.ExternalApplyUrl(Text(details, "clientCareersUrl"))
                             ?? NaukriFields.ExternalApplyUrl(Text(details, "applyRedirectUrl")),
                         LowConfidence = false,
                     },
@@ -528,8 +527,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <returns>The plain text, or null when the response has none.</returns>
         private static string? Description(JsonElement details)
         {
-            var html =
-                Text(details, "description")
+            var html = Text(details, "description")
                 ?? Text(details, "jobDescription")
                 ?? Text(details, "shortDescription");
             if (string.IsNullOrWhiteSpace(html))
@@ -803,10 +801,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         )]
         private static partial void LogKeyRotationSuspected(ILogger logger, int count);
 
-        [LoggerMessage(
-            Level = LogLevel.Warning,
-            Message = "Naukri API detail {JobId} failed"
-        )]
-        private static partial void LogDetailFailed(ILogger logger, Exception exception, string jobId);
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Naukri API detail {JobId} failed")]
+        private static partial void LogDetailFailed(
+            ILogger logger,
+            Exception exception,
+            string jobId
+        );
     }
 }

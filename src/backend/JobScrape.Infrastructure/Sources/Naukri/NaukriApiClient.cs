@@ -432,10 +432,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 return details;
             }
 
-            if (
-                root.TryGetProperty("jobs", out var jobs)
-                && jobs.ValueKind == JsonValueKind.Array
-            )
+            if (root.TryGetProperty("jobs", out var jobs) && jobs.ValueKind == JsonValueKind.Array)
             {
                 return jobs;
             }

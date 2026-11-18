@@ -26,11 +26,7 @@ namespace JobScrape.Application.Features.Runs
         /// <param name="store">Reads the recorded run back.</param>
         /// <param name="consent">The operator's configured compliance consent.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
-        public StartRunHandler(
-            IRunLauncher launcher,
-            IRunStore store,
-            ComplianceConsent consent
-        )
+        public StartRunHandler(IRunLauncher launcher, IRunStore store, ComplianceConsent consent)
         {
             ArgumentNullException.ThrowIfNull(launcher);
             ArgumentNullException.ThrowIfNull(store);

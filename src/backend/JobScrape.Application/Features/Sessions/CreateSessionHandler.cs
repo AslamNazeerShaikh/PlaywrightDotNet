@@ -74,19 +74,13 @@ namespace JobScrape.Application.Features.Sessions
             }
 
             var engine = BrowserEngine.Chromium;
-            if (
-                request.Engine is not null
-                && !EnumNames.TryParse(request.Engine, out engine)
-            )
+            if (request.Engine is not null && !EnumNames.TryParse(request.Engine, out engine))
             {
                 errors["engine"] = ["Choose Chromium, Firefox, or WebKit."];
             }
 
             var channel = BrowserChannel.Bundled;
-            if (
-                request.Channel is not null
-                && !EnumNames.TryParse(request.Channel, out channel)
-            )
+            if (request.Channel is not null && !EnumNames.TryParse(request.Channel, out channel))
             {
                 errors["channel"] = ["Choose Bundled."];
             }
