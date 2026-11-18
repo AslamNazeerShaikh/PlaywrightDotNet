@@ -468,12 +468,14 @@ namespace JobScrape.Api.Tests
             // requests through.
             var parallel = Enumerable
                 .Range(0, 80)
-                .Select(_ => Task.Run(async () =>
-                {
-                    var context = QuotaContext(provider);
-                    await middleware.InvokeAsync(context);
-                    return context.Response.StatusCode;
-                }))
+                .Select(_ =>
+                    Task.Run(async () =>
+                    {
+                        var context = QuotaContext(provider);
+                        await middleware.InvokeAsync(context);
+                        return context.Response.StatusCode;
+                    })
+                )
                 .ToArray();
             var statuses = await Task.WhenAll(parallel);
 
@@ -580,7 +582,8 @@ namespace JobScrape.Api.Tests
             return context;
         }
 
-        private sealed class AlwaysMissForCountersCache : Microsoft.Extensions.Caching.Memory.IMemoryCache
+        private sealed class AlwaysMissForCountersCache
+            : Microsoft.Extensions.Caching.Memory.IMemoryCache
         {
             private readonly Microsoft.Extensions.Caching.Memory.MemoryCache _inner = new(
                 new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()

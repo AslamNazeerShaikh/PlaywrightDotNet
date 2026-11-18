@@ -52,57 +52,28 @@ namespace JobScrape.Application.Tests
             var launcher = new FakeLauncher();
             var memory = new ScrapeHarness.InMemoryStore();
             var clock = new FakeTimeProvider(Now);
-            Assert.Throws<ArgumentNullException>(() =>
-                new StartRunHandler(null!, store, Consent)
-            );
+            Assert.Throws<ArgumentNullException>(() => new StartRunHandler(null!, store, Consent));
             Assert.Throws<ArgumentNullException>(() =>
                 new StartRunHandler(launcher, null!, Consent)
             );
-            Assert.Throws<ArgumentNullException>(() =>
-                new StartRunHandler(launcher, store, null!)
-            );
+            Assert.Throws<ArgumentNullException>(() => new StartRunHandler(launcher, store, null!));
             Assert.Throws<ArgumentNullException>(() => new ListRunsHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new GetRunHandler(null!));
             Assert.Throws<ArgumentNullException>(() => new ListRunPostingsHandler(null!));
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    null!,
-                    memory,
-                    memory,
-                    store,
-                    clock)
+                new CancelRunHandler(null!, memory, memory, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    null!,
-                    memory,
-                    store,
-                    clock)
+                new CancelRunHandler(launcher, null!, memory, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    null!,
-                    store,
-                    clock)
+                new CancelRunHandler(launcher, memory, null!, store, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    memory,
-                    null!,
-                    clock)
+                new CancelRunHandler(launcher, memory, memory, null!, clock)
             );
             Assert.Throws<ArgumentNullException>(() =>
-                new CancelRunHandler(
-                    launcher,
-                    memory,
-                    memory,
-                    store,
-                    null!)
+                new CancelRunHandler(launcher, memory, memory, store, null!)
             );
         }
 
@@ -110,10 +81,7 @@ namespace JobScrape.Application.Tests
         public async Task StartForwardsOnlyNewToTheLauncher()
         {
             var launcher = new FakeLauncher();
-            var handler = new StartRunHandler(
-                launcher,
-                new FakeRunStore(),
-                Consent);
+            var handler = new StartRunHandler(launcher, new FakeRunStore(), Consent);
             var request = new StartRunRequest(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -128,10 +96,7 @@ namespace JobScrape.Application.Tests
         public async Task StartForwardsOnlyNewFalseToTheLauncher()
         {
             var launcher = new FakeLauncher();
-            var handler = new StartRunHandler(
-                launcher,
-                new FakeRunStore(),
-                Consent);
+            var handler = new StartRunHandler(launcher, new FakeRunStore(), Consent);
             var request = new StartRunRequest(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -151,10 +116,10 @@ namespace JobScrape.Application.Tests
             var profileId = Guid.NewGuid();
             var browserId = Guid.NewGuid();
 
-            var result = await new StartRunHandler(
-                launcher,
-                store,
-                Consent).HandleAsync(new StartRunRequest(profileId, browserId, Enrich: false), Ct);
+            var result = await new StartRunHandler(launcher, store, Consent).HandleAsync(
+                new StartRunRequest(profileId, browserId, Enrich: false),
+                Ct
+            );
 
             Assert.Equal(run.Id.Value, result.Value.Id);
             var sent = Assert.Single(launcher.Started);
@@ -163,10 +128,7 @@ namespace JobScrape.Application.Tests
             Assert.Same(Consent, sent.Consent);
             Assert.False(sent.Enrich);
             await Assert.ThrowsAsync<ArgumentNullException>(() =>
-                new StartRunHandler(
-                    launcher,
-                    store,
-                    Consent).HandleAsync(null!, Ct)
+                new StartRunHandler(launcher, store, Consent).HandleAsync(null!, Ct)
             );
         }
 
@@ -177,7 +139,8 @@ namespace JobScrape.Application.Tests
             var result = await new StartRunHandler(
                 launcher,
                 new FakeRunStore(),
-                Consent).HandleAsync(new StartRunRequest(Guid.Empty, Guid.Empty), Ct);
+                Consent
+            ).HandleAsync(new StartRunRequest(Guid.Empty, Guid.Empty), Ct);
 
             Assert.Equal("VALIDATION_FAILED", result.Error.Code);
             var errors = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
@@ -195,14 +158,15 @@ namespace JobScrape.Application.Tests
             var conflict = await new StartRunHandler(
                 refused,
                 new FakeRunStore(),
-                Consent).HandleAsync(request, Ct);
+                Consent
+            ).HandleAsync(request, Ct);
             Assert.Equal("RUN_IN_PROGRESS", conflict.Error.Code);
 
             var ghost = new FakeLauncher { Next = Result.Ok(Guid.NewGuid()) };
-            var missing = await new StartRunHandler(
-                ghost,
-                new FakeRunStore(),
-                Consent).HandleAsync(request, Ct);
+            var missing = await new StartRunHandler(ghost, new FakeRunStore(), Consent).HandleAsync(
+                request,
+                Ct
+            );
             Assert.Equal("RUN_NOT_FOUND", missing.Error.Code);
         }
 
@@ -309,7 +273,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 new FakeRunStore(RunResponse.From(run, null)),
-                new FakeTimeProvider(Now));
+                new FakeTimeProvider(Now)
+            );
 
             var result = await handler.HandleAsync(run.Id.Value, Ct);
 
@@ -334,7 +299,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 store,
-                new FakeTimeProvider(Now.AddMinutes(1)));
+                new FakeTimeProvider(Now.AddMinutes(1))
+            );
 
             Assert.True((await handler.HandleAsync(paused.Id.Value, Ct)).IsSuccess);
             Assert.Equal(RunStage.Cancelled, paused.Stage);
@@ -365,7 +331,8 @@ namespace JobScrape.Application.Tests
                 memory,
                 memory,
                 new FakeRunStore(),
-                new FakeTimeProvider(Now));
+                new FakeTimeProvider(Now)
+            );
 
             Assert.Equal(
                 "RUN_NOT_FOUND",

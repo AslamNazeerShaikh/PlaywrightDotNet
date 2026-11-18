@@ -63,7 +63,9 @@ namespace JobScrape.Api.Controllers
             return GuardedAsync(
                 table,
                 async () =>
-                    Results.Ok(await _explorer.ListRowsAsync(table, offset, limit, cancellationToken)),
+                    Results.Ok(
+                        await _explorer.ListRowsAsync(table, offset, limit, cancellationToken)
+                    ),
                 writes: false
             );
         }
@@ -102,7 +104,9 @@ namespace JobScrape.Api.Controllers
             var primaryKeyValue = request?.PrimaryKeyValue;
             if (string.IsNullOrWhiteSpace(primaryKeyValue))
             {
-                return Task.FromResult(Errors.InvalidInput("PrimaryKeyValue is required.").ToProblem());
+                return Task.FromResult(
+                    Errors.InvalidInput("PrimaryKeyValue is required.").ToProblem()
+                );
             }
 
             return GuardedAsync(
