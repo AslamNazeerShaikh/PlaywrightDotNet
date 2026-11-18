@@ -206,6 +206,10 @@ As implemented (`JobScrape.Infrastructure/Sources/Naukri`): Naukri runs fetch th
 | Naming | Not a global feature toggle — `docs/21-feature-toggles.md` covers only `JobScrape:Features` |
 | Scope | Naukri only; Indeed/LinkedIn keep the browser path |
 
+**Cockpit**
+
+The cockpit follows the same split. With the default (`ApiOnly=true`) the runs form drops the session picker entirely and sends no `browserProfileId`, which the API accepts only when the profile's source is API-only (every other source still gets a `browserProfileId` field error). The Sessions page marks an API-only source `API` and turns profile creation off for it; the Sources page tags each source `API` or `BROWSER`. A `false` flag, an unlisted source, or an unavailable sources snapshot keeps the browser flow unchanged.
+
 **Request contract**
 
 | | Search | Detail |

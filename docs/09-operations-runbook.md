@@ -39,9 +39,9 @@ cd src/frontend && bun run dev
 
 Then, in the cockpit:
 
-1. `#/sessions` — create a session for `naukri` (engine `Chromium`, channel `Bundled`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret.
+1. `#/sessions` — on the browser path (`ApiOnly=false`), create a session for `naukri` (engine `Chromium`, channel `Bundled`). Its persistent profile lives in `{ProfilesRoot}/naukri/{name}`; treat it as a secret. On the default API path (`ApiOnly=true`) the page marks `naukri` as `API` and turns creation off — no session is needed; skip to step 2.
 2. `#/profiles` — create a search profile (keywords, cities, caps).
-3. `#/runs` — pick an enabled profile and a launchable session of the same source, then **Start**. On the browser path (`JobScrape:Sources:naukri:ApiOnly=false`), a **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends. With the default (`ApiOnly=true`) no window opens — the run fetches Naukri's `jobapi` endpoints directly and the browser never launches; see §5.5.
+3. `#/runs` — pick an enabled profile, then **Start**. The form asks for a launchable session of the same source only on the browser path; with the default (`ApiOnly=true`) the session picker is gone entirely and the run sends no `browserProfileId`, which the API accepts only when the profile's source is API-only. On the browser path (`JobScrape:Sources:naukri:ApiOnly=false`), a **visible browser window opens** (`JobScrape:Browser:Headless=false`, because Naukri blocks headless first contact): it loads the Naukri home page, pauses, scrolls, then searches. Do not close it mid-run; the API closes it when the run ends. With the default (`ApiOnly=true`) no window opens — the run fetches Naukri's `jobapi` endpoints directly and the browser never launches; see §5.5.
 4. The run detail polls every 2 s (stage track, page/posting/detail meters, postings table). **Cancel** stops the run cooperatively and keeps partial results.
 
 Rules the API enforces:
@@ -300,7 +300,7 @@ Naukri's API answers `406` for two different problems, and they need different r
 
 | Signal | Likely meaning | Operator response |
 |---|---|---|
-| A one-off or occasional `406` (200s interleaved) | Naukri throttled the request | Treat as a rate limit: wait out the cooldown; do not retry immediately; lower caps/delays before the next run. |
+| A one-off or occasional `406` (200s interleaved) | Naukri throttled the request | Treat as a rate limit: wait out the cooldown; do not retry immediately; lower the caps and raise the delays (slow the run down) before the next run. |
 | Three consecutive `406`s | The embedded `nkparam` public key has rotated — same request shape now fails for everyone until the key is replaced | Cooling down will not help. Stop scheduling Naukri runs; the fix is a code update replacing the key in `NaukriRequestToken.cs`. Report it; resume only after the update ships. |
 
 The adapter counts consecutive `406`s process-wide (across runs) and logs `the embedded API key has likely rotated` at warning level once the count reaches three; the classification's evidence then reads `status=406; N consecutive 406s: key rotation likely` in the wall log line. A run that hit one `406` is throttled; a dry spell of `406`s with no interleaved `200`s is rotation. A `406` during detail enrichment stops enrichment for that run only; the listings collected so far are kept. Rotation is not self-healing and is not something caps or retries can fix — it needs the key update.
