@@ -144,9 +144,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
             var uri = SearchUri(criteria, pageNumber);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            var token = NaukriRequestToken.Generate("srp");
             request.Headers.TryAddWithoutValidation("appid", "109");
             request.Headers.TryAddWithoutValidation("systemid", "Naukri");
-            request.Headers.TryAddWithoutValidation("nkparam", NaukriRequestToken.Generate("srp"));
+            request.Headers.TryAddWithoutValidation("nkparam", token);
             request.Headers.Accept.Add(new("application/json"));
             request.Headers.UserAgent.ParseAdd(UserAgent);
             if (_logger.IsEnabled(LogLevel.Information))
@@ -195,7 +196,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             NaukriApiLog.Response(_logger, uri, 200, NaukriApiLog.BodyShape(body));
                         }
 
-                        return ParsePage(body, pageNumber, uri);
+                        return ParsePage(body, pageNumber, uri, token);
                     }
                     case 400:
                         if (_logger.IsEnabled(LogLevel.Information))
@@ -210,6 +211,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             406,
                             "rate-limited",
+                            token,
                             Wall(ChallengeKind.RateLimited, 0.95, "status=406"),
                             cancellationToken
                         );
@@ -219,6 +221,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             (int)response.StatusCode,
                             "redirect",
+                            token,
                             Wall(
                                 ChallengeKind.SoftChallenge,
                                 0.9,
@@ -235,6 +238,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             (int)response.StatusCode,
                             "transient",
+                            token,
                             Wall(
                                 ChallengeKind.TransientError,
                                 0.8,
@@ -252,12 +256,13 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <summary>
         /// Reads and logs a rejected response's body, then returns the
         /// already-classified wall. Only the failure path may log body
-        /// content, and only through the shared capped preview.
+        /// content, and only through the shared capped, redacted preview.
         /// </summary>
         /// <param name="response">The rejected response.</param>
         /// <param name="uri">The request URI, for the log line.</param>
         /// <param name="status">The response status.</param>
         /// <param name="reason">The classification, for the log line.</param>
+        /// <param name="token">The request's token, stripped from the preview.</param>
         /// <param name="page">The pre-classified wall.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The wall.</returns>
@@ -266,6 +271,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Uri uri,
             int status,
             string reason,
+            string token,
             NaukriApiSearchPage page,
             CancellationToken cancellationToken
         )
@@ -278,7 +284,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
             if (_logger.IsEnabled(LogLevel.Warning))
             {
-                NaukriApiLog.Preview(_logger, uri, status, reason, body);
+                NaukriApiLog.Preview(_logger, uri, status, reason, body, token);
             }
 
             return page;
@@ -444,8 +450,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <param name="body">The response body.</param>
         /// <param name="pageNumber">The page number, for the warning.</param>
         /// <param name="uri">The request URI, for the drift warning.</param>
+        /// <param name="token">The request's token, stripped from the drift preview.</param>
         /// <returns>The mapped page.</returns>
-        private NaukriApiSearchPage ParsePage(string body, int pageNumber, Uri uri)
+        private NaukriApiSearchPage ParsePage(string body, int pageNumber, Uri uri, string token)
         {
             try
             {
@@ -455,7 +462,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 {
                     if (_logger.IsEnabled(LogLevel.Warning))
                     {
-                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body, token);
                     }
 
                     return Wall(ChallengeKind.SourceChanged, 0.8, "json");
@@ -493,7 +500,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
-                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body, token);
                 }
 
                 return Wall(ChallengeKind.SourceChanged, 0.8, "json");
@@ -853,8 +860,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
     /// Bodies never log in full at Information. The file sinks retain 90
     /// days, and the row and detail payloads carry every posting's full HTML
     /// description, so one failed page would flood the retention window with
-    /// content nobody reads. The failure preview is the single exception and
-    /// stops at <see cref="BodyPreviewLimit"/> characters.
+    /// content nobody reads. The failure preview is the single exception: it
+    /// strips the request's <c>nkparam</c> token and then stops at
+    /// <see cref="BodyPreviewLimit"/> characters, because a rejected answer
+    /// may quote the request that failed.
     /// </para>
     /// <para>
     /// The caller checks <see cref="ILogger.IsEnabled"/> for the level before
@@ -868,6 +877,11 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// The most response-body characters a failure line may carry.
         /// </summary>
         internal const int BodyPreviewLimit = 2_000;
+
+        /// <summary>
+        /// The text that replaces every secret the log would otherwise show.
+        /// </summary>
+        internal const string Redacted = "[redacted]";
 
         // Enough to name a shape at a glance, small enough to stay one line.
         private const int KeyLimit = 20;
@@ -929,30 +943,52 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// path, and when the shape line is already written and the body is
         /// classified into a wall after parsing, such as schema drift on a
         /// <c>200</c>.
+        /// <para>
+        /// The request's token is replaced with <see cref="Redacted"/> before
+        /// the preview is cut: a rejected answer may quote the request, and
+        /// truncating first would leave the token's head in the sink.
+        /// </para>
         /// </summary>
         /// <param name="logger">The logger to write to.</param>
         /// <param name="uri">The request URI.</param>
         /// <param name="status">The response status.</param>
         /// <param name="reason">The wall classification.</param>
-        /// <param name="body">The response body; only its capped preview is logged.</param>
+        /// <param name="body">The response body; only its redacted, capped preview is logged.</param>
+        /// <param name="token">The request's token, replaced everywhere it appears.</param>
         internal static void Preview(
             ILogger logger,
             Uri uri,
             int status,
             string reason,
-            string body
+            string body,
+            string token
         )
         {
-            var shown = Math.Min(body.Length, BodyPreviewLimit);
+            var redacted = Redact(body, token);
+            var shown = Math.Min(redacted.Length, BodyPreviewLimit);
             LogApiFailure(
                 logger,
                 status,
                 uri.AbsoluteUri,
                 reason,
-                body.Length,
+                redacted.Length,
                 shown,
-                body[..shown]
+                redacted[..shown]
             );
+        }
+
+        /// <summary>
+        /// Replaces every occurrence of the request token with
+        /// <see cref="Redacted"/>.
+        /// </summary>
+        /// <param name="body">The response body.</param>
+        /// <param name="token">The request's token; an empty one changes nothing.</param>
+        /// <returns>The body with no copy of the token left in it.</returns>
+        private static string Redact(string body, string token)
+        {
+            return string.IsNullOrEmpty(token)
+                ? body
+                : body.Replace(token, Redacted, StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -997,7 +1033,8 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
         /// <summary>
         /// Renders the request headers as one line: names in full, values
-        /// only for the allow-list, everything else as <c>[redacted]</c>.
+        /// only for the allow-list, everything else as
+        /// <see cref="Redacted"/>.
         /// </summary>
         /// <param name="request">The built request.</param>
         /// <returns>The rendered header line.</returns>
@@ -1018,7 +1055,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                     : ", ";
                 var value = PlaintextHeaders.Contains(header.Key)
                     ? string.Join(separator, header.Value)
-                    : "[redacted]";
+                    : Redacted;
                 rendered.Add($"{header.Key}={value}");
             }
 
@@ -1085,9 +1122,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             string shape
         );
 
-        // The one place a body may reach the log. It stops at the preview
-        // limit because the sinks retain 90 days and the row/detail payloads
-        // carry full HTML descriptions.
+        // The one place a body may reach the log. Its caller already replaced
+        // the request token, and the preview stops at the limit because the
+        // sinks retain 90 days and the row/detail payloads carry full HTML
+        // descriptions.
         [LoggerMessage(
             Level = LogLevel.Warning,
             Message = "Naukri API {Status} wall on {Uri}: {Reason}; body ({TotalChars} chars, first {ShownChars} shown): {Body}"

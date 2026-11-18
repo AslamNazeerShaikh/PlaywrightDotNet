@@ -551,20 +551,7 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
 
             var token = Header(Assert.Single(handler.Requests), "nkparam");
             Assert.NotEmpty(token);
-            Assert.NotEmpty(logger.Entries);
-
-            foreach (var entry in logger.Entries)
-            {
-                Assert.DoesNotContain(token, entry.Message, StringComparison.Ordinal);
-                foreach (var value in entry.Properties.Values)
-                {
-                    Assert.DoesNotContain(
-                        token,
-                        value?.ToString() ?? string.Empty,
-                        StringComparison.Ordinal
-                    );
-                }
-            }
+            AssertTokenNeverLogged(logger.Entries, token);
 
             // Redaction is visible, not silent: the header name stays so an
             // operator can see the token was sent.
@@ -573,6 +560,95 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
                 && headers?.ToString()?.Contains("nkparam=[redacted]", StringComparison.Ordinal)
                     == true
             );
+        }
+
+        // ---- failure-path body redaction ----
+
+        [Fact]
+        public async Task Rejected406BodyEchoingTheTokenNeverReachesAnyLogEntry()
+        {
+            // The header allow-list stops the token on the request line, but
+            // a rejected response can quote the request that failed: the
+            // capped preview would carry it into the 90-day sinks.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(request => new HttpResponseMessage(
+                HttpStatusCode.NotAcceptable
+            )
+            {
+                Content = new StringContent(
+                    EchoBody(request, "rejected"),
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            });
+            using var client = Client(handler, logger);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.Equal(ChallengeKind.RateLimited, page.Challenge.Kind);
+            var token = Header(Assert.Single(handler.Requests), "nkparam");
+            Assert.NotEmpty(token);
+            AssertTokenNeverLogged(logger.Entries, token);
+
+            // Redaction is visible and keeps the rest of the body: the
+            // operator still sees why the wall fired.
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            var body = Assert.IsType<string>(failure.Properties["Body"]);
+            Assert.Contains("[redacted]", body, StringComparison.Ordinal);
+            Assert.Contains("\"rejected\"", body, StringComparison.Ordinal);
+            Assert.Contains("[redacted]", failure.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task SchemaDrift200BodyEchoingTheTokenNeverReachesAnyLogEntry()
+        {
+            // A 200 whose evidence is the body takes the same preview path as
+            // a rejected status, so it needs the same redaction.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(request => JsonResponse(EchoBody(request, "drift")));
+            using var client = Client(handler, logger);
+
+            var page = await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            Assert.Equal(ChallengeKind.SourceChanged, page.Challenge.Kind);
+            var token = Header(Assert.Single(handler.Requests), "nkparam");
+            Assert.NotEmpty(token);
+            AssertTokenNeverLogged(logger.Entries, token);
+
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            var body = Assert.IsType<string>(failure.Properties["Body"]);
+            Assert.Contains("[redacted]", body, StringComparison.Ordinal);
+            Assert.Contains("\"drift\"", body, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task TokenRedactionRunsBeforeThePreviewIsTruncated()
+        {
+            // A token straddling the preview limit must be replaced before the
+            // cut: redacting after truncation would leave the token's head in
+            // the sink while the whole value looked gone.
+            var logger = new RecordingLogger();
+            var handler = new FakeHandler(request =>
+            {
+                var body = new string('x', 1_990) + RequestToken(request) + "TAIL-MARKER";
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                };
+            });
+            using var client = Client(handler, logger);
+
+            await client.FetchPageAsync(Criteria(), 1, Ct);
+
+            var token = Header(Assert.Single(handler.Requests), "nkparam");
+            Assert.NotEmpty(token);
+            AssertTokenNeverLogged(logger.Entries, token);
+
+            var failure = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning);
+            var body = Assert.IsType<string>(failure.Properties["Body"]);
+            Assert.Equal(2_000, body.Length);
+            Assert.EndsWith("[redacted]", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("TAIL-MARKER", body, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -696,6 +772,51 @@ namespace JobScrape.Infrastructure.Tests.Sources.Naukri
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),
             };
+        }
+
+        /// <summary>
+        /// Asserts the token appears in no rendered message and no structured
+        /// property value of the recorded entries.
+        /// </summary>
+        /// <param name="entries">The recorded log entries.</param>
+        /// <param name="token">The request token that must not survive.</param>
+        private static void AssertTokenNeverLogged(IReadOnlyList<LogEntry> entries, string token)
+        {
+            Assert.NotEmpty(entries);
+            foreach (var entry in entries)
+            {
+                Assert.DoesNotContain(token, entry.Message, StringComparison.Ordinal);
+                foreach (var value in entry.Properties.Values)
+                {
+                    Assert.DoesNotContain(
+                        token,
+                        value?.ToString() ?? string.Empty,
+                        StringComparison.Ordinal
+                    );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reads the token the handler saw on the wire.
+        /// </summary>
+        /// <param name="request">The captured request.</param>
+        /// <returns>The token.</returns>
+        private static string RequestToken(HttpRequestMessage request)
+        {
+            return Assert.Single(request.Headers.GetValues("nkparam"));
+        }
+
+        /// <summary>
+        /// Builds the response body a source that quotes the failing request
+        /// would send, with the token in raw base64 form.
+        /// </summary>
+        /// <param name="request">The request being answered.</param>
+        /// <param name="marker">The error marker the assertion looks for.</param>
+        /// <returns>The echo body.</returns>
+        private static string EchoBody(HttpRequestMessage request, string marker)
+        {
+            return "{\"error\":\"" + marker + "\",\"nkparam\":\"" + RequestToken(request) + "\"}";
         }
 
         private static HttpResponseMessage StatusResponse(HttpStatusCode status)

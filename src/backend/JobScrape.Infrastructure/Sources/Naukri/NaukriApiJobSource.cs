@@ -188,12 +188,10 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 UriKind.Absolute
             );
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            var token = NaukriRequestToken.Generate(job.ExternalJobId.Value);
             request.Headers.TryAddWithoutValidation("appid", "121");
             request.Headers.TryAddWithoutValidation("systemid", "Naukri");
-            request.Headers.TryAddWithoutValidation(
-                "nkparam",
-                NaukriRequestToken.Generate(job.ExternalJobId.Value)
-            );
+            request.Headers.TryAddWithoutValidation("nkparam", token);
             request.Headers.Accept.Add(new("application/json"));
             request.Headers.UserAgent.ParseAdd(UserAgent);
             if (_logger.IsEnabled(LogLevel.Information))
@@ -248,7 +246,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             NaukriApiLog.Response(_logger, uri, 200, NaukriApiLog.BodyShape(body));
                         }
 
-                        return ParseDetail(body, job, uri);
+                        return ParseDetail(body, job, uri, token);
                     }
                     case 406:
                         return await RejectedAsync(
@@ -256,6 +254,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             406,
                             "rate-limited",
+                            token,
                             new JobDetailResult(
                                 null,
                                 new ChallengeAssessment(
@@ -272,6 +271,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             (int)response.StatusCode,
                             "redirect",
+                            token,
                             new JobDetailResult(
                                 null,
                                 FetchWall(
@@ -293,6 +293,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                             uri,
                             (int)response.StatusCode,
                             "transient",
+                            token,
                             new JobDetailResult(
                                 null,
                                 new ChallengeAssessment(
@@ -313,12 +314,13 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <summary>
         /// Reads and logs a rejected detail response's body, then returns the
         /// already-classified result. Only the failure path may log body
-        /// content, and only through the shared capped preview.
+        /// content, and only through the shared capped, redacted preview.
         /// </summary>
         /// <param name="response">The rejected response.</param>
         /// <param name="uri">The request URI, for the log line.</param>
         /// <param name="status">The response status.</param>
         /// <param name="reason">The classification, for the log line.</param>
+        /// <param name="token">The request's token, stripped from the preview.</param>
         /// <param name="result">The pre-classified detail result.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>The detail result.</returns>
@@ -327,6 +329,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             Uri uri,
             int status,
             string reason,
+            string token,
             JobDetailResult result,
             CancellationToken cancellationToken
         )
@@ -339,7 +342,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
 
             if (_logger.IsEnabled(LogLevel.Warning))
             {
-                NaukriApiLog.Preview(_logger, uri, status, reason, body);
+                NaukriApiLog.Preview(_logger, uri, status, reason, body, token);
             }
 
             return result;
@@ -483,8 +486,9 @@ namespace JobScrape.Infrastructure.Sources.Naukri
         /// <param name="body">The response body.</param>
         /// <param name="job">The posting being enriched.</param>
         /// <param name="uri">The request URI, for the drift warning.</param>
+        /// <param name="token">The request's token, stripped from the drift preview.</param>
         /// <returns>The detail snapshot, or the classification.</returns>
-        private JobDetailResult ParseDetail(string body, JobReference job, Uri uri)
+        private JobDetailResult ParseDetail(string body, JobReference job, Uri uri, string token)
         {
             try
             {
@@ -494,7 +498,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 {
                     if (_logger.IsEnabled(LogLevel.Warning))
                     {
-                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body, token);
                     }
 
                     return new JobDetailResult(
@@ -508,7 +512,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
                 {
                     if (_logger.IsEnabled(LogLevel.Warning))
                     {
-                        NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                        NaukriApiLog.Preview(_logger, uri, 200, "json", body, token);
                     }
 
                     return new JobDetailResult(
@@ -598,7 +602,7 @@ namespace JobScrape.Infrastructure.Sources.Naukri
             {
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
-                    NaukriApiLog.Preview(_logger, uri, 200, "json", body);
+                    NaukriApiLog.Preview(_logger, uri, 200, "json", body, token);
                 }
 
                 return new JobDetailResult(
