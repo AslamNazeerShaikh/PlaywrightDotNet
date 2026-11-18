@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
@@ -680,4 +680,169 @@ describe("runs page", () => {
       { profileId: "p1", browserProfileId: "s1", enrich: true, onlyNew: false },
     ]);
   });
+});
+
+/** A failed timed call for overriding one client method in a test. */
+function failedCall(problem: ApiProblem) {
+  return {
+    result: { ok: false as const, problem },
+    ms: 1,
+    at: "2026-11-02T08:00:01Z",
+  };
+}
+
+describe("runs page postings failures", () => {
+  test("a thrown postings fetch shows a problem and keeps polling", async () => {
+    const { client: base } = runsBackend();
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      listRunPostings: () => {
+        postingsCalls += 1;
+        throw new Error("boom");
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+    expect(queries.getByRole("alert").textContent).not.toContain("boom");
+    expect(queries.queryByText("Loading postings…")).toBeNull();
+    // The loop survives the throw: the next poll runs on its own.
+    await waitFor(() => expect(postingsCalls).toBeGreaterThan(1), { timeout: 6000 });
+  }, 15_000);
+
+  test("RETRY refetches the postings and clears the problem on success", async () => {
+    const unavailable: ApiProblem = {
+      status: 503,
+      title: "Postings are unavailable.",
+      detail: "",
+      code: "BAD_RESPONSE",
+    };
+    const { client: base } = runsBackend(["Infosys", "TCS"], undefined, {
+      runPatch: { isTerminal: true },
+    });
+    let failuresLeft = 1;
+    const client = {
+      ...base,
+      listRunPostings: (id: string, offset?: number, limit?: number) => {
+        if (failuresLeft > 0) {
+          failuresLeft -= 1;
+          return Promise.resolve(failedCall(unavailable));
+        }
+        return base.listRunPostings(id, offset, limit);
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+
+    fireEvent.click(queries.getByRole("button", { name: "RETRY" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
+    );
+    expect(queries.queryByRole("alert")).toBeNull();
+  }, 15_000);
+
+  test("a terminal run with a failing postings list shows the error, not the spinner", async () => {
+    const unavailable: ApiProblem = {
+      status: 503,
+      title: "Postings are unavailable.",
+      detail: "",
+      code: "BAD_RESPONSE",
+    };
+    const { client: base } = runsBackend(["Infosys", "TCS"], undefined, {
+      runPatch: { isTerminal: true },
+    });
+    let postingsCalls = 0;
+    const client = {
+      ...base,
+      listRunPostings: () => {
+        postingsCalls += 1;
+        return Promise.resolve(failedCall(unavailable));
+      },
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE"));
+    expect(queries.getByRole("alert").textContent).toContain("Postings are unavailable.");
+    expect(queries.queryByText("Loading postings…")).toBeNull();
+
+    // Terminal: the failed poll is the last one.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    expect(postingsCalls).toBe(1);
+  }, 15_000);
+
+  test("session death on the follow poll still routes out", async () => {
+    const unauthorized: ApiProblem = {
+      status: 401,
+      title: "Your session ended. Sign in again to pick up any account changes.",
+      detail: "",
+      code: "UNAUTHENTICATED",
+    };
+    const onUnauthorized = mock((_problem: ApiProblem) => undefined);
+    const { client: base } = runsBackend();
+    const client = {
+      ...base,
+      getRun: () => Promise.resolve(failedCall(unauthorized)),
+      listRunPostings: () => Promise.resolve(failedCall(unauthorized)),
+    };
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={onUnauthorized} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(onUnauthorized.mock.calls[0]?.[0]).toEqual(unauthorized);
+    // The shell owns the sign-in route; the page never shows a postings error for it.
+    expect(queries.queryByRole("alert")).toBeNull();
+    expect(queries.queryByRole("button", { name: "RETRY" })).toBeNull();
+  }, 15_000);
+
+  test("re-selecting the active run refetches its postings", async () => {
+    const { client, calls } = runsBackend();
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    const postingsCalls = () =>
+      calls.filter((call) => call.startsWith("GET /api/v1/runs/r1/postings?")).length;
+    const before = postingsCalls();
+    fireEvent.click(queries.getByRole("button", { name: "2026-11-02 08:00:00" }));
+
+    await waitFor(() => expect(postingsCalls()).toBeGreaterThan(before));
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
+    );
+  }, 15_000);
 });
