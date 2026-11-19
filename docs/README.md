@@ -48,6 +48,7 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 18 | [Feature toggles](21-feature-toggles.md) | Which flags exist, what on/off does to each subsystem, and the edge rules? |
 | 19 | [Lean workflow](23-lean-workflow.md) | How do you run poteto-mode, ponytail, and superpowers gates from one slash, and what does each pack own? |
 | 20 | [Model intelligence](24-model-intelligence.md) | Which OpenCode/Go model is smartest for coding and tool use, with AA and HF evidence? |
+| 21 | [Docs-vs-code audit](25-docs-code-audit.md) | Where do the docs and comments contradict the tree, with evidence both sides? |
 
 ---
 
