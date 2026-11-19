@@ -216,8 +216,8 @@ const KNOWN_TABLES = new Set(ER_CARDS.map((card) => card.name));
 
 /**
  * DB-04 shape and flow. The top lane is drawn from the live schema: domain groups, the two enforced
- * FKs, the shared source_key identity, the run-progress identity, and the time-window link from a
- * run to its postings. The bottom lanes correct the runtime order: Playwright scrapes inside .NET,
+ * FKs, the shared source_key identity, the run-progress identity, and the seen-ids link from a run
+ * to its postings. The bottom lanes correct the runtime order: Playwright scrapes inside .NET,
  * SQLite is the only store, and the BFF only proxies the browser's API calls.
  */
 export function ErFlowDiagram({
@@ -413,7 +413,7 @@ export function ErFlowDiagram({
             textAnchor="middle"
             style={{ fill: "var(--amber)", fontSize: "var(--text-fine)" }}
           >
-            LastSeenAt in [StartedAt, FinishedAt] · no FK
+            SeenExternalIds · no FK
           </text>
         </g>
       )}

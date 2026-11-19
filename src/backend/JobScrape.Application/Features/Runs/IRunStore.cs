@@ -24,9 +24,9 @@ namespace JobScrape.Application.Features.Runs
         Task<RunListResponse> ListAsync(int offset, int limit, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Lists the postings a run saw: those of its source last seen
-        /// between its start and its finish (or now, while it runs). Runs
-        /// execute one at a time, so the window identifies the run's postings.
+        /// Lists the postings a run saw: those of its source whose external ids
+        /// its progress recorded. Later runs may refresh the same rows, so the
+        /// timestamps alone cannot identify a run's postings.
         /// </summary>
         /// <param name="runId">The run identifier.</param>
         /// <param name="offset">How many postings to skip; at least 0.</param>
@@ -42,7 +42,7 @@ namespace JobScrape.Application.Features.Runs
 
         /// <summary>
         /// Lists the postings a run saw, with the full stored fields for
-        /// export: the same window as <see cref="ListPostingsAsync"/>, most
+        /// export: the same id set as <see cref="ListPostingsAsync"/>, most
         /// recently seen first.
         /// </summary>
         /// <param name="runId">The run identifier.</param>

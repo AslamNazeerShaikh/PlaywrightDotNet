@@ -714,9 +714,9 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 > `202` + `Location` with the recorded run), `GET /api/v1/runs` (newest 50,
 > `{ items, total }`), `GET /api/v1/runs/{id}`, `POST /api/v1/runs/{id}/cancel`
 > (idempotent), and `GET /api/v1/runs/{id}/postings` (not in the table above:
-> postings of the run's source whose `LastSeenAt` falls in the run's
-> `[StartedAt, FinishedAt ?? now]` window, max 200 — valid because runs execute
-> one at a time), and `GET /api/v1/runs/{id}/postings/export?format=csv|xlsx`
+> postings of the run's source whose external ids its progress recorded
+> (and, for onlyNew runs, whose `FirstSeenAt >= StartedAt`), max 200 —
+> stable after later runs refresh shared rows), and `GET /api/v1/runs/{id}/postings/export?format=csv|xlsx`
 > (`text/csv` with BOM, or a `Jobs`-sheet workbook with posting-URL
 > hyperlinks; max 20 000 rows; `400 EXPORT_FORMAT_UNSUPPORTED` for anything
 > else). Add `group=only` or `group=exclude` to split the file by the

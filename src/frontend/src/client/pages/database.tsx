@@ -641,7 +641,7 @@ export function DatabasePage({ client }: { client: ApiClient }) {
             {
               key: "window",
               swatch: <Wire color="var(--amber)" dashed />,
-              text: "postings time window, no FK",
+              text: "run seen ids, no FK",
             },
           ]}
         />
@@ -655,9 +655,8 @@ export function DatabasePage({ client }: { client: ApiClient }) {
           Solid lines are enforced foreign keys from the live schema. Dashed violet lines share one
           value, <Abbr term="source_key" full="Source key: which site a row came from" /> or a run
           id, with no database link. Runs do not own postings: a run&apos;s postings are the rows
-          whose <Abbr term="LastSeenAt" full="Last seen at: when a posting was last sighted" />{" "}
-          falls in the run window. Scraping runs inside .NET through Playwright; the BFF only
-          proxies the browser&apos;s API calls and never talks to a source site.
+          whose external ids its progress recorded. Scraping runs inside .NET through Playwright;
+          the BFF only proxies the browser&apos;s API calls and never talks to a source site.
         </p>
         <Glossary
           terms={[
