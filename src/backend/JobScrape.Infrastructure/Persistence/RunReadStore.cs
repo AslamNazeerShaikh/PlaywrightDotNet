@@ -20,7 +20,7 @@ namespace JobScrape.Infrastructure.Persistence
         /// Initializes a new instance of the <see cref="RunReadStore"/> class.
         /// </summary>
         /// <param name="db">The database context.</param>
-        /// <param name="clock">The time source; ends the posting window of a run still executing.</param>
+        /// <param name="clock">The time source; a run that never started reports an empty list.</param>
         /// <exception cref="ArgumentNullException">Thrown when any argument is null.</exception>
         public RunReadStore(JobScrapeDbContext db, TimeProvider clock)
         {
@@ -108,7 +108,7 @@ namespace JobScrape.Infrastructure.Persistence
         }
 
         /// <summary>
-        /// Loads one run's postings in its start/finish window.
+        /// Loads one run's postings from its recorded id set.
         /// </summary>
         /// <param name="runId">The run identifier.</param>
         /// <param name="offset">How many postings to skip.</param>
@@ -133,32 +133,41 @@ namespace JobScrape.Infrastructure.Persistence
                 return new RunPostings(_clock.GetUtcNow(), [], 0);
             }
 
-            var until = run.FinishedAt ?? _clock.GetUtcNow();
+            // A run's postings are what its progress recorded, not what the
+            // mutable LastSeenAt timestamps still remember (later runs move shared rows).
+            // The lower bound keeps out cards the run saw on-page but dropped before
+            // persist (skill mismatch): those never advanced LastSeenAt into this run.
+            var seen = run.Progress?.SeenExternalIds ?? [];
+            if (seen.Count == 0)
+            {
+                return new RunPostings(from, [], 0);
+            }
+
             var source = run.Source;
             var onlyNew = run.OnlyNew;
-            var postings = await _db
-                .JobPostings.AsNoTracking()
-                .Where(posting =>
-                    posting.Source == source
-                    && posting.LastSeenAt >= from
-                    && posting.LastSeenAt <= until
-                    && (!onlyNew || posting.FirstSeenAt >= from)
-                )
-                .OrderByDescending(posting => posting.LastSeenAt)
-                .Skip(offset)
-                .Take(limit)
-                .ToListAsync(cancellationToken);
-            var total = await _db
-                .JobPostings.AsNoTracking()
-                .CountAsync(
-                    posting =>
+            var ids = seen.Select(ExternalJobId.Create).ToArray();
+            // SQLite caps bound parameters (~32k): one id list would 500 on large
+            // runs, so fetch in small batches and page the merged set in memory.
+            var all = new List<JobPosting>();
+            foreach (var chunk in ids.Chunk(2000))
+            {
+                var batch = await _db
+                    .JobPostings.AsNoTracking()
+                    .Where(posting =>
                         posting.Source == source
+                        && chunk.Contains(posting.ExternalJobId)
                         && posting.LastSeenAt >= from
-                        && posting.LastSeenAt <= until
-                        && (!onlyNew || posting.FirstSeenAt >= from),
-                    cancellationToken
-                );
-            return new RunPostings(from, postings, total);
+                        && (!onlyNew || posting.FirstSeenAt >= from)
+                    )
+                    .ToListAsync(cancellationToken);
+                all.AddRange(batch);
+            }
+
+            var ordered = all.OrderByDescending(posting => posting.LastSeenAt)
+                .ThenBy(posting => posting.ExternalJobId.Value, StringComparer.Ordinal)
+                .ToList();
+            var postings = ordered.Skip(offset).Take(limit).ToList();
+            return new RunPostings(from, postings, ordered.Count);
         }
 
         /// <summary>
@@ -259,11 +268,11 @@ namespace JobScrape.Infrastructure.Persistence
         }
 
         /// <summary>
-        /// One run's window and the postings last seen inside it.
+        /// One run's recorded id set and the postings it still resolves to.
         /// </summary>
         /// <param name="RunStart">When the run started.</param>
         /// <param name="Items">The postings, most recently seen first.</param>
-        /// <param name="Total">How many postings the window holds in total.</param>
+        /// <param name="Total">How many of the id set's postings still exist.</param>
         private sealed record RunPostings(
             DateTimeOffset RunStart,
             IReadOnlyList<JobPosting> Items,

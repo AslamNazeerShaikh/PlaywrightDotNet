@@ -106,15 +106,17 @@ namespace JobScrape.Infrastructure.Tests.Persistence
         }
 
         [Fact]
-        public async Task PostingsAreThoseSeenInsideTheRunWindow()
+        public async Task PostingsAreThoseInTheRunSeenSet()
         {
             await using var database = await TestDatabase.CreateAsync(Ct);
             var profile = Profile("backend");
             var run = ScrapeRun.Create(profile, Now);
             run.Start(Now);
+            run.ResumeProgress(Now).RecordPage(1, null, ["200", "300"], Now.AddMinutes(2));
             var notStarted = ScrapeRun.Create(profile, Now);
             var before = Posting("100", Now.AddHours(-2));
             var during = Posting("200", Now.AddMinutes(1));
+            var unrecorded = Posting("400", Now.AddMinutes(1));
             var refreshed = Posting("300", Now.AddDays(-3));
             refreshed.Refresh(
                 new JobSnapshot
@@ -135,17 +137,19 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                 var postings = scope.Get<IJobPostingRepository>();
                 await postings.AddAsync(before, Ct);
                 await postings.AddAsync(during, Ct);
+                await postings.AddAsync(unrecorded, Ct);
                 await postings.AddAsync(refreshed, Ct);
                 await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
             }
 
             await using var reload = database.Scope();
-            // Still executing: the window runs to the clock's now.
+            // Still executing: the run lists what its progress recorded so far.
             var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
 
             var seen = await store.ListPostingsAsync(run.Id.Value, 0, 50, Ct);
             Assert.Equal(["300", "200"], seen!.Items.Select(p => p.ExternalJobId));
             Assert.Equal(2, seen.Total);
+            Assert.DoesNotContain(seen.Items, p => p.ExternalJobId == "400");
             Assert.False(seen.Items[0].IsNew);
             Assert.True(seen.Items[0].Enriched);
             Assert.True(seen.Items[1].IsNew);
@@ -159,6 +163,70 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.Empty((await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Items);
             Assert.Equal(0, (await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Total);
             Assert.Null(await store.ListPostingsAsync(Guid.NewGuid(), 0, 50, Ct));
+        }
+
+        [Fact]
+        public async Task EarlierRunKeepsItsListAfterLaterRunRefreshesSharedPostings()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var profile = Profile("backend");
+            var run1 = ScrapeRun.Create(profile, Now);
+            run1.Start(Now);
+            run1.BeginSearching();
+            run1.RecordPage(new PageStats(2, 2, 0), Now.AddMinutes(2));
+            run1.ResumeProgress(Now).RecordPage(1, null, ["A", "B"], Now.AddMinutes(2));
+            run1.BeginPersisting();
+            run1.Complete(Now.AddMinutes(3));
+            var run2 = ScrapeRun.Create(profile, Now.AddHours(1));
+            run2.Start(Now.AddHours(1));
+            run2.ResumeProgress(Now.AddHours(1))
+                .RecordPage(1, null, ["A", "B"], Now.AddHours(1).AddMinutes(2));
+            var postingA = Posting("A", Now.AddMinutes(1));
+            var postingB = Posting("B", Now.AddMinutes(2));
+            // Later run re-sights both rows, moving LastSeenAt out of run1's window.
+            postingA.Refresh(
+                new JobSnapshot
+                {
+                    Source = SourceKey.Naukri,
+                    ExternalJobId = "A",
+                    Url = "https://www.naukri.com/job-listings-dev-A",
+                    Title = "Developer A",
+                },
+                Now.AddHours(1).AddMinutes(2)
+            );
+            postingB.Refresh(
+                new JobSnapshot
+                {
+                    Source = SourceKey.Naukri,
+                    ExternalJobId = "B",
+                    Url = "https://www.naukri.com/job-listings-dev-B",
+                    Title = "Developer B",
+                },
+                Now.AddHours(1).AddMinutes(2)
+            );
+            await using (var scope = database.Scope())
+            {
+                await scope.Get<ISearchProfileRepository>().AddAsync(profile, Ct);
+                var runs = scope.Get<IScrapeRunRepository>();
+                await runs.AddAsync(run1, Ct);
+                await runs.AddAsync(run2, Ct);
+                var postings = scope.Get<IJobPostingRepository>();
+                await postings.AddAsync(postingA, Ct);
+                await postings.AddAsync(postingB, Ct);
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(
+                reload.Db,
+                new FakeTimeProvider(Now.AddHours(1).AddMinutes(5))
+            );
+
+            var seen = await store.ListPostingsAsync(run1.Id.Value, 0, 50, Ct);
+            Assert.Equal(2, seen!.Total);
+            Assert.Equal(["A", "B"], seen.Items.Select(p => p.ExternalJobId).Order());
+            var export = await store.ListExportPostingsAsync(run1.Id.Value, 50, Ct);
+            Assert.Equal(2, export!.Count);
         }
 
         [Fact]

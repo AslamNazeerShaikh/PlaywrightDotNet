@@ -252,16 +252,7 @@ export function TopologyPage({ upstream }: { upstream: string }) {
             "no Description · Take(MaxDetails)",
           )}
           {flowLine("top5", 280, 522, 280, 544, "green")}
-          {flowRect(
-            "top5",
-            280,
-            544,
-            230,
-            52,
-            "green",
-            "PostingsAsync",
-            "LastSeenAt in run window",
-          )}
+          {flowRect("top5", 280, 544, 230, 52, "green", "PostingsAsync", "run seen ids")}
         </svg>
         <Legend
           label="Flow key"
