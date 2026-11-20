@@ -43,13 +43,13 @@ Skip the plan for a one-line fix. If the tasks are coupled through shared files,
 
 ## Pick the model for each delegate
 
-Read the role line in `.opencode/pstack-models.md` for each delegate. Pass it as `provider/model#variant`:
+Read the role line in `.opencode/pstack-models.md` for each delegate. Pass it as `provider/model`, plus `#variant` when the catalog lists thinking variants (longcat-2.5-free has none):
 
 | # | Role line | Model |
 |---|-----------|-------|
 | 1 | `hardest tasks`: redesign, cross-cutting change | `opencode-go/deepseek-v4.1-flash#max` |
 | 2 | `feature`, `refactoring`, `bug-fix`, `perf-issue` | `opencode/inkling-2-small-free#max` |
-| 3 | `chores`: pull, clean, format, graphify update | `opencode-go/beam-free#max` |
+| 3 | `chores`: pull, clean, format, graphify update | `opencode-go/longcat-2.5-free` |
 
 Omit `model` when the role line is missing or says `inherit-parent` or `auto`. Never use Cursor slugs such as `claude-opus-5-5-xhigh`. They are Cursor IDs and are not valid in this repo model map.
 

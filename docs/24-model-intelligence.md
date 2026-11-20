@@ -24,7 +24,7 @@
 3. Best agent/vision/finance: **Inkling 2 Small (31)** — BrowseComp 90.2%, MCP Atlas 85%, DesignArena #1, Apache-2.0. Second coder at 72.1.
 4. Productivity pick: **Hy4 flash** — no AA yet, vendor slightly above Hy4-preview, well below Hy4/DeepSeek on open benches. Use for slides/docs/everyday, not long-horizon SWE.
 5. Middle tier: **MiniMax (29/42 max) > Qwen (29/40 max) > MiMo (27)** on code; Qwen leads exams/multilingual.
-6. Last: **Beam (18)** — text-only, TB 4.0 3.0%. Fast but not capable; keep to chores (`beam-free#max` in `pstack-models.md`).
+6. Last: **Beam (18)** — text-only, TB 4.0 3.0%. Demoted from chores 2026-11-21 after local 6-round bench (longcat-2.5-free 4–2 over beam-free#max); chores now `opencode-go/longcat-2.5-free` in `pstack-models.md`.
 
 ## References
 
