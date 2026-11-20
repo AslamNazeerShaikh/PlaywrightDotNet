@@ -39,7 +39,7 @@ Not: read-only investigation, one-line edit.
 | Prototype fork | sketch decides, never AskQuestion |
 | Diff | smallest reuse: helper, stdlib, dep, else minimum |
 | Commit/review | deslop, no-comments, verification run |
-| Models (delegated) | hardest/deepseek#max; feature, bug-fix, perf-issue/inkling#max; chores/longcat-2.5-free (no variant); missing omits model |
+| Models (delegated) | hardest/deepseek#max; feature, bug-fix, perf-issue/inkling#max; chores/beam-free#max; missing omits model |
 | Fix loop | Critical/Important/spec-miss: resume 1-3, fresh+bump 4-5, max 5, tests+report+re-review; contested: one bakeoff; unclear: decide+ledger or ask once; Minor: deferred |
 | Plan gate | 2+ tasks/vague/shared names: names + Consumes/Produces + test first; one-line skips; coupled sequential |
 
