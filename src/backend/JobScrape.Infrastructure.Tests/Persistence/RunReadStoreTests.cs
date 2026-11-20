@@ -25,7 +25,12 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             );
         }
 
-        private static JobPosting Posting(string id, DateTimeOffset seen)
+        private static JobPosting Posting(
+            string id,
+            DateTimeOffset seen,
+            string? location = null,
+            string? company = null
+        )
         {
             return JobPosting.Create(
                 new JobSnapshot
@@ -35,9 +40,40 @@ namespace JobScrape.Infrastructure.Tests.Persistence
                     Url = $"https://www.naukri.com/job-listings-dev-{id}",
                     Title = $"Developer {id}",
                     Skills = ["C#"],
+                    Company = company,
+                    Location = location is null
+                        ? null
+                        : new JobLocation(location, null, null, null, WorkMode.Unknown),
                 },
                 seen
             );
+        }
+
+        private static async Task<Guid> SeedPostingsRunAsync(
+            TestDatabase database,
+            (string Id, string? Location, string? Company)[] specs
+        )
+        {
+            var profile = Profile("backend");
+            var run = ScrapeRun.Create(profile, Now);
+            run.Start(Now);
+            run.ResumeProgress(Now)
+                .RecordPage(1, null, specs.Select(spec => spec.Id).ToArray(), Now.AddMinutes(2));
+            await using (var scope = database.Scope())
+            {
+                await scope.Get<ISearchProfileRepository>().AddAsync(profile, Ct);
+                await scope.Get<IScrapeRunRepository>().AddAsync(run, Ct);
+                var postings = scope.Get<IJobPostingRepository>();
+                foreach (var spec in specs)
+                {
+                    await postings.AddAsync(
+                        Posting(spec.Id, Now.AddMinutes(1), spec.Location, spec.Company),
+                        Ct
+                    );
+                }
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+            return run.Id.Value;
         }
 
         [Fact]
@@ -163,6 +199,198 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             Assert.Empty((await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Items);
             Assert.Equal(0, (await store.ListPostingsAsync(notStarted.Id.Value, 0, 50, Ct))!.Total);
             Assert.Null(await store.ListPostingsAsync(Guid.NewGuid(), 0, 50, Ct));
+        }
+
+        [Fact]
+        public async Task LocationsFilterMatchesAnyCommaSeparatedPartCaseInsensitively()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var runId = await SeedPostingsRunAsync(
+                database,
+                [
+                    ("p1", "Pune, Mumbai", "Contoso"),
+                    ("p2", "Delhi", "Contoso"),
+                    ("p3", "Pune", "Fabrikam"),
+                    ("p4", null, null),
+                ]
+            );
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
+
+            // "Pune, Mumbai" matches a Pune filter: the raw text is split on commas.
+            var pune = await store.ListPostingsAsync(runId, 0, 50, Ct, locations: ["Pune"]);
+            Assert.Equal(["p1", "p3"], pune!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, pune.Total);
+
+            // Case does not matter.
+            var lower = await store.ListPostingsAsync(runId, 0, 50, Ct, locations: ["pune"]);
+            Assert.Equal(["p1", "p3"], lower!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, lower.Total);
+
+            // Within one axis the values combine with OR.
+            var both = await store.ListPostingsAsync(
+                runId,
+                0,
+                50,
+                Ct,
+                locations: ["Pune", "Delhi"]
+            );
+            Assert.Equal(["p1", "p2", "p3"], both!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(3, both.Total);
+
+            // A posting without a location never matches a location filter.
+            var nowhere = await store.ListPostingsAsync(runId, 0, 50, Ct, locations: ["Nowhere"]);
+            Assert.Empty(nowhere!.Items);
+            Assert.Equal(0, nowhere.Total);
+        }
+
+        [Fact]
+        public async Task CompaniesFilterIsAnExactCaseInsensitiveMatch()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var runId = await SeedPostingsRunAsync(
+                database,
+                [
+                    ("p1", "Pune, Mumbai", "Contoso"),
+                    ("p2", "Delhi", "Contoso"),
+                    ("p3", "Pune", "Fabrikam"),
+                    ("p4", null, null),
+                ]
+            );
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
+
+            var exact = await store.ListPostingsAsync(runId, 0, 50, Ct, companies: ["contoso"]);
+            Assert.Equal(["p1", "p2"], exact!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, exact.Total);
+
+            // No substring matching: "Cont" is not a company here.
+            var partial = await store.ListPostingsAsync(runId, 0, 50, Ct, companies: ["Cont"]);
+            Assert.Empty(partial!.Items);
+            Assert.Equal(0, partial.Total);
+
+            // A posting without a company never matches a company filter.
+            var fab = await store.ListPostingsAsync(runId, 0, 50, Ct, companies: ["Fabrikam"]);
+            Assert.Equal(["p3"], fab!.Items.Select(p => p.ExternalJobId));
+        }
+
+        [Fact]
+        public async Task BothAxesCombineWithAndAndPagingAppliesPostFilter()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var runId = await SeedPostingsRunAsync(
+                database,
+                [
+                    ("p1", "Pune, Mumbai", "Contoso"),
+                    ("p2", "Delhi", "Contoso"),
+                    ("p3", "Pune", "Fabrikam"),
+                    ("p4", null, null),
+                ]
+            );
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
+
+            var anded = await store.ListPostingsAsync(
+                runId,
+                0,
+                50,
+                Ct,
+                locations: ["Pune"],
+                companies: ["Fabrikam"]
+            );
+            Assert.Equal(["p3"], anded!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, anded.Total);
+
+            // No posting is both in Mumbai and at Fabrikam.
+            var empty = await store.ListPostingsAsync(
+                runId,
+                0,
+                50,
+                Ct,
+                locations: ["Mumbai"],
+                companies: ["Fabrikam"]
+            );
+            Assert.Empty(empty!.Items);
+            Assert.Equal(0, empty.Total);
+
+            // The total counts the filtered set; paging slices it.
+            var page = await store.ListPostingsAsync(runId, 1, 1, Ct, locations: ["Pune"]);
+            Assert.Equal(["p3"], page!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(2, page.Total);
+        }
+
+        [Fact]
+        public async Task BlankFiltersAreUnfilteredAndUnknownRunsStayNull()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var runId = await SeedPostingsRunAsync(
+                database,
+                [("p1", "Pune, Mumbai", "Contoso"), ("p2", "Delhi", "Contoso")]
+            );
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
+
+            var blank = await store.ListPostingsAsync(
+                runId,
+                0,
+                50,
+                Ct,
+                locations: ["  ", ""],
+                companies: []
+            );
+            Assert.Equal(2, blank!.Total);
+            Assert.Equal(["p1", "p2"], blank.Items.Select(p => p.ExternalJobId));
+
+            Assert.Null(
+                await store.ListPostingsAsync(
+                    Guid.NewGuid(),
+                    0,
+                    50,
+                    Ct,
+                    locations: ["Pune"],
+                    companies: ["Contoso"]
+                )
+            );
+        }
+
+        [Fact]
+        public async Task FacetsAreDistinctSortedAndDeduped()
+        {
+            await using var database = await TestDatabase.CreateAsync(Ct);
+            var runId = await SeedPostingsRunAsync(
+                database,
+                [
+                    ("q1", "Pune, Mumbai", "Contoso"),
+                    ("q2", "pune", "contoso"),
+                    ("q3", null, "Fabrikam"),
+                    ("q4", "Delhi", null),
+                ]
+            );
+            var profile = Profile("empty");
+            var notStarted = ScrapeRun.Create(profile, Now);
+            await using (var scope = database.Scope())
+            {
+                await scope.Get<ISearchProfileRepository>().AddAsync(profile, Ct);
+                await scope.Get<IScrapeRunRepository>().AddAsync(notStarted, Ct);
+                await scope.Get<IUnitOfWork>().SaveChangesAsync(Ct);
+            }
+
+            await using var reload = database.Scope();
+            var store = new RunReadStore(reload.Db, new FakeTimeProvider(Now.AddMinutes(3)));
+
+            Assert.Equal(
+                ["Delhi", "Mumbai", "Pune"],
+                await store.ListPostingLocationsAsync(runId, Ct)
+            );
+            Assert.Equal(["Contoso", "Fabrikam"], await store.ListPostingCompaniesAsync(runId, Ct));
+            Assert.Empty((await store.ListPostingLocationsAsync(notStarted.Id.Value, Ct))!);
+            Assert.Empty((await store.ListPostingCompaniesAsync(notStarted.Id.Value, Ct))!);
+            Assert.Null(await store.ListPostingLocationsAsync(Guid.NewGuid(), Ct));
+            Assert.Null(await store.ListPostingCompaniesAsync(Guid.NewGuid(), Ct));
         }
 
         [Fact]

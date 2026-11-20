@@ -3,7 +3,7 @@
 > **Status:** production ready back-end API and ops-deck cockpit front-end.
 >
 > Polite, low-volume job-board automation on .NET 11 with Playwright automation and e2e coverage, plus an ops-deck cockpit (React 19, Bun, Tailwind). Domain-driven, test-driven: explicit use-case handlers, EF Core + SQLite, skill-demand analysis, hyperlinked CSV/Excel exports, JWT roles and quotas, health-gated runs, Serilog, OpenAPI.
-> A modular monolith built to be read: 1,515 backend tests (xUnit v3, incl. architecture tests) + 233 frontend tests + 13 e2e specs; docs match the tree.
+> A modular monolith built to be read: 1,528 backend tests (xUnit v3, incl. architecture tests) + 242 frontend tests + 13 e2e specs; docs match the tree.
 
 ## Architecture
 
