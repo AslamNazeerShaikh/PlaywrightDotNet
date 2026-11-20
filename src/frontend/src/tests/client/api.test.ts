@@ -198,4 +198,95 @@ describe("api client", () => {
       expect(codelessResult.result.problem.code).toBe("UNKNOWN");
     }
   });
+
+  test("listRunPostings without filters keeps the exact unfiltered URL", async () => {
+    const seen: string[] = [];
+    const fetchImpl: FetchImpl = async (url) => {
+      seen.push(url);
+      return { ok: true, status: 200, json: async () => ({ runId: "r1", items: [], total: 0 }) };
+    };
+
+    await createApiClient(fetchImpl).listRunPostings("r1");
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200);
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200, {});
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200, {
+      locations: [" ", ""],
+      companies: [],
+    });
+
+    expect(seen).toEqual([
+      "/api/v1/runs/r1/postings?offset=0&limit=200",
+      "/api/v1/runs/r1/postings?offset=0&limit=200",
+      "/api/v1/runs/r1/postings?offset=0&limit=200",
+      "/api/v1/runs/r1/postings?offset=0&limit=200",
+    ]);
+  });
+
+  test("listRunPostings appends locations and companies when selected", async () => {
+    let seenUrl = "";
+    const fetchImpl: FetchImpl = async (url) => {
+      seenUrl = url;
+      return { ok: true, status: 200, json: async () => ({ runId: "r1", items: [], total: 0 }) };
+    };
+
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200, {
+      locations: ["Pune"],
+      companies: ["Contoso"],
+    });
+
+    expect(seenUrl).toBe(
+      "/api/v1/runs/r1/postings?offset=0&limit=200&locations=Pune&companies=Contoso",
+    );
+  });
+
+  test("listRunPostings repeats keys so spaces encode per value", async () => {
+    let seenUrl = "";
+    const fetchImpl: FetchImpl = async (url) => {
+      seenUrl = url;
+      return { ok: true, status: 200, json: async () => ({ runId: "r1", items: [], total: 0 }) };
+    };
+
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200, {
+      locations: ["Pune MH", "Delhi"],
+    });
+
+    expect(seenUrl).toBe(
+      "/api/v1/runs/r1/postings?offset=0&limit=200&locations=Pune%20MH&locations=Delhi",
+    );
+  });
+
+  test("a company facet with a comma round-trips to exactly itself", async () => {
+    let seenUrl = "";
+    const fetchImpl: FetchImpl = async (url) => {
+      seenUrl = url;
+      return { ok: true, status: 200, json: async () => ({ runId: "r1", items: [], total: 0 }) };
+    };
+
+    await createApiClient(fetchImpl).listRunPostings("r1", 0, 200, {
+      companies: ["Acme, Inc."],
+    });
+
+    expect(seenUrl).toBe("/api/v1/runs/r1/postings?offset=0&limit=200&companies=Acme%2C%20Inc.");
+    const query = new URL(seenUrl, "http://deck").searchParams;
+    expect(query.getAll("companies")).toEqual(["Acme, Inc."]);
+  });
+
+  test("listRunPostingLocations and listRunPostingCompanies GET the facet lists", async () => {
+    const seen: string[] = [];
+    const fetchImpl: FetchImpl = async (url) => {
+      seen.push(url);
+      return { ok: true, status: 200, json: async () => ["Pune"] };
+    };
+    const client = createApiClient(fetchImpl);
+
+    const locations = await client.listRunPostingLocations("r1");
+    const companies = await client.listRunPostingCompanies("r1");
+
+    expect(locations.result).toEqual({ ok: true, value: ["Pune"] });
+    expect(companies.result).toEqual({ ok: true, value: ["Pune"] });
+    expect(seen).toEqual([
+      "/api/v1/runs/r1/postings/locations",
+      "/api/v1/runs/r1/postings/companies",
+    ]);
+  });
 });

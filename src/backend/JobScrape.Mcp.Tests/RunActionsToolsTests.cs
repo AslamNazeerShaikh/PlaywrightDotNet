@@ -531,7 +531,9 @@ namespace JobScrape.Mcp.Tests
                 Guid runId,
                 int offset,
                 int limit,
-                CancellationToken cancellationToken
+                CancellationToken cancellationToken,
+                IReadOnlyList<string>? locations = null,
+                IReadOnlyList<string>? companies = null
             )
             {
                 return Task.FromResult<RunPostingListResponse?>(null);
@@ -544,6 +546,22 @@ namespace JobScrape.Mcp.Tests
             )
             {
                 return Task.FromResult<IReadOnlyList<ExportPosting>?>(null);
+            }
+
+            public Task<IReadOnlyList<string>?> ListPostingLocationsAsync(
+                Guid runId,
+                CancellationToken cancellationToken = default
+            )
+            {
+                return Task.FromResult<IReadOnlyList<string>?>(null);
+            }
+
+            public Task<IReadOnlyList<string>?> ListPostingCompaniesAsync(
+                Guid runId,
+                CancellationToken cancellationToken = default
+            )
+            {
+                return Task.FromResult<IReadOnlyList<string>?>(null);
             }
         }
     }
