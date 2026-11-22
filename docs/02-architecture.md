@@ -225,17 +225,23 @@ flowchart TB
     MAPOA --> MIG["MigrateInDevelopment<br/>(Database.Migrate, Development only)"]
     MIG --> CORR["UseMiddleware CorrelationMiddleware"]
     CORR --> EXHMW["UseExceptionHandler"]
-    EXHMW --> SERILOG["UseSerilogRequestLogging"]
-    SERILOG --> MAPC["MapControllers"]
-    MAPC --> RUN["app.Run()"]
+    EXHMW --> LOGINRL["UseMiddleware LoginIpRateLimitMiddleware"]
+    LOGINRL --> RATELIM["UseRateLimiter"]
+    RATELIM --> AUTHN["UseAuthentication"]
+    AUTHN --> AUTHZ["UseAuthorization"]
+    AUTHZ --> SERILOG["UseSerilogRequestLogging"]
+    SERILOG --> IDEM["UseMiddleware IdempotencyMiddleware"]
+    IDEM --> QUOTA["UseMiddleware UsageQuotaMiddleware"]
+    QUOTA --> MAPC["MapControllers"]
+    MAPC --> MCP["MapMcp /mcp (authorized)"]
+    MCP --> RUN["app.Run()"]
 ```
 
 `AddJobScrapeBrowser` lives in `JobScrape.Api/Composition/BrowserRegistration.cs`; it resolves `ProfilesRoot` and `ArtifactsRoot` against the content root into `BrowserSessionSettings`. `BrowserSessionPool` is a singleton, so container disposal on shutdown closes every browser and flushes profile cookies.
 
 ### 5.2 Implemented feature slices
 
-Seventeen handlers are registered one by one in `Program.cs` (Health 1,
-SearchProfiles 4, Sources 1, Sessions 4, Runs 6, Scraping 1); the Database
+Thirty-one transient handlers plus the scoped `RunScrapeHandler` are registered in `UseCaseRegistration.cs` (Health 1, SearchProfiles 4, Sources 1, Sessions 4, Runs 6, UsageQuotas 2, Auth 3, Users 5, Roles 5, Scraping 1 scoped); the Database
 page bypasses handlers and calls its port directly.
 
 ```mermaid
@@ -263,11 +269,11 @@ flowchart LR
 | Profile lookup | `GET /api/v1/search-profiles/{id:guid}` | `GetSearchProfileHandler(ISearchProfileStore)` | `ISearchProfileStore` → `SearchProfileReadStore` (SQLite) | Live, tested |
 | Profile list | `GET /api/v1/search-profiles` | `ListSearchProfilesHandler(ISearchProfileStore)` | `SearchProfileReadStore` → `{ items, total }` by name | Live, tested |
 | Sources | `GET /api/v1/sources` | `ListSourcesHandler(SourceSettingsCatalog, ComplianceConsent, ISourceQuotaRepository, ISourceCircuitBreakerRepository, TimeProvider)` | Per source: tier, enabled, `CompliancePolicy` gate under the configured consent (interactive confirmation is per run, so always false here), policy caps, today's quota usage, circuit state; read-only | Live, tested; cockpit `#/sources` |
-| Sessions | `GET /api/v1/sessions`, `GET /api/v1/sessions/{id:guid}`, `POST /api/v1/sessions` | `ListSessionsHandler(ISessionStore)`, `GetSessionHandler(ISessionStore)`, `CreateSessionHandler(IBrowserProfileRepository, IUnitOfWork, TimeProvider)` | `SessionReadStore` (EF no-tracking, `CanLaunch` on the injected clock); create validates with `BrowserProfile.IsValidName` and exact engine/channel names (branded channels need Chromium); `201` + `Location`, `400` field `errors`, `409 SESSION_NAME_TAKEN`, `404 SESSION_NOT_FOUND`. Login/probe are not exposed as endpoints; a run verifies its session through `PlaywrightSessionManager` | Live, tested; cockpit `#/sessions` |
+| Sessions | `GET /api/v1/sessions`, `GET /api/v1/sessions/{id:guid}`, `POST /api/v1/sessions` | `ListSessionsHandler(ISessionStore)`, `GetSessionHandler(ISessionStore)`, `CreateSessionHandler(IBrowserProfileRepository, IUnitOfWork, TimeProvider)` | `SessionReadStore` (EF no-tracking, `CanLaunch` on the injected clock); create validates with `BrowserProfile.IsValidName` and exact engine/channel names (only the `Bundled` channel is accepted); `201` + `Location`, `400` field `errors`, `409 SESSION_NAME_TAKEN`, `404 SESSION_NOT_FOUND`. Login/probe are not exposed as endpoints; a run verifies its session through `PlaywrightSessionManager` | Live, tested; cockpit `#/sessions` |
 | Profile create | `POST /api/v1/search-profiles` | `CreateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; `201` + `Location`, `400` field `errors`, `409 PROFILE_NAME_TAKEN`; caps default to and may only tighten the source policy (`SourceSettings.DefaultLimits`) | Live, tested; cockpit `#/profiles` |
 | Profile update | `PUT /api/v1/search-profiles/{id:guid}` | `UpdateSearchProfileHandler(ISearchProfileRepository, IUnitOfWork, SourceSettingsCatalog, TimeProvider)` | EF repository; source is immutable; full replacement through `SearchProfileValidator`; `200`, `400` field `errors`, `404 PROFILE_NOT_FOUND`, `409 PROFILE_NAME_TAKEN`; enabling a high-risk source without interactive consent is a `400` field error | Live, tested; cockpit `#/profiles` |
 | Session update | `PATCH /api/v1/sessions/{id:guid}` | `UpdateSessionHandler(IBrowserProfileRepository, IBrowserProfileWorkspace, IUnitOfWork, TimeProvider, ILogger)` | EF repository; source immutable; a rename moves the user-data directory through `BrowserProfileWorkspace` (pool-backed) before the row is saved; `200`, `400` field `errors`, `404 SESSION_NOT_FOUND`, `409 SESSION_NAME_TAKEN` / `SESSION_RENAME_BLOCKED` | Live, tested; cockpit `#/sessions` |
-| Runs | `POST /api/v1/runs` (`{ profileId, browserProfileId, enrich = true, onlyNew = false }`), `GET /api/v1/runs`, `GET /api/v1/runs/{id:guid}`, `POST /api/v1/runs/{id:guid}/cancel`, `GET /api/v1/runs/{id:guid}/postings` | `StartRunHandler(IRunLauncher, IRunStore, ComplianceConsent)`, `ListRunsHandler(IRunStore)`, `GetRunHandler(IRunStore)`, `CancelRunHandler(IRunLauncher, IScrapeRunRepository, IUnitOfWork, IRunStore, TimeProvider)`, `ListRunPostingsHandler(IRunStore)` | `RunReadStore` (EF no-tracking). Start → `202` + `Location` with the recorded run, or the gate's problem; `409 RUN_IN_PROGRESS` while another run executes; `503 RUN_NOT_STARTED` when the host stops before the run is recorded. List: newest 50 (`ListRunsHandler.Limit`). Cancel is idempotent: an executing run is signalled, a paused run that is not executing is cancelled directly, a terminal run is returned unchanged. Postings: the run's source postings whose external ids its progress recorded (and, for a run started with `onlyNew = true`, whose `FirstSeenAt >= StartedAt`), max 200 — stable after later runs refresh shared rows. `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
+| Runs | `POST /api/v1/runs` (`{ profileId, browserProfileId, enrich = true, onlyNew = false }`), `GET /api/v1/runs`, `GET /api/v1/runs/{id:guid}`, `POST /api/v1/runs/{id:guid}/cancel`, `GET /api/v1/runs/{id:guid}/postings` | `StartRunHandler(IRunLauncher, IRunStore, ComplianceConsent, ISearchProfileRepository, SourceSettingsCatalog)`, `ListRunsHandler(IRunStore)`, `GetRunHandler(IRunStore)`, `CancelRunHandler(IRunLauncher, IScrapeRunRepository, IUnitOfWork, IRunStore, TimeProvider)`, `ListRunPostingsHandler(IRunStore)` | `RunReadStore` (EF no-tracking). Start → `202` + `Location` with the recorded run, or the gate's problem; `409 RUN_IN_PROGRESS` while another run executes; `503 RUN_NOT_STARTED` when the host stops before the run is recorded. List: newest 50 (`ListRunsHandler.Limit`). Cancel is idempotent: an executing run is signalled, a paused run that is not executing is cancelled directly, a terminal run is returned unchanged. Postings: the run's source postings whose external ids its progress recorded and whose `LastSeenAt >= StartedAt` (and, for a run started with `onlyNew = true`, whose `FirstSeenAt >= StartedAt`), max 200. It stays stable after later runs refresh shared rows. `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Export postings | `GET /api/v1/runs/{id:guid}/postings/export?format=csv\|xlsx&group=all\|only\|exclude` | `ExportRunPostingsHandler(IRunStore, IEnumerable<IPostingExportWriter>)` | `RunReadStore.ListExportPostingsAsync` (max 20,000), then `CsvPostingWriter` or `ExcelPostingWriter`; company groups filter against the run's captured `companies`; `400 EXPORT_FORMAT_UNSUPPORTED` / `EXPORT_GROUP_UNSUPPORTED` / `EXPORT_COMPANIES_MISSING`, `404 RUN_NOT_FOUND` | Live, tested; cockpit `#/runs` |
 | Database explorer | `GET /api/v1/db/tables`, `GET /api/v1/db/tables/{table}/schema`, `GET/POST/PUT /api/v1/db/tables/{table}/rows`, `DELETE /api/v1/db/tables/{table}/rows/{primaryKeyValue}` | none — `DatabaseController` calls `IDatabaseExplorer` directly | `SqliteDatabaseExplorer` (Dapper) over the same SQLite file; identifiers validated against the live schema and quoted, values parameterized; `400 INVALID_TABLE` / `INVALID_INPUT` / `DB_ERROR`, `404 TABLE_NOT_FOUND` / `ROW_NOT_FOUND`, `204` on writes | Live, tested; cockpit `#/database` |
 | Run scrape | (background) | `RunScrapeHandler(ScrapeStores, JobSourceRegistry, SourceSettingsCatalog, ISessionManager, IArtifactStore, IDelay, RetryPolicy, IRandomSource, TimeProvider, ILogger)` | 6 domain repositories and `IUnitOfWork` via `ScrapeStores`; `PlaywrightSessionManager`, `FileArtifactStore`, and the adapter `JobSourceRegistry` returns. Scoped; `RunCoordinator` resolves it in a fresh scope per run and calls `HandleAsync(request, started, ct)` | Live, tested; verified live against Naukri (§7.1) |
@@ -423,7 +429,7 @@ sequenceDiagram
 
 Gate failures return typed `Result` errors instead of throwing: `VALIDATION_FAILED`, `PROFILE_NOT_FOUND`, `PROFILE_DISABLED`, `SOURCE_UNAVAILABLE`, `SOURCE_DISABLED`, `COMPLIANCE_BLOCKED`, `SOURCE_COOLING_DOWN`, `BROWSER_PROFILE_NOT_FOUND`, `SESSION_UNAVAILABLE` / `SESSION_RESET_REQUIRED`, `QUOTA_EXCEEDED`. Cancellation records `Run.Cancelled` with partial results and rethrows; unexpected exceptions record `Run.Fail` before reaching the global handler.
 
-**`RunCoordinator`** (`JobScrape.Api/Runs/RunCoordinator.cs`, singleton `IRunLauncher` + `IHostedService`):
+**`RunCoordinator`** (`JobScrape.Infrastructure/Runtime/RunCoordinator.cs`, singleton `IRunLauncher` + `IHostedService`):
 
 - One run at a time: a second start gets `409 RUN_IN_PROGRESS` (with `activeRunId`) while a run executes.
 - Each run gets its own DI scope (its own unit of work); a gate refusal comes back as the start's problem, and a host stop before the run is recorded returns `503 RUN_NOT_STARTED`.
@@ -610,7 +616,8 @@ public sealed record SearchPageResult(
     IReadOnlyList<JobSnapshot> Jobs,
     string? NextCursor,
     PageFingerprint? Fingerprint,
-    ChallengeAssessment Challenge);
+    ChallengeAssessment Challenge,
+    int? LastPage = null);
 
 public enum ChallengeKind
 {
@@ -1018,7 +1025,7 @@ The API returns `application/problem+json` for every error. One mapper (`ErrorMa
 flowchart LR
     subgraph Desk["Developer machine"]
         BFF["Bun BFF :3000<br/>healthz · /api/* proxy · SPA"]
-        API["JobScrape.Api :5207 / :5208<br/>6 controllers · RunCoordinator"]
+        API["JobScrape.Api :5207 / :5208<br/>11 controllers · RunCoordinator"]
         DB[("SQLite<br/>artifacts/data/jobscrape.db")]
         UI["React cockpit (browser tab)<br/>Overview · Health · Profiles · Sources<br/>Sessions · Runs · Topology · Database"]
         BRW["Visible browser window<br/>Playwright persistent profile"]
@@ -1041,7 +1048,7 @@ No CI workflow exists in the repo yet. When one lands: `dotnet build` with warni
 
 ### 13.3 API and cockpit (present, v1)
 
-- `JobScrape.Api` is a controller-based ASP.NET Core API (not minimal-API): `HealthController`, `SearchProfilesController`, `SourcesController`, `SessionsController`, `RunsController`, and `DatabaseController` make 22 endpoints. The first five call use-case handlers directly and map `Result` through `ErrorMapper`; `DatabaseController` bypasses handlers and calls `IDatabaseExplorer` directly.
+- `JobScrape.Api` is a controller-based ASP.NET Core API (not minimal-API): `HealthController`, `SearchProfilesController`, `SourcesController`, `SessionsController`, `RunsController`, `UsageQuotasController`, `AuthController`, `UsersController`, `RolesController`, `FeaturesController`, and `DatabaseController` make 41 endpoints (one `[Http...]` attribute per action, verified by grep). The handler-backed controllers call use-case handlers directly and map `Result` through `ErrorMapper`; `FeaturesController` reads the bound feature flags and `DatabaseController` calls `IDatabaseExplorer` directly.
 - The cockpit is a React SPA served by the Bun BFF on loopback (`src/frontend/`) with eight routes (`#/overview` through `#/database`); the browser talks to the BFF, the BFF proxies `/api/*` to the API. Runs are started, followed (polled every 2 s, no SSE), cancelled, and exported as CSV/XLSX from `#/runs`; `#/database` browses raw SQLite tables. There is no separate Jobs page.
 
 The v2 control plane is specified in [Web Cockpit](12-web-cockpit.md) and [ADR-0010](10-adr/0010-react-bun-cockpit.md). It is a React SPA served by a Bun BFF on loopback; the browser never calls a source site, and Playwright stays in Infrastructure. The API is the cockpit’s only backend.

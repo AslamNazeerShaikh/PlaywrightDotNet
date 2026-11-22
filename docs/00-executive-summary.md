@@ -16,7 +16,7 @@ Build a brand-new automation/web-scraping solution that:
 - Reuses the **anti-bot lessons** of the old Python project without copying its structure or mess.
 - Is understandable to a developer who knows C#/OOP and ASP.NET Core Web APIs but not xUnit or Playwright.
 
-The immediate deliverable is this **documentation set**: research, architecture, domain model, execution plan, testing strategy, site playbooks, anti-bot policy, and runbook. Implementation starts after the open decisions are approved.
+The immediate deliverable is this **documentation set**: research, architecture, domain model, execution plan, testing strategy, site playbooks, anti-bot policy, and runbook. The implementation exists beside it: 11 projects in `src/backend/JobScrape.slnx`, 11 API controllers, and about 1,100 backend test methods. The open decisions still need approval before the next phase.
 
 ---
 
@@ -244,4 +244,4 @@ If the plan is approved:
 2. Start **Phase 0**: create the solution skeleton, pin the SDK/packages, add CI, and write the first failing domain tests.
 3. Deliver the **walking skeleton** in Phase 3: one Naukri page → SQLite → CSV before expanding.
 
-No code has been written yet. This is intentional: the architecture and compliance boundaries are cheaper to change now than after three adapters and a database schema exist.
+The code is written and tested: 11 projects in `src/backend/JobScrape.slnx`, 11 API controllers, about 1,100 backend test methods. The architecture and compliance boundaries held from design into implementation.

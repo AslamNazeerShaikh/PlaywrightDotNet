@@ -21,7 +21,7 @@ applications.
   **`JobScrape.<Layer>`** (e.g. `JobScrape.Domain.csproj`,
   `JobScrape.Api.csproj`) so the assembly name reads naturally.
 - `src/backend/` hosts the full .NET solution (Domain, Application,
-  Infrastructure, Api + four test projects); `src/frontend/` hosts the React
+  Infrastructure, Api + six test projects); `src/frontend/` hosts the React
   + Bun cockpit and stays a scoped placeholder until the backend health slice
   is green.
 - API code uses **explicit `Program.Main` + block-scoped namespaces**; no

@@ -8,8 +8,8 @@
 | [0002](0002-xunit-v3.md) | Use xUnit.net v3 | Accepted |
 | [0003](0003-playwright-dotnet.md) | Use Playwright for .NET | Accepted |
 | [0004](0004-modular-monolith-clean-architecture.md) | Modular monolith + Clean Architecture + focused DDD | Accepted |
-| [0005](0005-sqlite-ef-core.md) | SQLite + EF Core 10 | Accepted |
-| [0006](0006-browser-first-optional-api-fast-path.md) | Browser-first, optional API fast path | Accepted |
+| [0005](0005-sqlite-ef-core.md) | SQLite + EF Core 11 | Accepted |
+| [0006](0006-browser-first-optional-api-fast-path.md) | Browser-first, optional API fast path | Accepted (partially superseded for Naukri; see ADR) |
 | [0007](0007-compliance-first-low-signal-automation.md) | Compliance-first low-signal automation | Accepted |
 | [0008](0008-cli-first-api-later.md) | CLI first, API/dashboard later | Accepted |
 | [0009](0009-test-pyramid-coverage-gates.md) | Test pyramid + risk-based coverage gates | Accepted |
@@ -22,7 +22,7 @@
 | [0016](0016-csharp-style-csharpier.md) | C# style guides (ktaranov + Google) and csharpier formatting | Accepted |
 | [0017](0017-xml-documentation-rule.md) | XML documentation as a global build rule | Accepted |
 | [0018](0018-dapper-sqlite-explorer.md) | Dapper for the raw SQLite explorer | Accepted |
-| [0019](0019-mcp-transports-and-tools.md) | MCP server transports and tool surface | Accepted |
+| [0019](0019-mcp-transports-and-tools.md) | MCP server transports and tool surface | Superseded |
 | [0020](0020-dotnet-11-upgrade.md) | Target .NET 11 | Accepted |
 
 ## Conventions

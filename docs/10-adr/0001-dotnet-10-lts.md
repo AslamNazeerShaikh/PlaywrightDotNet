@@ -1,6 +1,6 @@
 # ADR-0001: Target .NET 10 LTS
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0020](0020-dotnet-11-upgrade.md)
 - **Date:** 2026-10-29
 - **Deciders:** Project owner
 

@@ -15,7 +15,7 @@ domain writes and read models, where EF Core already covers the need.
 
 ## Decision
 
-Use **Dapper** (`2.1.89`) with **Microsoft.Data.Sqlite** (`10.0.14`) inside
+Use **Dapper** (`2.1.89`) with **Microsoft.Data.Sqlite** (`11.0.0`) inside
 `SqliteDatabaseExplorer` only. The `IDatabaseExplorer` contract is unchanged.
 Identifier validation and quoting stay, since table and column names cannot
 be parameterized. Every query carries the `CancellationToken` through

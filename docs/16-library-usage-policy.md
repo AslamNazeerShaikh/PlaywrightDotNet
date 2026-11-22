@@ -37,10 +37,9 @@ Use DataAnnotations for simple ranges plus `IValidateOptions<T>` for cross-field
 ```csharp
 public sealed class BrowserOptions
 {
-    [Required]
-    public string DefaultEngine { get; init; } = "Chromium";
+    public bool Headless { get; init; }
 
-    [Range(1, 300)]
+    [Range(5, 120)]
     public int NavigationTimeoutSeconds { get; init; } = 45;
 }
 
@@ -65,7 +64,7 @@ sheet.Cell(2, 1).SetHyperlink(new XLHyperlink(applyUrl));
 workbook.SaveAs(path);
 ```
 
-Keep it behind `IExportWriter` for testability, bound the row count, dispose the workbook, and write atomically. Do not replace it with a lower-level writer merely for AOT.
+Keep it behind `IPostingExportWriter` for testability, bound the row count, dispose the workbook, and write atomically. Do not replace it with a lower-level writer merely for AOT.
 
 ### Scalar
 

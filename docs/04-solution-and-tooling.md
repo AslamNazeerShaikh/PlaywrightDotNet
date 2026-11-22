@@ -28,11 +28,13 @@
 > │   │   ├── JobScrape.Domain/          (aggregates, value objects, policies, events; BCL only)
 > │   │   ├── JobScrape.Application/     (use cases, ports, Result; refs Domain)
 > │   │   ├── JobScrape.Infrastructure/  (EF Core SQLite, options, runtime, Playwright browser, Naukri adapter; refs Application, Domain)
-> │   │   ├── JobScrape.Api/             (explicit Program.Main, 5 controllers, RunCoordinator)
+> │   │   ├── JobScrape.Api/             (explicit Program.Main, 11 controllers, RunCoordinator)
+> │   │   ├── JobScrape.Mcp/             (MCP tools over application use cases, served at `/mcp`)
 > │   │   ├── JobScrape.Domain.Tests/
 > │   │   ├── JobScrape.Application.Tests/
 > │   │   ├── JobScrape.Api.Tests/       (WebApplicationFactory integration)
 > │   │   ├── JobScrape.Infrastructure.Tests/
+> │   │   ├── JobScrape.Mcp.Tests/
 > │   │   └── JobScrape.Architecture.Tests/ (NetArchTest layer rules)
 > │   └── frontend/                      (React 19 + Bun ops deck: BFF + routed pages)
 > └── .config/dotnet-tools.json         (dotnet-coverage 18.12.0, repo-local)
@@ -87,11 +89,13 @@ Use `.slnx` (the modern XML solution format supported by .NET 10 and later). If 
 |---|---|---|
 | `JobScrape.Domain` | Aggregates (`SearchProfile`, `ScrapeRun`, `JobPosting`, `BrowserProfile`, `SourceQuota`, `SourceCircuitBreaker`), value objects, policies, domain events. Pure C#, zero packages. | BCL only |
 | `JobScrape.Application` | Use cases (`GetHealth`, `Get/List/CreateSearchProfile`, `ListSources`, `List/Get/CreateSession`, `Start/List/Get/CancelRun`, `ListRunPostings`, `RunScrape`), ports (10 `Abstractions` + `ISearchProfileStore`, `ISessionStore`, `IRunStore`, `IRunLauncher`, `IJobSource`), Result pattern. | Domain, inbox logging abstractions (no package reference on .NET 11) |
-| `JobScrape.Infrastructure` | EF Core SQLite persistence (6 repositories, `JobScrapeDbContext`, migrations), read stores (`SearchProfileReadStore`, `SessionReadStore`, `RunReadStore`), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `Browser/` (`BrowserSessionPool`, `PlaywrightSessionManager`, `FileArtifactStore`), `Sources/Naukri/` (`NaukriJobSource`, URL builder, parsers, challenge classifier). | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, `AngleSharp` |
-| `JobScrape.Api` | Composition root (`Program.Main`): 5 controllers (Health, SearchProfiles, Sources, Sessions, Runs), `RunCoordinator` (background runs), `BrowserRegistration`, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
+| `JobScrape.Infrastructure` | EF Core SQLite persistence (10 repositories, `JobScrapeDbContext`, migrations), read stores (`SearchProfileReadStore`, `SessionReadStore`, `RunReadStore`), options binding/validation, runtime (`TimeProvider` delay, `SystemRandomSource`), `Browser/` (`BrowserSessionPool`, `PlaywrightSessionManager`, `FileArtifactStore`), `Sources/Naukri/` (`NaukriJobSource`, URL builder, parsers, challenge classifier). | Application, Domain, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets=all`), `Microsoft.Extensions.Options.DataAnnotations`, `Microsoft.Playwright`, `AngleSharp` |
+| `JobScrape.Api` | Composition root (`Program.Main`): 11 controllers (Auth, Database, Features, Health, Roles, Runs, SearchProfiles, Sessions, Sources, UsageQuotas, Users), `RunCoordinator` (background runs), `BrowserRegistration`, Problem Details + `traceId`, Serilog, validated options. | Domain, Application, Infrastructure, `Microsoft.AspNetCore.OpenApi`, Serilog (`AspNetCore`, `Sinks.Async`, enrichers, `Exceptions`, `Demystifier`) |
 | `JobScrape.Domain.Tests` | Pure unit tests. | Domain, xUnit |
 | `JobScrape.Application.Tests` | Use-case tests with fakes + `FakeTimeProvider`. | Application, Domain, xUnit |
 | `JobScrape.Api.Tests` | `WebApplicationFactory` integration (endpoints, store). | Api, xUnit, `Serilog.Sinks.InMemory` |
+| `JobScrape.Mcp` | MCP tools (`Tools/`: health, runs, search profiles, sessions, sources) over application use cases, mapped at `/mcp` with authorization. | Application, `ModelContextProtocol`, `ModelContextProtocol.AspNetCore` |
+| `JobScrape.Mcp.Tests` | MCP tool tests. | Mcp, xUnit |
 | `JobScrape.Infrastructure.Tests` | SQLite integration, options validation, Naukri fixture tests (URL builder, parsers, challenge classifier). | Infrastructure, xUnit |
 | `JobScrape.Architecture.Tests` | Layer/dependency rules (NetArchTest). | Domain, Application, Infrastructure, Api |
 
@@ -150,6 +154,8 @@ No production project may reference a test project. Domain references nothing. A
 | `AngleSharp` | `1.10.4` | Infrastructure | Offline HTML parsing of captured Naukri search/detail pages. |
 | `Microsoft.AspNetCore.OpenApi` | `11.0.0` | Api | OpenAPI document generation (Development only). |
 | `Scalar.AspNetCore` | `3.0.0` | Api | Local interactive API reference at `/scalar` (Development only). |
+| `ModelContextProtocol` | `2.4.0` | Mcp | MCP server primitives. |
+| `ModelContextProtocol.AspNetCore` | `2.4.0` | Mcp | MCP HTTP transport (`/mcp`). |
 | `Serilog.AspNetCore` | `10.0.0` | Api | Structured logging, request logging. |
 | `Serilog.Sinks.Async` | `2.1.0` | Api | Keep file I/O off the request thread. |
 | `Serilog.Enrichers.Environment` | `3.0.1` | Api | Machine and environment names. |
@@ -709,7 +715,7 @@ dotnet ef database update \
   --startup-project src/backend/JobScrape.Api
 ```
 
-`JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only; runtime code registers the context through `AddJobScrapePersistence`. The current baseline is `202611010743_InitialCreate` (6 tables; see [Architecture §10.4](02-architecture.md#104-schema-overview)).
+`JobScrapeDesignTimeFactory` exists for `dotnet ef` tooling only; runtime code registers the context through `AddJobScrapePersistence`. The current baseline is `20261107112658_InitialCreate` (11 tables; see [Architecture §10.4](02-architecture.md#104-schema-overview)). `20261109171206_AddOnlyNewToScrapeRuns` and `20261111093952_MigrateChannelsToBundled` follow it, 3 migrations total.
 
 Rules:
 

@@ -178,7 +178,7 @@ pwsh src/JobLens.Cli/bin/Debug/net11.0/playwright.ps1 install chromium firefox w
 A typical image build (conceptual) is:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+FROM mcr.microsoft.com/dotnet/sdk:11.0
 # Install Playwright OS dependencies and browsers for the pinned version.
 # Prefer a checked-in script that runs the CLI's doctor --install-browsers
 # plus the Playwright Linux dependency step.
@@ -376,16 +376,16 @@ schtasks /Create /TN "JobLens Naukri" /SC DAILY /ST 08:15 /TR "dotnet run --proj
 ```text
 artifacts/
 ├── data/
-│   └── joblens.db          SQLite source of truth (+ -wal/-shm)
+│   └── jobscrape.db        SQLite source of truth (+ -wal/-shm)
 ├── profiles/
 │   └── naukri/
 │       └── chromium-bundled/   persistent browser profile (secret)
 ├── runs/
 │   └── {runId}/
-│       ├── run.json
-│       ├── page-001.html
-│       ├── screenshot-001.png
-│       └── trace.zip
+│       └── {yyyyMMddTHHmmss}-{kind}/
+│           ├── assessment.json
+│           ├── screenshot.png
+│           └── page.html
 ├── exports/
 │   └── joblens_2026-11-25.xlsx
 ├── logs/
@@ -408,7 +408,7 @@ artifacts/
 | Exports | Manual | User-managed |
 | Browser profiles | Until reset | Manual |
 
-Cleanup runs at startup and daily: it deletes expired artifacts/temp files, skips the active run, and logs `BytesFreed`/`FilesDeleted`/`SkippedActive`. Serilog owns log retention; do not delete an open log file manually. Low disk fails the next write with `STORAGE_LOW_DISK` rather than filling the volume.
+Cleanup runs at startup and daily: it deletes expired artifacts/temp files, skips the active run, and logs `LogSwept(postings, directories)`. Serilog owns log retention; do not delete an open log file manually. Low disk fails the next write with `STORAGE_LOW_DISK` rather than filling the volume.
 
 ---
 
@@ -418,14 +418,14 @@ Cleanup runs at startup and daily: it deletes expired artifacts/temp files, skip
 
 ```bash
 mkdir -p artifacts/backups
-sqlite3 artifacts/data/joblens.db \
-  ".backup 'artifacts/backups/joblens-$(date +%F).db'"
+sqlite3 artifacts/data/jobscrape.db \
+  ".backup 'artifacts/backups/jobscrape-$(date +%F).db'"
 ```
 
 Windows (with `sqlite3.exe` on PATH):
 
 ```powershell
-sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25.db'"
+sqlite3 artifacts/data/jobscrape.db ".backup 'artifacts/backups/jobscrape-2026-11-25.db'"
 ```
 
 - Prefer `.backup` over copying a live DB with WAL.
@@ -451,14 +451,13 @@ sqlite3 artifacts/data/joblens.db ".backup 'artifacts/backups/joblens-2026-11-25
 
 ## 9. Logs and artifacts
 
-> **As implemented:** wall evidence lives in `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` as `assessment.json` (kind, confidence, evidence, URL), `screenshot.png` (full page), and `page.html` (capped at 2,000,000 chars); capture is best effort. No `run.json` or `trace.zip` is written — run state is in SQLite and readable through `GET /api/v1/runs/{id}`. API logs go to `artifacts/logs/jobscrape-api-*.jsonl`. The table below is the design target.
+> **As implemented:** wall evidence lives in `{ArtifactsRoot}/runs/{runId}/{yyyyMMddTHHmmss}-{kind}/` as `assessment.json` (kind, confidence, evidence, URL), `screenshot.png` (full page), and `page.html` (capped at 2,000,000 chars); capture is best effort. No per-run summary file or timeline archive is written. Run state is in SQLite and readable through `GET /api/v1/runs/{id}`. API logs go to `artifacts/logs/jobscrape-api-*.jsonl`. The table below is the design target.
 
 | Log/artifact | What it tells you |
 |---|---|
-| `runs/{id}/run.json` | Stage, stats, outcome, challenge kind, timings. |
-| `page-001.html` | Exact DOM at the time of failure. |
-| `screenshot-001.png` | Visual wall/state. |
-| `trace.zip` | Playwright timeline (DOM snapshots, network, actions). |
+| `runs/{id}/{timestamp}-{kind}/assessment.json` | Challenge kind, confidence, evidence, URL. |
+| `runs/{id}/{timestamp}-{kind}/page.html` | Exact DOM at the time of failure (capped). |
+| `runs/{id}/{timestamp}-{kind}/screenshot.png` | Visual wall/state. |
 | `logs/joblens-cli-*.jsonl` | Structured JSON events with `RunId`/`Source`/`TraceId`. |
 | `runs show <id>` | Human-readable summary + artifact paths. |
 
@@ -503,7 +502,7 @@ jq -c 'select(.TraceId == "00-...-01")' artifacts/logs/joblens-api-*.jsonl
 | Working set grows across runs | Unbounded queue/cache, large HTML in memory, or leaked browser process | `dotnet-counters`/`dotnet-gcdump`; bound channels; stream artifacts; dispose page/context/browser. |
 | Cannot delete artifacts on Windows | File handle still open | Dispose browser/streams/traces; stop the owning run; retry cleanup after exit. |
 | `joblens.log.async_buffer_used` high or missing final logs | Log flood or shutdown without flush | Keep `blockWhenFull: true`; call `Log.CloseAndFlush()`; reduce Debug logging. |
-| `joblens.db-wal` keeps growing | Long read transaction or no checkpoint | Keep transactions short; `PRAGMA wal_checkpoint(TRUNCATE)` on shutdown/backup; one writer. |
+| `jobscrape.db-wal` keeps growing | Long read transaction or no checkpoint | Keep transactions short; `PRAGMA wal_checkpoint(TRUNCATE)` on shutdown/backup; one writer. |
 | `no such table` | Migrations not applied | `joblens db migrate`. |
 | xUnit tests not discovered | Missing adapter/test SDK or library project | Add `xunit.runner.visualstudio` + `Microsoft.NET.Test.Sdk`; set `OutputType=Exe`. |
 | `dotnet test` hangs | Browser test waiting forever | Add timeouts; check fixture server; run with `--blame-hang`. |

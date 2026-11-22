@@ -1,6 +1,6 @@
 # Application Patterns
 
-> **Purpose:** define the patterns that shape JobScrape application code — **Result**, **Options**, and **Problem Details** — and the explicit decision **not** to use CQRS or MediatR. Specifications and read models are deferred (no `Queries/` folder, no read-model ports exist yet).
+> **Purpose:** define the patterns that shape JobScrape application code. It covers **Result**, **Options**, and **Problem Details**. It keeps the explicit decision **not** to use CQRS or MediatR. Specifications are deferred (no `Queries/` folder, no `ISpecification<T>`); reads go through named `*ReadStore` ports over the same tables.
 >
 > **Scope:** `JobScrape.Application` and the `JobScrape.Api` edge. Infrastructure implements the ports; Domain stays pure.
 >
@@ -94,7 +94,7 @@ The project still separates **shapes** where it helps:
 - Read paths return DTOs (today: `GetHealthResponse`, `SearchProfileResponse`, `ScrapeRunSummary`); repositories never expose `IQueryable`.
 - The API may use different request/response models for reads and writes.
 
-That is **not** CQRS in the command/query bus sense. There is no separate command store, no event sourcing, no event-driven read-model projection pipeline, no read-model ports, and no mediator.
+That is **not** CQRS in the command/query bus sense. There is no separate command store, no event sourcing, no event-driven read-model projection pipeline, no separate read-model tables (the `*ReadStore` ports query the aggregate tables), and no mediator.
 
 ### 2.6 Enforcement
 
@@ -134,17 +134,15 @@ Do **not** use `Result` for:
 public enum ErrorKind
 {
     Validation,
+    Unauthorized,
     NotFound,
     Conflict,
     Forbidden,
     RateLimited,
     QuotaExceeded,
-    Challenge,
     CoolingDown,
-    SourceChanged,
     Unavailable,
-    Storage,
-    Unexpected
+    Storage
 }
 
 public sealed record ErrorInfo(
@@ -208,21 +206,18 @@ Codes use uppercase snake case and are stable across releases. The cockpit maps 
 
 | `ErrorKind` | Actual `Code`(s) | HTTP status (API) |
 |---|---|---|
-| `Validation` | `VALIDATION_FAILED` | `400` |
+| `Validation` | `VALIDATION_FAILED`, `INVALID_TABLE`, `INVALID_INPUT`, `DB_ERROR`, export codes (`EXPORT_FORMAT_UNSUPPORTED`, `EXPORT_GROUP_UNSUPPORTED`, `EXPORT_COMPANIES_MISSING`), `UNKNOWN_PERMISSION` | `400` |
 | `Unauthorized` | `INVALID_CREDENTIALS`, `UNAUTHENTICATED`, `SESSION_REVOKED` | `401` |
-| `NotFound` | `PROFILE_NOT_FOUND`, `BROWSER_PROFILE_NOT_FOUND` | `404` |
-| `Conflict` | `PROFILE_DISABLED`, `SOURCE_DISABLED` | `409` |
-| `Forbidden` | `COMPLIANCE_BLOCKED` | `403` |
-| `RateLimited` | *(no code defined yet)* | `429` |
+| `NotFound` | `PROFILE_NOT_FOUND`, `BROWSER_PROFILE_NOT_FOUND`, `SESSION_NOT_FOUND`, `RUN_NOT_FOUND`, `USER_NOT_FOUND`, `ROLE_NOT_FOUND`, `FEATURE_DISABLED`, `TABLE_NOT_FOUND`, `ROW_NOT_FOUND`, `UNKNOWN_QUOTA_SCOPE` | `404` |
+| `Conflict` | `PROFILE_DISABLED`, `PROFILE_NAME_TAKEN`, `SESSION_NAME_TAKEN`, `SESSION_RENAME_BLOCKED`, `RUN_IN_PROGRESS`, `IDEMPOTENCY_KEY_REUSED`, `EMAIL_TAKEN`, `PASSWORD_SETUP_COMPLETE`, identity codes (`ROLE_ALREADY_ASSIGNED`, `LAST_ADMIN_REQUIRED`, `PERMISSION_ALREADY_GRANTED`) | `409` |
+| `Forbidden` | `COMPLIANCE_BLOCKED`, `SOURCE_DISABLED`, `ACCESS_DENIED`, `ACCOUNT_LOCKED`, `ROLE_PROTECTED` | `403` |
+| `RateLimited` | `RATE_LIMITED` | `429` |
 | `QuotaExceeded` | `QUOTA_EXCEEDED` | `429` |
-| `Challenge` | *(no code defined yet)* | `409` |
 | `CoolingDown` | `SOURCE_COOLING_DOWN`, `SESSION_COOLING_DOWN`, `SESSION_RESET_REQUIRED` | `423` |
-| `SourceChanged` | *(no code defined yet)* | `502` |
-| `Unavailable` | `SOURCE_UNAVAILABLE` | `503` |
-| `Storage` | *(no code defined yet)* | `507` |
-| `Unexpected` | `INTERNAL_ERROR` | `500` |
+| `Unavailable` | `SOURCE_UNAVAILABLE`, `RUN_NOT_STARTED`, `IDEMPOTENCY_IN_PROGRESS` | `503` |
+| `Storage` | `STORAGE_LOW_DISK` | `507` |
 
-(All `SESSION_*` codes surface as `CoolingDown`/`423`, including resets — see `Errors.SessionUnavailable`.)
+(Only the three cooling codes surface as `CoolingDown`/`423`. See `Errors.SessionUnavailable` and `Errors.SourceCoolingDown`. Other `SESSION_*` codes differ: `SESSION_NOT_FOUND` is `404`, `SESSION_NAME_TAKEN` and `SESSION_RENAME_BLOCKED` are `409`, `SESSION_REVOKED` is `401`. There is no `Challenge`, `SourceChanged`, or `Unexpected` kind, and no `INTERNAL_ERROR` factory in `Errors`: `INTERNAL_ERROR` is hardcoded only in `GlobalExceptionHandler` for unhandled exceptions, while unmapped kinds fall back to `500` with the original code.)
 
 Bad credentials are `401 INVALID_CREDENTIALS`, never `400`: a wrong email
 or password is an authentication failure, not a validation error. The login
@@ -370,7 +365,7 @@ Rules:
 
 ## 5. Specification pattern
 
-> **Deferred — not implemented.** There is no `Queries/` folder, no `ISpecification<T>`, and no read-model ports. Identity lookups (`GetAsync`/`FindAsync` by id) are repository methods and stay that way. When the **second** real filter need arrives (the first being a plain id lookup), add the smallest composable specification type that EF Core can translate — and only then. The rules below are the design to follow at that point, kept brief until it exists:
+> **Deferred. Not implemented.** There is no `Queries/` folder and no `ISpecification<T>`. The `*ReadStore` ports (`ISearchProfileStore`, `IRunStore`, `ISessionStore`) are the named read methods. Identity lookups (`GetAsync`/`FindAsync` by id) are repository methods and stay that way. When the **second** real filter need arrives (the first being a plain id lookup), add the smallest composable specification type that EF Core can translate. Do it only then. The rules below are the design to follow at that point, kept brief until it exists:
 
 - One specification = one business predicate; compose (`And`/`Or`/`Not`) rather than inherit deep hierarchies.
 - The expression must be EF Core translatable: no custom methods, no client-side evaluation, no `Compile()` inside the expression; a parameter-replacing `ExpressionVisitor` is the composition mechanism (never `Expression.Invoke`).
@@ -391,10 +386,11 @@ The API returns errors as **RFC 9457 Problem Details** with content type `applic
 
 | Extension | Purpose |
 |---|---|
-| `code` | Stable machine-readable code (`PROFILE_NOT_FOUND`, `INTERNAL_ERROR`) |
+| `code` | Stable machine-readable code (`PROFILE_NOT_FOUND`, `RATE_LIMITED`) |
 | `traceId` | Correlation ID for logs and support (Activity id or trace identifier) |
+| `errors` | Field-error map on `400` only (`{"id": [...]}` keyed by JSON request field name; `{}` when no map was supplied) |
 
-> **Known defect (verified live 2026-11-01):** `ErrorMapper` passes the field-error map to `Results.ValidationProblem`, but the rendered 400 body carries NO `errors` member today (only `code` + `traceId` alongside the standard members), and its `type` is the framework default `https://tools.ietf.org/html/rfc9110#section-15.5.1`, not a `jobscrape.local` URI. Do not build cockpit or test expectations on an `errors` member or a stable 400 `type` until this is fixed. The intended contract keeps both; see the `errors` row the mapper code already prepares.
+The mapper always calls `Results.Problem`. It never calls `Results.ValidationProblem`. MVC's problem writer rebuilds the body from the standard members plus extensions, so the validation-specific `Errors` property would be dropped on the wire; the field map travels as the `errors` extension instead (see `ErrorMapper.Extensions`). Every kind renders a `jobscrape.local` type URI, including validation. No `retryAfter` member or header is emitted; retry hints stay in `ErrorInfo.Metadata` (cooling and lockout errors carry `retryAfter` there).
 
 ### 6.2 Example
 
@@ -412,21 +408,24 @@ A real miss, exactly as the edge renders it (`GET /api/v1/search-profiles/{id:gu
 }
 ```
 
-Validation uses `ValidationProblemDetails`:
+Validation renders the same shape, with the field map as the `errors` extension:
 
 ```json
 {
-  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "type": "https://jobscrape.local/problems/validation-failed",
   "title": "One or more validation errors occurred.",
   "status": 400,
   "detail": "The request contains invalid fields.",
   "instance": "/api/v1/search-profiles/00000000-0000-0000-0000-000000000000",
   "code": "VALIDATION_FAILED",
-  "traceId": "00-456cd528b1864c160a9f34b77529329-f5be82b9ca1f23e8-00"
+  "traceId": "00-456cd528b1864c160a9f34b77529329-f5be82b9ca1f23e8-00",
+  "errors": {
+    "id": ["A profile id is required."]
+  }
 }
 ```
 
-(Verified live: the field map (`{"id": [...]}`) does not appear on the wire today — see the defect note in §6.1.)
+(The `errors` map is empty (`{}`) when the failure carries no field map.)
 
 ### 6.3 Result → HTTP mapping
 
@@ -435,33 +434,16 @@ One mapper owns the translation (`JobScrape.Api/Http/ErrorMapper.cs`). Endpoints
 ```csharp
 public static IResult ToProblem(this ErrorInfo error)
 {
-    if (error.Kind == ErrorKind.Validation)
-    {
-        var errors = error.Metadata?.TryGetValue("errors", out var raw) == true
-            && raw is IReadOnlyDictionary<string, string[]> typed
-                ? typed
-                : new Dictionary<string, string[]>();
-        return Results.ValidationProblem(
-            (IDictionary<string, string[]>)errors,
-            title: error.Title,
-            detail: error.Detail,
-            extensions: new Dictionary<string, object?>
-            {
-                ["code"] = error.Code,
-                ["traceId"] = Activity.Current?.Id ?? "unknown",
-            });
-    }
-
     var status = error.Kind switch
     {
+        ErrorKind.Validation => 400,
+        ErrorKind.Unauthorized => 401,
         ErrorKind.NotFound => 404,
         ErrorKind.Conflict => 409,
         ErrorKind.Forbidden => 403,
         ErrorKind.RateLimited => 429,
         ErrorKind.QuotaExceeded => 429,
-        ErrorKind.Challenge => 409,
         ErrorKind.CoolingDown => 423,
-        ErrorKind.SourceChanged => 502,
         ErrorKind.Unavailable => 503,
         ErrorKind.Storage => 507,
         _ => 500,
@@ -472,15 +454,30 @@ public static IResult ToProblem(this ErrorInfo error)
         title: error.Title,
         detail: error.Detail,
         statusCode: status,
-        extensions: new Dictionary<string, object?>
-        {
-            ["code"] = error.Code,
-            ["traceId"] = Activity.Current?.Id ?? "unknown",
-        });
+        extensions: Extensions(error));
+}
+
+private static Dictionary<string, object?> Extensions(ErrorInfo error)
+{
+    var extensions = new Dictionary<string, object?>
+    {
+        ["code"] = error.Code,
+        ["traceId"] = Activity.Current?.Id ?? "unknown",
+    };
+    if (error.Kind == ErrorKind.Validation)
+    {
+        extensions["errors"] =
+            error.Metadata?.TryGetValue("errors", out var raw) == true
+            && raw is IReadOnlyDictionary<string, string[]> typed
+                ? typed
+                : new Dictionary<string, string[]>();
+    }
+
+    return extensions;
 }
 ```
 
-The validation branch uses `Results.ValidationProblem` so the `errors` dictionary is generated correctly; the switch maps the remaining kinds. (On the wire today the `errors` member is missing — see §6.1 defect note.)
+One path for every kind: `Results.Problem` plus the `code`/`traceId` extensions, with the `errors` map added for validation. No `Retry-After` header and no `retryAfter` member are emitted; retry hints stay in `ErrorInfo.Metadata`.
 
 ### 6.4 Registration
 
@@ -529,7 +526,7 @@ Neither exists: no CLI project, no SSE/events, no exit-code mapping. When they a
 
 ### 6.7 Testing
 
-- Unit-test every `ErrorKind` → status mapping (`KindMapsToExpectedStatus` covers all 12).
+- Unit-test every `ErrorKind` → status mapping (`KindMapsToExpectedStatus` covers the 9 non-validation kinds; validation is covered by its own facts. That covers all 10).
 - Integration-test the two live endpoints for status codes and stable `code`s (`SearchProfilesEndpointTests`, `HealthEndpointTests`).
 - Assert a `500` never contains `detail` with a stack trace, SQL, or file path (the global handler only emits a static message).
 - Assert validation errors use the request field names — once the §6.1 defect is fixed.
@@ -585,15 +582,19 @@ Result<T> ──► Ok → 200 + DTO
 > MCP tools are a second edge over the same handlers, served web-only by
 > the API. `JobScrape.Mcp.Host` (stdio) is removed; `JobScrape.Api` is the
 > single composition root. The API maps them at `/mcp` (stateless
-> Streamable HTTP). Every call runs as `CallerContext.LocalOperator` until
-> JWT wiring lands; then `/mcp` enforces the same bearer chain as the
-> REST controllers. See [ADR-0019](10-adr/0019-mcp-transports-and-tools.md).
+> Streamable HTTP). Each call runs with the per-request `ICallerContext`
+> built from the bearer token (roles and permissions from claims;
+> unauthenticated callers get a denied empty-permission context, never the
+> local operator), and `/mcp` requires authorization. Every tool except
+> `get_health` also checks one catalog permission
+> (`McpAuth.RequirePermission`, `ACCESS_DENIED` otherwise).
+> See [ADR-0019](10-adr/0019-mcp-transports-and-tools.md).
 
 - One sealed class per area, marked `[McpServerToolType]` (`HealthTools`,
   `SourcesTools`, `SessionsTools`, `SearchProfilesTools`,
   `SearchProfilesWriteTools`, `RunsTools`, `RunActionsTools`).
 - Tools are listed explicitly (one fixed `.WithTools(McpTools.All)` list in
-  both composition roots). No assembly scanning; adding a tool is a visible diff.
+  the single composition root, `JobScrape.Api`). No assembly scanning; adding a tool is a visible diff.
 - Handlers are constructor-injected and called directly. No mediator, per §2.
 - Expected handler failures throw `McpException` carrying the stable code
   plus operator-safe detail (`McpErrors.OrThrow`); the installed SDK's

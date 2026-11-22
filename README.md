@@ -116,19 +116,19 @@ Status means In use (referenced by a project today) or Planned (design-matrix ve
 
 | Area | Package | Version | Status | What it does |
 | ---- | ------- | ------- | ------ | ------------ |
-| Runtime | .NET SDK / runtime | 10.0.403 / 10.0.14 | In use | LTS base. SDK pinned in `global.json`. Every project targets `net10.0`. |
+| Runtime | .NET SDK / runtime | 11.0.100 / 11.0.0 | In use | STS base. SDK pinned in `global.json`. Every project targets `net11.0`. |
 | Tests | xUnit.net v3 + VS adapter | 4.0.3 / 4.0.1 | In use | Test framework, assertions, and the Visual Studio runner across all test projects. |
 | Browser automation | `Microsoft.Playwright` | 1.64.1 | In use | Headed browsing with persistent per-profile contexts. Drivers for Chromium 156, Firefox 157, WebKit 27.2. |
-| Data access | EF Core SQLite + `Microsoft.Extensions` | 10.0.14 | In use | SQLite storage through EF Core. Options binding and DataAnnotations validation through Extensions. |
-| Raw explorer access | `Microsoft.Data.Sqlite` | 10.0.14 | In use | Direct SQLite access for the raw database explorer. |
+| Data access | EF Core SQLite + `Microsoft.Extensions` | 11.0.0 | In use | SQLite storage through EF Core. Options binding and DataAnnotations validation through Extensions. |
+| Raw explorer access | `Microsoft.Data.Sqlite` | 11.0.0 | In use | Direct SQLite access for the raw database explorer. |
 | Raw explorer mapping | Dapper | 2.1.89 | In use | Micro-ORM for the raw database explorer. Contract unchanged. |
-| HTML parsing | AngleSharp | 1.10.1 | In use | Offline parsing of captured search and detail pages. |
+| HTML parsing | AngleSharp | 1.10.4 | In use | Offline parsing of captured search and detail pages. |
 | Excel export | ClosedXML | 0.105.1 | In use | XLSX export of postings. Referenced by Infrastructure. |
 | Logging | Serilog + sinks and enrichers | 10.0.0 | In use | Compact JSON console and file logs. 90-day retention from validated options. |
 | CLI parsing | `System.CommandLine` | 2.0.14 | Planned | Future command-line surface. No package reference exists today. |
 | HTTP resilience | Polly v8 via `Microsoft.Extensions.Http.Resilience` | 10.0.0 | Planned | Future retry policy. No package reference exists today. |
-| API reference | `Microsoft.AspNetCore.OpenApi` | 10.0.14 | In use | OpenAPI document generated and served in Development. |
-| API docs UI | `Scalar.AspNetCore` | 2.18.5 | In use | Local interactive reference at `/scalar`. Development only. |
+| API reference | `Microsoft.AspNetCore.OpenApi` | 11.0.0 | In use | OpenAPI document generated and served in Development. |
+| API docs UI | `Scalar.AspNetCore` | 3.0.0 | In use | Local interactive reference at `/scalar`. Development only. |
 
 ## What this project will be
 

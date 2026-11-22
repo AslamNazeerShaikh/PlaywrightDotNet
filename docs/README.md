@@ -2,7 +2,7 @@
 
 > **Working name:** JobLens (rename is a mechanical change; see [Open Decisions](11-open-decisions.md)).
 >
-> **Status:** Research and planning complete. No implementation code yet.
+> **Status:** Implemented: 11 projects in `src/backend/JobScrape.slnx`, 11 API controllers, about 1,100 backend test methods.
 >
 > **Last updated:** 2026-11-11
 >

@@ -127,7 +127,7 @@ Had the script run, it would have made the browser **more** detectable:
 | Persistent Chromium profile | **Yes** | Persistent context per source/profile; owner-only permissions; profile lock. |
 | Headed first contact | **Yes** | Default headed for live collection; headless is for fixture E2E/diagnostics only. |
 | Genuine UA (no override) | **Yes** | Enforced by design: no UA option in config. |
-| Locale/timezone consistency | **Yes** | Validated against config; `en-IN` / `Asia/Kolkata` defaults. |
+| Locale/timezone consistency | **Yes** | Browser genuine defaults; one value across context, no override keys. |
 | Human pauses/scrolls/mouse | **Yes** | `HumanPacing` with injected randomness; bounded and testable. |
 | Honeypot-safe extraction | **Yes** | Visibility/size/aria/off-screen guards; never click hidden elements. |
 | Manual solve on wall | **Yes** | Pause + prompt + artifact; unattended runs exit with code 3. |
@@ -135,14 +135,14 @@ Had the script run, it would have made the browser **more** detectable:
 | One pass at a time | **Yes** | Global semaphore + per-profile lock. |
 | No proxy rotation | **Yes** | Optional static egress only; no pools. |
 | No CAPTCHA solving | **Yes** | Hard rule, no code path. |
-| uBlock Origin Lite | **Required for Naukri** | Naukri runs headed bundled Chromium with `ubol-max` (§5.1). Committed default stays `AdblockMode: null`; other sources stay blocker-free. Headless and non-Chromium launches ignore it. |
+| uBlock Origin Lite | Only on the browser path (`ApiOnly=false`) | Naukri runs headed bundled Chromium with `ubol-max` (§5.1) when the browser path is enabled. Committed default stays `AdblockMode: null`; other sources stay blocker-free. Headless and non-Chromium launches ignore it. |
 | Chrome-only stack | **No** | Chromium default; Firefox/WebKit compatibility. |
 | UA pinning / language stubs | **No** | Never. |
 | Inert stealth init script | **No** | Removed permanently. |
 
-### 5.1 uBlock Origin Lite (Naukri: max on headed bundled Chromium)
+### 5.1 uBlock Origin Lite (Naukri browser path only: max on headed bundled Chromium)
 
-Naukri runs headed bundled Chromium with uBlock Origin Lite at maximum
+On the browser path (`ApiOnly=false`), Naukri runs headed bundled Chromium with uBlock Origin Lite at maximum
 filtering: `ubol-max`, 16 of 56 rulesets (`ublock-filters`, `easylist`,
 `easyprivacy`, `pgl`, `ublock-badware`, `urlhaus-full`,
 `adguard-spyware-url`, `ublock-experimental`, `ind-0`, plus the 7
@@ -191,10 +191,10 @@ Install steps:
 | Channel | Bundled Chromium | Playwright bundled build only; system Chrome/Edge are not supported. |
 | Headless | `false` | Headless is for fixture E2E/diagnostics; do not use it for live collection. |
 | User agent | Browser's genuine UA | **No override.** |
-| Locale | `en-IN` | Match the network/region; one value across context. |
-| Timezone | `Asia/Kolkata` | Match locale/egress; one value across context. |
-| Viewport | `1366x768` or `1440x900` | Realistic desktop; consistent within a profile. |
-| SlowMo | `40ms` | Helps human pacing/debugging; not a stealth feature. |
+| Locale | Browser default | No locale key; keep the genuine value consistent. |
+| Timezone | Browser default | No timezone key; keep the genuine value consistent. |
+| Viewport | `NoViewport` | Real window size; no viewport override. |
+| Pacing delay | None | No launch pacing option; pacing is via `HumanPacing`, not launch options. |
 | Extensions | Naukri: `ubol-max`; others: none | Naukri runs headed bundled Chromium with `ubol-max` (§5.1). Committed default stays `AdblockMode: null`; no other source is required to run it. |
 | Proxy | `null` | Optional user-supplied static egress; no rotation. |
 | Downloads | Disabled/controlled | Do not auto-open files. |
@@ -373,10 +373,10 @@ flowchart TD
 ### 10.1 Backoff
 
 ```text
-delay = min(base * 2^attempt, max) + jitter
-base  = 2 seconds
-max   = 60 seconds
-jitter = 0..20% of delay
+delay = base * 4^(attempt-1) + jitter
+base   = 2 seconds (attempt delays 2s, 8s, 32s)
+cap    = none
+jitter = 0..1s fixed addition
 ```
 
 - Honor `Retry-After` when larger.
@@ -480,9 +480,9 @@ Rules:
 
 ### 12.3 Naukri
 
-- Public search/detail pages are the access path.
-- Akamai may challenge unknown/headless sessions; a persistent headed profile is the best case.
-- Do not use the private search API as a way around a wall; it is an optional fast path only if it is stable and compliant.
+- Default transport is the `jobapi` API fast path (`NaukriApiJobSource`, `ApiOnly=true`); no browser launches on the default path.
+- The Playwright browser path is the explicit opt-out (`ApiOnly=false`): public search/detail pages, headed first contact, Akamai may challenge unknown/headless sessions so a persistent headed profile is the best case on that path.
+- Do not use the private search API as a way around a wall; it is the default fast path only while stable and compliant.
 - Low volume, personal use, no resale.
 
 ### 12.4 Indeed

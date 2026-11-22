@@ -29,7 +29,7 @@ Related decisions: [Application Patterns](14-application-patterns.md), [Library 
 
 - Domain and Application use `Microsoft.Extensions.Logging.ILogger<T>` only. They do not reference Serilog.
 - Infrastructure may use `ILogger<T>`; it does not configure sinks.
-- `JobLens.Cli` and `JobLens.Api` own Serilog configuration, enrichers, sinks, and shutdown.
+- `JobScrape.Api` owns Serilog configuration, enrichers, sinks, and shutdown.
 - No `Console.WriteLine` for diagnostics; no interpolated log messages.
 
 ### 2.2 Pipeline
@@ -68,10 +68,10 @@ public sealed class LoggingOptions
 
 ```csharp
 var logOptions = builder.Configuration
-    .GetSection("JobLens:Logging")
+    .GetSection("JobScrape:Logging")
     .Get<LoggingOptions>() ?? new LoggingOptions();
 
-var applicationName = role == "api" ? "JobLens.Api" : "JobLens.Cli";
+var applicationName = "JobScrape.Api";
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -90,7 +90,7 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(new RenderedCompactJsonFormatter())
     .WriteTo.Async(
         configure: sink => sink.File(
-            path: Path.Combine(logRoot, $"joblens-{role}-.jsonl"),
+            path: Path.Combine(logRoot, $"jobscrape-api-.jsonl"),
             rollingInterval: RollingInterval.Day,
             retainedFileCountLimit: 200,
             retainedFileTimeLimit: TimeSpan.FromDays(logOptions.RetentionDays),
@@ -101,7 +101,7 @@ Log.Logger = new LoggerConfiguration()
         blockWhenFull: true)
     .WriteTo.Async(
         configure: sink => sink.File(
-            path: Path.Combine(logRoot, $"joblens-{role}-.log"),
+            path: Path.Combine(logRoot, $"jobscrape-api-.log"),
             rollingInterval: RollingInterval.Hour,
             retainedFileCountLimit: 336,
             retainedFileTimeLimit: TimeSpan.FromDays(logOptions.PlainTextRetentionDays),
@@ -117,7 +117,7 @@ builder.Host.UseSerilog();          // IHostBuilder
 // builder.Services.AddSerilog();   // HostApplicationBuilder
 ```
 
-- `role` is `cli` or `api`; separate prefixes avoid two processes fighting over one file.
+- The file prefix is fixed (`jobscrape-api`, the `LoggingRegistration` default); the API is the single host, so no per-role prefix split exists.
 - `blockWhenFull: true` makes logging lossless under pressure; the alternative is dropped events. For this low-volume app, backpressure is the safer default. Monitor buffer pressure if it ever changes.
 - `retainedFileCountLimit` and `retainedFileTimeLimit` are applied together: a file is kept while it is within both limits.
 - `rollOnFileSizeLimit` prevents one 100 MB file per day from becoming unbounded.
@@ -139,7 +139,7 @@ builder.Host.UseSerilog();          // IHostBuilder
       }
     }
   },
-  "JobLens": {
+  "JobScrape": {
     "Logging": {
       "RetentionDays": 90,
       "FileSizeLimitBytes": 104857600,
@@ -151,9 +151,10 @@ builder.Host.UseSerilog();          // IHostBuilder
       "MinimumFreeDiskBytes": 1073741824
     },
     "Browser": {
-      "MaxHtmlBytes": 10485760,
-      "MaxScreenshotBytes": 5242880,
-      "MaxTraceBytes": 104857600
+      "Headless": false,
+      "NavigationTimeoutSeconds": 45,
+      "AdblockMode": null,
+      "ExtensionDir": null
     }
   }
 }
@@ -180,7 +181,7 @@ Application-scoped (not global mutable state):
 
 | Property | Source |
 |---|---|
-| `Application` | `"JobLens.Cli"` or `"JobLens.Api"` |
+| `Application` | `"JobScrape.Api"` |
 | `RunId` | Run scope |
 | `Source` | Source scope |
 | `JobId` | Per-posting scope |
@@ -250,11 +251,11 @@ Never put a `RunId` in a static global property; concurrent runs must not share 
 
 ### 2.8 Files, rotation, retention, disk budget
 
-- Path: `artifacts/logs/joblens-{role}-YYYYMMDD.jsonl` and `artifacts/logs/joblens-{role}-YYYYMMDDHH.log` (human-readable).
+- Path: `artifacts/logs/jobscrape-api-YYYYMMDD.jsonl` and `artifacts/logs/jobscrape-api-YYYYMMDDHH.log` (human-readable).
 - Rotation: `.jsonl` rolls daily and at 100 MB; keep at most 200 files and 90 days. The `.log` sink rolls hourly and at 100 MB; keep at most 336 files (14 days x 24 hourly files) and 14 days, sized by `JobScrape:Logging:PlainTextFileSizeLimitBytes` and retained per `PlainTextRetentionDays`.
 - Format: `CompactJsonFormatter` (one JSON object per line) for grep/`jq`; console can stay compact JSON for consistency. The `.log` file is a rendered one-line template for humans reading `tail -f`.
 - `artifacts/` is gitignored and owner-only.
-- Check free disk before a run or export; fail with `STORAGE_LOW_DISK` when below `JobLens:Storage:MinimumFreeDiskBytes`.
+- Check free disk before a run or export; fail with `STORAGE_LOW_DISK` when below `JobScrape:Storage:MinimumFreeDiskBytes` (`RunCoordinator` enforces the floor before recording a run).
 - Do not delete open/active log files during cleanup; let the sink own its retention.
 - On startup, clean only expired **temp** files and orphaned artifacts, never the current run's directory.
 
@@ -637,7 +638,7 @@ Do not start a task without an owner. If work must run in the background:
 - Validate paths: `Path.GetFullPath` and ensure the result stays under the configured root; reject traversal.
 - Set owner-only permissions for profiles/artifacts on Unix (`0700`).
 - Treat `IOException` (sharing violation/lock) as an operational failure with a clear code; do not retry forever.
-- Cap HTML (`Browser:MaxHtmlBytes`, 10 MB), screenshots (`MaxScreenshotBytes`, 5 MB), and traces (`MaxTraceBytes`, 100 MB) at capture time; record `Truncated=true`.
+- Cap page HTML at capture time (`FileArtifactStore.MaxHtmlChars`, 2,000,000 chars). No `Browser:MaxHtmlBytes`, `MaxScreenshotBytes`, or `MaxTraceBytes` options exist.
 - Check free disk before runs/exports; keep `MinimumFreeDiskBytes` free.
 
 ### 6.3 Network
@@ -675,7 +676,7 @@ Do not start a task without an owner. If work must run in the background:
 - Cleanup is idempotent and runs at startup and on a schedule; never delete the active run's files.
 - Delete temp files older than 24 hours; delete orphaned run directories with no DB row only after a grace period.
 - Log `BytesFreed`, `FilesDeleted`, and `SkippedActive` from cleanup.
-- Check disk through the `IDiskSpace` port before writing; fail with `STORAGE_LOW_DISK` rather than filling the volume. Handlers do not call `DriveInfo` directly.
+- Check disk through the file-system abstraction (`IFileSystem.GetAvailableFreeBytes`, backed by `DriveInfo` in `PhysicalFileSystem`) before writing; fail with `STORAGE_LOW_DISK` rather than filling the volume.
 - Backups: `VACUUM INTO` or SQLite `.backup`, not a raw copy of a live WAL database.
 - Windows: a file that is still open cannot be deleted; dispose before cleanup and surface the owning process.
 
@@ -726,7 +727,7 @@ Use `System.Diagnostics.Metrics`; OpenTelemetry export is optional and out of sc
 - **Polly:** use a fake `HttpMessageHandler`; assert retry counts, `Retry-After`, no retry for POST/4xx, circuit opening, timeout mapping, and fallback flags.
 - **Cancellation:** assert `OperationCanceledException` propagates; no partial artifact is left behind; partial results are retained where specified.
 - **Disposal:** count `DisposeAsync` calls; after a run, temp files are gone and the SQLite/log/profile handles are released; on Windows, delete the artifact directory to prove it.
-- **Disk:** use an `IDiskSpace` port and a fake; do not call `DriveInfo` directly from handlers.
+- **Disk:** fake `IFileSystem` (`GetAvailableFreeBytes`) in tests; the production implementation reads `DriveInfo`.
 - **Soak:** 10 consecutive fixture runs; assert bounded file count, stable memory, no orphan processes, and no growing WAL.
 - **Static analysis:** enable `CA1848` (LoggerMessage), `CA2000` (dispose), `CA2007` (ConfigureAwait), `CA2016` (CancellationToken), and `CA1031` (general catch) as warnings/errors in `.editorconfig`.
 

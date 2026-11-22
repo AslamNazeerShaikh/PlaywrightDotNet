@@ -2,8 +2,9 @@
 
 > **Purpose:** specify the central control system — the “cockpit” — that commands the .NET API to run scraping, monitoring, exports, and diagnostics.
 >
-> **Status:** Ops deck live in `src/frontend/`: BFF + seven hash-routed pages
-> (overview, health, profiles, sources, sessions, runs, topology) over the
+> **Status:** Ops deck live in `src/frontend/`: BFF + eleven hash-routed pages
+> (overview, health, profiles, sources, sessions, runs, topology, database,
+> users, roles, quotas through `#/quotas`) over the
 > tested API. Runs can be started, followed, and cancelled from `#/runs`
 > against the live Naukri adapter. Full v2 scope per §2 below; what is not
 > built yet is called out per section.
@@ -138,10 +139,11 @@ flowchart LR
 
 | Mode | Process | Port | Notes |
 |---|---|---|---|
-| Development | `bun --hot src/server/dev.ts` + Tailwind watch | `5173` | HMR, source maps, detailed errors |
-| Development | .NET API (`dotnet run --project src/JobLens.Api`) | `5080` | Loopback only |
-| Production | `bun dist/server/index.js` or compiled binary | `5173` | Prebuilt assets, minified, no HMR |
-| Production | .NET API | `5080` | Loopback only; bearer token required |
+| Development | `bun --hot src/server/dev.ts` + Tailwind watch | `3000` | HMR, source maps, detailed errors |
+| Development | .NET API (`dotnet run --project src/backend/JobScrape.Api --launch-profile http`) | `5207` | Loopback only, plain HTTP |
+| Development | .NET API (`dotnet run --project src/backend/JobScrape.Api --launch-profile https`) | `5208` | Loopback only, TLS |
+| Production | `bun dist/server/index.js` or compiled binary | `3000` | Prebuilt assets, minified, no HMR |
+| Production | .NET API | `5207` (http) or `5208` (https) | Loopback only; session bearer required |
 
 The cockpit and API are separate processes. The cockpit must not host the scraping engine in-process.
 
@@ -312,14 +314,15 @@ PlaywrightDotNet/
 
 ```json
 {
-  "name": "joblens-cockpit",
+  "name": "jobscrape-cockpit",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.4",
   "trustedDependencies": [],
   "scripts": {
     "dev": "bun run --parallel dev:server dev:css",
-    "dev:server": "bun --hot src/server/dev.ts",
+    "dev:server": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bun --hot src/server/dev.ts",
+    "dev:http": "DOTNET_API_URL=http://127.0.0.1:5207 bun --hot src/server/dev.ts",
     "dev:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --watch=always",
     "build": "bun run build:css && bun run build:client && bun run build:server",
     "build:css": "bunx --bun tailwindcss -i ./src/client/styles/globals.css -o ./src/client/styles/generated.css --minify",
@@ -327,12 +330,15 @@ PlaywrightDotNet/
     "build:server": "bun build ./src/server/index.ts --target=bun --outdir ./dist/server --minify",
     "start": "NODE_ENV=production bun ./dist/server/index.js",
     "typecheck": "bun check",
-    "format": "bun fmt",
-    "format:check": "bun fmt --check",
+    "format": "bun fmt src package.json bunfig.toml",
+    "format:check": "bun fmt --check src package.json bunfig.toml",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "compile": "bun build --compile --target=bun ./src/server/index.ts --outfile ./dist/joblens-cockpit",
-    "api:types": "bunx --bun openapi-typescript@7.13.0 http://127.0.0.1:5080/openapi/v1.json -o ./src/shared/contracts.ts",
+    "test:e2e": "playwright test",
+    "test:flags": "bun ./src/tests/e2e/validate-flags.ts",
+    "test:pretest": "bun ./src/tests/e2e/validate-pretest.ts",
+    "api:types": "NODE_EXTRA_CA_CERTS=./.certs/devcert.pem bunx --bun openapi-typescript@7.13.0 https://localhost:5208/openapi/v1.json -o ./src/shared/contracts.ts",
+    "api:types:http": "bunx --bun openapi-typescript@7.13.0 http://localhost:5207/openapi/v1.json -o ./src/shared/contracts.ts",
     "audit": "bun audit"
   }
 }
@@ -341,6 +347,8 @@ PlaywrightDotNet/
 Notes:
 
 - `bun run --parallel` requires Bun `1.3.9+`; `1.4.4` is fine.
+- `dev:http` pins `DOTNET_API_URL=http://127.0.0.1:5207` for the plain-HTTP lane; `dev:server` pins `NODE_EXTRA_CA_CERTS` for the HTTPS lane (`https://localhost:5208`).
+- `test:e2e` runs Playwright (`src/tests/e2e/*.e2e.ts`); `bun test` stays the unit and component runner.
 - `bun tailwindcss` resolves the local `@tailwindcss/cli` binary.
 - `bun fmt` is built in; do not add Prettier or Biome.
 - `bun check` is built in; do not add `ts-node` or a `tsc` script.
@@ -416,9 +424,6 @@ printWidth = 100
 sortImports = true
 sortTailwindcss = true
 sortPackageJson = true
-
-[test]
-preload = ["./src/tests/setup.ts"]
 ```
 
 Optional public build-time values (never secrets):
@@ -606,12 +611,16 @@ import homepage from "../client/index.html";
 
 Bun.serve({
   hostname: "127.0.0.1",
-  port: Number(Bun.env.PORT ?? 5173),
+  port: Number(Bun.env.PORT ?? 3000),
   development: {
     hmr: true,
     console: true,
   },
   routes: {
+    // BFF session lifecycle (HttpOnly cookie, CSRF guard): POST/GET/DELETE
+    // /bff/session plus POST /bff/session/setup.
+    "/bff/session": bffSession,
+    "/bff/session/setup": bffSessionSetup,
     // Specific SSE route must precede the API wildcard.
     "/api/v1/runs/:id/events": sse,
     "/api/*": proxy,
@@ -706,6 +715,12 @@ The cockpit requires an HTTP API. This refines ADR-0008: the CLI remains the v1 
 | `POST` | `/api/v1/sessions/{id}/probe` | Probe a session |
 | `POST` | `/api/v1/sessions/{id}/login` | Launch headed manual login on the host |
 | `GET` | `/api/v1/quotas` | Per-source quota and circuit state |
+| `PUT` | `/api/v1/quotas/{scope}` | Update quota limit + window (`{ limit, window }`) |
+| `GET` | `/api/v1/users` | User list (admin) |
+| `POST` | `/api/v1/users` | Create user (admin) |
+| `GET` | `/api/v1/roles` | Role list (admin) |
+| `GET` | `/api/v1/auth/me` | Session identity (BFF calls it server-side for `GET /bff/session`) |
+| `GET` | `/api/v1/db/tables` | Database tables for `#/database` |
 | `GET` | `/api/v1/metrics/summary` | Dashboard aggregates |
 | `GET` | `/openapi/v1.json` | OpenAPI 3.1 document |
 
@@ -929,9 +944,9 @@ Packages: `Microsoft.AspNetCore.OpenApi` `11.0.0` and `Scalar.AspNetCore` `3.0.0
 | Concern | BFF behavior |
 |---|---|
 | Static hosting | Serve `dist/client`, hashed immutable assets, SPA fallback |
-| API proxy | `/api/v1/*` → `JOBLENS_API_URL`, inject bearer token |
+| API proxy | `/api/v1/*` → `DOTNET_API_URL`, inject session bearer server-side |
 | SSE proxy | Stream `text/event-stream`, disable buffering, pass `Last-Event-ID` |
-| Auth | Login, HttpOnly cookie, session expiry |
+| Auth | Login, HttpOnly session cookie, session expiry |
 | CSRF | Double-submit cookie + `Origin` check on mutations |
 | Security headers | CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` |
 | Request IDs | Generate `X-Request-Id`, log, propagate |
@@ -943,12 +958,13 @@ Packages: `Microsoft.AspNetCore.OpenApi` `11.0.0` and `Scalar.AspNetCore` `3.0.0
 ```ts
 async function proxy(req: Request): Promise<Response> {
   const incoming = new URL(req.url);
-  const target = new URL(incoming.pathname + incoming.search, Bun.env.JOBLENS_API_URL);
+  const target = new URL(incoming.pathname + incoming.search, Bun.env.DOTNET_API_URL);
 
   const headers = new Headers(req.headers);
   headers.delete("cookie");
   headers.delete("host");
-  headers.set("authorization", `Bearer ${Bun.env.JOBLENS_API_TOKEN}`);
+  const session = readSessionToken(req);
+  if (session !== null) headers.set("authorization", `Bearer ${session}`);
   headers.set("x-request-id", crypto.randomUUID());
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
@@ -975,10 +991,11 @@ async function proxy(req: Request): Promise<Response> {
 ```ts
 async function sse(req: Request): Promise<Response> {
   const incoming = new URL(req.url);
-  const target = new URL(incoming.pathname + incoming.search, Bun.env.JOBLENS_API_URL);
+  const target = new URL(incoming.pathname + incoming.search, Bun.env.DOTNET_API_URL);
 
   const headers = new Headers({ accept: "text/event-stream" });
-  headers.set("authorization", `Bearer ${Bun.env.JOBLENS_API_TOKEN}`);
+  const session = readSessionToken(req);
+  if (session !== null) headers.set("authorization", `Bearer ${session}`);
   const lastEventId = req.headers.get("last-event-id");
   if (lastEventId) headers.set("last-event-id", lastEventId);
 
@@ -1003,7 +1020,7 @@ async function sse(req: Request): Promise<Response> {
 > Implemented: the BFF proxies `/api/*` with a server-side session, CSRF
 > check, and no bearer token in the browser; both processes bind loopback only.
 
-- **Login:** the operator signs in with email + password; the BFF trades them for the backend JWT once, then sets:
+- **Sign-in:** the operator signs in at the deck root with email + password. The BFF trades them for the backend JWT once via `POST /bff/session` (first boot: `POST /bff/session/setup`), then sets:
   - session cookie (`__Host-jobscrape_session` over TLS, `jobscrape_session` otherwise) — `HttpOnly; Path=/; SameSite=Strict` (`Secure` with TLS). Holds the backend bearer server-side; the browser never sees a token.
   - `jobscrape_csrf` — readable, random, same lifetime.
 - **Mutations:** unsafe `/api/*` calls require `x-csrf-token` to equal the `jobscrape_csrf` cookie, plus origin checks.
@@ -1045,12 +1062,12 @@ Cross-Origin-Resource-Policy: same-origin
 
 | Variable | Example | Scope |
 |---|---|---|
-| `PORT` | `5173` | BFF |
+| `PORT` | `3000` | BFF |
 | `HOST` | `127.0.0.1` | BFF |
-| `JOBLENS_API_URL` | `http://127.0.0.1:5080` | BFF only |
-| `JOBLENS_API_TOKEN` | random 32+ bytes | BFF only, secret |
-| `JOBLENS_COCKPIT_TOKEN` | random 32+ bytes | BFF only, secret; optional (dev/automation) |
-| `JOBLENS_COCKPIT_TOKEN_FILE` | `~/.config/joblens/cockpit.token` | BFF; Argon2id hash file |
+| `DOTNET_API_URL` | `https://localhost:5208` (https lane) or `http://127.0.0.1:5207` (http lane) | BFF only |
+| `BFF_TLS_CERT_FILE` | `./.certs/localhost-cert.pem` | BFF only; serve the deck over HTTPS (unset = plain HTTP) |
+| `BFF_TLS_KEY_FILE` | `./.certs/localhost-key.pem` | BFF only; serve the deck over HTTPS (unset = plain HTTP) |
+| `NODE_EXTRA_CA_CERTS` | `./.certs/devcert.pem` | BFF only; trust the API dev cert (https lane) |
 | `NODE_ENV` | `production` | BFF |
 | `PUBLIC_*` | non-secret UI flags | may be inlined at build |
 
@@ -1073,28 +1090,28 @@ Bun auto-loads `.env`, `.env.local`, and `.env.production`; do not add `dotenv`.
 
 ### 14.1 Routes
 
-| Route | Page |
-|---|---|
-| `/` | Dashboard |
-| `/sources` | Source cards, compliance gates, circuit state |
-| `/profiles` | Search profile table + create/edit |
-| `/runs` | Run history |
-| `/runs/:runId` | Live run detail and timeline |
-| `/jobs` | Job explorer |
-| `/jobs/:jobId` | Job detail (drawer route) |
-| `/sessions` | Browser profiles and session states |
-| `/exports` | Export history and downloads |
-| `/diagnostics` | `doctor`, logs, artifacts, retention |
-| `/settings` | Local preferences; no secrets |
+| Route | Code | Page |
+|---|---|---|
+| `#/overview` | 01 | Dashboard |
+| `#/health` | 02 | Engine health detail |
+| `#/profiles` | 03 | Search profile table + create/edit |
+| `#/sources` | 04 | Source cards, compliance gates, circuit state |
+| `#/sessions` | 05 | Browser profiles and session states |
+| `#/runs` | 06 | Start form, run history, run detail, postings (one page; selection is page state) |
+| `#/topology` | 07 | Scrape flow and new-only delta diagrams |
+| `#/database` | 08 | Tables, schema, rows (`GET /api/v1/db/tables*`) |
+| `#/users` | 09 | User list, create, roles per user (`GET/POST /api/v1/users*`) |
+| `#/roles` | 10 | Role list, create, permissions per role (`GET/POST /api/v1/roles*`) |
+| `#/quotas` | 11 | Per-scope limit + window editor (`GET /api/v1/quotas`, `PUT /api/v1/quotas/{scope}`) |
 
 > **As implemented:** a pure hash router (`src/client/lib/router.ts`, no
-> TanStack Router) with seven stops: `#/overview` (01), `#/health` (02),
-> `#/profiles` (03), `#/sources` (04), `#/sessions` (05), `#/runs` (06), and
-> `#/topology` (07). `#/runs` holds the start form, run history, run detail,
-> and postings on one page; selecting a run is page state, not a
-> `/runs/:runId` route. No jobs, exports, diagnostics, or settings pages.
+> TanStack Router) with the eleven stops above. `#/runs` holds the start
+> form, run history, run detail, and postings on one page; selecting a run
+> is page state, not a `/runs/:runId` route. Login renders at the deck
+> root when unauthenticated and posts to `POST /bff/session` (first boot:
+> `POST /bff/session/setup`); `DELETE /bff/session` signs out.
 
-Use TanStack Router with a code-based route tree. The shadcn TanStack Router guide is the reference; do not add a Vite plugin.
+Use TanStack Router with a code-based route tree for a future migration. The shadcn TanStack Router guide is the reference; do not add a Vite plugin.
 
 ### 14.2 State model
 
@@ -1105,7 +1122,7 @@ Use TanStack Router with a code-based route tree. The shadcn TanStack Router gui
 | Filters, sort, page, selected tab | URL search params |
 | Theme, sidebar, command palette | Small UI store/context |
 | Form draft | `react-hook-form` |
-| Auth/session | HttpOnly cookie; `/api/v1/auth/me` for identity |
+| Auth/session | HttpOnly session cookie; `GET /bff/session` (BFF) backed by `GET /api/v1/auth/me` for identity |
 
 Rules:
 
@@ -1324,7 +1341,7 @@ Techniques: route-level code splitting, lazy charts/diagnostics, virtualized tab
 | API errors | Generated types + fixtures | Problem Details status/`code`/`traceId` mapping |
 | API exploration | Scalar.AspNetCore (Development only) | `/scalar` against `/openapi/v1.json`; bearer auth flow |
 | Observability | .NET tests + BFF logs | Correlation ID propagation, redaction, no stack traces |
-| E2E | Existing .NET Playwright suite | Critical flows against a real API + built cockpit |
+| E2E | Playwright (`src/frontend/src/tests/e2e/*.e2e.ts`, 13 `test(` calls: runs, auth, login, topology, database, features) | Sign-in gate, first-login setup, role-change sign-out, HttpOnly cookie, quota limit + window edits, users/roles/quotas/auth/db endpoints; temp backend + BFF on `:5399`/`:3399` |
 | Accessibility | Keyboard checks + `@axe-core/react` in dev | Focus order, labels, contrast, reduced motion |
 
 `src/tests/setup.ts`:
@@ -1352,7 +1369,7 @@ bun test --coverage
 bun run build
 ```
 
-E2E stays in .NET (`tests/JobLens.E2E.Tests`) so the frontend adds no Node-based Playwright runner. The E2E suite starts the built cockpit and a stub API, or the real API with fixture data.
+E2E lives in the frontend (`bun run test:e2e` → `playwright test` over `src/tests/e2e/*.e2e.ts`). The suite boots its own temp backend + temp DB and BFF on loopback ports `:5399`/`:3399` and drives Playwright's bundled Chromium. No Node-based runner beyond Playwright; no shared dev DB is touched.
 
 ---
 
@@ -1402,16 +1419,16 @@ Rules:
 ### 20.1 Local processes
 
 ```sh
-# Terminal 1 — .NET API (loopback)
-dotnet run --project src/JobLens.Api --urls http://127.0.0.1:5080
+# Terminal 1, .NET API (loopback, http lane)
+dotnet run --project src/backend/JobScrape.Api/JobScrape.Api.csproj --launch-profile http
 
 # Terminal 2 — cockpit
-cd web
+cd src/frontend
 bun install
-bun run dev
+bun run dev:http
 ```
 
-Open `http://127.0.0.1:5173`.
+Open `http://127.0.0.1:3000/#/overview`. The https lane uses `--launch-profile https` (`https://localhost:5208`) plus `bun run dev`.
 
 ### 20.2 Production
 
@@ -1499,13 +1516,13 @@ The cockpit is interactive; the OS scheduler still runs the CLI for unattended c
 
 | # | Decision | Recommendation |
 |---|---|---|
-| W1 | API host/port and TLS | `127.0.0.1:5080`, HTTP loopback; TLS only for remote mode |
+| W1 | API host/port and TLS | `127.0.0.1:5207` (http) / `127.0.0.1:5208` (https), loopback; TLS only for the https lane |
 | W2 | Token bootstrap UX | Token file + paste-once login; optional `--print-token` CLI |
 | W3 | Remote access | Tailscale/SSH tunnel only; no public bind in v2.0 |
 | W4 | Single-binary assets | Verify embedding in W0; fallback `dist/client` |
 | W5 | WebSocket | Not in v2.0; SSE + HTTP commands are enough |
 | W6 | Lint | `bun check` + `bun fmt`; add `oxlint` only if a real rule gap appears |
-| W7 | E2E ownership | Keep in .NET Playwright; no JS test runner |
+| W7 | E2E ownership | Frontend Playwright (`src/frontend/src/tests/e2e/*.e2e.ts`); no .NET-runner ownership |
 | W8 | Chart scope | Recharts via shadcn; lazy-load; no custom chart engine |
 
 ---
