@@ -96,6 +96,16 @@ export function RunsPage({
   const [postingsProblem, setPostingsProblem] = useState<ApiProblem | null>(null);
   const [postingsOffset, setPostingsOffset] = useState(0);
   const [postingsTotal, setPostingsTotal] = useState(0);
+  // Server-side posting filters (RUN-04): the selected labels per axis. Empty means unfiltered;
+  // the server ANDs the axes and stays the only row-filter truth.
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  // Facet labels for the filter panels, as the server lists them.
+  const [companyFacets, setCompanyFacets] = useState<string[] | null>(null);
+  const [locationFacets, setLocationFacets] = useState<string[] | null>(null);
+  const [facetsProblem, setFacetsProblem] = useState<ApiProblem | null>(null);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   // Bumped when the same selection must be followed again: re-clicking the active history entry
   // and RETRY reuse the follow effect rather than a second fetch path.
   const [followSeq, setFollowSeq] = useState(0);
@@ -153,6 +163,13 @@ export function RunsPage({
     setPostingsTotal(0);
     setExportProblem(null);
     setCancelProblem(null);
+    setSelectedCompanies([]);
+    setSelectedLocations([]);
+    setCompanyOpen(false);
+    setLocationOpen(false);
+    setCompanyFacets(null);
+    setLocationFacets(null);
+    setFacetsProblem(null);
     setSelectedId(id);
     // The same id changes nothing the effect watches; the bump makes every click refetch.
     setFollowSeq((n) => n + 1);
@@ -201,6 +218,52 @@ export function RunsPage({
     void loadRunsRef.current();
   }, [client, runsOffset]);
 
+  // Whether the followed run is already known terminal: the follow poll upserts the history,
+  // so the facet effect refires on the terminal transition and lists the finished run's labels.
+  // Re-clicking the active entry bumps followSeq for the same refetch.
+  const followedTerminal = runs?.find((r) => r.id === selectedId)?.isTerminal ?? false;
+
+  // Facet labels for the filter panels; the rows themselves always come from the postings poll.
+  useEffect(() => {
+    if (selectedId === null) {
+      return;
+    }
+    let alive = true;
+    void Promise.all([
+      client.listRunPostingCompanies(selectedId),
+      client.listRunPostingLocations(selectedId),
+    ]).then(([companies, locations]) => {
+      if (!alive) {
+        return;
+      }
+      const companiesProblem = !companies.result.ok ? companies.result.problem : null;
+      const locationsProblem = !locations.result.ok ? locations.result.problem : null;
+      if (
+        (companiesProblem !== null && fail(companiesProblem)) ||
+        (locationsProblem !== null && fail(locationsProblem))
+      ) {
+        return;
+      }
+      if (companiesProblem !== null) {
+        setFacetsProblem(companiesProblem);
+        return;
+      }
+      if (locationsProblem !== null) {
+        setFacetsProblem(locationsProblem);
+        return;
+      }
+      if (!companies.result.ok || !locations.result.ok) {
+        return;
+      }
+      setFacetsProblem(null);
+      setCompanyFacets(companies.result.value);
+      setLocationFacets(locations.result.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [client, selectedId, followSeq, followedTerminal]);
+
   // Follow the selected run: poll while it executes, fetch once when it
   // is already finished, and log the moment it ends. The sequence bump re-runs it for a repeat
   // click on the active entry or a RETRY; a thrown poll becomes a problem, never a dead loop.
@@ -218,7 +281,10 @@ export function RunsPage({
           // death or terminal stage.
           const [run, list] = await Promise.allSettled([
             client.getRun(selectedId),
-            client.listRunPostings(selectedId, postingsOffset, POSTINGS_LIMIT),
+            client.listRunPostings(selectedId, postingsOffset, POSTINGS_LIMIT, {
+              locations: selectedLocations,
+              companies: selectedCompanies,
+            }),
           ]);
           if (!alive) {
             return;
@@ -278,7 +344,7 @@ export function RunsPage({
       alive = false;
       clearTimeout(timer);
     };
-  }, [client, selectedId, postingsOffset, followSeq]);
+  }, [client, selectedId, postingsOffset, followSeq, selectedCompanies, selectedLocations]);
 
   const profile = profiles.find((p) => p.id === profileId) ?? null;
   // API-only sources never launch a browser, so the session step does not exist for them.
@@ -287,8 +353,45 @@ export function RunsPage({
   const selected = runs?.find((r) => r.id === selectedId) ?? null;
   // Keep the catch path honest about a run whose payload is already known to be finished.
   terminalRef.current = selected?.isTerminal ?? false;
-  const selectedCompanies = selected?.companies ?? [];
+  const runCompanies = selected?.companies ?? [];
   const fieldErrors = startProblem?.errors ?? {};
+  // Panel labels only: distinct, sorted facet values. Rows always come from the server.
+  const companyOptions = distinctValues(companyFacets ?? []);
+  const locationOptions = distinctValues(locationFacets ?? []);
+  const filtersActive = selectedCompanies.length > 0 || selectedLocations.length > 0;
+  // Triggers stay put while the panel has nothing to offer or an answer failed.
+  const filtersBusy =
+    selected === null ||
+    companyFacets === null ||
+    locationFacets === null ||
+    facetsProblem !== null ||
+    postingsProblem !== null ||
+    (postings === null && postingsProblem === null);
+
+  /** Toggles one label in a filter axis and restarts paging so the poll refetches at once. */
+  function toggleAxis(setter: (next: string[]) => void, current: string[], label: string) {
+    const key = label.trim().toLowerCase();
+    const next = current.some((s) => s.trim().toLowerCase() === key)
+      ? current.filter((s) => s.trim().toLowerCase() !== key)
+      : [...current, label];
+    setter(next);
+    setPostingsOffset(0);
+  }
+
+  function toggleCompany(label: string) {
+    toggleAxis(setSelectedCompanies, selectedCompanies, label);
+  }
+
+  function toggleLocation(label: string) {
+    toggleAxis(setSelectedLocations, selectedLocations, label);
+  }
+
+  /** Clears both axes and restarts paging; the poll refetches unfiltered. */
+  function clearPostingFilters() {
+    setSelectedCompanies([]);
+    setSelectedLocations([]);
+    setPostingsOffset(0);
+  }
 
   async function start(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -324,7 +427,18 @@ export function RunsPage({
     setPostingsProblem(null);
     setPostingsOffset(0);
     setPostingsTotal(0);
+    // A new run starts unfiltered; the facet effect reloads the new run's labels.
+    setSelectedCompanies([]);
+    setSelectedLocations([]);
+    setCompanyOpen(false);
+    setLocationOpen(false);
+    setCompanyFacets(null);
+    setLocationFacets(null);
+    setFacetsProblem(null);
     setSelectedId(result.value.id);
+    // The new id already refires the follow and facet effects; the bump covers a repeated start
+    // that reuses the selection path.
+    setFollowSeq((n) => n + 1);
     onEventRef.current({
       at: formatClock(at),
       kind: "ok",
@@ -618,10 +732,10 @@ export function RunsPage({
                 onExport={() => void exportRun("xlsx")}
               />
             </p>
-            {selectedCompanies.length > 0 && (
+            {runCompanies.length > 0 && (
               <p className="status-line">
-                Company filter ({selectedCompanies.length}{" "}
-                {selectedCompanies.length === 1 ? "company" : "companies"}): Only:{" "}
+                Company filter ({runCompanies.length}{" "}
+                {runCompanies.length === 1 ? "company" : "companies"}): Only:{" "}
                 <ExportButton
                   label="CSV"
                   ariaLabel="Export only companies as CSV"
@@ -671,14 +785,60 @@ export function RunsPage({
             </button>
           </p>
         )}
+        {facetsProblem !== null && postingsProblem === null && (
+          <p className="status-line">
+            Posting filters unavailable: <CodeTag code={facetsProblem.code} /> {facetsProblem.title}
+          </p>
+        )}
         {selected === null && <p className="status-line">No run selected.</p>}
         {selected !== null && postings === null && postingsProblem === null && (
           <p className="status-line">Loading postings…</p>
         )}
         {selected !== null && postings !== null && postings.length === 0 && (
           <p className="status-line">
-            {selected.isTerminal ? "This run saw no postings." : "No postings yet."}
+            {filtersActive ? (
+              <>
+                No postings match the selected filters.{" "}
+                <button type="button" className="btn btn-ghost" onClick={clearPostingFilters}>
+                  CLEAR
+                </button>
+              </>
+            ) : selected.isTerminal ? (
+              "This run saw no postings."
+            ) : (
+              "No postings yet."
+            )}
           </p>
+        )}
+        {selected !== null && (
+          <div className="tag-row" aria-label="Posting filters">
+            <FacetFilter
+              label="Company"
+              options={companyOptions}
+              selected={selectedCompanies}
+              open={companyOpen}
+              onToggleOpen={() => setCompanyOpen((v) => !v)}
+              onToggleValue={toggleCompany}
+              onSelectAll={() => {
+                setSelectedCompanies([]);
+                setPostingsOffset(0);
+              }}
+              disabled={filtersBusy}
+            />
+            <FacetFilter
+              label="Location"
+              options={locationOptions}
+              selected={selectedLocations}
+              open={locationOpen}
+              onToggleOpen={() => setLocationOpen((v) => !v)}
+              onToggleValue={toggleLocation}
+              onSelectAll={() => {
+                setSelectedLocations([]);
+                setPostingsOffset(0);
+              }}
+              disabled={filtersBusy}
+            />
+          </div>
         )}
         {selected !== null && postings !== null && postings.length > 0 && (
           <>
@@ -856,6 +1016,32 @@ export function upsertRun(runs: RunPayload[] | null, run: RunPayload): RunPayloa
     : [run, ...list];
 }
 
+/**
+ * Distinct labels for a filter panel: trimmed, empties and nulls dropped, first casing kept, sorted
+ * case-insensitively. Labels only — the server stays the only row-filter truth.
+ */
+export function distinctValues(values: Array<string | null | undefined>): string[] {
+  const seen = new Map<string, string>();
+  for (const value of values) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      continue;
+    }
+    const key = trimmed.toLowerCase();
+    if (!seen.has(key)) {
+      seen.set(key, trimmed);
+    }
+  }
+  return [...seen.values()].sort((a, b) => {
+    const left = a.toLowerCase();
+    const right = b.toLowerCase();
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
+}
+
 /** How long a run took (or has taken so far), e.g. "42 s", "3 m 05 s"; "—" before it starts. */
 export function runDuration(run: RunPayload, now: number): string {
   if (run.startedAt === null) {
@@ -905,4 +1091,99 @@ function ExportButton({
 /** "2026-11-02 08:00:00" from an ISO timestamp. */
 function stamp(iso: string): string {
   return iso.slice(0, 19).replace("T", " ");
+}
+
+/**
+ * One filterable postings axis (Company or Location): the column label, a trigger carrying the
+ * selected count, and a checkbox panel that applies live. The All box is tri-state — checked when
+ * nothing is selected, indeterminate on a partial pick. The result count lives in a persistent
+ * `status` node outside the panel, so opening or closing never destroys the live region; Escape
+ * closes the panel and puts focus back on the trigger.
+ */
+function FacetFilter({
+  label,
+  options,
+  selected,
+  open,
+  onToggleOpen,
+  onToggleValue,
+  onSelectAll,
+  disabled,
+}: {
+  label: "Company" | "Location";
+  options: string[];
+  selected: string[];
+  open: boolean;
+  onToggleOpen: () => void;
+  onToggleValue: (value: string) => void;
+  onSelectAll: () => void;
+  disabled: boolean;
+}) {
+  const panelId = `posting-${label.toLowerCase()}-filter`;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const allChecked =
+    selected.length === 0 || (options.length > 0 && selected.length === options.length);
+  const partial = selected.length > 0 && selected.length < options.length;
+  const count = selected.length === 0 ? "all" : `${selected.length} of ${options.length}`;
+  function onKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Escape" && open) {
+      event.stopPropagation();
+      onToggleOpen();
+      triggerRef.current?.focus();
+    }
+  }
+  return (
+    <span onKeyDown={onKeyDown}>
+      <span>{label} </span>
+      <button
+        type="button"
+        ref={triggerRef}
+        className="btn btn-ghost"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={`Filter ${label}, ${count} selected`}
+        disabled={disabled}
+        onClick={onToggleOpen}
+      >
+        {selected.length > 0 ? `FILTER (${selected.length})` : "FILTER"}
+      </button>{" "}
+      <span className="status-line" role="status">
+        {selected.length === 0
+          ? `All ${options.length} shown`
+          : `${selected.length} of ${options.length} selected`}
+      </span>
+      {open && (
+        <span id={panelId} role="group" aria-label={`${label} filters`}>
+          <label className="check">
+            <input
+              type="checkbox"
+              ref={(el) => {
+                if (el !== null) {
+                  el.indeterminate = partial;
+                }
+              }}
+              checked={allChecked}
+              onChange={onSelectAll}
+              aria-label={label === "Company" ? "All companies" : "All locations"}
+              disabled={disabled}
+            />{" "}
+            All
+          </label>
+          {options.map((option) => (
+            <label className="check" key={option}>
+              <input
+                type="checkbox"
+                checked={selected.some((s) => s.trim().toLowerCase() === option.toLowerCase())}
+                onChange={() => onToggleValue(option)}
+                disabled={disabled}
+              />{" "}
+              {option}
+            </label>
+          ))}
+          {options.length === 0 && <span className="status-line">No values.</span>}
+        </span>
+      )}
+    </span>
+  );
 }

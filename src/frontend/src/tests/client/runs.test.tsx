@@ -12,6 +12,7 @@ import {
 } from "../../client/lib/api.ts";
 import type { LogEvent } from "../../client/lib/telemetry.ts";
 import {
+  distinctValues,
   pageWindow,
   profileInputs,
   runDuration,
@@ -192,6 +193,16 @@ describe("run helpers", () => {
   });
 });
 
+describe("run posting filter helpers", () => {
+  test("distinctValues dedupes case-insensitively and sorts", () => {
+    expect(distinctValues(["TCS", "Infosys", "infosys", " TCS ", "", null, undefined])).toEqual([
+      "Infosys",
+      "TCS",
+    ]);
+    expect(distinctValues([])).toEqual([]);
+  });
+});
+
 /**
  * A stateful fake of the runs API: POST starts a run that advances one stage per poll and completes
  * with two postings; a second POST while it executes answers RUN_IN_PROGRESS.
@@ -211,6 +222,51 @@ function runsBackend(
   const calls: string[] = [];
   const posted: StartRunInput[] = [];
   let polls = 0;
+  // The stored postings behind every read: empty until the run turns terminal, so facet lists
+  // and the table move together like the server.
+  const storedPostings = (runId: string) =>
+    (runs.find((r) => r.id === runId)?.isTerminal ?? false)
+      ? [
+          {
+            id: "j1",
+            externalJobId: "101",
+            url: "https://www.naukri.com/job-listings-dotnet-dev-101",
+            title: "Senior .NET Developer",
+            company: "Contoso",
+            location: "Pune",
+            workMode: "Onsite",
+            experience: "5-8 Yrs",
+            salary: "15-25 Lacs PA",
+            postedAt: "2026-11-01T00:00:00Z",
+            skills: ["C#", "ASP.NET Core"],
+            enriched: true,
+            isNew: true,
+            firstSeenAt: "2026-11-02T08:00:10Z",
+            lastSeenAt: "2026-11-02T08:00:10Z",
+          },
+          {
+            id: "j2",
+            externalJobId: "102",
+            url: "https://www.naukri.com/job-listings-dotnet-dev-102",
+            title: "Backend Developer",
+            company: "Fabrikam",
+            location: "Delhi",
+            workMode: "Onsite",
+            experience: "3-5 Yrs",
+            salary: "10-18 Lacs PA",
+            postedAt: "2026-11-01T00:00:00Z",
+            skills: ["Java"],
+            enriched: true,
+            isNew: true,
+            firstSeenAt: "2026-11-02T08:00:10Z",
+            lastSeenAt: "2026-11-02T08:00:10Z",
+          },
+        ]
+      : [];
+  const distinctStored = (
+    runId: string,
+    pick: (p: { company: string; location: string }) => string,
+  ) => [...new Set(storedPostings(runId).map(pick))];
   const fetchImpl: FetchImpl = async (url: string, init?: RequestInit) => {
     calls.push(`${init?.method ?? "GET"} ${url}`);
     const reply = (status: number, body: unknown) => ({
@@ -335,30 +391,40 @@ function runsBackend(
       runs[index] = cancelled;
       return reply(200, cancelled);
     }
+    const locationsMatch = /^\/api\/v1\/runs\/(r\d+)\/postings\/locations$/.exec(url);
+    if (locationsMatch) {
+      // Facets follow the stored postings: empty until the run turns terminal.
+      return reply(
+        200,
+        distinctStored(locationsMatch[1]!, (p) => p.location),
+      );
+    }
+    const companiesMatch = /^\/api\/v1\/runs\/(r\d+)\/postings\/companies$/.exec(url);
+    if (companiesMatch) {
+      return reply(
+        200,
+        distinctStored(companiesMatch[1]!, (p) => p.company),
+      );
+    }
     const postings = /^\/api\/v1\/runs\/(r\d+)\/postings(\?|$)/.exec(url);
     if (postings) {
-      const done = runs.find((r) => r.id === postings[1])?.isTerminal ?? false;
-      const items = done
-        ? [
-            {
-              id: "j1",
-              externalJobId: "101",
-              url: "https://www.naukri.com/job-listings-dotnet-dev-101",
-              title: "Senior .NET Developer",
-              company: "Contoso",
-              location: "Pune",
-              workMode: "Onsite",
-              experience: "5-8 Yrs",
-              salary: "15-25 Lacs PA",
-              postedAt: "2026-11-01T00:00:00Z",
-              skills: ["C#", "ASP.NET Core"],
-              enriched: true,
-              isNew: true,
-              firstSeenAt: "2026-11-02T08:00:10Z",
-              lastSeenAt: "2026-11-02T08:00:10Z",
-            },
-          ]
-        : [];
+      // Server-truth filtering: absent/blank axes pass everything, otherwise ANDed. Repeated
+      // keys decode one by one, so "Acme, Inc." stays a single company value.
+      const query = new URL(url, "http://deck").searchParams;
+      const axis = (name: string) =>
+        query
+          .getAll(name)
+          .map((s) => s.trim())
+          .filter((s) => s !== "");
+      const wantLocations = axis("locations").map((s) => s.toLowerCase());
+      const wantCompanies = axis("companies").map((s) => s.toLowerCase());
+      let items = storedPostings(postings[1]!);
+      if (wantLocations.length > 0) {
+        items = items.filter((p) => wantLocations.includes((p.location ?? "").toLowerCase()));
+      }
+      if (wantCompanies.length > 0) {
+        items = items.filter((p) => wantCompanies.includes((p.company ?? "").toLowerCase()));
+      }
       return reply(200, { runId: postings[1], items, total: items.length });
     }
     const one = /^\/api\/v1\/runs\/(r\d+)$/.exec(url);
@@ -431,7 +497,11 @@ describe("runs page", () => {
     expect(filterLine).toBeDefined();
     expect(calls).toContain("GET /api/v1/runs?offset=0&limit=50");
     expect(calls).toContain("GET /api/v1/runs/r1/postings?offset=0&limit=200");
-    expect(queries.getByRole("status").textContent).toContain("COMPLETED");
+    const detail = queries
+      .getAllByRole("status")
+      .map((el) => el.textContent ?? "")
+      .find((text) => text.includes("COMPLETED"));
+    expect(detail).toBeDefined();
     expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
     // Run meters measure progress: a cap reached is done, never the quota red.
     expect(queries.getByRole("meter", { name: "Pages used" }).getAttribute("data-level")).toBe(
@@ -729,12 +799,17 @@ describe("runs page postings failures", () => {
     let failuresLeft = 1;
     const client = {
       ...base,
-      listRunPostings: (id: string, offset?: number, limit?: number) => {
+      listRunPostings: (
+        id: string,
+        offset?: number,
+        limit?: number,
+        filters?: { locations?: string[]; companies?: string[] },
+      ) => {
         if (failuresLeft > 0) {
           failuresLeft -= 1;
           return Promise.resolve(failedCall(unavailable));
         }
-        return base.listRunPostings(id, offset, limit);
+        return base.listRunPostings(id, offset, limit, filters);
       },
     };
     const queries = render(
@@ -873,7 +948,14 @@ describe("runs page postings failures", () => {
 
     fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
 
-    await waitFor(() => expect(queries.getByRole("status").textContent).toContain("COMPLETED"));
+    await waitFor(() =>
+      expect(
+        queries
+          .getAllByRole("status")
+          .map((el) => el.textContent ?? "")
+          .some((text) => text.includes("COMPLETED")),
+      ).toBe(true),
+    );
     expect(queries.queryByRole("button", { name: "CANCEL RUN" })).toBeNull();
     expect(queries.getByRole("alert").textContent).toContain("BAD_RESPONSE");
 
@@ -910,5 +992,111 @@ describe("runs page postings failures", () => {
         "Senior .NET Developer",
       ),
     );
+  }, 15_000);
+
+  test("checking filters refetches from the server and CLEAR restores", async () => {
+    const { client, calls } = runsBackend();
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    // ANDing Delhi with Contoso matches nothing: no row is both.
+    fireEvent.click(queries.getByRole("button", { name: /Filter Location/ }));
+    fireEvent.click(queries.getByRole("checkbox", { name: "Delhi" }));
+    fireEvent.click(queries.getByRole("button", { name: /Filter Company/ }));
+    fireEvent.click(queries.getByRole("checkbox", { name: "Contoso" }));
+
+    await waitFor(() =>
+      expect(calls).toContain(
+        "GET /api/v1/runs/r1/postings?offset=0&limit=200&locations=Delhi&companies=Contoso",
+      ),
+    );
+    await waitFor(() =>
+      expect(queries.getByText(/No postings match the selected filters/)).toBeDefined(),
+    );
+    // Zero matches hide the table, never the triggers.
+    expect(queries.getByRole("button", { name: /Filter Location/ })).toBeDefined();
+    expect(queries.getByRole("button", { name: /Filter Company/ })).toBeDefined();
+
+    fireEvent.click(queries.getByRole("button", { name: "CLEAR" }));
+
+    await waitFor(() =>
+      expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+        "Senior .NET Developer",
+      ),
+    );
+  }, 15_000);
+
+  test("facets refetch when the run turns terminal and list its labels", async () => {
+    const { client, calls } = runsBackend();
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    // One facet read on selection, another on the terminal transition.
+    const facetCalls = () =>
+      calls.filter((call) => call === "GET /api/v1/runs/r1/postings/companies").length;
+    await waitFor(() => expect(facetCalls()).toBe(2), { timeout: 6000 });
+    // No stray refetch after the terminal flip: the count stays put.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(facetCalls()).toBe(2);
+
+    fireEvent.click(queries.getByRole("button", { name: /Filter Company/ }));
+    expect(queries.getByRole("checkbox", { name: "Contoso" })).toBeDefined();
+    expect(queries.getByRole("checkbox", { name: "Fabrikam" })).toBeDefined();
+  }, 15_000);
+
+  test("the filter count survives the panel and Escape refocuses the trigger", async () => {
+    const { client } = runsBackend();
+    const queries = render(
+      <RunsPage client={client} onEvent={() => undefined} onUnauthorized={() => undefined} />,
+    );
+    await waitFor(() => expect(queries.getByRole("option", { name: /naukri-main/ })).toBeDefined());
+
+    fireEvent.submit(queries.getByRole("form", { name: "Start a run" }));
+    await waitFor(
+      () =>
+        expect(queries.getByRole("table", { name: "Postings" }).textContent).toContain(
+          "Senior .NET Developer",
+        ),
+      { timeout: 6000 },
+    );
+
+    const trigger = queries.getByRole("button", { name: /Filter Location/ });
+    const before = queries.getAllByText("All 2 shown");
+    expect(before).toHaveLength(2);
+    for (const node of before) {
+      expect(node.getAttribute("role")).toBe("status");
+    }
+    fireEvent.click(trigger);
+    const panel = queries.getByRole("group", { name: "Location filters" });
+    // The live count sits outside the panel: closing must not destroy it.
+    fireEvent.keyDown(panel, { key: "Escape" });
+    expect(queries.queryByRole("group", { name: "Location filters" })).toBeNull();
+    const after = queries.getAllByText("All 2 shown");
+    expect(after).toHaveLength(2);
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(document.activeElement).toBe(trigger);
   }, 15_000);
 });

@@ -314,12 +314,14 @@ classDiagram
 - `RecordRunStart` counts a run without a cap. The handler calls it when the source has no daily run cap.
 - `TryConsumePage`, `TryConsumeDetail`, and `TryStartRun` return a typed `QuotaDecision` (`Allowed`, `Exceeded`).
 
-### 4.6 `RunEvent` (entity, not aggregate root)
+### 4.6 Run history (no `RunEvent` entity)
 
-- `Id`, `RunId`, `Sequence`, `Type`, `Message`, `DataJson`, `OccurredAt`.
-- Sequence is monotonic per run.
-- Events are append-only; used for audit and UI/progress.
-- Payloads contain IDs and counts, not cookies/PII.
+No `RunEvent` type exists in `src/`. Aggregates raise domain events in
+memory (`AggregateRoot.DomainEvents`); every EF configuration ignores them
+(`builder.Ignore(...)`), so no event is persisted and no dispatcher runs.
+Only tests read the collection. Run history surfaces through the
+`ScrapeRun` row itself (`Stage`, `Stats`, timestamps, `FailureReason`);
+there is no append-only event table and no `RUN_POSTING` join.
 
 ---
 
@@ -535,7 +537,7 @@ stateDiagram-v2
 | `RunFailed` | Failure terminal state | `RunId`, reason, stats |
 | `RunCancelled` | Cancellation terminal state | `RunId`, stats |
 
-**Dispatch:** in-process, after `SaveChangesAsync`, so handlers never see uncommitted state. No outbox/message bus (YAGNI). No `JobPostingDiscovered` or `ChallengeDetected` events exist — creation and classification surface through `SearchPageFetched` (with `JobCount`) and the `Challenge` on each result.
+**Dispatch:** none. No in-process dispatcher runs after `SaveChangesAsync`, and there is no outbox/message bus (YAGNI). Aggregates raise events in memory; only tests read the collection. No `JobPostingDiscovered` or `ChallengeDetected` events exist. Creation and classification surface through `SearchPageFetched` (with `JobCount`) and the `Challenge` on each result.
 
 ---
 
@@ -596,7 +598,7 @@ Maps `ChallengeKind` to `ChallengeDecision` (verbatim from `ChallengePolicy.Deci
 
 ## 9. Repository and unit-of-work contracts
 
-> Verbatim from `JobScrape.Application/Abstractions` — no `UpdateAsync`, no `ListEnabledAsync`, no `FindByNameAsync`, no read-model ports exist.
+> Verbatim from `JobScrape.Application/Abstractions`. It has no `UpdateAsync`, no `ListEnabledAsync`, no `FindByNameAsync`. Read ports exist alongside the repositories: `ISearchProfileStore`, `IRunStore`, `ISessionStore`.
 
 ```csharp
 public interface ISearchProfileRepository
@@ -640,7 +642,7 @@ public interface IUnitOfWork
 }
 ```
 
-Plus `ISessionManager.EnsureSessionAsync`, `IArtifactStore.CaptureAsync`, `IDelay.WaitAsync`, and the read port `ISearchProfileStore.GetAsync` — all declared, the first two without implementations.
+Plus `ISessionManager.EnsureSessionAsync`, `IArtifactStore.CaptureAsync`, `IDelay.WaitAsync`, and the read port `ISearchProfileStore.GetAsync`. All are implemented (`PlaywrightSessionManager`, `FileArtifactStore`, `SearchProfileReadStore`, `RunReadStore`, `SessionReadStore`).
 
 **Rules**
 
@@ -743,7 +745,7 @@ erDiagram
     }
 ```
 
-The only enforced foreign key is `scrape_runs.profile_id → search_profiles.id` (restrict on delete). `JobSkill` is an owned value list inside `JOB_POSTING.skills`, not a table. `RUN_EVENT`, `RUN_POSTING`, and any read-model tables do not exist; neither do `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, or posting↔run foreign keys.
+The only enforced foreign key is `scrape_runs.profile_id → search_profiles.id` (restrict on delete). `JobSkill` is an owned value list inside `JOB_POSTING.skills`, not a table. `RUN_EVENT`, `RUN_POSTING`, and separate read-model tables do not exist (the `*ReadStore` ports query these same tables); neither do `BROWSER_PROFILE.used_by`, `SOURCE_QUOTA.governs`, or posting↔run foreign keys.
 
 **Indexes**
 

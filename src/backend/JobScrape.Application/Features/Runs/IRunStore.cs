@@ -24,25 +24,63 @@ namespace JobScrape.Application.Features.Runs
         Task<RunListResponse> ListAsync(int offset, int limit, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Lists the postings a run saw: those of its source last seen
-        /// between its start and its finish (or now, while it runs). Runs
-        /// execute one at a time, so the window identifies the run's postings.
+        /// Lists the postings a run saw: those of its source whose external ids
+        /// its progress recorded. Later runs may refresh the same rows, so the
+        /// timestamps alone cannot identify a run's postings. Optional filters
+        /// narrow the id set before paging: a location filter matches when any
+        /// comma-separated part of the posting's raw location equals it
+        /// (case-insensitive); a company filter matches the posting's company
+        /// exactly (case-insensitive). Both axes combine with AND; a null,
+        /// empty, or all-blank axis is unfiltered.
         /// </summary>
         /// <param name="runId">The run identifier.</param>
         /// <param name="offset">How many postings to skip; at least 0.</param>
         /// <param name="limit">How many postings to return; at least 1.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <param name="locations">Location filters; null means unfiltered.</param>
+        /// <param name="companies">Company filters; null means unfiltered.</param>
         /// <returns>The postings, or null when the run does not exist.</returns>
         Task<RunPostingListResponse?> ListPostingsAsync(
             Guid runId,
             int offset,
             int limit,
-            CancellationToken cancellationToken
+            CancellationToken cancellationToken,
+            IReadOnlyList<string>? locations = null,
+            IReadOnlyList<string>? companies = null
+        );
+
+        /// <summary>
+        /// Lists the distinct location parts across the postings a run saw:
+        /// each posting's raw location split on commas, trimmed, de-duplicated
+        /// case-insensitively (first spelling wins), and sorted
+        /// case-insensitively. Values are directly usable as
+        /// <c>locations</c> filters.
+        /// </summary>
+        /// <param name="runId">The run identifier.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The locations, an empty list when the run saw none, or null when the run does not exist.</returns>
+        Task<IReadOnlyList<string>?> ListPostingLocationsAsync(
+            Guid runId,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Lists the distinct companies across the postings a run saw,
+        /// de-duplicated case-insensitively (first spelling wins) and sorted
+        /// case-insensitively. Values are directly usable as
+        /// <c>companies</c> filters.
+        /// </summary>
+        /// <param name="runId">The run identifier.</param>
+        /// <param name="cancellationToken">Token to observe for cancellation.</param>
+        /// <returns>The companies, an empty list when the run saw none, or null when the run does not exist.</returns>
+        Task<IReadOnlyList<string>?> ListPostingCompaniesAsync(
+            Guid runId,
+            CancellationToken cancellationToken = default
         );
 
         /// <summary>
         /// Lists the postings a run saw, with the full stored fields for
-        /// export: the same window as <see cref="ListPostingsAsync"/>, most
+        /// export: the same id set as <see cref="ListPostingsAsync"/>, most
         /// recently seen first.
         /// </summary>
         /// <param name="runId">The run identifier.</param>

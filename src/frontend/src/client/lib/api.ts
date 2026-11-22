@@ -206,6 +206,12 @@ export interface RunPosting {
   lastSeenAt: string;
 }
 
+/** Filter axes for a run's postings. Absent, empty, or blank entries mean unfiltered. */
+export interface RunPostingFilters {
+  locations?: string[];
+  companies?: string[];
+}
+
 /** GET /api/v1/runs/{id}/postings. */
 export interface RunPostingList {
   runId: string;
@@ -472,13 +478,17 @@ export function createApiClient(fetchImpl: FetchImpl = fetch) {
     listRuns: (offset = 0, limit = 50) =>
       timed(() => authed<RunList>("GET", `/api/v1/runs?offset=${offset}&limit=${limit}`)),
     getRun: (id: string) => timed(() => authed<RunPayload>("GET", `/api/v1/runs/${id}`)),
-    listRunPostings: (id: string, offset = 0, limit = 200) =>
+    listRunPostings: (id: string, offset = 0, limit = 200, filters?: RunPostingFilters) =>
       timed(() =>
         authed<RunPostingList>(
           "GET",
-          `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}`,
+          `/api/v1/runs/${id}/postings?offset=${offset}&limit=${limit}${postingFilterQuery(filters)}`,
         ),
       ),
+    listRunPostingLocations: (id: string) =>
+      timed(() => authed<string[]>("GET", `/api/v1/runs/${id}/postings/locations`)),
+    listRunPostingCompanies: (id: string) =>
+      timed(() => authed<string[]>("GET", `/api/v1/runs/${id}/postings/companies`)),
     downloadRunExport: (id: string, format: ExportFormat, group: ExportGroup = "all") =>
       timed(() => downloadExport(fetchImpl, id, format, group)),
     startRun: (input: StartRunInput) =>
@@ -538,6 +548,24 @@ async function timed<T>(run: () => Promise<T>): Promise<Timed<T>> {
 
 function get<T>(fetchImpl: FetchImpl, path: string): Promise<ApiResult<T>> {
   return send<T>(fetchImpl, "GET", path);
+}
+
+/**
+ * Serializes posting filter axes to a query suffix. Each axis is trimmed, blank entries are
+ * dropped, and an axis with nothing left is omitted entirely, so absent/blank stays unfiltered.
+ * Values are encoded one by one as repeated keys, matching
+ * `?offset=&limit=&locations=a&locations=b&companies=x`: a comma inside a value (e.g. "Acme, Inc.")
+ * stays one value because the framework decodes each key separately.
+ */
+function postingFilterQuery(filters?: RunPostingFilters): string {
+  const axis = (name: string, values: string[] | undefined): string => {
+    if (values === undefined) {
+      return "";
+    }
+    const cleaned = values.map((v) => v.trim()).filter((v) => v !== "");
+    return cleaned.map((v) => `&${name}=${encodeURIComponent(v)}`).join("");
+  };
+  return `${axis("locations", filters?.locations)}${axis("companies", filters?.companies)}`;
 }
 
 /**

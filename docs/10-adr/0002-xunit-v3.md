@@ -6,11 +6,11 @@
 
 ## Context
 
-The project needs a test framework suitable for TDD, async tests, fixtures, parallel unit tests, and Playwright browser tests. xUnit v2 is in maintenance; xUnit v3 is the active line. Current `xunit.v3` is `4.0.2` (the v3 product line uses a 4.x package version), with VS adapter `4.0.1`. Playwright ships an official `Microsoft.Playwright.Xunit.v3` package.
+The project needs a test framework suitable for TDD, async tests, fixtures, parallel unit tests, and Playwright browser tests. xUnit v2 is in maintenance; xUnit v3 is the active line. Current `xunit.v3` is `4.0.3` (the v3 product line uses a 4.x package version), with VS adapter `4.0.1`. Playwright ships an official `Microsoft.Playwright.Xunit.v3` package.
 
 ## Decision
 
-Use **xUnit.net v3** (`xunit.v3` `4.0.2`, `xunit.runner.visualstudio` `4.0.1`, `Microsoft.NET.Test.Sdk` `18.11.0`) for all test projects. Use `Microsoft.Playwright.Xunit.v3` `1.64.1` for browser E2E.
+Use **xUnit.net v3** (`xunit.v3` `4.0.3`, `xunit.runner.visualstudio` `4.0.1`, `Microsoft.NET.Test.Sdk` `18.12.0`) for all test projects. Use `Microsoft.Playwright.Xunit.v3` `1.64.1` for browser E2E.
 
 ## Consequences
 

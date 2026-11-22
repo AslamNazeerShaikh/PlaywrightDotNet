@@ -134,6 +134,8 @@ namespace JobScrape.Api.Controllers
         /// <param name="id">The run identifier.</param>
         /// <param name="offset">How many postings to skip.</param>
         /// <param name="limit">How many postings to return.</param>
+        /// <param name="locations">Repeated location filters; blank means unfiltered.</param>
+        /// <param name="companies">Repeated company filters; blank means unfiltered.</param>
         /// <param name="cancellationToken">Aborted when the client disconnects.</param>
         /// <returns>200 with the postings; 404 <c>RUN_NOT_FOUND</c>.</returns>
         [HttpGet("{id:guid}/postings")]
@@ -142,10 +144,53 @@ namespace JobScrape.Api.Controllers
             Guid id,
             [FromQuery] int offset = 0,
             [FromQuery] int limit = ListRunPostingsHandler.Limit,
+            [FromQuery] string[]? locations = null,
+            [FromQuery] string[]? companies = null,
             CancellationToken cancellationToken = default
         )
         {
-            var result = await _postings.HandleAsync(id, offset, limit, cancellationToken);
+            var result = await _postings.HandleAsync(
+                id,
+                offset,
+                limit,
+                cancellationToken,
+                locations,
+                companies
+            );
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
+        }
+
+        /// <summary>
+        /// Lists the distinct location parts across the postings a run saw.
+        /// </summary>
+        /// <param name="id">The run identifier.</param>
+        /// <param name="cancellationToken">Aborted when the client disconnects.</param>
+        /// <returns>200 with the sorted locations; 404 <c>RUN_NOT_FOUND</c>.</returns>
+        [HttpGet("{id:guid}/postings/locations")]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
+        public async Task<IResult> PostingLocationsAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var result = await _postings.HandleLocationsAsync(id, cancellationToken);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
+        }
+
+        /// <summary>
+        /// Lists the distinct companies across the postings a run saw.
+        /// </summary>
+        /// <param name="id">The run identifier.</param>
+        /// <param name="cancellationToken">Aborted when the client disconnects.</param>
+        /// <returns>200 with the sorted companies; 404 <c>RUN_NOT_FOUND</c>.</returns>
+        [HttpGet("{id:guid}/postings/companies")]
+        [Authorize(Policy = AuthPolicies.RunsRead)]
+        public async Task<IResult> PostingCompaniesAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var result = await _postings.HandleCompaniesAsync(id, cancellationToken);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         }
 

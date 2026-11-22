@@ -48,8 +48,11 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             var profile = Profile("backend");
             var run1 = ScrapeRun.Create(profile, Now);
             run1.Start(Now);
+            run1.ResumeProgress(Now).RecordPage(1, null, ["refreshed"], Now.AddMinutes(1));
             var run2 = ScrapeRun.Create(profile, Now.AddHours(1), onlyNew);
             run2.Start(Now.AddHours(1));
+            run2.ResumeProgress(Now.AddHours(1))
+                .RecordPage(1, null, ["refreshed", "fresh"], Now.AddHours(1).AddMinutes(3));
             var refreshed = Posting("refreshed", Now.AddMinutes(1));
             refreshed.Refresh(Snapshot("refreshed"), Now.AddHours(1).AddMinutes(2));
             var fresh = Posting("fresh", Now.AddHours(1).AddMinutes(3));
@@ -130,6 +133,8 @@ namespace JobScrape.Infrastructure.Tests.Persistence
             var profile = Profile("backend");
             var run = ScrapeRun.Create(profile, Now.AddHours(1), onlyNew: true);
             run.Start(Now.AddHours(1));
+            run.ResumeProgress(Now.AddHours(1))
+                .RecordPage(1, null, ["boundary"], Now.AddHours(1).AddMinutes(1));
             var boundary = Posting("boundary", Now.AddHours(1));
             await using (var scope = database.Scope())
             {

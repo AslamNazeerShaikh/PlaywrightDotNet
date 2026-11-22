@@ -15,7 +15,7 @@ Build a **modular monolith** with Clean Architecture layers:
 - `Domain` — pure aggregates, value objects, policies, events.
 - `Application` — use cases, ports, orchestration.
 - `Infrastructure` — Playwright, EF Core, parsers, exporters.
-- `Cli` — composition root.
+- `Api` (`JobScrape.Api/Program.cs`). It is the composition root.
 
 Apply **DDD tactically** to Sourcing and Access; use read models/filter objects for Insight/Export. No CQRS, MediatR, AutoMapper, or generic repositories. See [ADR-0011](0011-no-cqrs-mediatr.md).
 

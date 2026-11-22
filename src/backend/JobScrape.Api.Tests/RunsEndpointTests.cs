@@ -323,6 +323,115 @@ namespace JobScrape.Api.Tests
         }
 
         [Fact]
+        public async Task PostingsFiltersAndFacetsNarrowTheRun()
+        {
+            var source = new FakeSource { CommaCompany = true };
+            await using var factory = Factory(source);
+            using var client = await factory.CreateAdminClientAsync(Ct);
+            var (profile, session) = await SeedAsync(client);
+
+            using var started = await client.PostAsJsonAsync(
+                "api/v1/runs",
+                new { profileId = profile, browserProfileId = session },
+                Ct
+            );
+            var run = await started.Content.ReadFromJsonAsync<RunResponse>(Ct);
+            await WaitAsync(client, run!.Id, r => r.IsTerminal);
+
+            // One axis: "Pune, Mumbai" matches Pune.
+            var pune = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?locations=Pune",
+                Ct
+            );
+            Assert.Equal(["101"], pune!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, pune.Total);
+
+            // Repeated values on one axis combine with OR.
+            var either = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?locations=Pune&locations=Delhi",
+                Ct
+            );
+            Assert.Equal(3, either!.Total);
+
+            var fabri = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?companies=Fabrikam",
+                Ct
+            );
+            Assert.Equal(["102"], fabri!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, fabri.Total);
+
+            // Both axes combine with AND: nothing is both in Pune and at Fabrikam.
+            var anded = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?locations=Pune&companies=Fabrikam",
+                Ct
+            );
+            Assert.Empty(anded!.Items);
+            Assert.Equal(0, anded.Total);
+
+            // Repeated company values combine with OR across the axis.
+            var both = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?companies=Contoso&companies=Fabrikam",
+                Ct
+            );
+            Assert.Equal(2, both!.Total);
+
+            // An encoded comma stays one value: "Acme, Inc." round-trips as a
+            // single company filter, not two.
+            var comma = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?companies=Acme%2C%20Inc.",
+                Ct
+            );
+            Assert.Equal(["103"], comma!.Items.Select(p => p.ExternalJobId));
+            Assert.Equal(1, comma.Total);
+
+            // Blank means unfiltered on that axis.
+            var blank = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?locations=&companies=",
+                Ct
+            );
+            Assert.Equal(3, blank!.Total);
+
+            // An unknown city is a 200 with no items, not a 404.
+            var nowhere = await client.GetFromJsonAsync<RunPostingListResponse>(
+                $"api/v1/runs/{run.Id}/postings?locations=Nowhere",
+                Ct
+            );
+            Assert.Empty(nowhere!.Items);
+            Assert.Equal(0, nowhere.Total);
+
+            var locations = await client.GetFromJsonAsync<List<string>>(
+                $"api/v1/runs/{run.Id}/postings/locations",
+                Ct
+            );
+            Assert.Equal(["Delhi", "Mumbai", "Pune"], locations);
+
+            var companies = await client.GetFromJsonAsync<List<string>>(
+                $"api/v1/runs/{run.Id}/postings/companies",
+                Ct
+            );
+            Assert.Equal(["Acme, Inc.", "Contoso", "Fabrikam"], companies);
+
+            var ghost = Guid.NewGuid();
+            foreach (
+                var path in new[]
+                {
+                    $"api/v1/runs/{ghost}/postings/locations",
+                    $"api/v1/runs/{ghost}/postings/companies",
+                }
+            )
+            {
+                using var response = await client.GetAsync(path, Ct);
+                Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+                Assert.Equal(
+                    "RUN_NOT_FOUND",
+                    (await response.Content.ReadFromJsonAsync<JsonElement>(Ct))
+                        .GetProperty("code")
+                        .GetString()
+                );
+            }
+        }
+
+        [Fact]
         public async Task StartRunWithoutASessionSucceedsForAnApiOnlySource()
         {
             await using var factory = Factory(new FakeSource());
@@ -858,7 +967,13 @@ namespace JobScrape.Api.Tests
 
             var unknown = Guid.NewGuid();
             foreach (
-                var path in new[] { $"api/v1/runs/{unknown}", $"api/v1/runs/{unknown}/postings" }
+                var path in new[]
+                {
+                    $"api/v1/runs/{unknown}",
+                    $"api/v1/runs/{unknown}/postings",
+                    $"api/v1/runs/{unknown}/postings/locations",
+                    $"api/v1/runs/{unknown}/postings/companies",
+                }
             )
             {
                 using var response = await client.GetAsync(path, Ct);
@@ -911,6 +1026,12 @@ namespace JobScrape.Api.Tests
 
             public volatile bool RefusesBeyondLastPage;
 
+            /// <summary>
+            /// When true, the fake serves a third posting whose company is
+            /// literally "Acme, Inc.", pinning encoded-comma round-trips.
+            /// </summary>
+            public volatile bool CommaCompany;
+
             public TaskCompletionSource Entered { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -950,7 +1071,9 @@ namespace JobScrape.Api.Tests
                             Snapshot("102", ["Java"], now.AddHours(-3)),
                             Snapshot("103", ["C#"], now.AddDays(-5)),
                         ]
-                    : [Snapshot("101"), Snapshot("102")];
+                    : CommaCompany
+                        ? [Snapshot("101"), Snapshot("102"), Snapshot("103", company: "Acme, Inc.")]
+                        : [Snapshot("101"), Snapshot("102")];
                 return new SearchPageResult(
                     jobs,
                     RefusesBeyondLastPage ? "p2" : null,
@@ -971,7 +1094,8 @@ namespace JobScrape.Api.Tests
             private static JobSnapshot Snapshot(
                 string id,
                 string[]? skills = null,
-                DateTimeOffset? postedAt = null
+                DateTimeOffset? postedAt = null,
+                string? company = null
             )
             {
                 return new JobSnapshot
@@ -980,7 +1104,14 @@ namespace JobScrape.Api.Tests
                     ExternalJobId = id,
                     Url = $"https://www.naukri.com/job-listings-dev-{id}",
                     Title = $"Developer {id}",
-                    Company = id == "101" ? "Contoso" : "Fabrikam",
+                    Company = company ?? (id == "101" ? "Contoso" : "Fabrikam"),
+                    Location = new JobLocation(
+                        id == "101" ? "Pune, Mumbai" : "Delhi",
+                        null,
+                        null,
+                        null,
+                        WorkMode.Unknown
+                    ),
                     Skills = skills ?? [],
                     PostedAt = postedAt,
                 };

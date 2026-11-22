@@ -2,7 +2,7 @@
 
 > **Working name:** JobLens (rename is a mechanical change; see [Open Decisions](11-open-decisions.md)).
 >
-> **Status:** Research and planning complete. No implementation code yet.
+> **Status:** Implemented: 11 projects in `src/backend/JobScrape.slnx`, 11 API controllers, about 1,100 backend test methods.
 >
 > **Last updated:** 2026-11-11
 >
@@ -47,6 +47,8 @@ This is **not** a rewrite of the old Python project line-for-line. The old proje
 | 17 | [ADRs](10-adr/README.md) | Why were the key technical decisions made? |
 | 18 | [Feature toggles](21-feature-toggles.md) | Which flags exist, what on/off does to each subsystem, and the edge rules? |
 | 19 | [Lean workflow](23-lean-workflow.md) | How do you run poteto-mode, ponytail, and superpowers gates from one slash, and what does each pack own? |
+| 20 | [Model intelligence](24-model-intelligence.md) | Which OpenCode/Go model is smartest for coding and tool use, with AA and HF evidence? |
+| 21 | [Docs-vs-code audit](25-docs-code-audit.md) | Where do the docs and comments contradict the tree, with evidence both sides? |
 
 ---
 
@@ -154,4 +156,5 @@ These assumptions are the basis for the scope in the [Executive Summary](00-exec
 | 2026-10-29 | Added Scalar local API reference/testing (Development only) on `Microsoft.AspNetCore.OpenApi` 10.0.14. |
 | 2026-11-09 | Added the lean-workflow guide (one-slash poteto-mode plus ponytail plus superpowers gates) and the `working-lean-with-poteto` skill. |
 | 2026-11-17 | Moved the backend to .NET 11 (SDK `11.0.100`, `net11.0`, Microsoft packages `11.0.0`) with the latest compatible third-party versions, and added ADR-0020. |
+| 2026-11-18 | Added the OpenCode/Go 8-model intelligence comparison (AA v5 + HF + thinking variants) and linked it as `24-model-intelligence.md`. |
 | 2026-11-11 | Bundled-only browsers: docs and runbook reference only Playwright bundled Chromium (with darwin-arm64/win64 install paths) and the screenshot tool launches it over CDP; system Chrome/Edge channel references removed. |

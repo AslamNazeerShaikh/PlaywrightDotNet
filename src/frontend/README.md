@@ -1,13 +1,15 @@
 # JobScrape Cockpit (control plane) — React 19 + Bun
 
-> **Status:** ops-deck walking skeleton. The BFF proxies `/api/*` loopback-only
-> to the .NET data plane, and seven routed pages exercise the tested backend
-> features: a central overview dashboard, engine-health detail,
+> **Status:** ops-deck live. The BFF proxies `/api/*` loopback-only
+> to the .NET data plane with a server-side session (HttpOnly cookie, CSRF
+> check, session bearer; e2e-tested), and eleven routed pages exercise the
+> tested backend: a central overview dashboard, engine-health detail,
 > search-profile management (create with inline server field errors,
 > list, detail; persisted in SQLite), source status (compliance gate,
 > daily quota meters, circuit state), browser-profile sessions (create,
 > state and launch readiness), runs (start a scrape, follow it live by
-> polling, cancel it, read its postings), and a topology map.
+> polling, cancel it, read its postings), a topology map, database tables,
+> users, roles, and quotas (limit + window edits).
 >
 > **Look:** hacker instrument-panel — matte-black surfaces, one emerald signal
 > color, framed modules with corner brackets, IBM Plex Mono everywhere
@@ -179,14 +181,14 @@ src/frontend/
 │   ├── client/
 │   │   ├── index.html / main.tsx / app.tsx   # ops-deck shell: cmd bar, tabs, routed pages
 │   │   ├── lib/
-│   │   │   ├── api.ts        # timed fetch helpers (incl. listRuns/getRun/listRunPostings/startRun/cancelRun); UI maps stable codes, never prose
-│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/sources #/sessions #/runs #/topology (codes 01–07)
+│   │   │   ├── api.ts        # timed fetch helpers (incl. listRuns/getRun/listRunPostings/startRun/cancelRun, users/roles/quotas/auth/db); UI maps stable codes, never prose
+│   │   │   ├── router.ts     # pure hash router: #/overview #/health #/profiles #/sources #/sessions #/runs #/topology #/database #/users #/roles #/quotas (codes 01–11)
 │   │   │   └── telemetry.ts  # samples, stats, event log (pure, unit-tested)
 │   │   ├── components/   # module frame, sparkline, tac-map, scramble, legend,
 │   │   │                 # compass, ruler-tabs (ArtCraft rail × radar blip)
 │   │                 # (tac-map: god's-eye battlespace per iart-ai/svg-animation:
 │   │                 #  sweep, tracers, blips — SMIL, motion-gated)
-│   │   ├── pages/        # overview, health, profiles, sources (+ Meter), sessions, runs, topology
+│   │   ├── pages/        # overview, health, profiles, sources (+ Meter), sessions, runs, topology, database, users, roles, quotas
 │   │   ├── fonts/        # IBM Plex Mono woff2, self-hosted (bundled as data URIs)
 │   │   └── styles/       # design system: tokens, grid, modules, no-overflow rules
 │   └── tests/
@@ -202,7 +204,7 @@ src/frontend/
 - Failures render the stable `code` (`PROFILE_NOT_FOUND`,
   `VALIDATION_FAILED`, `DOTNET_UNREACHABLE`, …), never prose parsing.
 - One page per feature, hash-routed (`#/overview`, `#/health`, `#/profiles`, `#/sources`, `#/sessions`,
-  `#/runs`, `#/topology`): deep links survive refresh with zero server config.
+  `#/runs`, `#/topology`, `#/database`, `#/users`, `#/roles`, `#/quotas`): deep links survive refresh with zero server config.
 - Runs page (`#/runs`, code 06): the start form offers enabled profiles and
   only the sessions of the chosen profile's source (sessions that cannot
   launch are disabled); a history table; the run detail (stage track,
@@ -305,16 +307,8 @@ Rules that follow from the baseline:
 
 ## Deliberate deviations from `docs/12-web-cockpit.md`
 
-- **Port defaults are `5207` (http) + `5208` (https), not `5080`.** The doc's service table says
-  `5080`; the repo's `launchSettings.json` splits them across two profiles (`http` → `5207`,
-  `https` → `5208`). The BFF default follows the https profile (`https://localhost:5208`), and
-  `dev:http` follows the http one; the table needs a fix-up.
-- **No TanStack, no shadcn, no SSE yet.** A handful of fetches do not earn a
-  query client (YAGNI). The runs vertical shipped without SSE: it uses the
-  spec's documented fallback, polling `GET /api/v1/runs/{id}` every 2 s
-  (the API has no events endpoint). TanStack, the `shadcn/ui` copy-in, auth
-  (cookie/CSRF/bearer), and the SSE event proxy wait for the jobs vertical
-  or a real need.
+- **Ports are `3000` (BFF) + `5207` (http API) + `5208` (https API).** The BFF default follows the https profile (`https://localhost:5208`); `dev:http` follows the http one.
+- **Auth ships; TanStack, shadcn, and SSE do not yet.** The BFF holds the session server-side (HttpOnly cookie, CSRF double-submit + origin check, session bearer upstream; login at `POST /bff/session`, first boot at `POST /bff/session/setup`, sign-out at `DELETE /bff/session`). A handful of fetches do not earn a query client (YAGNI). The runs vertical shipped without SSE: it uses the spec's documented fallback, polling `GET /api/v1/runs/{id}` every 2 s (the API has no events endpoint). TanStack, the `shadcn/ui` copy-in, and the SSE event proxy wait for the jobs vertical or a real need.
 - **No `jest-dom`.** Its matchers have no `bun:test` type augmentation;
   the suite asserts on `textContent`. Re-add with proper setup if matchers
   earn their keep.
@@ -327,7 +321,7 @@ Rules that follow from the baseline:
 
 ## Follow-ups
 
-Auth + CSRF + BFF bearer token, SSE run-event proxy (once the API has
+SSE run-event proxy (once the API has
 `/runs/{id}/events`), run resume/artifacts views, TanStack
 Query/Router/Table, shadcn copy-in, `api:types` codegen into
 `src/shared/contracts.ts`, `openapi-typescript` wiring, production

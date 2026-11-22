@@ -1,4 +1,4 @@
-# ADR-0005: SQLite + EF Core 10
+# ADR-0005: SQLite + EF Core 11
 
 - **Status:** Accepted
 - **Date:** 2026-10-29
@@ -10,7 +10,7 @@ The tool is single-user and local-first. It needs transactions, deduplication, r
 
 ## Decision
 
-Use **SQLite** as the source of truth via **EF Core 10.0.14** (`Microsoft.EntityFrameworkCore.Sqlite`). Keep mappings provider-agnostic so PostgreSQL can be added later. Use migrations, WAL, one writer, and a dedicated read-model query path.
+Use **SQLite** as the source of truth via **EF Core 11.0.0** (`Microsoft.EntityFrameworkCore.Sqlite`). Keep mappings provider-agnostic so PostgreSQL can be added later. Use migrations, WAL, one writer, and a dedicated read-model query path.
 
 ## Consequences
 

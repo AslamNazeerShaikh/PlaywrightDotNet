@@ -350,6 +350,167 @@ namespace JobScrape.Application.Tests
         }
 
         [Fact]
+        public async Task ForwardsBothFilterAxesToTheStore()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                0,
+                ListRunPostingsHandler.Limit,
+                Ct,
+                locations: ["Pune"],
+                companies: ["Contoso"]
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(["Pune"], store.LastLocations);
+            Assert.Equal(["Contoso"], store.LastCompanies);
+        }
+
+        [Fact]
+        public async Task NormalizesFiltersByTrimmingAndDroppingBlanksAndDuplicates()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                0,
+                ListRunPostingsHandler.Limit,
+                Ct,
+                locations: [" pune ", "", "PUNE", "Mumbai", "mumbai "],
+                companies: ["Contoso", " contoso "]
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(["pune", "Mumbai"], store.LastLocations);
+            Assert.Equal(["Contoso"], store.LastCompanies);
+        }
+
+        [Fact]
+        public async Task BlankFilterAxesAreUnfiltered()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                0,
+                ListRunPostingsHandler.Limit,
+                Ct,
+                locations: ["  ", ""],
+                companies: []
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Null(store.LastLocations);
+            Assert.Null(store.LastCompanies);
+        }
+
+        [Fact]
+        public async Task FilterCountsAreNotCapped()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+            string[] many =
+            [
+                "Pune",
+                "Mumbai",
+                "Delhi",
+                "Bengaluru",
+                "Chennai",
+                "Hyderabad",
+                "Kolkata",
+                "Noida",
+                "Gurgaon",
+                "Ahmedabad",
+                "Jaipur",
+                "Kochi",
+                "Indore",
+                "Lucknow",
+                "Surat",
+            ];
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                0,
+                ListRunPostingsHandler.Limit,
+                Ct,
+                locations: many
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(many, store.LastLocations);
+        }
+
+        [Fact]
+        public async Task PagingClampIsKeptWhenFiltersArePresent()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                run.Id,
+                -3,
+                0,
+                Ct,
+                locations: ["Pune"],
+                companies: ["Contoso"]
+            );
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal((0, ListRunPostingsHandler.Limit), (store.LastOffset, store.LastLimit));
+            Assert.Equal(["Pune"], store.LastLocations);
+            Assert.Equal(["Contoso"], store.LastCompanies);
+        }
+
+        [Fact]
+        public async Task FilteredListingOfAMissingRunIsNotFound()
+        {
+            var store = new FakeRunStore();
+
+            var result = await new ListRunPostingsHandler(store).HandleAsync(
+                Guid.NewGuid(),
+                0,
+                ListRunPostingsHandler.Limit,
+                Ct,
+                locations: ["Pune"],
+                companies: ["Contoso"]
+            );
+
+            Assert.Equal("RUN_NOT_FOUND", result.Error.Code);
+        }
+
+        [Fact]
+        public async Task FacetsForwardAndReportMissingRuns()
+        {
+            var run = RunResponse.From(Run(RunStage.StartingSession), null);
+            var store = new FakeRunStore(run);
+            var handler = new ListRunPostingsHandler(store);
+
+            Assert.Equal(["Pune"], (await handler.HandleLocationsAsync(run.Id, Ct)).Value);
+            Assert.Equal(["Contoso"], (await handler.HandleCompaniesAsync(run.Id, Ct)).Value);
+            Assert.Equal(
+                "VALIDATION_FAILED",
+                (await handler.HandleLocationsAsync(Guid.Empty, Ct)).Error.Code
+            );
+            Assert.Equal(
+                "VALIDATION_FAILED",
+                (await handler.HandleCompaniesAsync(Guid.Empty, Ct)).Error.Code
+            );
+            Assert.Equal(
+                "RUN_NOT_FOUND",
+                (await handler.HandleLocationsAsync(Guid.NewGuid(), Ct)).Error.Code
+            );
+            Assert.Equal(
+                "RUN_NOT_FOUND",
+                (await handler.HandleCompaniesAsync(Guid.NewGuid(), Ct)).Error.Code
+            );
+        }
+
+        [Fact]
         public async Task CancelSignalsAnExecutingRunWithoutTouchingTheStore()
         {
             var run = Run(RunStage.StartingSession);
@@ -464,6 +625,10 @@ namespace JobScrape.Application.Tests
 
             public int LastOffset { get; private set; }
 
+            public IReadOnlyList<string>? LastLocations { get; private set; }
+
+            public IReadOnlyList<string>? LastCompanies { get; private set; }
+
             public Task<RunResponse?> GetAsync(Guid id, CancellationToken cancellationToken)
             {
                 return Task.FromResult(runs.FirstOrDefault(r => r.Id == id));
@@ -486,11 +651,15 @@ namespace JobScrape.Application.Tests
                 Guid runId,
                 int offset,
                 int limit,
-                CancellationToken cancellationToken
+                CancellationToken cancellationToken,
+                IReadOnlyList<string>? locations = null,
+                IReadOnlyList<string>? companies = null
             )
             {
                 LastLimit = limit;
                 LastOffset = offset;
+                LastLocations = locations;
+                LastCompanies = companies;
                 RunPostingResponse posting = new(
                     Guid.NewGuid(),
                     "101",
@@ -512,6 +681,26 @@ namespace JobScrape.Application.Tests
                     runs.Any(r => r.Id == runId)
                         ? new RunPostingListResponse(runId, [posting], 1)
                         : null
+                );
+            }
+
+            public Task<IReadOnlyList<string>?> ListPostingLocationsAsync(
+                Guid runId,
+                CancellationToken cancellationToken = default
+            )
+            {
+                return Task.FromResult<IReadOnlyList<string>?>(
+                    runs.Any(r => r.Id == runId) ? ["Pune"] : null
+                );
+            }
+
+            public Task<IReadOnlyList<string>?> ListPostingCompaniesAsync(
+                Guid runId,
+                CancellationToken cancellationToken = default
+            )
+            {
+                return Task.FromResult<IReadOnlyList<string>?>(
+                    runs.Any(r => r.Id == runId) ? ["Contoso"] : null
                 );
             }
 
