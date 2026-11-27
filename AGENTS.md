@@ -89,14 +89,23 @@ Follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0
 ## OpenCode config scope
 
 - OpenCode configuration for this repo is project-local only: `.opencode/` and this file. There is no global `~/.config/opencode/` config (no global skills, agents, commands, plugins, or instructions), so sessions here see only what the repo ships.
-- Repo rule: responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose.
 
-## Include tables in responses
+## Response formatting
 
-- When a reply carries comparable numbers, options, or findings a reader would line up by hand, use one or more detailed tables with multiple columns when the table fits.
-- Number every row with an index column so each item stays referenceable in the surrounding prose.
+- Responses stay terse (answer first, no ceremony); code, comments, commits, PRs, and docs stay normal prose.
+- These rules do not override a skill's or agent's own required response format. Where they conflict, the skill wins.
+- unslop rule 18 still applies: an emoji that helps scanning is not decorative, so keep one per heading or list item and drop the rest.
+
+### Tables
+
+- When a reply carries comparable numbers, options, or findings a reader would line up by hand, use a table with the columns the comparison needs.
+- Number the rows of peer-item tables with an index column so each item stays referenceable in the surrounding prose. Key-value tables need no index.
 - When the content is a single fact, a narrative, or a judgment with no peers, keep prose. Never force content into a table to decorate it.
-- Note this only adds or guides how to include tables in responses and it does not change any skill's or agent's own response format. Means I need skill's or agent's original response plus this "add tables instruction" in responses/outputs but smartly and not in every time.
+
+### Emoji
+
+- Emoji are for chat replies; artifacts stay plain. Emojis are optional: at most one per heading or list item, and only where it helps scanning. Reuse the same emoji for items of the same kind.
+- Omit the emoji where a word is clearer. Keep emoji out of code, commands, paths, comments, and any commit, PR, issue, or doc a reply writes or quotes.
 
 ## graphify
 
