@@ -125,7 +125,7 @@ Write the reply clean as you draft it. A cleanup pass after drafting does not re
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 - **Evidence once per section.** Group sources in the section intro, or put them in a table, with the label, measured, inferred, or guess, once for the group. Do not repeat the same label in every sentence.
 - **Do the check yourself.** Never hand the human a check you could run.
-- **Tables when they carry metrics.** When a reply carries comparable numbers, options, or findings a reader would line up by hand, use one or more detailed tables when the table fits. The comparison lands at a glance. Number every row with an index column so each item stays referenceable in the surrounding prose. When the content is a single fact, a narrative, or a judgment with no peers, keep prose. Never force content into a table to decorate it.
+- **Tables follow the repo response rules.** See [AGENTS.md](../../../AGENTS.md#tables).
 
 Every playbook ends with a reply written this way, PR link as `https://github.com/<owner>/<repo>/pull/<number>`. Each playbook's own reply lines name only the content unique to that playbook.
 

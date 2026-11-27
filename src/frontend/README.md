@@ -44,10 +44,10 @@ cd src/frontend && bun run dev:http
 ```
 
 Open `http://127.0.0.1:3000/#/overview`. `dev:http` pins
-`DOTNET_API_URL=http://127.0.0.1:5207` and sets no `NODE_EXTRA_CA_CERTS`, so a
-fresh clone needs no `.env` at all. If you do copy `.env.example`, use its
-commented http-only block: the active block there is the https lane, whose
-`BFF_TLS_*` paths would otherwise make the BFF look for cert files.
+`DOTNET_API_URL=http://127.0.0.1:5207` and blanks `BFF_TLS_*` itself, so a
+fresh clone needs no `.env` at all and a leftover https-lane `.env` cannot
+break it. `dev` (the HTTPS lane) is the only script that needs the https
+block in `.env`.
 
 Verify: `curl http://localhost:5207/api/v1/health` (API),
 `curl http://127.0.0.1:3000/api/v1/health` (BFF proxy, must return `healthy`,
@@ -58,7 +58,7 @@ which also proves Bun booted without a CA file).
 | Command                                   | What it does                                             |
 | ----------------------------------------- | -------------------------------------------------------- |
 | `bun install`                             | Resolve + install; writes `bun.lock` (committed).        |
-| `bun run dev:http`                        | Default lane: BFF with HMR on `http://127.0.0.1:3000`, pinned to `http://127.0.0.1:5207`; no cert, no `.env`. Run `bun run dev:css` alongside when editing styles. |
+| `bun run dev:http`                        | Default lane: BFF with HMR on `http://127.0.0.1:3000`, pinned to `http://127.0.0.1:5207`; no cert, no `.env`. Styles live in `src/client/styles/globals.css`, which is linked directly and hot-reloads with the dev server; no watcher needed. |
 | `bun run dev`                             | HTTPS lane: BFF with HMR (`:3000`, HTTPS) + Tailwind watcher, in parallel. Needs the optional cert setup below; no manual export (scripts carry `NODE_EXTRA_CA_CERTS`). |
 | `bun run build`                           | CSS → client bundle → server bundle, into `dist/`.       |
 | `bun run start`                           | Serve the production build (`NODE_ENV=production`).      |
